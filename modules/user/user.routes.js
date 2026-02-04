@@ -24,12 +24,19 @@ router.route("/:id/update-password").put(checkLogin, User.updatePassword);
 router.route("/data").post(async (req, res) => {
   const { symbol, interval } = req.body;
 
+  // Check if MT5 symbol (ends with 'm')
+  if (symbol.endsWith("m") || symbol.endsWith("M")) {
+    // Return empty for now as we don't have MT5 History API
+    return res.json([]);
+  }
+
   const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`;
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // If Binance returns error (e.g. invalid symbol), return empty
+      return res.json([]);
     }
     const data = await response.json();
     res.json(data);
@@ -39,16 +46,33 @@ router.route("/data").post(async (req, res) => {
 });
 
 router.route("/prices").get(async (req, res) => {
-  const symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "XRPUSDT"];
+  const defaultSymbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "XRPUSDT"];
+  let symbols = defaultSymbols;
+
+  // Check if client sent symbols in query
+  if (req.query.symbols) {
+    try {
+      const parsed = decodeURIComponent(req.query.symbols).split(',');
+      // Filter to valid ones (simple regex check or just allow)
+      // Also filter out MT5 symbols which we handle differently or just ignore here
+      symbols = parsed.filter(s => !s.endsWith('m') && !s.endsWith('M'));
+      // Merge defaults if needed, or just replace. Let's merge to ensure defaults always show
+      symbols = [...new Set([...defaultSymbols, ...symbols])];
+    } catch (e) { }
+  }
 
   try {
     const promises = symbols.map((sym) =>
-      fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym}`).then(
-        (response) => response.json()
-      )
+      fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym}`)
+        .then(async (response) => {
+          if (!response.ok) return null;
+          return response.json();
+        })
+        .catch(() => null)
     );
 
-    const prices = await Promise.all(promises);
+    const pricesRaw = await Promise.all(promises);
+    const prices = pricesRaw.filter(p => p !== null);
 
     const result = prices.map((r) => ({
       symbol: r.symbol,
@@ -68,10 +92,12 @@ router.route("/symbols").get(async (req, res) => {
     const response = await fetch("https://api.binance.com/api/v3/exchangeInfo");
     const data = await response.json();
 
-    const symbols = data.symbols
+    const binanceSymbols = data.symbols
       .filter((s) => s.symbol.endsWith("USDT") && s.status === "TRADING")
-      .map((s) => s.symbol)
-      .sort();
+      .map((s) => s.symbol);
+
+    const mt5Symbols = ["XAUUSDm", "BTCUSDm", "EURUSDm", "GBPUSDm"];
+    const symbols = [...mt5Symbols, ...binanceSymbols].sort();
 
     res.json(symbols);
   } catch (err) {
