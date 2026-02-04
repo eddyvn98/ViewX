@@ -14,63 +14,79 @@ export class RSIIndicator {
         this.config = config;
 
         if (!this.series) {
+            // Use DEDICATED 'rsi' price scale (separate from main chart)
             this.series = this.chart.addSeries(LineSeries, {
                 color: this.config.color,
-                lineWidth: this.config.lineWidth as any,
-                // title: `RSI ${this.config.params.period}`, // Moved to Legend
-                priceScaleId: 'rsi',
+                lineWidth: 2,
+                priceScaleId: 'rsi', // Dedicated RSI scale
                 visible: this.config.visible,
-                lastValueVisible: false, // Ensure hidden from axis
+                lastValueVisible: true,
                 priceLineVisible: false,
             });
 
-            this.chart.priceScale('rsi').applyOptions({
-                autoScale: true,
-                scaleMargins: {
-                    top: 0.8,
-                    bottom: 0.05,
-                },
-                borderVisible: true,
-            });
+            const priceScale = this.chart.priceScale('rsi');
+            if (priceScale && typeof priceScale.applyOptions === 'function') {
+                priceScale.applyOptions({
+                    autoScale: true,
+                    borderVisible: true,
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1,
+                    },
+                });
+            } else {
+                console.warn('[RSI] Could not find/create price scale "rsi"');
+            }
 
             // Add standard lines
-            this.series.createPriceLine({
-                price: this.config.params.upperLimit || 60,
-                color: '#ef4444',
-                lineWidth: 1,
-                lineStyle: LineStyle.Dashed,
-                axisLabelVisible: false, // SMART: Hide from axis, already in legend
-                title: '60',
-            });
+            if (this.series) {
+                this.series.createPriceLine({
+                    price: this.config.params.upperLimit || 70,
+                    color: '#ef4444',
+                    lineWidth: 1,
+                    lineStyle: LineStyle.Dashed,
+                    axisLabelVisible: false,
+                    title: '70',
+                });
 
-            this.series.createPriceLine({
-                price: this.config.params.lowerLimit || 40,
-                color: '#22c55e',
-                lineWidth: 1,
-                lineStyle: LineStyle.Dashed,
-                axisLabelVisible: false, // SMART: Hide from axis
-                title: '40',
-            });
+                this.series.createPriceLine({
+                    price: this.config.params.lowerLimit || 30,
+                    color: '#22c55e',
+                    lineWidth: 1,
+                    lineStyle: LineStyle.Dashed,
+                    axisLabelVisible: false,
+                    title: '30',
+                });
+            }
         } else {
             this.series.applyOptions({
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
-                // title: `RSI ${this.config.params.period}`, // Moved to Legend
-                lastValueVisible: false,
-                priceLineVisible: false,
             });
         }
+
+        if (!this.series) return;
 
         const closePrices = candles.map(c => c.close);
         const rsiValues = calculateRSI(closePrices, this.config.params.period);
 
-        const data = candles.map((c, i) => ({
-            time: c.time as any,
-            value: rsiValues[i]
-        })).filter(d => !isNaN(d.value));
+        const seriesData = candles
+            .map((c, i) => {
+                const v = rsiValues[i];
+                if (!Number.isFinite(v)) return null;
+                return {
+                    time: c.time as any,
+                    value: v,
+                };
+            })
+            .filter((item): item is { time: any; value: number } => item !== null);
 
-        this.series.setData(data);
+        if (seriesData.length > 0) {
+            this.series.setData(seriesData);
+        } else {
+            console.warn('[RSI] No valid data points to display');
+        }
     }
 
     destroy() {

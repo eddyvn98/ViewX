@@ -14,9 +14,9 @@ export function useChartIndicators(
     chartRef: React.RefObject<IChartApi | null>,
     seriesRef: React.RefObject<any>,
     candles: Candle[],
-    symbol: string | undefined
+    symbol: string | undefined,
+    indicators: IndicatorConfig[] = EMPTY_INDICATORS
 ) {
-    const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
     const addIndicators = useMarketStore(state => state.addIndicators);
 
     // Map of indicator ID to instance

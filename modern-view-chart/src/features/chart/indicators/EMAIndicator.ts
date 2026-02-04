@@ -14,22 +14,24 @@ export class EMAIndicator {
         this.config = config;
 
         if (!this.series) {
+            const isMainPane = this.config.pane === 'main' || !this.config.pane;
             this.series = this.chart.addSeries(LineSeries, {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 // title: `${this.config.type} ${this.config.params.period}`, // Moved to ChartOverlay Legend
                 priceLineVisible: false,
-                lastValueVisible: false,
+                lastValueVisible: !isMainPane,
                 visible: this.config.visible,
             });
         } else {
+            const isMainPane = this.config.pane === 'main' || !this.config.pane;
             this.series.applyOptions({
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
                 // title: `${this.config.type} ${this.config.params.period}`, // Moved to Legend
                 priceLineVisible: false,
-                lastValueVisible: false,
+                lastValueVisible: !isMainPane,
             });
         }
 
@@ -41,7 +43,9 @@ export class EMAIndicator {
             value: emaValues[i]
         })).filter(d => !isNaN(d.value));
 
-        this.series.setData(data);
+        if (this.series) {
+            this.series.setData(data);
+        }
     }
 
     destroy() {

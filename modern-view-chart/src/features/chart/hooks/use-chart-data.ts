@@ -3,17 +3,7 @@ import { useMarketStore } from '@/lib/store';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { calculateHeikinAshi } from '../utils/indicator-math';
-
-const getOffset = (tz: string) => {
-    try {
-        const now = new Date();
-        const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const tzDate = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-        return Math.round((tzDate.getTime() - utcDate.getTime()) / 1000);
-    } catch (e) {
-        return 0;
-    }
-};
+import { getChartTimezoneOffset as getOffset } from '../utils/time-utils';
 
 export function useChartData(
     id: string, // chart id
