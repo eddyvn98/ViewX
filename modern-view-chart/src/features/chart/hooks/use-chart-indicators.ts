@@ -37,7 +37,7 @@ export function useChartIndicators(
                 visible: true, lineWidth: 2, pane: 'main'
             },
             {
-                type: 'RSI', params: { period: 14 }, color: '#7e57c2',
+                type: 'RSI', params: { period: 14 }, color: '#fbbf24',
                 visible: true, lineWidth: 2, pane: 'rsi'
             },
             {

@@ -4,6 +4,7 @@ import { calculateRSI } from '../utils/indicator-math';
 
 export class RSIIndicator {
     private series: ISeriesApi<"Line"> | null = null;
+    private hasFitted = false;
 
     constructor(
         private chart: IChartApi,
@@ -12,64 +13,67 @@ export class RSIIndicator {
 
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
+        const period = this.config.params.period || 14;
 
+        // Không đủ data thì không render
+        if (candles.length < period) {
+            if (this.series) {
+                this.series.setData([]);
+            }
+            return;
+        }
+
+        // ===== INIT SERIES =====
         if (!this.series) {
-            // Use DEDICATED 'rsi' price scale (separate from main chart)
             this.series = this.chart.addSeries(LineSeries, {
                 color: this.config.color,
                 lineWidth: 2,
-                priceScaleId: 'rsi', // Dedicated RSI scale
+                priceScaleId: 'right', // ✅ Sử dụng right scale mặc định
                 visible: this.config.visible,
-                lastValueVisible: true,
+                lastValueVisible: false,
                 priceLineVisible: false,
+
+                // ✅ FIX CHÍ MẠNG: KHÓA RSI 0–100 ĐÚNG API
+                autoscaleInfoProvider: () => ({
+                    priceRange: {
+                        minValue: 0,
+                        maxValue: 100,
+                    },
+                }),
             });
 
-            const priceScale = this.chart.priceScale('rsi');
-            if (priceScale && typeof priceScale.applyOptions === 'function') {
-                priceScale.applyOptions({
-                    autoScale: true,
-                    borderVisible: true,
-                    scaleMargins: {
-                        top: 0.1,
-                        bottom: 0.1,
-                    },
-                });
-            } else {
-                console.warn('[RSI] Could not find/create price scale "rsi"');
-            }
+            // Upper / Lower lines
+            this.series.createPriceLine({
+                price: this.config.params.upperLimit || 70,
+                color: '#ef4444',
+                lineWidth: 1,
+                lineStyle: LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: '70',
+            });
 
-            // Add standard lines
-            if (this.series) {
-                this.series.createPriceLine({
-                    price: this.config.params.upperLimit || 70,
-                    color: '#ef4444',
-                    lineWidth: 1,
-                    lineStyle: LineStyle.Dashed,
-                    axisLabelVisible: false,
-                    title: '70',
-                });
-
-                this.series.createPriceLine({
-                    price: this.config.params.lowerLimit || 30,
-                    color: '#22c55e',
-                    lineWidth: 1,
-                    lineStyle: LineStyle.Dashed,
-                    axisLabelVisible: false,
-                    title: '30',
-                });
-            }
+            this.series.createPriceLine({
+                price: this.config.params.lowerLimit || 30,
+                color: '#22c55e',
+                lineWidth: 1,
+                lineStyle: LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: '30',
+            });
         } else {
             this.series.applyOptions({
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
+                lastValueVisible: false,
             });
         }
 
         if (!this.series) return;
 
+        // ===== DATA =====
         const closePrices = candles.map(c => c.close);
-        const rsiValues = calculateRSI(closePrices, this.config.params.period);
+        const rsiValues = calculateRSI(closePrices, period);
 
         const seriesData = candles
             .map((c, i) => {
@@ -80,13 +84,11 @@ export class RSIIndicator {
                     value: v,
                 };
             })
-            .filter((item): item is { time: any; value: number } => item !== null);
+            .filter(
+                (p): p is { time: any; value: number } => p !== null
+            );
 
-        if (seriesData.length > 0) {
-            this.series.setData(seriesData);
-        } else {
-            console.warn('[RSI] No valid data points to display');
-        }
+        this.series.setData(seriesData);
     }
 
     destroy() {

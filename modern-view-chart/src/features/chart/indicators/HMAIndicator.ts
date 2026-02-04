@@ -12,13 +12,21 @@ export class HMAIndicator {
 
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
+        const period = this.config.params.period || 14;
+
+        // Minimum bar check
+        if (candles.length < period) {
+            if (this.series) {
+                this.series.setData([]);
+            }
+            return;
+        }
 
         if (!this.series) {
             const isMainPane = this.config.pane === 'main' || !this.config.pane;
             this.series = this.chart.addSeries(LineSeries, {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
-                // title: `Hull ${this.config.params.period}`, // Moved to Legend
                 priceLineVisible: false,
                 lastValueVisible: !isMainPane,
                 visible: this.config.visible,
@@ -29,19 +37,24 @@ export class HMAIndicator {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
-                // title: `Hull ${this.config.params.period}`, // Moved to Legend
                 priceLineVisible: false,
                 lastValueVisible: !isMainPane,
             });
         }
 
         const closePrices = candles.map(c => c.close);
-        const hmaValues = calculateHullMA(closePrices, this.config.params.period);
+        const hmaValues = calculateHullMA(closePrices, period);
 
-        const data = candles.map((c, i) => ({
-            time: c.time as any,
-            value: hmaValues[i]
-        })).filter(d => !isNaN(d.value));
+        const data = candles
+            .map((c, i) => {
+                const v = hmaValues[i];
+                if (v === null || v === undefined || !Number.isFinite(v)) return null;
+                return {
+                    time: c.time as any,
+                    value: v,
+                };
+            })
+            .filter((item): item is { time: any; value: number } => item !== null);
 
         if (this.series) {
             this.series.setData(data);
