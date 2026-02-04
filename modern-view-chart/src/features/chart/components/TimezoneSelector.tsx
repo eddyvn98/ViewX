@@ -1,0 +1,120 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { Globe, Search, Check } from 'lucide-react';
+import { useMarketStore } from '@/lib/store';
+import { cn } from '@/lib/utils';
+
+const POPULAR_TIMEZONES = [
+    { id: 'Etc/UTC', label: 'UTC (Greenwich)' },
+    { id: 'Asia/Ho_Chi_Minh', label: 'Ho Chi Minh (UTC+7)' },
+    { id: 'Asia/Tokyo', label: 'Tokyo (UTC+9)' },
+    { id: 'Asia/Seoul', label: 'Seoul (UTC+9)' },
+    { id: 'Asia/Singapore', label: 'Singapore (UTC+8)' },
+    { id: 'Europe/London', label: 'London (BST/GMT)' },
+    { id: 'Europe/Paris', label: 'Paris (CEST/CET)' },
+    { id: 'Europe/Berlin', label: 'Berlin (CEST/CET)' },
+    { id: 'America/New_York', label: 'New York (EDT/EST)' },
+    { id: 'America/Chicago', label: 'Chicago (CDT/CST)' },
+    { id: 'America/Los_Angeles', label: 'Los Angeles (PDT/PST)' },
+    { id: 'Australia/Sydney', label: 'Sydney (AEST/AEDT)' },
+];
+
+export function TimezoneSelector() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const activeTabId = useMarketStore(state => state.activeTabId);
+    const activeTab = useMarketStore(state => state.tabs[activeTabId]);
+    const activeChartId = activeTab?.activeChartId;
+    const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
+    const setChartTimezone = useMarketStore(state => state.setChartTimezone);
+
+    const currentTimezone = activeChart?.timezone || 'Etc/UTC';
+
+    const filteredTimezones = useMemo(() => {
+        if (!search) return POPULAR_TIMEZONES;
+        return POPULAR_TIMEZONES.filter(tz =>
+            tz.label.toLowerCase().includes(search.toLowerCase()) ||
+            tz.id.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [search]);
+
+    const handleSelect = (id: string) => {
+        if (activeChartId) {
+            setChartTimezone(activeChartId, id);
+        }
+        setIsOpen(false);
+    };
+
+    if (!activeChart) return null;
+
+    return (
+        <div className="relative border-l border-zinc-800/50 pl-2 ml-1">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={cn(
+                    "flex items-center gap-1.5 px-2 py-1 round-md transition-colors",
+                    "text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/50",
+                    isOpen && "bg-zinc-800/50 text-white"
+                )}
+                title="Change Chart Timezone"
+            >
+                <Globe className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[80px]">
+                    {POPULAR_TIMEZONES.find(tz => tz.id === currentTimezone)?.label.split(' ')[0] || 'UTC'}
+                </span>
+            </button>
+
+            {isOpen && (
+                <>
+                    <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <div className="absolute top-full left-0 mt-1 w-64 bg-[#1e222d] border border-zinc-800 rounded-lg shadow-2xl z-50 overflow-hidden">
+                        <div className="p-2 border-b border-zinc-800">
+                            <div className="relative">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Search timezone..."
+                                    className="w-full bg-black/30 border-none rounded-md py-1.5 pl-7 pr-3 text-[12px] text-zinc-200 focus:ring-1 focus:ring-blue-500/50 outline-none placeholder:text-zinc-600"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="max-h-64 overflow-y-auto custom-scrollbar p-1">
+                            {filteredTimezones.map((tz) => (
+                                <button
+                                    key={tz.id}
+                                    onClick={() => handleSelect(tz.id)}
+                                    className={cn(
+                                        "w-full flex items-center justify-between px-3 py-2 rounded-md text-[12px] transition-colors group",
+                                        currentTimezone === tz.id
+                                            ? "bg-blue-500/10 text-blue-400"
+                                            : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                    )}
+                                >
+                                    <div className="flex flex-col items-start translate-x-0 group-hover:translate-x-1 transition-transform">
+                                        <span className="font-medium">{tz.label}</span>
+                                        <span className="text-[10px] text-zinc-500 group-hover:text-zinc-400">{tz.id}</span>
+                                    </div>
+                                    {currentTimezone === tz.id && <Check className="w-3.5 h-3.5" />}
+                                </button>
+                            ))}
+                            {filteredTimezones.length === 0 && (
+                                <div className="py-8 text-center text-zinc-500 text-[12px]">
+                                    No timezones found
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}

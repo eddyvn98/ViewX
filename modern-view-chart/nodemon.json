@@ -1,0 +1,12 @@
+{
+    "watch": [
+        "backend"
+    ],
+    "ext": "js,json",
+    "ignore": [
+        "backend/bridge/**",
+        "**/*.test.js",
+        "node_modules/**"
+    ],
+    "delay": "1000"
+}
