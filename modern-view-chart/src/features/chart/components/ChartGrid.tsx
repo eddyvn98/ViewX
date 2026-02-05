@@ -7,23 +7,20 @@ export function ChartGrid() {
     const activeTab = useMarketStore((state) => state.tabs[state.activeTabId]);
     if (!activeTab) return null;
 
-    const { charts, activeChartId, maximizedChartId, layoutMode } = activeTab;
+    const { charts, activeChartId, maximizedChartId, rows, cols } = activeTab;
     const chartList = Object.values(charts);
 
     const visibleCharts = maximizedChartId ? [charts[maximizedChartId]].filter(Boolean) :
-        (layoutMode === '1x1' ? (activeChartId ? [charts[activeChartId]].filter(Boolean) : chartList.slice(0, 1)) : chartList);
-
-    const getGridClass = () => {
-        switch (layoutMode) {
-            case '2x1': return 'grid-cols-1 grid-rows-2';
-            case '2x2': return 'grid-cols-2 grid-rows-2';
-            case '3x2': return 'grid-cols-3 grid-rows-2';
-            default: return 'grid-cols-1 grid-rows-1';
-        }
-    };
+        (rows === 1 && cols === 1 ? (activeChartId ? [charts[activeChartId]].filter(Boolean) : chartList.slice(0, 1)) : chartList.slice(0, rows * cols));
 
     return (
-        <div className={`flex-1 min-h-0 grid gap-2 ${getGridClass()}`}>
+        <div
+            className="flex-1 min-h-0 grid gap-2"
+            style={{
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
+            }}
+        >
             {visibleCharts.map((chart) => (
                 <ChartItem
                     key={chart.id}

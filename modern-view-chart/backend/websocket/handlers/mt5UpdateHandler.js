@@ -5,22 +5,27 @@ const dailyOpens = new Map();
 export function handleMt5Update({ ws, clients, mt5Prices }, data) {
     const normalizedSymbol = (data.symbol || "").replace(/[mM]$/, 'm');
 
-    // Simple daily open tracking: if not exists or different day, set it
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const openKey = `${normalizedSymbol}_${todayStr}`;
+    // Use daily_open from bridge if available (accurate Daily Open from MT5)
+    let openPrice = data.daily_open;
 
-    if (!dailyOpens.has(openKey)) {
-        // Clear old entries for this symbol
-        for (const key of dailyOpens.keys()) {
-            if (key.startsWith(normalizedSymbol)) dailyOpens.delete(key);
+    if (!openPrice) {
+        // Fallback for older bridge versions or first hit: simple daily open tracking
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const openKey = `${normalizedSymbol}_${todayStr}`;
+
+        if (!dailyOpens.has(openKey)) {
+            // Clear old entries for this symbol
+            for (const key of dailyOpens.keys()) {
+                if (key.startsWith(normalizedSymbol)) dailyOpens.delete(key);
+            }
+            dailyOpens.set(openKey, data.price);
         }
-        dailyOpens.set(openKey, data.price);
+        openPrice = dailyOpens.get(openKey);
     }
 
-    const openPrice = dailyOpens.get(openKey);
     const changeValue = data.price - openPrice;
-    const changePercent = openPrice !== 0 ? (changeValue / openPrice) * 100 : 0;
+    const changePercent = (openPrice && openPrice !== 0) ? (changeValue / openPrice) * 100 : 0;
 
     mt5Prices.set(normalizedSymbol, {
         symbol: normalizedSymbol,

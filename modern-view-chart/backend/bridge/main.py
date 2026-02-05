@@ -39,7 +39,24 @@ async def main():
         last_positions_time = 0
         POSITION_UPDATE_INTERVAL = 2.0  # Only send position updates every 2 seconds unless changed
         
+        # Cache for Daily Open prices
+        daily_opens = {}
+        last_daily_open_refresh = 0
+        DAILY_OPEN_REFRESH_INTERVAL = 300 # refresh every 5 mins
+        
         while True:
+            import time
+            current_time = time.time()
+            
+            # Refresh Daily Opens
+            if current_time - last_daily_open_refresh > DAILY_OPEN_REFRESH_INTERVAL:
+                for symbol in SYMBOLS:
+                    d_open = service.get_daily_open(symbol)
+                    if d_open:
+                        daily_opens[symbol] = d_open
+                last_daily_open_refresh = current_time
+                print(f"📊 [REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
+
             # 1. Send Ticks
             for symbol in SYMBOLS:
                 tick = service.get_tick(symbol)
@@ -52,6 +69,7 @@ async def main():
                         "symbol": symbol,
                         "price": tick.bid,
                         "ask": tick.ask,
+                        "daily_open": daily_opens.get(symbol),
                         "time": int(tick.time * 1000)
                     })
             

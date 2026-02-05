@@ -2,6 +2,7 @@
 
 import React, { useRef, memo, useEffect, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
+import { cn } from '@/lib/utils';
 import { useChartInit } from './hooks/use-chart-init';
 import { useChartData } from './hooks/use-chart-data';
 // import { useChartCrosshair } from './hooks/use-chart-crosshair';
@@ -15,6 +16,7 @@ import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 
 import { ChartOverlay } from './components/ChartOverlay';
 import { SubchartLegend } from './components/SubchartLegend';
+import { SubchartIndicatorsTabs } from './components/SubchartIndicatorsTabs';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { Bell, BellOff, X, ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -296,20 +298,34 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                 {/* PRICE CHART (Main) - Always background */}
                 <div ref={priceContainerRef} className="w-full h-full" />
 
-                {/* TOGGLE SUBCHART BUTTON - Integrated Tab Style */}
-                <button
-                    onClick={() => setIsSubchartVisible(!isSubchartVisible)}
-                    className={`absolute right-[80px] z-30 px-3 py-1.5 rounded-t-md border border-b-0 transition-all duration-300 flex items-center gap-2 backdrop-blur-md ${isSubchartVisible
-                        ? 'bottom-[25%] bg-[#1e222d]/80 border-blue-500/20 text-[#787b86] hover:text-blue-400 hover:bg-[#2a2e39]'
-                        : 'bottom-0 bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-[0_-5px_15px_rgba(59,130,246,0.1)]'
-                        }`}
-                    style={{ marginRight: '-1px' }}
+                {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
+                <div
+                    className={cn(
+                        "absolute right-[80px] z-30 flex items-end transition-all duration-300",
+                        isSubchartVisible ? "bottom-[25%]" : "bottom-0"
+                    )}
                 >
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                        {isSubchartVisible ? 'Hide' : 'Show Indicator'}
-                    </span>
-                    {isSubchartVisible ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                </button>
+                    <SubchartIndicatorsTabs
+                        chartId={chartId}
+                        isSubchartVisible={isSubchartVisible}
+                    />
+
+                    <button
+                        onClick={() => setIsSubchartVisible(!isSubchartVisible)}
+                        className={cn(
+                            "px-4 py-1.5 rounded-tr-lg border border-zinc-700/50 border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-2 backdrop-blur-md",
+                            isSubchartVisible
+                                ? "bg-[#1e222d]/90 text-[#787b86] hover:text-blue-400"
+                                : "bg-blue-600/20 text-blue-400"
+                        )}
+                        style={{ marginLeft: '-1px' }}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                            {isSubchartVisible ? 'Hide' : 'Show Indicator'}
+                        </span>
+                        {isSubchartVisible ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                    </button>
+                </div>
 
                 {/* RSI SUBCHART (Overlay) - Floating at bottom */}
                 <div

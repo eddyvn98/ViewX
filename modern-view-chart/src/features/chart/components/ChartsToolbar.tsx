@@ -1,9 +1,10 @@
 'use client';
 
-import { LayoutGrid, Maximize2, Columns, Plus, Crosshair, Link } from 'lucide-react';
+import { Plus, Crosshair, Link } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { TimeframeToolbar } from './TimeframeToolbar';
 import { TimezoneSelector } from './TimezoneSelector';
+import { LayoutGridSelector } from './LayoutGridSelector';
 import { cn } from '@/lib/utils';
 
 export function ChartsToolbar() {
@@ -80,11 +81,7 @@ export function ChartsToolbar() {
 
                     <TimezoneSelector />
 
-                    <div className="flex items-center gap-0.5 ml-2 p-0.5 bg-black/20 rounded-md">
-                        <button onClick={() => setLayoutMode('1x1')} className={cn("p-1 rounded transition-all", layoutMode === '1x1' ? "text-blue-500 bg-zinc-800 shadow-sm" : "text-zinc-600 hover:text-zinc-400")} title="Single Chart"><Maximize2 size={15} /></button>
-                        <button onClick={() => setLayoutMode('2x1')} className={cn("p-1 rounded transition-all", layoutMode === '2x1' ? "text-blue-500 bg-zinc-800 shadow-sm" : "text-zinc-600 hover:text-zinc-400")} title="2 Charts (Vertical)"><Columns size={15} className="rotate-90" /></button>
-                        <button onClick={() => setLayoutMode('2x2')} className={cn("p-1 rounded transition-all", layoutMode === '2x2' ? "text-blue-500 bg-zinc-800 shadow-sm" : "text-zinc-600 hover:text-zinc-400")} title="Grid 2x2"><LayoutGrid size={15} /></button>
-                    </div>
+                    <LayoutGridSelector />
                 </div>
 
                 <div className="h-4 w-[1px] bg-zinc-800" />

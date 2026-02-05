@@ -17,6 +17,12 @@ class MT5Service:
     def get_tick(self, symbol):
         return mt5.symbol_info_tick(symbol)
 
+    def get_daily_open(self, symbol):
+        rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 1)
+        if rates is not None and len(rates) > 0:
+            return float(rates[0]['open'])
+        return None
+
     def fetch_candles(self, symbol, interval, count=200):
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
         print(f"[FETCH] {symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")

@@ -31,6 +31,8 @@ export function useChartData(
 
     const lastKeyRef = useRef(key);
 
+    const isConnected = useMarketStore(state => state.isConnected);
+
     // 1. Đồng bộ toàn bộ dữ liệu (History hoặc New Candle)
     useEffect(() => {
         if (!seriesRef.current || !symbol || !interval || !source) return;
@@ -50,7 +52,7 @@ export function useChartData(
 
         if (candles.length === 0) {
             // Nếu chưa có data, request server
-            if (symbol && interval && source === 'MT5') {
+            if (symbol && interval && source === 'MT5' && isConnected) {
                 sendMessage({
                     topic: "mt5_command",
                     command: "get_candles",
@@ -118,7 +120,7 @@ export function useChartData(
         }
 
         lastDataLength.current = candles.length;
-    }, [candles, symbol, interval, source]);
+    }, [candles, symbol, interval, source, isConnected]);
 
     // 2. Đồng bộ giá nhảy Real-time từ Ticker
     useEffect(() => {

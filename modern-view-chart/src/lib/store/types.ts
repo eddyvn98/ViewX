@@ -86,7 +86,9 @@ export interface ChartTab {
     charts: Record<string, ChartInstance>;
     activeChartId: string | null;
     maximizedChartId: string | null;
-    layoutMode: '1x1' | '2x1' | '2x2' | '3x2';
+    layoutMode: string; // e.g., '1x1', '2x2', or custom NxM
+    rows: number;
+    cols: number;
 }
 
 export interface FavoriteTimeframe {

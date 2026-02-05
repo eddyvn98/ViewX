@@ -8,7 +8,7 @@ export interface TabSlice {
     removeTab: (id: string) => void;
     setActiveTab: (id: string) => void;
     renameTab: (id: string, name: string) => void;
-    setLayoutMode: (mode: ChartTab['layoutMode']) => void;
+    setLayoutMode: (mode: string, r?: number, c?: number) => void;
 }
 
 export const createTabSlice: StateCreator<TabSlice> = (set) => ({
@@ -22,6 +22,8 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
             activeChartId: 'default',
             maximizedChartId: null,
             layoutMode: '1x1',
+            rows: 1,
+            cols: 1
         }
     },
     activeTabId: 'default-tab',
@@ -36,7 +38,9 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
             },
             activeChartId: `chart-${id}-1`,
             maximizedChartId: null,
-            layoutMode: '1x1'
+            layoutMode: '1x1',
+            rows: 1,
+            cols: 1
         };
         return {
             tabs: { ...state.tabs, [id]: newTab },
@@ -64,10 +68,47 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
         }
     })),
 
-    setLayoutMode: (mode) => set((state) => ({
-        tabs: {
-            ...state.tabs,
-            [state.activeTabId]: { ...state.tabs[state.activeTabId], layoutMode: mode }
+    setLayoutMode: (mode: string, r?: number, c?: number) => set((state: any) => {
+        const activeTab = state.tabs[state.activeTabId];
+        if (!activeTab) return state;
+
+        const rows = r || parseInt(mode.split('x')[0]) || 1;
+        const cols = c || parseInt(mode.split('x')[1]) || 1;
+        const needed = rows * cols;
+        const existingCharts = Object.keys(activeTab.charts);
+        const existingCount = existingCharts.length;
+
+        const newCharts = { ...activeTab.charts };
+        const newChartIndicators = { ...state.chartIndicators };
+
+        // Find prototype
+        const protoId = activeTab.activeChartId || existingCharts[0];
+        const protoChart = activeTab.charts[protoId];
+        const protoIndicators = state.chartIndicators[protoId] || [];
+
+        if (existingCount < needed) {
+            for (let i = existingCount + 1; i <= needed; i++) {
+                const newId = `chart-${activeTab.id}-${i}`;
+                newCharts[newId] = { ...protoChart, id: newId, group: 'none' };
+                newChartIndicators[newId] = protoIndicators.map((ind: any) => ({
+                    ...ind,
+                    id: Math.random().toString(36).substring(7)
+                }));
+            }
         }
-    })),
+
+        return {
+            chartIndicators: newChartIndicators,
+            tabs: {
+                ...state.tabs,
+                [state.activeTabId]: {
+                    ...activeTab,
+                    layoutMode: `${rows}x${cols}`,
+                    rows,
+                    cols,
+                    charts: newCharts
+                }
+            }
+        };
+    }),
 });
