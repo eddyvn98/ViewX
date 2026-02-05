@@ -44,6 +44,14 @@ const AVAILABLE_INDICATORS = [
         pane: 'rsi' as const
     },
     {
+        type: 'RSI' as const,
+        name: 'RSI Subchart',
+        description: 'RSI hiển thị trong một khung riêng biệt bên dưới biểu đồ chính.',
+        defaultParams: { period: 14, overbought: 70, oversold: 30 },
+        defaultColor: '#e91e63',
+        pane: 'subchart' as const
+    },
+    {
         type: 'Signals' as const,
         name: 'Buy/Sell Signals',
         description: 'Tín hiệu mua bán dựa trên nến Heikin Ashi và bộ lọc ngưỡng.',

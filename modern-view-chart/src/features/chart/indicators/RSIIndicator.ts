@@ -4,6 +4,8 @@ import { calculateRSI } from '../utils/indicator-math';
 
 export class RSIIndicator {
     private series: ISeriesApi<"Line"> | null = null;
+    private upperLine: any = null;
+    private lowerLine: any = null;
 
     constructor(
         private chart: IChartApi,
@@ -17,38 +19,45 @@ export class RSIIndicator {
             this.series = this.chart.addSeries(LineSeries, {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
-                // title: `RSI ${this.config.params.period}`, // Moved to Legend
-                priceScaleId: 'rsi',
+                priceScaleId: 'right',
                 visible: this.config.visible,
-                lastValueVisible: false, // Ensure hidden from axis
+                lastValueVisible: true,
                 priceLineVisible: false,
+                priceFormat: {
+                    type: 'custom',
+                    formatter: (v: number) => v.toFixed(0),
+                },
+                autoscaleInfoProvider: () => ({
+                    priceRange: {
+                        minValue: 0,
+                        maxValue: 100,
+                    },
+                }),
             });
 
-            this.chart.priceScale('rsi').applyOptions({
-                autoScale: true,
-                scaleMargins: {
-                    top: 0.8,
-                    bottom: 0.05,
-                },
+            this.chart.priceScale('right').applyOptions({
+                visible: true,
+                autoScale: true, // 🔴 PHẢI true
+                scaleMargins: { top: 0.1, bottom: 0.1 },
                 borderVisible: true,
             });
 
-            // Add standard lines
-            this.series.createPriceLine({
+            // Add standard lines (Overbought/Oversold)
+            this.upperLine = this.series.createPriceLine({
                 price: this.config.params.upperLimit || 60,
                 color: '#ef4444',
                 lineWidth: 1,
                 lineStyle: LineStyle.Dashed,
-                axisLabelVisible: false, // SMART: Hide from axis, already in legend
+                axisLabelVisible: false,
                 title: '60',
             });
 
-            this.series.createPriceLine({
+            this.lowerLine = this.series.createPriceLine({
                 price: this.config.params.lowerLimit || 40,
                 color: '#22c55e',
                 lineWidth: 1,
                 lineStyle: LineStyle.Dashed,
-                axisLabelVisible: false, // SMART: Hide from axis
+                axisLabelVisible: false,
                 title: '40',
             });
         } else {
@@ -56,21 +65,28 @@ export class RSIIndicator {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
-                // title: `RSI ${this.config.params.period}`, // Moved to Legend
-                lastValueVisible: false,
-                priceLineVisible: false,
             });
         }
 
         const closePrices = candles.map(c => c.close);
         const rsiValues = calculateRSI(closePrices, this.config.params.period);
 
-        const data = candles.map((c, i) => ({
-            time: c.time as any,
-            value: rsiValues[i]
-        })).filter(d => !isNaN(d.value));
+        const firstValidIdx = rsiValues.findIndex(v => !isNaN(v));
+        const firstValidValue = firstValidIdx !== -1 ? rsiValues[firstValidIdx] : 50;
 
-        this.series.setData(data);
+        const data = candles.map((c, i) => {
+            let val = rsiValues[i];
+            // Backfill up to 14 fake values before the first valid RSI point
+            if (isNaN(val) && firstValidIdx !== -1 && i >= firstValidIdx - 14) {
+                val = firstValidValue;
+            }
+            return {
+                time: c.time as any,
+                value: val
+            };
+        }).filter(d => !isNaN(d.value));
+
+        this.series.setData(data as any);
     }
 
     destroy() {

@@ -1,33 +1,34 @@
 'use client';
 
-import React, { useRef, memo, useEffect } from 'react';
+import React, { useRef, memo, useEffect, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useChartInit } from './hooks/use-chart-init';
 import { useChartData } from './hooks/use-chart-data';
-import { useChartCrosshair } from './hooks/use-chart-crosshair';
+// import { useChartCrosshair } from './hooks/use-chart-crosshair';
 import { useChartPositions } from './hooks/use-chart-positions';
 import { useChartOrders } from './hooks/use-chart-orders';
 import { useChartDraftOrder } from './hooks/use-chart-draft-order';
 import { useChartIndicators } from './hooks/use-chart-indicators';
-import { useChartRSI } from './hooks/use-chart-rsi';
-import { useChartAlerts } from './hooks/use-chart-alerts'; // Import Hook
-import { Bell, BellOff, X } from 'lucide-react'; // Import Icons
-import { useState } from 'react';
-
+import { useChartAlerts } from './hooks/use-chart-alerts';
 import { useChartInteraction } from './hooks/use-chart-interaction';
+
 import { ChartOverlay } from './components/ChartOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
-import { cn } from '@/lib/utils';
+import { Bell, BellOff, X } from 'lucide-react';
 
 const EMPTY_CANDLES: any[] = [];
 
 export const ChartContainer = memo(function ChartContainer({ chartId }: { chartId: string }) {
-    const containerRef = useRef<HTMLDivElement>(null);
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
 
-    // Context Menu State
-    const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; price: number; nearAlertId?: string } | null>(null);
+    const [contextMenu, setContextMenu] = useState<{
+        visible: boolean;
+        x: number;
+        y: number;
+        price: number;
+        nearAlertId?: string;
+    } | null>(null);
 
     const chartInstance = useMarketStore((state) => {
         for (const tab of Object.values(state.tabs)) {
@@ -39,45 +40,72 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
     const symbol = chartInstance?.symbol;
     const interval = chartInstance?.interval;
     const source = chartInstance?.source;
+    const timezone = chartInstance?.timezone || 'Etc/UTC';
 
-    // KEY NORMALIZATION: Crucial for matching store updates
-    const normSymbol = (symbol || "").toLowerCase().endsWith('m') ? symbol!.replace(/[mM]$/, 'm') : symbol;
+    const normSymbol =
+        (symbol || '').toLowerCase().endsWith('m')
+            ? symbol!.replace(/[mM]$/, 'm')
+            : symbol;
+
     const key = `${source}:${normSymbol}:${interval}`;
-
-    // Stabilize selector: avoid returning new [] on every render
     const candles = useMarketStore((state) => state.candleData[key] || EMPTY_CANDLES);
 
-    const { chartRef, seriesRef } = useChartInit(containerRef);
+    /* ================= REFS ================= */
+    const priceContainerRef = useRef<HTMLDivElement>(null);
+    const subchartContainerRef = useRef<HTMLDivElement>(null);
+    const timescaleContainerRef = useRef<HTMLDivElement>(null);
 
-    useChartData(
-        chartId,
-        symbol,
-        interval,
-        source,
-        chartRef,
-        seriesRef
-    );
+    const { priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, subSyncRef, timescaleSyncRef, syncRange } =
+        useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef);
 
-    useChartCrosshair(chartId, chartRef, seriesRef);
-    useChartPositions(symbol, seriesRef, positions, chartRef);
+    /* ================= DATA ================= */
+    useChartData(chartId, symbol, interval, source, priceChartRef, seriesRef, subSyncRef, timescaleSyncRef);
+
+    /* ================= OVERLAYS ================= */
+    // useChartCrosshair(chartId, priceChartRef, seriesRef);
+    useChartPositions(symbol, seriesRef, positions, priceChartRef);
     useChartOrders(symbol, seriesRef, orders);
     useChartDraftOrder(symbol, seriesRef);
-    useChartIndicators(chartId, chartRef, seriesRef, candles, symbol);
-    // Alert Hook
-    const { alerts, handleAddAlertAtPrice, handleRemoveAlert, handleUpdateAlertPrice, getAlertNearPrice } = useChartAlerts(chartId, chartRef, seriesRef, symbol);
 
-    useChartInteraction(chartRef, seriesRef, symbol, containerRef, alerts, handleUpdateAlertPrice, handleRemoveAlert);
+    /* ================= INDICATORS ================= */
+    useChartIndicators(
+        chartId,
+        priceChartRef,
+        subchartChartRef,
+        seriesRef,
+        candles,
+        symbol,
+        timezone,
+        syncRange
+    );
 
-    // Context Menu Handler
+    /* ================= ALERTS ================= */
+    const {
+        alerts,
+        handleAddAlertAtPrice,
+        handleRemoveAlert,
+        handleUpdateAlertPrice,
+        getAlertNearPrice,
+    } = useChartAlerts(chartId, priceChartRef, seriesRef, symbol);
+
+    useChartInteraction(
+        priceChartRef,
+        seriesRef,
+        symbol,
+        priceContainerRef,
+        alerts,
+        handleUpdateAlertPrice,
+        handleRemoveAlert
+    );
+
+    /* ================= CONTEXT MENU ================= */
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (!chartRef.current || !containerRef.current) return;
+        if (!priceChartRef.current || !priceContainerRef.current) return;
 
-        const rect = containerRef.current.getBoundingClientRect();
+        const rect = priceContainerRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
-
-        // Convert Y to Price
         const price = seriesRef.current?.coordinateToPrice(y);
 
         if (price) {
@@ -87,21 +115,20 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                 x: e.clientX,
                 y: e.clientY,
                 price,
-                nearAlertId: nearAlert?.id
+                nearAlertId: nearAlert?.id,
             });
         }
     };
 
-    // Close Menu on Click Elsewhere
     useEffect(() => {
-        const checkClose = () => setContextMenu(null);
-        window.addEventListener('click', checkClose);
-        return () => window.removeEventListener('click', checkClose);
+        const close = () => setContextMenu(null);
+        window.addEventListener('click', close);
+        return () => window.removeEventListener('click', close);
     }, []);
 
     return (
         <div
-            className="w-full h-full relative group/chart"
+            className="w-full h-full relative flex flex-col bg-[#131722]"
             onContextMenu={handleContextMenu}
         >
             <ChartOverlay
@@ -111,46 +138,65 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                 source={chartInstance?.source}
                 candles={candles}
             />
-            <PositionModifier />
-            <div ref={containerRef} className="w-full h-full" />
 
-            {/* Context Menu */}
-            {contextMenu && contextMenu.visible && (
+            <PositionModifier />
+
+            {/* PRICE CHART */}
+            <div className="flex-[3] relative min-h-0">
+                <div ref={priceContainerRef} className="w-full h-full" />
+            </div>
+
+            <div className="h-[1px] bg-zinc-800" />
+
+            {/* RSI SUBCHART */}
+            <div className="flex-1 relative min-h-0">
+                <div ref={subchartContainerRef} className="w-full h-full" />
+            </div>
+
+            <div className="h-[1px] bg-zinc-800" />
+
+            {/* TIMESCALE FOOTER */}
+            <div className="h-[38px] relative overflow-hidden shrink-0 bg-[#131722]">
+                <div ref={timescaleContainerRef} className="w-full h-full" />
+            </div>
+
+            {/* CONTEXT MENU */}
+            {contextMenu?.visible && (
                 <div
-                    className="fixed z-50 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl py-1 w-48 animate-in fade-in zoom-in-95 duration-100"
+                    className="fixed z-50 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl py-1 w-48"
                     style={{ left: contextMenu.x, top: contextMenu.y }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {!contextMenu.nearAlertId ? (
                         <button
-                            className="w-full text-left px-3 py-2 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] flex items-center gap-2 transition-colors"
+                            className="w-full text-left px-3 py-2 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] flex items-center gap-2"
                             onClick={() => {
                                 handleAddAlertAtPrice(contextMenu.price);
                                 setContextMenu(null);
                             }}
                         >
                             <Bell size={14} className="text-orange-500" />
-                            <span>Add Alert at {contextMenu.price.toFixed(symbol?.includes('JPY') ? 3 : 5)}</span>
+                            Add Alert
                         </button>
                     ) : (
                         <button
-                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
                             onClick={() => {
                                 handleRemoveAlert(contextMenu.nearAlertId!);
                                 setContextMenu(null);
                             }}
                         >
                             <BellOff size={14} />
-                            <span>Remove Alert</span>
+                            Remove Alert
                         </button>
                     )}
                     <div className="h-[1px] bg-[#2a2e39] my-1" />
                     <button
-                        className="w-full text-left px-3 py-2 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-3 py-2 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] flex items-center gap-2"
                         onClick={() => setContextMenu(null)}
                     >
                         <X size={14} className="text-zinc-500" />
-                        <span>Cancel</span>
+                        Cancel
                     </button>
                 </div>
             )}

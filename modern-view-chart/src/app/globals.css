@@ -119,3 +119,21 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
 }
+
+/* TradingView Layout: Subchart Legend & Debug */
+.rsi-debug-bg {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+  /* Red background for debug */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hide TradingView Logo and Branding - FINAL BOSS MODE */
+[class*="tv-lightweight-charts-logo"],
+a[href*="tradingview.com"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  pointer-events: none !important;
+}

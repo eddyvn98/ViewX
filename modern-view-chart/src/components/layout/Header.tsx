@@ -12,7 +12,6 @@ export function Header() {
             <div className="flex items-center gap-6 h-full">
                 {/* Logo */}
                 <div className="flex items-center gap-2 font-black text-sm text-white tracking-tighter mr-2">
-                    <div className="h-5 w-5 rounded bg-blue-600 shadow-lg shadow-blue-500/20 flex items-center justify-center text-[10px] font-black">V</div>
                     ViewChart
                 </div>
 

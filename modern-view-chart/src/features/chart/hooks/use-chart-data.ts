@@ -1,157 +1,104 @@
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
-import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { useWebSocket } from '@/hooks/use-websocket';
-import { calculateHeikinAshi } from '../utils/indicator-math';
 
-const getOffset = (tz: string) => {
-    try {
-        const now = new Date();
-        const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const tzDate = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-        return Math.round((tzDate.getTime() - utcDate.getTime()) / 1000);
-    } catch (e) {
-        return 0;
-    }
-};
+const EMPTY_CANDLES: any[] = [];
 
 export function useChartData(
-    id: string, // chart id
+    id: string,
     symbol: string | undefined,
     interval: string | undefined,
     source: string | undefined,
     chartRef: React.RefObject<IChartApi | null>,
-    seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>
+    seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
+    subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
+    timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>
 ) {
+    const isInitialMount = useRef(true);
+    const lastDataLength = useRef(0);
+    const lastTimeRef = useRef<number>(0);
     const { sendMessage } = useWebSocket();
-    const initialDataLoaded = useRef(false);
-    const chart = useMarketStore(state => state.activeTabId ? state.tabs[state.activeTabId]?.charts[id] : null);
-    const timezone = chart?.timezone || 'Etc/UTC';
-    const chartType = chart?.chartType || 'candles';
 
+    const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
+    const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
+
+    const candles = useMarketStore(state => (key ? state.candleData[key] : null) || EMPTY_CANDLES);
+    const currentPrice = useMarketStore(state => symbol ? state.tickers[symbol]?.price : null);
+
+    // 1. Đồng bộ toàn bộ dữ liệu (History hoặc New Candle)
     useEffect(() => {
-        if (!symbol || !interval || !source || !seriesRef.current) return;
-
-        const normSymbol = (symbol || "").toLowerCase().endsWith('m') ? symbol!.replace(/[mM]$/, 'm') : symbol;
-        const key = `${source}:${normSymbol}:${interval}`;
-        const state = useMarketStore.getState();
-        const initialCandles = state.candleData[key] || [];
-        const offset = getOffset(timezone);
-
-        // Explicitly request history and subscription on change
-        if (source === 'MT5') {
-            sendMessage({
-                topic: "mt5_command",
-                command: "get_candles",
-                symbol,
-                interval,
-                count: 500
-            });
-            sendMessage({
-                topic: "mt5_command",
-                command: "get_symbol_info",
-                symbol
-            });
-        } else if (source === 'BINANCE') {
-            sendMessage({
-                topic: "get_binance_candles",
-                symbol: symbol,
-                interval: interval,
-                limit: 500
-            });
+        if (!seriesRef.current || !symbol || !interval || !source || candles.length === 0) {
+            if (candles.length === 0 && symbol && interval && source === 'MT5') {
+                sendMessage({
+                    topic: "mt5_command",
+                    command: "get_candles",
+                    symbol: symbol,
+                    interval: interval,
+                    count: 300
+                });
+            }
+            return;
         }
 
-        // Always subscribe to real-time updates for this specific config
-        sendMessage({
-            topic: "subscribeCandle",
-            symbol: symbol,
-            interval: interval
-        });
+        const formatted = candles.map(c => ({
+            time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as Time,
+            open: Number(c.open),
+            high: Number(c.high),
+            low: Number(c.low),
+            close: Number(c.close),
+        }));
 
-        const formatCandles = (candles: any[]) => {
-            if (chartType === 'heikin_ashi') {
-                return calculateHeikinAshi(candles).map(c => ({
-                    time: c.time + offset,
-                    open: c.ha_open,
-                    high: c.ha_high,
-                    low: c.ha_low,
-                    close: c.ha_close
-                }));
+        // Luôn ghi nhớ mốc thời gian cuối cùng để so sánh
+        const lastT = Number(formatted[formatted.length - 1].time);
+        lastTimeRef.current = lastT;
+
+        if (isInitialMount.current || candles.length !== lastDataLength.current) {
+            seriesRef.current.setData(formatted);
+
+            const timeOnly = formatted.map(f => ({ time: f.time, value: 0 }));
+            subSyncRef.current?.setData(timeOnly as any);
+            timescaleSyncRef.current?.setData(timeOnly as any);
+
+            if (isInitialMount.current && formatted.length > 0) {
+                chartRef.current?.timeScale().fitContent();
+                isInitialMount.current = false;
             }
-            return candles.map(c => ({
-                ...c,
-                time: c.time + offset
-            }));
-        };
+        }
 
-        const formatSingle = (candle: any, allCandles: any[]) => {
-            if (chartType === 'heikin_ashi') {
-                const has = calculateHeikinAshi(allCandles);
-                const c = has[has.length - 1];
-                return {
-                    time: c.time + offset,
-                    open: c.ha_open,
-                    high: c.ha_high,
-                    low: c.ha_low,
-                    close: c.ha_close
+        lastDataLength.current = candles.length;
+    }, [candles, symbol, interval, source]);
+
+    // 2. Đồng bộ giá nhảy Real-time từ Ticker
+    useEffect(() => {
+        if (!seriesRef.current || !currentPrice || candles.length === 0) return;
+
+        const lastCandle = candles[candles.length - 1];
+        const candleTime = typeof lastCandle.time === 'object' ? (lastCandle.time as any).timestamp : Number(lastCandle.time);
+
+        // CHỈ cập nhật nếu thời gian nến ticker >= thời gian nến cuối trên chart
+        if (candleTime >= lastTimeRef.current) {
+            try {
+                const updatedPrice = Number(currentPrice);
+                const updatedCandle = {
+                    time: candleTime as Time,
+                    open: Number(lastCandle.open),
+                    high: Math.max(Number(lastCandle.high), updatedPrice),
+                    low: Math.min(Number(lastCandle.low), updatedPrice),
+                    close: updatedPrice,
                 };
+
+                seriesRef.current.update(updatedCandle);
+
+                // Đồng bộ nhịp nhảy cho các thành phần khác
+                const syncUpdate = { time: candleTime as Time, value: 0 } as any;
+                subSyncRef.current?.update(syncUpdate);
+                timescaleSyncRef.current?.update(syncUpdate);
+
+                lastTimeRef.current = candleTime;
+            } catch (err) {
+                console.warn("⚠️ [ChartData] Update tick failed:", err);
             }
-            return { ...candle, time: candle.time + offset };
-        };
-
-        let lastCandleCount = 0;
-        let lastFirstCandleTime = 0;
-
-        // Initial Data Load
-        if (initialCandles.length > 0) {
-            const sorted = [...initialCandles].sort((a, b) => a.time - b.time);
-            const formatted = formatCandles(sorted);
-            seriesRef.current?.setData(formatted as any);
-            lastCandleCount = initialCandles.length;
-            lastFirstCandleTime = sorted[0].time;
-            initialDataLoaded.current = true;
         }
-
-        const unsubscribe = useMarketStore.subscribe(
-            (state) => state.candleData[key],
-            (currentCandles) => {
-                if (!currentCandles?.length || !seriesRef.current) {
-                    lastCandleCount = 0;
-                    lastFirstCandleTime = 0;
-                    return;
-                }
-
-                const sorted = [...currentCandles].sort((a, b) => a.time - b.time);
-                const firstCandleTime = sorted[0].time;
-                const lastIdx = sorted.length - 1;
-                const lastCandle = sorted[lastIdx];
-
-                // Heikin Ashi depends on previous candle, so we reload more often or re-calc
-                if (!initialDataLoaded.current ||
-                    (firstCandleTime !== lastFirstCandleTime) ||
-                    (Math.abs(currentCandles.length - lastCandleCount) > 1) ||
-                    chartType === 'heikin_ashi') { // Always full re-calc for HA for simplicity/correctness
-
-                    const formatted = formatCandles(sorted);
-                    seriesRef.current.setData(formatted as any);
-                    lastCandleCount = currentCandles.length;
-                    lastFirstCandleTime = firstCandleTime;
-                    initialDataLoaded.current = true;
-                } else {
-                    // Real-time update/append (Normal candles)
-                    seriesRef.current.update(formatSingle(lastCandle, sorted));
-                    lastCandleCount = currentCandles.length;
-                    lastFirstCandleTime = firstCandleTime;
-                }
-            }
-        );
-
-        return () => {
-            unsubscribe();
-            initialDataLoaded.current = false;
-            if (seriesRef.current) seriesRef.current.setData([]);
-        };
-    }, [symbol, interval, source, timezone, chartType]);
-
-    return { initialDataLoaded };
+    }, [currentPrice]);
 }

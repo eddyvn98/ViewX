@@ -34,9 +34,6 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles }: Cha
             <div className="flex items-center gap-3">
                 {/* Symbol Info */}
                 <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
-                        <span className="text-[10px] font-black text-white italic">V</span>
-                    </div>
                     <div className="flex items-baseline gap-1">
                         <span className="text-[13px] font-extrabold text-white uppercase tracking-tight">{data.symbol}</span>
                         <span className="text-[10px] text-zinc-500 font-bold opacity-80">{data.interval} · {data.source}</span>
@@ -68,14 +65,31 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles }: Cha
                 </div>
             </div>
 
-            {/* Bottom Row: Indicator Values - Premium List */}
-            {indicatorValues.length > 0 && (
+            {/* Top Row: Main Indicator Values */}
+            {indicatorValues.filter((v: any) => v.pane !== 'subchart').length > 0 && (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 ml-[26px]">
-                    {indicatorValues.map((val: any) => (
+                    {indicatorValues.filter((v: any) => v.pane !== 'subchart').map((val: any) => (
                         <div key={val.id} className="flex items-center gap-1.5 bg-zinc-900/40 px-1.5 py-0.5 rounded border border-white/5 backdrop-blur-sm">
                             <span className="text-[9px] font-extrabold uppercase tracking-tight text-zinc-400">{val.name}</span>
                             <span
                                 className="text-[10px] font-bold font-mono"
+                                style={{ color: val.color }}
+                            >
+                                {val.value !== undefined && !isNaN(val.value) ? val.value.toFixed(2) : '···'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Bottom Row: Subchart Indicator Values (RSI) */}
+            {indicatorValues.filter((v: any) => v.pane === 'subchart').length > 0 && (
+                <div className="fixed top-[calc(75%+10px)] left-[calc(16px+64px+14px)] z-20 flex flex-wrap items-center gap-x-4 pointer-events-none">
+                    {indicatorValues.filter((v: any) => v.pane === 'subchart').map((val: any) => (
+                        <div key={val.id} className="flex items-center gap-1.5 bg-transparent px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-extrabold uppercase tracking-tight text-zinc-400 opacity-60">{val.name}</span>
+                            <span
+                                className="text-[11px] font-black font-mono shadow-sm"
                                 style={{ color: val.color }}
                             >
                                 {val.value !== undefined && !isNaN(val.value) ? val.value.toFixed(2) : '···'}

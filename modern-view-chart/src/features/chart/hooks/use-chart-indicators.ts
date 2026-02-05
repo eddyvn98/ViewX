@@ -9,53 +9,60 @@ import { SignalIndicator } from '../indicators/SignalIndicator';
 
 const EMPTY_INDICATORS: any[] = [];
 
+/* ❌ FIX 1: KHÔNG offset time lần nữa (đã offset ở data layer) */
+const formatCandles = (candles: Candle[]) =>
+    candles.map(c => ({
+        ...c,
+        time: c.time as any,
+    }));
+
 export function useChartIndicators(
     chartId: string,
-    chartRef: React.RefObject<IChartApi | null>,
+    priceChartRef: React.RefObject<IChartApi | null>,
+    subchartChartRef: React.RefObject<IChartApi | null>,
     seriesRef: React.RefObject<any>,
     candles: Candle[],
-    symbol: string | undefined
+    symbol: string | undefined,
+    timezone: string | undefined,
+    syncRange: () => void
 ) {
-    const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
+    const indicators = useMarketStore(
+        useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS)
+    );
     const addIndicators = useMarketStore(state => state.addIndicators);
 
-    // Map of indicator ID to instance
     const instancesRef = useRef<Record<string, any>>({});
     const defaultsAppliedRef = useRef(false);
 
-    // Initial default indicators if empty
+    /* ===== DEFAULT INDICATORS ===== */
     useEffect(() => {
         if (!symbol || defaultsAppliedRef.current || indicators.length > 0) return;
 
         addIndicators(chartId, [
-            {
-                type: 'EMA', params: { period: 25 }, color: '#9c27b0',
-                visible: true, lineWidth: 1, pane: 'main'
-            },
-            {
-                type: 'HMA', params: { period: 25 }, color: '#00bcd4',
-                visible: true, lineWidth: 2, pane: 'main'
-            },
-            {
-                type: 'RSI', params: { period: 14 }, color: '#7e57c2',
-                visible: true, lineWidth: 2, pane: 'rsi'
-            },
-            {
-                type: 'Signals', // Changed from 'HA' more descriptive
-                params: { upperLimit: 60, lowerLimit: 40 }, color: '#22c55e',
-                visible: true, lineWidth: 1, pane: 'main'
-            }
+            { type: 'EMA', params: { period: 25 }, color: '#9c27b0', visible: true, lineWidth: 1, pane: 'main' },
+            { type: 'HMA', params: { period: 25 }, color: '#00bcd4', visible: true, lineWidth: 2, pane: 'main' },
+            { type: 'RSI', params: { period: 14 }, color: '#f06292', visible: true, lineWidth: 2, pane: 'subchart' },
+            { type: 'Signals', params: { upperLimit: 60, lowerLimit: 40 }, color: '#22c55e', visible: true, lineWidth: 1, pane: 'main' },
         ]);
 
         defaultsAppliedRef.current = true;
     }, [chartId, symbol, indicators.length, addIndicators]);
 
+    /* ===== UPDATE INDICATORS ===== */
     useEffect(() => {
-        if (!chartRef.current || !seriesRef.current || !symbol || candles.length < 2) return;
-        const chart = chartRef.current;
-        const mainSeries = seriesRef.current;
+        if (
+            !priceChartRef.current ||
+            !subchartChartRef.current ||
+            !seriesRef.current ||
+            !symbol ||
+            candles.length < 2
+        )
+            return;
 
-        // Cleanup removed indicators
+        /* ❌ FIX 2: KHÔNG cộng offset time lần 2 */
+        const formattedCandles = formatCandles(candles);
+
+        /* Cleanup removed */
         const currentIds = new Set(indicators.map(i => i.id));
         Object.keys(instancesRef.current).forEach(id => {
             if (!currentIds.has(id)) {
@@ -64,49 +71,70 @@ export function useChartIndicators(
             }
         });
 
-        // Update or Create indicators
+        /* Create / Update */
         indicators.forEach(config => {
             let instance = instancesRef.current[config.id];
 
             if (!instance) {
+                const isSubchart = config.pane === 'subchart';
+                const targetChart = isSubchart
+                    ? subchartChartRef.current!
+                    : priceChartRef.current!;
+
                 switch (config.type) {
                     case 'EMA':
-                        instance = new EMAIndicator(chart, config);
+                        instance = new EMAIndicator(targetChart, config);
                         break;
                     case 'HMA':
-                        instance = new HMAIndicator(chart, config);
+                        instance = new HMAIndicator(targetChart, config);
                         break;
                     case 'RSI':
-                        instance = new RSIIndicator(chart, config);
+                        instance = new RSIIndicator(targetChart, config);
                         break;
-                    case 'Signals': // Strategies/Signals
-                        instance = new SignalIndicator(mainSeries, config);
+                    case 'Signals':
+                        instance = new SignalIndicator(seriesRef.current, config);
                         break;
                 }
-                if (instance) instancesRef.current[config.id] = instance;
+
+                if (instance) {
+                    instancesRef.current[config.id] = instance;
+                }
             }
 
             if (instance) {
-                instance.update(candles, config);
+                instance.update(formattedCandles, config);
             }
         });
 
-    }, [chartId, indicators, candles, symbol, chartRef, seriesRef]);
+        /* ❌ FIX 3: BẮT BUỘC sync range sau khi Subchart setData */
+        const hasSubchartIndicator = indicators.some(i => i.pane === 'subchart');
 
-    // Cleanup all on unmount
+        if (hasSubchartIndicator) {
+            requestAnimationFrame(() => {
+                setTimeout(syncRange, 0);
+            });
+        }
+
+
+
+    }, [
+        chartId,
+        indicators,
+        candles,
+        symbol,
+        priceChartRef,
+        subchartChartRef,
+        seriesRef,
+        syncRange,
+    ]);
+
+    /* ===== CLEANUP ===== */
     useEffect(() => {
         return () => {
-            const instances = instancesRef.current;
-            if (!instances) return;
-
-            Object.values(instances).forEach(inst => {
+            Object.values(instancesRef.current).forEach(inst => {
                 try {
-                    if (inst && typeof inst.destroy === 'function') {
-                        inst.destroy();
-                    }
-                } catch (err) {
-                    console.warn('[Indicators] Unmount cleanup failed:', err);
-                }
+                    inst?.destroy?.();
+                } catch { }
             });
             instancesRef.current = {};
         };

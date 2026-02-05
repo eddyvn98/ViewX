@@ -116,7 +116,7 @@ export interface IndicatorConfig {
     color: string;
     visible: boolean;
     lineWidth: number;
-    pane: 'main' | 'rsi';
+    pane: 'main' | 'rsi' | 'subchart';
 }
 
 export interface Alert {

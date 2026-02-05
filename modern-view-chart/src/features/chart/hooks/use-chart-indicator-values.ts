@@ -49,7 +49,8 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
                 type: config.type,
                 name: `${config.type} ${period}`,
                 value,
-                color: config.color
+                color: config.color,
+                pane: config.pane
             };
         }).filter(Boolean);
     }, [indicators, candles, activeIndex]);

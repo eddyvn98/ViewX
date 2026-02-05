@@ -36,12 +36,14 @@ export class EMAIndicator {
         const closePrices = candles.map(c => c.close);
         const emaValues = calculateEMA(closePrices, this.config.params.period);
 
-        const data = candles.map((c, i) => ({
-            time: c.time as any,
-            value: emaValues[i]
-        })).filter(d => !isNaN(d.value));
+        const data = candles
+            .map((c, i) => ({
+                time: c.time as any,
+                value: emaValues[i]
+            }))
+            .filter(d => !isNaN(d.value));
 
-        this.series.setData(data);
+        this.series.setData(data as any);
     }
 
     destroy() {
