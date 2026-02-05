@@ -54,8 +54,8 @@ export function useChartIndicators(
             !priceChartRef.current ||
             !subchartChartRef.current ||
             !seriesRef.current ||
-            !symbol ||
-            candles.length < 2
+            !seriesRef.current ||
+            !symbol
         )
             return;
 

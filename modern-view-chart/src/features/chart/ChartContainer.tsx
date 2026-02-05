@@ -11,6 +11,7 @@ import { useChartDraftOrder } from './hooks/use-chart-draft-order';
 import { useChartIndicators } from './hooks/use-chart-indicators';
 import { useChartAlerts } from './hooks/use-chart-alerts';
 import { useChartInteraction } from './hooks/use-chart-interaction';
+import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 
 import { ChartOverlay } from './components/ChartOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
@@ -98,6 +99,15 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         handleRemoveAlert
     );
 
+    useChartScaleReset(
+        priceChartRef,
+        subchartChartRef,
+        timescaleChartRef,
+        priceContainerRef,
+        subchartContainerRef,
+        timescaleContainerRef
+    );
+
     /* ================= CONTEXT MENU ================= */
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -137,6 +147,27 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                 interval={chartInstance?.interval}
                 source={chartInstance?.source}
                 candles={candles}
+                onReset={() => {
+                    if (priceChartRef.current) {
+                        const chart = priceChartRef.current;
+                        const subchart = subchartChartRef.current;
+
+                        // 1. Reset Price Scales for both charts
+                        chart.priceScale('right').applyOptions({ autoScale: true });
+                        if (subchart) {
+                            subchart.priceScale('right').applyOptions({ autoScale: true });
+                        }
+
+                        // 2. Fit Time Scale immediately
+                        chart.timeScale().fitContent();
+
+                        // 3. Fit again after a safe delay to allow layout (width) updates to settle
+                        // This mimics the human delay between clicks and handles the layout shift
+                        setTimeout(() => {
+                            chart.timeScale().fitContent();
+                        }, 100);
+                    }
+                }}
             />
 
             <PositionModifier />

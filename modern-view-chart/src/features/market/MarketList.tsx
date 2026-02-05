@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Trash2, Search, Star } from 'lucide-react';
 import React, { useMemo, useState, memo, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 
 const EMPTY_CHARTS: any = {};
 
@@ -97,7 +98,25 @@ interface MarketListProps {
 }
 
 function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
-    const tickers = useMarketStore(useShallow((state) => state.tickers));
+    const tickers = useStoreWithEqualityFn(
+        useMarketStore,
+        (state) => state.tickers,
+        (a, b) => {
+            if (mode === 'watchlist') {
+                return a === b;
+            }
+            // Discovery mode: only update if keys (symbols) change
+            const keysA = Object.keys(a);
+            const keysB = Object.keys(b);
+            if (keysA.length !== keysB.length) return false;
+
+            // Quick check for key existence
+            for (const key of keysA) {
+                if (!(key in b)) return false;
+            }
+            return true;
+        }
+    );
     const watchlist = useMarketStore((state) => state.watchlist);
     const addToWatchlist = useMarketStore((state) => state.addToWatchlist);
     const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);

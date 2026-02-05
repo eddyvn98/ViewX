@@ -26,10 +26,30 @@ export function useChartData(
     const candles = useMarketStore(state => (key ? state.candleData[key] : null) || EMPTY_CANDLES);
     const currentPrice = useMarketStore(state => symbol ? state.tickers[symbol]?.price : null);
 
+    const lastSymbolRef = useRef(symbol);
+
+    const lastKeyRef = useRef(key);
+
     // 1. Đồng bộ toàn bộ dữ liệu (History hoặc New Candle)
     useEffect(() => {
-        if (!seriesRef.current || !symbol || !interval || !source || candles.length === 0) {
-            if (candles.length === 0 && symbol && interval && source === 'MT5') {
+        if (!seriesRef.current || !symbol || !interval || !source) return;
+
+        // Reset chart khi thay đổi Context (Symbol, Interval, Source)
+        // Dùng key để định danh duy nhất
+        if (key !== lastKeyRef.current) {
+            seriesRef.current.setData([]);
+            subSyncRef.current?.setData([]);
+            timescaleSyncRef.current?.setData([]);
+
+            lastSymbolRef.current = symbol;
+            lastKeyRef.current = key;
+            isInitialMount.current = true; // Để lát nữa có data thì fitContent lại
+            lastDataLength.current = 0;
+        }
+
+        if (candles.length === 0) {
+            // Nếu chưa có data, request server
+            if (symbol && interval && source === 'MT5') {
                 sendMessage({
                     topic: "mt5_command",
                     command: "get_candles",

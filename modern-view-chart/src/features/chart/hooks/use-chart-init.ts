@@ -78,7 +78,7 @@ export function useChartInit(
             width: timescaleContainerRef.current.clientWidth,
             height: timescaleContainerRef.current.clientHeight,
             timeScale: { ...timeScaleOptions, visible: true },
-            rightPriceScale: { visible: false },
+            rightPriceScale: { visible: true, borderVisible: false, ticksVisible: false, minimumWidth: 80 },
             leftPriceScale: { visible: false },
             crosshair: {
                 vertLine: { visible: false, labelVisible: true },
@@ -143,10 +143,45 @@ export function useChartInit(
         subTS.subscribeVisibleLogicalRangeChange(syncTime);
         footTS.subscribeVisibleLogicalRangeChange(syncTime);
 
+        /* ================= SYNC LAYOUT WIDTH ================= */
+        let syncRequestId: number | null = null;
+        let lastMaxW = 80;
+
+        const autoSyncLayout = () => {
+            if (syncRequestId !== null) return;
+
+            syncRequestId = requestAnimationFrame(() => {
+                syncRequestId = null;
+
+                // Check if charts are still valid
+                if (!priceContainerRef.current || !subchartContainerRef.current) return;
+
+                const priceW = priceChart.priceScale('right').width();
+                const subW = subchartChart.priceScale('right').width();
+                const maxW = Math.max(priceW, subW, 80);
+
+                if (Math.abs(maxW - lastMaxW) > 1) {
+                    lastMaxW = maxW;
+                    const opt = { rightPriceScale: { minimumWidth: maxW } };
+                    priceChart.applyOptions(opt);
+                    subchartChart.applyOptions(opt);
+                    timescaleChart.applyOptions(opt);
+                }
+            });
+        };
+
+        // Subscribe to events that might change the price scale width
+        priceTS.subscribeVisibleLogicalRangeChange(autoSyncLayout);
+        subTS.subscribeVisibleLogicalRangeChange(autoSyncLayout);
+
+        // Run initially
+        setTimeout(autoSyncLayout, 50);
+
         const resizeObserver = new ResizeObserver(() => {
             if (priceContainerRef.current) priceChart.applyOptions({ width: priceContainerRef.current.clientWidth, height: priceContainerRef.current.clientHeight });
             if (subchartContainerRef.current) subchartChart.applyOptions({ width: subchartContainerRef.current.clientWidth, height: subchartContainerRef.current.clientHeight });
             if (timescaleContainerRef.current) timescaleChart.applyOptions({ width: timescaleContainerRef.current.clientWidth, height: timescaleContainerRef.current.clientHeight });
+            autoSyncLayout();
         });
 
         if (priceContainerRef.current) resizeObserver.observe(priceContainerRef.current);
@@ -159,6 +194,7 @@ export function useChartInit(
         timescaleSyncRef.current = footSyncSeries as any;
 
         return () => {
+            if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
             resizeObserver.disconnect();
             priceChart.remove();
             subchartChart.remove();

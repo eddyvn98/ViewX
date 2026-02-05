@@ -10,40 +10,42 @@ const EMPTY_INDICATORS: any[] = [];
 export function useChartIndicatorValues(chartId: string, candles: Candle[], activeIndex: number) {
     const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
 
-    return useMemo(() => {
-        if (!indicators.length || !candles.length || activeIndex < 0) return [];
+    // 1. Calculate full series data only when candles or indicators config change
+    const calculatedIndicators = useMemo(() => {
+        if (!indicators.length || !candles.length) return [];
 
         return indicators.map(config => {
             if (!config.visible) return null;
-
-            let value: number = NaN;
             const period = config.params.period || 14;
+            let results: (number | null)[] = [];
 
             try {
+                const prices = candles.map(c => c.close);
                 switch (config.type) {
-                    case 'EMA': {
-                        const prices = candles.map(c => c.close);
-                        const results = calculateEMA(prices, period);
-                        value = results[activeIndex];
+                    case 'EMA':
+                        results = calculateEMA(prices, period);
                         break;
-                    }
-                    case 'HMA': {
-                        const prices = candles.map(c => c.close);
-                        const results = calculateHullMA(prices, period);
-                        value = results[activeIndex];
+                    case 'HMA':
+                        results = calculateHullMA(prices, period);
                         break;
-                    }
-                    case 'RSI': {
-                        const prices = candles.map(c => c.close);
-                        const results = calculateRSI(prices, period);
-                        value = results[activeIndex];
+                    case 'RSI':
+                        results = calculateRSI(prices, period);
                         break;
-                    }
                 }
             } catch (e) {
                 console.error(`Indicator calc error (${config.type}):`, e);
             }
 
+            return { config, results, period };
+        }).filter(Boolean) as { config: any, results: (number | null)[], period: number }[];
+    }, [indicators, candles]);
+
+    // 2. Cheap lookup when activeIndex changes (mouse move)
+    return useMemo(() => {
+        if (activeIndex < 0 || !calculatedIndicators.length) return [];
+
+        return calculatedIndicators.map(({ config, results, period }) => {
+            const value = results[activeIndex] ?? NaN;
             return {
                 id: config.id,
                 type: config.type,
@@ -52,6 +54,6 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
                 color: config.color,
                 pane: config.pane
             };
-        }).filter(Boolean);
-    }, [indicators, candles, activeIndex]);
+        });
+    }, [calculatedIndicators, activeIndex]);
 }

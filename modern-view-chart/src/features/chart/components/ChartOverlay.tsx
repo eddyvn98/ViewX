@@ -2,6 +2,7 @@ import { useChartOHLC } from '../hooks/use-chart-ohlc';
 import { useMarketStore, Candle } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useChartIndicatorValues } from '../hooks/use-chart-indicator-values';
+import { Maximize2 } from 'lucide-react';
 
 interface ChartOverlayProps {
     chartId: string;
@@ -9,9 +10,10 @@ interface ChartOverlayProps {
     interval?: string;
     source?: string;
     candles: Candle[];
+    onReset?: () => void;
 }
 
-export function ChartOverlay({ chartId, symbol, interval, source, candles }: ChartOverlayProps) {
+export function ChartOverlay({ chartId, symbol, interval, source, candles, onReset }: ChartOverlayProps) {
     const data = useChartOHLC(symbol, interval, source);
     const indicatorValues = useChartIndicatorValues(chartId, candles, data?.activeIndex ?? -1);
 
@@ -63,6 +65,16 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles }: Cha
                         <span className="text-[10px]">({isPositive ? '+' : ''}{data.change.toFixed(2)}%)</span>
                     </div>
                 </div>
+
+                {onReset && (
+                    <button
+                        onClick={onReset}
+                        className="pointer-events-auto p-1.5 hover:bg-white/10 rounded-md text-zinc-400 hover:text-zinc-200 transition-colors ml-2"
+                        title="Reset Chart Scale (Auto Fit)"
+                    >
+                        <Maximize2 size={14} strokeWidth={2.5} />
+                    </button>
+                )}
             </div>
 
             {/* Top Row: Main Indicator Values */}
