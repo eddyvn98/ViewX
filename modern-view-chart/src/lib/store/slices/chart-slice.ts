@@ -39,7 +39,7 @@ export const createChartSlice: StateCreator<
             interval: interval || '15',
             group: 'none',
             source,
-            timezone: 'Etc/UTC',
+            timezone: 'Asia/Ho_Chi_Minh',
             chartType: 'candles'
         };
 

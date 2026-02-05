@@ -16,7 +16,7 @@ import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 import { ChartOverlay } from './components/ChartOverlay';
 import { SubchartLegend } from './components/SubchartLegend';
 import { PositionModifier } from '../terminal/components/PositionModifier';
-import { Bell, BellOff, X } from 'lucide-react';
+import { Bell, BellOff, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 const EMPTY_CANDLES: any[] = [];
 
@@ -43,7 +43,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
     const symbol = chartInstance?.symbol;
     const interval = chartInstance?.interval;
     const source = chartInstance?.source;
-    const timezone = chartInstance?.timezone || 'Etc/UTC';
+    const timezone = chartInstance?.timezone || 'Asia/Ho_Chi_Minh';
 
     const normSymbol =
         (symbol || '').toLowerCase().endsWith('m')
@@ -187,6 +187,73 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         return () => container.removeEventListener('wheel', handleWheel);
     }, [chartId, toggleIndicatorVisibility]);
 
+    const [isSubchartVisible, setIsSubchartVisible] = useState(true);
+
+    // Dynamic margin adjustment to keep candles above the subchart overlay
+    useEffect(() => {
+        if (!priceChartRef.current) return;
+
+        const bottomMargin = isSubchartVisible ? 0.32 : 0.08; // 32% if overlay (25%) is visible
+        priceChartRef.current.priceScale('right').applyOptions({
+            scaleMargins: {
+                top: 0.08,
+                bottom: bottomMargin
+            }
+        });
+    }, [isSubchartVisible, priceChartRef]);
+
+    // Apply Timezone to Chart Localization & Scale
+    useEffect(() => {
+        if (!priceChartRef.current || !timezone) return;
+
+        const timeFormatter = (timestamp: number) => {
+            return new Intl.DateTimeFormat('en-GB', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            }).format(timestamp * 1000).replace(',', '');
+        };
+
+        const tickMarkFormatter = (time: number) => {
+            const date = new Date(time * 1000);
+            return new Intl.DateTimeFormat('en-GB', {
+                timeZone: timezone,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            }).format(date);
+        };
+
+        const localizationOptions = {
+            localization: {
+                timeFormatter,
+            },
+        };
+
+        const timeScaleOptions = {
+            timeScale: {
+                tickMarkFormatter,
+            },
+        };
+
+        priceChartRef.current.applyOptions(localizationOptions);
+        (priceChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+
+        if (subchartChartRef.current) {
+            subchartChartRef.current.applyOptions(localizationOptions);
+            (subchartChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+        }
+
+        if (timescaleChartRef.current) {
+            timescaleChartRef.current.applyOptions(localizationOptions);
+            (timescaleChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+        }
+    }, [timezone, priceChartRef, subchartChartRef, timescaleChartRef]);
+
     return (
         <div
             className="w-full h-full relative flex flex-col bg-[#131722]"
@@ -224,24 +291,44 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
 
             <PositionModifier />
 
-            {/* PRICE CHART */}
-            <div className="flex-[3] relative min-h-0">
-                <div ref={priceContainerRef} className="w-full h-full" />
-            </div>
-
-            <div className="h-[1px] bg-zinc-800" />
-
-            {/* RSI SUBCHART */}
+            {/* MAIN CHART AREA WITH OVERLAY */}
             <div className="flex-1 relative min-h-0">
-                <SubchartLegend
-                    chartId={chartId}
-                    symbol={chartInstance?.symbol}
-                    interval={chartInstance?.interval}
-                    source={chartInstance?.source}
-                    candles={candles}
-                    currentPrice={currentPrice}
-                />
-                <div ref={subchartContainerRef} className="w-full h-full" />
+                {/* PRICE CHART (Main) - Always background */}
+                <div ref={priceContainerRef} className="w-full h-full" />
+
+                {/* TOGGLE SUBCHART BUTTON - Integrated Tab Style */}
+                <button
+                    onClick={() => setIsSubchartVisible(!isSubchartVisible)}
+                    className={`absolute right-[80px] z-30 px-3 py-1.5 rounded-t-md border border-b-0 transition-all duration-300 flex items-center gap-2 backdrop-blur-md ${isSubchartVisible
+                        ? 'bottom-[25%] bg-[#1e222d]/80 border-blue-500/20 text-[#787b86] hover:text-blue-400 hover:bg-[#2a2e39]'
+                        : 'bottom-0 bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-[0_-5px_15px_rgba(59,130,246,0.1)]'
+                        }`}
+                    style={{ marginRight: '-1px' }}
+                >
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                        {isSubchartVisible ? 'Hide' : 'Show Indicator'}
+                    </span>
+                    {isSubchartVisible ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                </button>
+
+                {/* RSI SUBCHART (Overlay) - Floating at bottom */}
+                <div
+                    className={`absolute bottom-0 left-0 right-0 h-[25%] min-h-[100px] z-10 bg-[#131722]/50 backdrop-blur-md border-t border-blue-500/30 shadow-[0_-10px_20px_rgba(0,0,0,0.5)] transition-all duration-300 transform ${isSubchartVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+                        }`}
+                >
+                    {/* Visual Border Highlight */}
+                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+
+                    <SubchartLegend
+                        chartId={chartId}
+                        symbol={chartInstance?.symbol}
+                        interval={chartInstance?.interval}
+                        source={chartInstance?.source}
+                        candles={candles}
+                        currentPrice={currentPrice}
+                    />
+                    <div ref={subchartContainerRef} className="w-full h-full" />
+                </div>
             </div>
 
             <div className="h-[1px] bg-zinc-800" />

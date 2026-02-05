@@ -109,20 +109,17 @@ export function OrderForm() {
     };
 
     return (
-        <div className="flex-[1.5] min-w-[320px] bg-[#1e222d] border border-zinc-800 rounded-xl flex flex-col overflow-hidden shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-                <div className="flex items-center gap-2">
-                    <img src="https://bin.bnbstatic.com/static/images/common/favicon.ico" className="w-4 h-4 rounded-full opacity-80" alt="" />
-                    <span className="font-bold text-white text-sm">{symbol.replace('m', '')}</span>
-                    <span className={cn("ml-2 text-[9px] font-black px-1.5 py-0.5 rounded border border-white/5", isCrypto ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500")}>
-                        {isCrypto ? 'BINANCE' : 'MT5'}
-                    </span>
+        <div className="flex-1 bg-[#131722] flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-900">
+                    <div className="flex items-center gap-2">
+                        <span className="font-black text-white text-lg tracking-tighter">{symbol.replace('m', '')}</span>
+                        <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded border border-white/5", isCrypto ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500")}>
+                            {isCrypto ? 'BINANCE' : 'MT5'}
+                        </span>
+                    </div>
                 </div>
-                <X size={18} className="text-zinc-500 hover:text-white cursor-pointer" />
-            </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
                 <OrderTypeTabs orderType={orderType} setOrderType={setOrderType} />
 
                 <SideButtons

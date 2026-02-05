@@ -30,7 +30,15 @@ export function TimezoneSelector() {
     const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
     const setChartTimezone = useMarketStore(state => state.setChartTimezone);
 
-    const currentTimezone = activeChart?.timezone || 'Etc/UTC';
+    const currentTimezone = activeChart?.timezone || 'Asia/Ho_Chi_Minh';
+
+    const displayLabel = useMemo(() => {
+        const tz = POPULAR_TIMEZONES.find(t => t.id === currentTimezone);
+        if (!tz) return 'UTC';
+        // Extract UTC+X part if exists, else the first part of label
+        const match = tz.label.match(/\(([^)]+)\)/);
+        return match ? match[1] : tz.label.split(' ')[0];
+    }, [currentTimezone]);
 
     const filteredTimezones = useMemo(() => {
         if (!search) return POPULAR_TIMEZONES;
@@ -54,15 +62,15 @@ export function TimezoneSelector() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "flex items-center gap-1.5 px-2 py-1 round-md transition-colors",
+                    "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors",
                     "text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/50",
                     isOpen && "bg-zinc-800/50 text-white"
                 )}
-                title="Change Chart Timezone"
+                title={`Current Timezone: ${currentTimezone}`}
             >
                 <Globe className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[80px]">
-                    {POPULAR_TIMEZONES.find(tz => tz.id === currentTimezone)?.label.split(' ')[0] || 'UTC'}
+                    {displayLabel}
                 </span>
             </button>
 

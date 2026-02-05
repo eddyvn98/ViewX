@@ -50,7 +50,7 @@ export function RightSidebar() {
                 <div className={cn("flex-1 min-h-0", activeTab === 'strategy' ? "flex flex-col" : "hidden")}>
                     <StrategyPanel />
                 </div>
-                <div className={cn("flex-1 p-4 overflow-y-auto custom-scrollbar min-h-0", activeTab === 'trade' ? "block" : "hidden")}>
+                <div className={cn("flex-1 overflow-y-auto custom-scrollbar min-h-0", activeTab === 'trade' ? "block" : "hidden")}>
                     <OrderForm />
                 </div>
             </div>

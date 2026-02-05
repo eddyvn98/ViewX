@@ -106,9 +106,12 @@ export function useChartData(
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                 subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
 
-                // Scroll to the last REAL candle, then let rightOffset show future points
-                chartRef.current?.timeScale().scrollToPosition(0, false);
-                chartRef.current?.timeScale().scrollToRealTime();
+                // Fit content first to get a reasonable zoom level, then scroll to the end
+                // Use a small timeout to ensure data rendering has stabilized
+                requestAnimationFrame(() => {
+                    chartRef.current?.timeScale().fitContent();
+                    chartRef.current?.timeScale().scrollToRealTime();
+                });
 
                 isInitialMount.current = false;
             }

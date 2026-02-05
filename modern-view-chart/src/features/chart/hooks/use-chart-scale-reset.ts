@@ -50,7 +50,8 @@ export function useChartScaleReset(
         const handleTimeScaleDblClick = () => {
             const chart = priceChartRef.current;
             if (chart) {
-                chart.timeScale().fitContent();
+                // Focus on the most recent candles rather than zooming out to all history
+                chart.timeScale().scrollToRealTime();
             }
         };
 

@@ -61,6 +61,7 @@ export function useChartInit(
         /* ================= RSI SUBCHART ================= */
         const subchartChart = createChart(subchartContainerRef.current, {
             ...commonOptions,
+            layout: { ...commonOptions.layout, background: { color: 'transparent' } },
             width: subchartContainerRef.current.clientWidth,
             height: subchartContainerRef.current.clientHeight,
             timeScale: { ...commonOptions.timeScale, visible: false },

@@ -17,7 +17,7 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
             id: 'default-tab',
             name: 'Workspace 1',
             charts: {
-                'default': { id: 'default', symbol: 'BTCUSDm', interval: '15', source: 'MT5', group: 'A', chartType: 'candles' }
+                'default': { id: 'default', symbol: 'BTCUSDm', interval: '15', source: 'MT5', group: 'A', chartType: 'candles', timezone: 'Asia/Ho_Chi_Minh' }
             },
             activeChartId: 'default',
             maximizedChartId: null,
@@ -32,7 +32,7 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
             id,
             name: name || `Workspace ${Object.keys(state.tabs).length + 1}`,
             charts: {
-                [`chart-${id}-1`]: { id: `chart-${id}-1`, symbol: 'BTCUSDm', interval: '15', source: 'MT5', group: 'A', chartType: 'candles' }
+                [`chart-${id}-1`]: { id: `chart-${id}-1`, symbol: 'BTCUSDm', interval: '15', source: 'MT5', group: 'A', chartType: 'candles', timezone: 'Asia/Ho_Chi_Minh' }
             },
             activeChartId: `chart-${id}-1`,
             maximizedChartId: null,
