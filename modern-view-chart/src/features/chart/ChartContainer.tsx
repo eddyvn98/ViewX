@@ -14,6 +14,7 @@ import { useChartInteraction } from './hooks/use-chart-interaction';
 import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 
 import { ChartOverlay } from './components/ChartOverlay';
+import { SubchartLegend } from './components/SubchartLegend';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { Bell, BellOff, X } from 'lucide-react';
 
@@ -22,6 +23,7 @@ const EMPTY_CANDLES: any[] = [];
 export const ChartContainer = memo(function ChartContainer({ chartId }: { chartId: string }) {
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
+    const toggleIndicatorVisibility = useMarketStore(state => state.toggleIndicatorVisibility);
 
     const [contextMenu, setContextMenu] = useState<{
         visible: boolean;
@@ -48,6 +50,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
             ? symbol!.replace(/[mM]$/, 'm')
             : symbol;
 
+    const currentPrice = useMarketStore(state => symbol ? state.tickers[symbol]?.price : undefined);
+
     const key = `${source}:${normSymbol}:${interval}`;
     const candles = useMarketStore((state) => state.candleData[key] || EMPTY_CANDLES);
 
@@ -60,7 +64,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef);
 
     /* ================= DATA ================= */
-    useChartData(chartId, symbol, interval, source, priceChartRef, seriesRef, subSyncRef, timescaleSyncRef);
+    useChartData(chartId, symbol, interval, source, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef);
 
     /* ================= OVERLAYS ================= */
     // useChartCrosshair(chartId, priceChartRef, seriesRef);
@@ -77,7 +81,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         candles,
         symbol,
         timezone,
-        syncRange
+        syncRange,
+        currentPrice
     );
 
     /* ================= ALERTS ================= */
@@ -136,6 +141,52 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         return () => window.removeEventListener('click', close);
     }, []);
 
+    const lastSwitchRef = useRef<number>(0);
+
+    // Prevent page scroll when wheeling over subchart to switch indicators
+    useEffect(() => {
+        const container = subchartContainerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
+            const subchartIndicators = indicators.filter(i => i.pane === 'subchart');
+            if (subchartIndicators.length <= 1) return;
+
+            // block page scroll early if we have multiple indicators
+            e.preventDefault();
+            e.stopPropagation();
+
+            const now = Date.now();
+            // Threshold: 200ms between switches and significant deltaY to avoid hair-trigger
+            if (now - lastSwitchRef.current < 200 || Math.abs(e.deltaY) < 20) return;
+
+            const visibleIndex = subchartIndicators.findIndex(i => i.visible);
+            if (e.deltaY === 0) return;
+            const direction = e.deltaY > 0 ? 1 : -1;
+
+            let nextIndex = visibleIndex + direction;
+            if (nextIndex >= subchartIndicators.length) nextIndex = 0;
+            if (nextIndex < 0) nextIndex = subchartIndicators.length - 1;
+
+            if (nextIndex !== visibleIndex) {
+                lastSwitchRef.current = now;
+                if (visibleIndex !== -1) {
+                    toggleIndicatorVisibility(chartId, subchartIndicators[visibleIndex].id);
+                }
+                toggleIndicatorVisibility(chartId, subchartIndicators[nextIndex].id);
+
+                // Auto-fit the new indicator scale so it's always centered
+                requestAnimationFrame(() => {
+                    subchartChartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                });
+            }
+        };
+
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
+    }, [chartId, toggleIndicatorVisibility]);
+
     return (
         <div
             className="w-full h-full relative flex flex-col bg-[#131722]"
@@ -147,6 +198,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                 interval={chartInstance?.interval}
                 source={chartInstance?.source}
                 candles={candles}
+                currentPrice={currentPrice}
                 onReset={() => {
                     if (priceChartRef.current) {
                         const chart = priceChartRef.current;
@@ -181,6 +233,14 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
 
             {/* RSI SUBCHART */}
             <div className="flex-1 relative min-h-0">
+                <SubchartLegend
+                    chartId={chartId}
+                    symbol={chartInstance?.symbol}
+                    interval={chartInstance?.interval}
+                    source={chartInstance?.source}
+                    candles={candles}
+                    currentPrice={currentPrice}
+                />
                 <div ref={subchartContainerRef} className="w-full h-full" />
             </div>
 

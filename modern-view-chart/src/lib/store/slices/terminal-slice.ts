@@ -88,7 +88,7 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     editingPosition: null, // Initialized
     draggingPosition: null, // Initialized
     isTerminalVisible: true,
-    isTerminalCollapsed: false,
+    isTerminalCollapsed: true,
     terminalHeight: 300,
     hoveredTicket: null,
 

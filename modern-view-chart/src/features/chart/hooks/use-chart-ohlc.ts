@@ -11,7 +11,8 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
     return useMemo(() => {
         if (!symbol || !interval || !source) return null;
 
-        const key = `${source}:${symbol}:${interval}`;
+        const normSymbol = symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
+        const key = `${source}:${normSymbol}:${interval}`;
         const candles = candleData[key] || [];
         if (candles.length === 0) return null;
 
@@ -30,12 +31,20 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
         const ticker = tickers[symbol];
 
         // Determine price and changes
-        // If live, use ticker price for "close", otherwise use candle close
-        const close = (isLive && ticker?.price) ? ticker.price : activeCandle.close;
+        let open = activeCandle.open;
+        let high = activeCandle.high;
+        let low = activeCandle.low;
+        let close = activeCandle.close;
+
+        if (isLive && ticker?.price) {
+            close = ticker.price;
+            if (close > high) high = close;
+            if (close < low) low = close;
+        }
 
         // Calculate the change relative to the candle's open (OHLC Change)
-        const changeValue = close - activeCandle.open;
-        const change = activeCandle.open !== 0 ? (changeValue / activeCandle.open * 100) : 0;
+        const changeValue = close - open;
+        const change = open !== 0 ? (changeValue / open * 100) : 0;
 
         // Find index for indicators
         const activeIndex = crosshairPoint?.time
@@ -43,9 +52,9 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
             : candles.length - 1;
 
         return {
-            open: activeCandle.open,
-            high: activeCandle.high,
-            low: activeCandle.low,
+            open,
+            high,
+            low,
             close,
             change,
             changeValue,

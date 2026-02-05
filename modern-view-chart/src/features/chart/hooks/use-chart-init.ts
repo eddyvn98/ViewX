@@ -26,15 +26,20 @@ export function useChartInit(
             layout: { background: { color: '#131722' }, textColor: '#d4d4d8' },
             grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
             crosshair: { mode: 1 },
-        };
-
-        const timeScaleOptions = {
-            visible: true,
-            timeVisible: true,
-            secondsVisible: false,
-            borderVisible: false,
-            rightBarStaysOnScroll: true,
-            barSpacing: 10,
+            timeScale: {
+                rightOffset: 40, // Khoảng trống sau 100 nến trắng tương lai
+                barSpacing: 10,
+                fixLeftEdge: true,
+                fixRightEdge: false, // Cho phép kéo chart về phía tương lai
+                lockVisibleTimeRangeOnResize: true,
+                rightBarStaysOnScroll: false, // Cho phép scroll xa khỏi nến cuối cùng
+                borderVisible: false,
+                borderColor: "#2B2B43",
+                visible: true,
+                timeVisible: true,
+                secondsVisible: false,
+                shiftVisibleRangeOnNewBar: true,
+            },
         };
 
         /* ================= PRICE CHART ================= */
@@ -42,7 +47,7 @@ export function useChartInit(
             ...commonOptions,
             width: priceContainerRef.current.clientWidth,
             height: priceContainerRef.current.clientHeight,
-            timeScale: { ...timeScaleOptions, visible: false },
+            timeScale: { ...commonOptions.timeScale, visible: false },
             rightPriceScale: {
                 visible: true,
                 scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -58,7 +63,7 @@ export function useChartInit(
             ...commonOptions,
             width: subchartContainerRef.current.clientWidth,
             height: subchartContainerRef.current.clientHeight,
-            timeScale: { ...timeScaleOptions, visible: false },
+            timeScale: { ...commonOptions.timeScale, visible: false },
             rightPriceScale: {
                 visible: true,
                 autoScale: true,
@@ -66,7 +71,7 @@ export function useChartInit(
                 borderVisible: true,
                 minimumWidth: 80,
             },
-            handleScale: { mouseWheel: true, axisPressedMouseMove: { price: true, time: true } as any },
+            handleScale: { mouseWheel: false, axisPressedMouseMove: { price: true, time: true } as any },
             handleScroll: true,
         });
 
@@ -77,7 +82,7 @@ export function useChartInit(
             grid: { vertLines: { visible: false }, horzLines: { visible: false } },
             width: timescaleContainerRef.current.clientWidth,
             height: timescaleContainerRef.current.clientHeight,
-            timeScale: { ...timeScaleOptions, visible: true },
+            timeScale: { ...commonOptions.timeScale, visible: true },
             rightPriceScale: { visible: true, borderVisible: false, ticksVisible: false, minimumWidth: 80 },
             leftPriceScale: { visible: false },
             crosshair: {

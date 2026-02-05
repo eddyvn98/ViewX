@@ -111,7 +111,7 @@ export type RightSidebarTab = 'market' | 'indicators' | 'strategy' | 'trade';
 
 export interface IndicatorConfig {
     id: string;
-    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SMA' | 'WMA';
+    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SMA' | 'WMA' | 'MACD';
     params: Record<string, any>;
     color: string;
     visible: boolean;

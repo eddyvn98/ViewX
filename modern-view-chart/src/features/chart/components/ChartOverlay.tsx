@@ -10,12 +10,13 @@ interface ChartOverlayProps {
     interval?: string;
     source?: string;
     candles: Candle[];
+    currentPrice?: number;
     onReset?: () => void;
 }
 
-export function ChartOverlay({ chartId, symbol, interval, source, candles, onReset }: ChartOverlayProps) {
+export function ChartOverlay({ chartId, symbol, interval, source, candles, currentPrice, onReset }: ChartOverlayProps) {
     const data = useChartOHLC(symbol, interval, source);
-    const indicatorValues = useChartIndicatorValues(chartId, candles, data?.activeIndex ?? -1);
+    const indicatorValues = useChartIndicatorValues(chartId, candles, data?.activeIndex ?? -1, currentPrice);
 
     if (!data) return null;
 
@@ -87,29 +88,14 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles, onRes
                                 className="text-[10px] font-bold font-mono"
                                 style={{ color: val.color }}
                             >
-                                {val.value !== undefined && !isNaN(val.value) ? val.value.toFixed(2) : '···'}
+                                {val.value}
                             </span>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Bottom Row: Subchart Indicator Values (RSI) */}
-            {indicatorValues.filter((v: any) => v.pane === 'subchart').length > 0 && (
-                <div className="fixed top-[calc(75%+10px)] left-[calc(16px+64px+14px)] z-20 flex flex-wrap items-center gap-x-4 pointer-events-none">
-                    {indicatorValues.filter((v: any) => v.pane === 'subchart').map((val: any) => (
-                        <div key={val.id} className="flex items-center gap-1.5 bg-transparent px-1.5 py-0.5 rounded">
-                            <span className="text-[10px] font-extrabold uppercase tracking-tight text-zinc-400 opacity-60">{val.name}</span>
-                            <span
-                                className="text-[11px] font-black font-mono shadow-sm"
-                                style={{ color: val.color }}
-                            >
-                                {val.value !== undefined && !isNaN(val.value) ? val.value.toFixed(2) : '···'}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            )}
+            {/* Bottom Row: Subchart Indicator Values (RSI) - REMOVED, now handled by SubchartLegend */}
         </div>
     );
 }

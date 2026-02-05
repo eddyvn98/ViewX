@@ -100,6 +100,16 @@ export function Terminal() {
         setIsMounted(true);
     }, []);
 
+    // Auto-scroll when expanding terminal to show user it has opened
+    useEffect(() => {
+        if (!isCollapsed && isMounted) {
+            // Wait a frame for height to apply, then scroll
+            requestAnimationFrame(() => {
+                window.scrollBy({ top: 100, behavior: 'smooth' });
+            });
+        }
+    }, [isCollapsed, isMounted]);
+
     if (!isMounted) {
         return <div className="h-full bg-[#131722]" />;
     }

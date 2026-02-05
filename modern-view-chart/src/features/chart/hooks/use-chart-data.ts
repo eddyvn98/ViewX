@@ -11,6 +11,7 @@ export function useChartData(
     interval: string | undefined,
     source: string | undefined,
     chartRef: React.RefObject<IChartApi | null>,
+    subchartRef: React.RefObject<IChartApi | null>,
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>
@@ -69,19 +70,46 @@ export function useChartData(
             close: Number(c.close),
         }));
 
-        // Luôn ghi nhớ mốc thời gian cuối cùng để so sánh
+        // Calculate time step for future whitespace points
+        let timeStep = 60; // default 1 min
+        if (formatted.length > 1) {
+            timeStep = Number(formatted[formatted.length - 1].time) - Number(formatted[formatted.length - 2].time);
+        }
+
+        // Generate future whitespace points (at least 100 bars)
         const lastT = Number(formatted[formatted.length - 1].time);
         lastTimeRef.current = lastT;
+        const futurePoints: any[] = [];
+        for (let i = 1; i <= 100; i++) {
+            futurePoints.push({ time: (lastT + timeStep * i) as Time });
+        }
 
         if (isInitialMount.current || candles.length !== lastDataLength.current) {
+            // 1. Series chính: KHÔNG thêm futurePoints để hàm update() real-time hoạt động được
+            // (Lightweight-charts không cho update nến cũ nếu đã có nến tương lai trong series)
             seriesRef.current.setData(formatted);
 
+            // 2. Subchart Sync: Cũng không thêm để đảm bảo đồng bộ update
             const timeOnly = formatted.map(f => ({ time: f.time, value: 0 }));
             subSyncRef.current?.setData(timeOnly as any);
-            timescaleSyncRef.current?.setData(timeOnly as any);
+
+            // 3. Timescale Footer: THÊM futurePoints vào đây để hiện labels ở vùng tương lai
+            // Vì series này chỉ để hiện timescale nên không cần update() real-time nhảy múa
+            const footerData = [
+                ...timeOnly,
+                ...futurePoints.map(p => ({ time: p.time })) // Whitespace points (no value)
+            ];
+            timescaleSyncRef.current?.setData(footerData as any);
 
             if (isInitialMount.current && formatted.length > 0) {
-                chartRef.current?.timeScale().fitContent();
+                // Reset Price Scale to Auto
+                chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+
+                // Scroll to the last REAL candle, then let rightOffset show future points
+                chartRef.current?.timeScale().scrollToPosition(0, false);
+                chartRef.current?.timeScale().scrollToRealTime();
+
                 isInitialMount.current = false;
             }
         }

@@ -6,6 +6,7 @@ import { EMAIndicator } from '../indicators/EMAIndicator';
 import { HMAIndicator } from '../indicators/HMAIndicator';
 import { RSIIndicator } from '../indicators/RSIIndicator';
 import { SignalIndicator } from '../indicators/SignalIndicator';
+import { MACDIndicator } from '../indicators/MACDIndicator';
 
 const EMPTY_INDICATORS: any[] = [];
 
@@ -24,7 +25,8 @@ export function useChartIndicators(
     candles: Candle[],
     symbol: string | undefined,
     timezone: string | undefined,
-    syncRange: () => void
+    syncRange: () => void,
+    currentPrice?: number
 ) {
     const indicators = useMarketStore(
         useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS)
@@ -42,6 +44,7 @@ export function useChartIndicators(
             { type: 'EMA', params: { period: 25 }, color: '#9c27b0', visible: true, lineWidth: 1, pane: 'main' },
             { type: 'HMA', params: { period: 25 }, color: '#00bcd4', visible: true, lineWidth: 2, pane: 'main' },
             { type: 'RSI', params: { period: 14 }, color: '#f06292', visible: true, lineWidth: 2, pane: 'subchart' },
+            { type: 'MACD', params: { fast: 12, slow: 26, signal: 9 }, color: '#2962FF', visible: false, lineWidth: 1, pane: 'subchart' },
             { type: 'Signals', params: { upperLimit: 60, lowerLimit: 40 }, color: '#22c55e', visible: true, lineWidth: 1, pane: 'main' },
         ]);
 
@@ -60,7 +63,21 @@ export function useChartIndicators(
             return;
 
         /* ❌ FIX 2: KHÔNG cộng offset time lần 2 */
-        const formattedCandles = formatCandles(candles);
+        // Create effective candles with live price for real-time indicator updates
+        let effectiveCandles = candles;
+        if (currentPrice !== undefined && candles.length > 0) {
+            const lastIdx = candles.length - 1;
+            const lastCandle = candles[lastIdx];
+            const updatedLastCandle = {
+                ...lastCandle,
+                close: currentPrice,
+                high: Math.max(lastCandle.high, currentPrice),
+                low: Math.min(lastCandle.low, currentPrice),
+            };
+            effectiveCandles = [...candles.slice(0, lastIdx), updatedLastCandle];
+        }
+
+        const formattedCandles = formatCandles(effectiveCandles);
 
         /* Cleanup removed */
         const currentIds = new Set(indicators.map(i => i.id));
@@ -90,6 +107,9 @@ export function useChartIndicators(
                         break;
                     case 'RSI':
                         instance = new RSIIndicator(targetChart, config);
+                        break;
+                    case 'MACD':
+                        instance = new MACDIndicator(targetChart, config);
                         break;
                     case 'Signals':
                         instance = new SignalIndicator(seriesRef.current, config);
@@ -125,7 +145,9 @@ export function useChartIndicators(
         priceChartRef,
         subchartChartRef,
         seriesRef,
+        seriesRef,
         syncRange,
+        currentPrice,
     ]);
 
     /* ===== CLEANUP ===== */
