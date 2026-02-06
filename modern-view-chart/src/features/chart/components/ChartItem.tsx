@@ -1,10 +1,10 @@
 'use client';
 
+import React, { useState, useRef, useEffect } from 'react';
 import { Maximize2, ExternalLink, X, Link } from 'lucide-react';
 import { useMarketStore, ChartInstance } from '@/lib/store';
 import { ChartContainer } from '../ChartContainer';
-import { OHLCHeader } from './OHLCHeader';
-import { IndicatorsHeader } from './IndicatorsHeader';
+
 
 interface ChartItemProps {
     chart: ChartInstance;
@@ -19,13 +19,31 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
     const removeChart = useMarketStore((state) => state.removeChart);
     const updateChart = useMarketStore((state) => state.updateChart);
 
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isNarrow, setIsNarrow] = useState(false);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const observer = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                // Determine if width is narrow (e.g., < 450px)
+                setIsNarrow(entry.contentRect.width < 450);
+            }
+        });
+
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <div
+            ref={containerRef}
             onClick={() => setActiveChart(chart.id)}
             onDoubleClick={() => toggleMaximizeChart(isMaximized ? null : chart.id)}
             className={`group relative rounded-xl border overflow-hidden flex flex-col bg-zinc-900 transition-all ${isActive ? 'border-blue-500/50 ring-1 ring-blue-500/20 shadow-xl' : 'border-zinc-800 hover:border-zinc-700'}`}
         >
-            <div className="bg-zinc-950/50 border-b border-zinc-800 flex flex-col shrink-0">
+            <div className={`bg-zinc-950/50 border-b border-zinc-800 flex flex-col shrink-0 ${isNarrow ? 'pb-0' : 'pb-1.5'}`}>
                 {/* Row 1: Main Info & Actions */}
                 <div className="px-3 py-1.5 flex justify-between items-center">
                     <div className="flex items-center gap-2 overflow-hidden">
@@ -45,7 +63,6 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                         <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-tighter whitespace-nowrap">
                             {chart.symbol} • {chart.interval}
                         </span>
-                        <OHLCHeader symbol={chart.symbol} interval={chart.interval} source={chart.source} />
                     </div>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="text-zinc-600 hover:text-blue-500 transition-colors" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={12} /></button>
@@ -55,18 +72,8 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                         {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} className="text-zinc-600 hover:text-red-500 transition-colors"><X size={12} /></button>}
                     </div>
                 </div>
-
-                {/* Row 2: Indicators */}
-                <div className="px-3 pb-1.5 ml-[24px]">
-                    <IndicatorsHeader
-                        chartId={chart.id}
-                        symbol={chart.symbol}
-                        interval={chart.interval}
-                        source={chart.source}
-                    />
-                </div>
             </div>
-            <div className="flex-1 min-h-0"><ChartContainer chartId={chart.id} /></div>
+            <div className="flex-1 min-h-0"><ChartContainer chartId={chart.id} isNarrow={isNarrow} /></div>
         </div>
     );
 }

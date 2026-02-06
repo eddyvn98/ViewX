@@ -14,17 +14,18 @@ import { useChartAlerts } from './hooks/use-chart-alerts';
 import { useChartInteraction } from './hooks/use-chart-interaction';
 import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 import { CandleCountdown } from './components/CandleCountdown';
-import { DataWindow } from './components/DataWindow';
+
 
 import { ChartOverlay } from './components/ChartOverlay';
 import { SubchartLegend } from './components/SubchartLegend';
 import { SubchartIndicatorsTabs } from './components/SubchartIndicatorsTabs';
+import { ChartLegend } from './components/ChartLegend';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { Bell, BellOff, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 const EMPTY_CANDLES: any[] = [];
 
-export const ChartContainer = memo(function ChartContainer({ chartId }: { chartId: string }) {
+export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }: { chartId: string, isNarrow?: boolean }) {
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
     const toggleIndicatorVisibility = useMarketStore(state => state.toggleIndicatorVisibility);
@@ -283,19 +284,20 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
 
             <PositionModifier />
 
+            <ChartLegend
+                chartId={chartId}
+                symbol={chartInstance?.symbol}
+                interval={chartInstance?.interval}
+                source={chartInstance?.source}
+                candles={candles}
+            />
+
             {/* MAIN CHART AREA WITH OVERLAY */}
             <div className="flex-1 relative min-h-0">
                 {/* PRICE CHART (Main) - Always background */}
                 <div ref={priceContainerRef} className="w-full h-full" />
 
-                {/* DATA WINDOW (Intelligent Floating Panel) */}
-                <DataWindow
-                    chartId={chartId}
-                    symbol={chartInstance?.symbol}
-                    interval={chartInstance?.interval}
-                    source={chartInstance?.source}
-                    candles={candles}
-                />
+
 
                 {/* CANDLE COUNTDOWN OVERLAY */}
                 <CandleCountdown
