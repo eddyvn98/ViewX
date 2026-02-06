@@ -13,6 +13,9 @@ export interface UISlice {
     isLeftSidebarOpen: boolean;
     isRightSidebarOpen: boolean;
     activeRightSidebarTab: RightSidebarTab;
+    activeMobileTab: string;
+    isInputFocused: boolean;
+    isScrollingPanel: boolean;
     notifications: Notification[];
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
@@ -20,6 +23,9 @@ export interface UISlice {
     setRightSidebarOpen: (isOpen: boolean) => void;
     toggleRightSidebar: () => void;
     setActiveRightSidebarTab: (tab: RightSidebarTab) => void;
+    setActiveMobileTab: (tab: string) => void;
+    setInputFocused: (focused: boolean) => void;
+    setIsScrollingPanel: (isScrolling: boolean) => void;
     addNotification: (message: string, type?: Notification['type'], alertId?: string) => void;
     removeNotification: (id: string) => void;
 }
@@ -28,6 +34,9 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     isLeftSidebarOpen: false,
     isRightSidebarOpen: true,
     activeRightSidebarTab: 'market',
+    activeMobileTab: 'chart',
+    isInputFocused: false,
+    isScrollingPanel: false,
     notifications: [],
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
@@ -35,6 +44,9 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setRightSidebarOpen: (isOpen) => set({ isRightSidebarOpen: isOpen }),
     toggleRightSidebar: () => set((state) => ({ isRightSidebarOpen: !state.isRightSidebarOpen })),
     setActiveRightSidebarTab: (tab) => set({ activeRightSidebarTab: tab }),
+    setActiveMobileTab: (tab) => set({ activeMobileTab: tab }),
+    setInputFocused: (focused) => set({ isInputFocused: focused }),
+    setIsScrollingPanel: (isScrolling) => set((state) => state.isScrollingPanel === isScrolling ? state : { isScrollingPanel: isScrolling }),
     addNotification: (message, type = 'info', alertId) => set((state) => ({
         notifications: [...state.notifications, { id: crypto.randomUUID(), message, type, alertId }]
     })),

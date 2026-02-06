@@ -1,4 +1,7 @@
 'use client';
+import { memo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { RootState } from '@/lib/store';
 
 import { Plus, Crosshair, Link } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
@@ -9,15 +12,22 @@ import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
 
 export function ChartsToolbar() {
-    const activeTabId = useMarketStore((state) => state.activeTabId);
-    const activeTab = useMarketStore((state) => state.tabs[activeTabId]);
-    const layoutMode = activeTab?.layoutMode || '1x1';
-    const activeChartId = activeTab?.activeChartId;
-    const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
+    const { layoutMode, activeChartId, activeChart } = useMarketStore(useShallow((state: RootState) => {
+        const activeTab = state.activeTabId ? state.tabs[state.activeTabId] : null;
+        const activeChartId = activeTab?.activeChartId;
+        const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
+        return {
+            layoutMode: activeTab?.layoutMode || '1x1',
+            activeChartId,
+            activeChart
+        };
+    }));
 
-    const isConnected = useMarketStore((state) => state.isConnected);
-    const isTerminalVisible = useMarketStore((state) => state.isTerminalVisible);
-    const isCrosshairSyncEnabled = useMarketStore((state) => state.isCrosshairSyncEnabled);
+    const { isConnected, isTerminalVisible, isCrosshairSyncEnabled } = useMarketStore(useShallow((state: RootState) => ({
+        isConnected: state.isConnected,
+        isTerminalVisible: state.isTerminalVisible,
+        isCrosshairSyncEnabled: state.isCrosshairSyncEnabled
+    })));
 
     const setLayoutMode = useMarketStore((state) => state.setLayoutMode);
     const addChart = useMarketStore((state) => state.addChart);
@@ -114,3 +124,4 @@ export function ChartsToolbar() {
         </div>
     );
 }
+export const ChartsToolbarMemo = memo(ChartsToolbar);

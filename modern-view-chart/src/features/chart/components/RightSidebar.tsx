@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { MarketList } from '@/features/market/MarketList';
 import { IndicatorManager } from '@/features/chart/components/IndicatorManager';
@@ -7,7 +7,7 @@ import { StrategyPanel } from '@/features/chart/components/StrategyPanel';
 import { LineChart, Layout, ShoppingCart, X, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function RightSidebar() {
+export const RightSidebar = memo(function RightSidebar() {
     const activeTab = useMarketStore(state => state.activeRightSidebarTab);
     const setActiveTab = useMarketStore(state => state.setActiveRightSidebarTab);
 
@@ -56,4 +56,4 @@ export function RightSidebar() {
             </div>
         </aside>
     );
-}
+});

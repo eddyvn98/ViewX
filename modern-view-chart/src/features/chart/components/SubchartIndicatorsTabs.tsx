@@ -39,22 +39,22 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
     };
 
     return (
-        <div className="flex bg-[#1e222d]/90 backdrop-blur-md border border-zinc-700/50 rounded-t-lg overflow-hidden border-b-0">
+        <div className="flex bg-[#1e222d]/80 backdrop-blur-md border border-zinc-700/40 rounded-t-md overflow-hidden border-b-0">
             {subchartIndicators.map((ind, idx) => (
                 <button
                     key={ind.id}
                     onClick={() => handleTabClick(ind.id)}
                     className={cn(
-                        "px-5 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all relative",
+                        "px-3 md:px-5 py-1 text-[11px] md:text-[10px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
                         ind.visible
-                            ? "bg-blue-600/10 text-blue-400"
+                            ? "bg-blue-600/20 text-blue-400"
                             : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5",
-                        idx !== 0 && "border-l border-zinc-800/50"
+                        idx !== 0 && "border-l border-zinc-800/40"
                     )}
                 >
                     {/* Active Indicator Top Border */}
                     {ind.visible && (
-                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                     )}
                     {ind.type}
                 </button>

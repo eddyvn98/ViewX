@@ -6,40 +6,36 @@ import { cn } from '@/lib/utils';
 import { Trash2, Search, Star } from 'lucide-react';
 import React, { useMemo, useState, memo, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useStoreWithEqualityFn } from 'zustand/traditional';
 
-const EMPTY_CHARTS: any = {};
-
-// Memoized ticker row that subscribes to its own data
-const TickerRow = memo(({ symbol, isActive, isWatched, onSelect, onRemove, mode, onAdd }: any) => {
-    // Select only the specific ticker data
-    const ticker = useMarketStore(useShallow((state) => state.tickers[symbol] || { symbol, source: 'BINANCE' }));
+// Memoized ticker row
+const TickerRow = memo(({ ticker, isActive, isWatched, onSelect, onRemove, mode, onAdd }: any) => {
+    if (!ticker) return null;
 
     return (
         <div
             onClick={() => onSelect(ticker.symbol, ticker.source)}
             className={cn(
-                "flex justify-between items-center px-4 py-2.5 cursor-pointer hover:bg-zinc-800/30 transition-all border-b border-zinc-800/50 last:border-0 group",
+                "flex justify-between items-center px-4 py-3 cursor-pointer hover:bg-white/5 transition-all border-b border-white/5 last:border-0 group min-h-[60px]",
                 isActive && mode === 'watchlist' && "bg-blue-500/10 border-l-2 border-l-blue-500"
             )}
         >
             <div className="flex items-center gap-3">
                 <div className="flex flex-col">
                     <span className={cn(
-                        "text-[13px] font-bold tracking-tight",
-                        isActive && mode === 'watchlist' ? "text-blue-400" : "text-zinc-300"
+                        "text-[14px] font-bold tracking-tight",
+                        isActive && mode === 'watchlist' ? "text-blue-400" : "text-zinc-200"
                     )}>
-                        {(ticker.symbol || '').replace('USDT', '')}
+                        {(ticker.symbol || '').replace('USDT', '').replace('USDTm', '')}
                     </span>
-                    <span className="text-[9px] font-bold text-zinc-600 uppercase">{ticker.source}</span>
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase">{ticker.source}</span>
                 </div>
             </div>
 
             {mode === 'watchlist' ? (
                 <div className="flex items-center gap-4 text-sm">
                     <div className="flex flex-col items-end">
-                        <span className="text-zinc-400 font-mono text-[13px]">
-                            {ticker.price ? (ticker.price < 1 ? ticker.price.toFixed(4) : ticker.price.toFixed(2)) : '---'}
+                        <span className="text-zinc-300 font-mono text-[14px]">
+                            {ticker.price ? (ticker.price < 1 ? ticker.price.toFixed(4) : ticker.price.toFixed(ticker.price > 1000 ? 1 : 2)) : '---'}
                         </span>
                         <div className={cn(
                             "flex items-center gap-1.5 font-mono text-[11px] font-bold",
@@ -60,9 +56,9 @@ const TickerRow = memo(({ symbol, isActive, isWatched, onSelect, onRemove, mode,
                             e.stopPropagation();
                             onRemove(ticker.symbol);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-600 hover:text-red-400 transition-all"
+                        className="p-1.5 text-zinc-600 hover:text-red-400 transition-all md:opacity-0 md:group-hover:opacity-100"
                     >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                     </button>
                 </div>
             ) : (
@@ -77,18 +73,18 @@ const TickerRow = memo(({ symbol, isActive, isWatched, onSelect, onRemove, mode,
                             }
                         }}
                         className={cn(
-                            "p-1.5 rounded-md transition-all",
+                            "p-2 rounded-md transition-all",
                             isWatched
                                 ? "text-yellow-500 bg-yellow-500/10"
-                                : "text-zinc-600 hover:text-white hover:bg-zinc-800"
+                                : "text-zinc-500 hover:text-white hover:bg-zinc-800"
                         )}
                     >
-                        <Star size={14} fill={isWatched ? "currentColor" : "none"} />
+                        <Star size={18} fill={isWatched ? "currentColor" : "none"} />
                     </button>
                 </div>
             )}
         </div>
-    )
+    );
 });
 
 TickerRow.displayName = 'TickerRow';
@@ -98,61 +94,62 @@ interface MarketListProps {
 }
 
 function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
-    const tickers = useStoreWithEqualityFn(
-        useMarketStore,
-        (state) => state.tickers,
-        (a, b) => {
-            if (mode === 'watchlist') {
-                return a === b;
-            }
-            // Discovery mode: only update if keys (symbols) change
-            const keysA = Object.keys(a);
-            const keysB = Object.keys(b);
-            if (keysA.length !== keysB.length) return false;
-
-            // Quick check for key existence
-            for (const key of keysA) {
-                if (!(key in b)) return false;
-            }
-            return true;
-        }
-    );
+    const tickers = useMarketStore((state) => state.tickers);
     const watchlist = useMarketStore((state) => state.watchlist);
     const addToWatchlist = useMarketStore((state) => state.addToWatchlist);
     const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);
 
     const activeTabId = useMarketStore((state) => state.activeTabId);
-    const activeTab = useMarketStore(useShallow(state => state.tabs[activeTabId || '']));
+    const activeTab = useMarketStore(useShallow(state => activeTabId ? state.tabs[activeTabId] : null));
 
     const activeChartId = activeTab?.activeChartId || null;
-    const charts = activeTab?.charts || EMPTY_CHARTS;
+    const charts = activeTab?.charts || {};
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
     const { broadcastSymbolChange, broadcastGroupSymbolChange } = useCrossWindowSync();
 
-    const activeChartSymbol = activeChartId ? charts[activeChartId]?.symbol : null;
+    const activeChartSymbol = (activeChartId && charts[activeChartId]) ? charts[activeChartId].symbol : null;
 
     const [search, setSearch] = useState('');
     const [sourceTab, setSourceTab] = useState<'ALL' | 'BINANCE' | 'MT5'>('ALL');
 
-    const tickerList = useMemo(() => {
-        let list = Object.values(tickers);
+    // FORCE DEFAULT WATCHLIST IF EMPTY (Emergency fix for mobile initialization issues)
+    React.useEffect(() => {
+        if (watchlist.length === 0) {
+            console.log("Empty watchlist detected, adding defaults...");
+            ['BTCUSDm', 'XAUUSDm', 'EURUSDm'].forEach(s => addToWatchlist(s));
+        }
+    }, [watchlist.length, addToWatchlist]);
 
+    const tickerList = useMemo(() => {
+        let list = [];
         if (mode === 'watchlist') {
-            list = list.filter(t => watchlist.includes(t.symbol));
+            list = watchlist
+                .map(symbol => {
+                    const isMT5 = symbol.includes('USD') || symbol.endsWith('m') || !symbol.includes('USDT');
+                    return tickers[symbol] || {
+                        symbol,
+                        source: isMT5 ? 'MT5' : 'BINANCE',
+                        price: 0,
+                        change: 0,
+                        changeValue: 0
+                    };
+                });
+        } else {
+            list = Object.values(tickers);
         }
 
         return list
             .filter(t => {
-                const matchesSearch = (t.symbol || '').toLowerCase().includes(search.toLowerCase());
+                const s = (t.symbol || '').toLowerCase();
+                const matchesSearch = s.includes(search.toLowerCase());
                 const matchesTab = sourceTab === 'ALL' || t.source === sourceTab;
                 return matchesSearch && matchesTab;
             })
-            .sort((a, b) => {
-                // If in discovery, maybe sort by name, if in watchlist sort by volume or just keep it
-                if (mode === 'discovery') return a.symbol.localeCompare(b.symbol);
-                return (b.volume || 0) - (a.volume || 0);
-            });
+            .sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
     }, [tickers, search, sourceTab, watchlist, mode]);
+
+    // Debug helper for mobile
+    const debugInfo = `T:${Object.keys(tickers).length} W:${watchlist.length} L:${tickerList.length}`;
 
     const handleSymbolSelect = useCallback((symbol: string, source: 'BINANCE' | 'MT5') => {
         if (activeChartId) {
@@ -165,7 +162,6 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                 broadcastSymbolChange(activeChartId, symbol, source);
             }
 
-            // AUTO-ADD TO WATCHLIST if selected from discovery list
             if (mode === 'discovery' && !watchlist.includes(symbol)) {
                 addToWatchlist(symbol);
             }
@@ -173,7 +169,7 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     }, [activeChartId, charts, mode, setChartSymbol, watchlist, addToWatchlist, broadcastGroupSymbolChange, broadcastSymbolChange]);
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-0">
+        <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-[300px] h-full">
             {/* Header / Search */}
             <div className="p-3 border-b border-zinc-800 space-y-3 shrink-0">
                 <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800">
@@ -203,6 +199,11 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-700 transition-colors"
                     />
                 </div>
+
+                {/* Mobile Debug Tag */}
+                <div className="md:hidden text-[9px] text-zinc-700 font-mono text-center">
+                    {debugInfo}
+                </div>
             </div>
 
             {/* List Header */}
@@ -217,31 +218,28 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
             )}
 
             {/* Scrollable List Area */}
-            <div className="flex-1 relative min-h-0">
-                <div className="absolute inset-0 overflow-y-auto custom-scrollbar">
-                    {tickerList.length === 0 ? (
-                        <div className="p-4 text-center text-zinc-600 text-xs italic">
-                            {mode === 'watchlist' ? 'Your watchlist is empty' : 'No tickers found'}
-                        </div>
-                    ) : (
-                        tickerList.map((ticker) => (
-                            <TickerRow
-                                key={ticker.symbol}
-                                symbol={ticker.symbol}
-                                mode={mode}
-                                isActive={activeChartSymbol === ticker.symbol}
-                                isWatched={watchlist.includes(ticker.symbol)}
-                                onSelect={handleSymbolSelect}
-                                onAdd={addToWatchlist}
-                                onRemove={removeFromWatchlist}
-                            />
-                        ))
-                    )}
-                </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-950/20">
+                {tickerList.length === 0 ? (
+                    <div className="p-10 text-center text-zinc-600 text-xs italic">
+                        {mode === 'watchlist' ? 'Your watchlist is empty' : 'No tickers found'}
+                    </div>
+                ) : (
+                    tickerList.map((ticker) => (
+                        <TickerRow
+                            key={ticker.symbol}
+                            ticker={ticker}
+                            mode={mode}
+                            isActive={activeChartSymbol === ticker.symbol}
+                            isWatched={watchlist.includes(ticker.symbol)}
+                            onSelect={handleSymbolSelect}
+                            onAdd={addToWatchlist}
+                            onRemove={removeFromWatchlist}
+                        />
+                    ))
+                )}
             </div>
         </div>
     );
 }
 
-// Export memoized version to prevent unnecessary re-renders
 export const MarketList = memo(MarketListInternal);

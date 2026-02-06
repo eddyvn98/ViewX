@@ -1,5 +1,4 @@
-'use client';
-
+import React, { memo } from 'react';
 import { BarChart2, CandlestickChart, LayoutGrid, Newspaper, Wallet, FolderOpen } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -11,7 +10,7 @@ const MENU_ITEMS = [
     { icon: FolderOpen, label: 'History' },
 ];
 
-export function Sidebar({ onToggleMarket }: { onToggleMarket?: () => void }) {
+export const Sidebar = memo(function Sidebar({ onToggleMarket }: { onToggleMarket?: () => void }) {
     return (
         <aside className="fixed left-0 top-14 h-[calc(100vh-56px)] w-16 flex-col items-center border-r border-zinc-800 bg-zinc-950 py-4 flex z-20">
             <div className="flex flex-col gap-6 w-full items-center">
@@ -40,4 +39,4 @@ export function Sidebar({ onToggleMarket }: { onToggleMarket?: () => void }) {
             </div>
         </aside>
     );
-}
+});

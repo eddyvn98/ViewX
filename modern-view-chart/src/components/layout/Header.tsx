@@ -1,60 +1,70 @@
+import React, { memo } from 'react';
 import { Bell, Search, Settings, PanelRightClose } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { TabContainer } from './TabContainer';
 import { cn } from '@/lib/utils';
+import { MobileAccessButton } from '@/features/chart/components/MobileAccessButton';
 
-export function Header() {
+export const Header = memo(function Header() {
     const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
     const toggleRightSidebar = useMarketStore((state) => state.toggleRightSidebar);
 
     return (
-        <header className="flex h-12 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 shrink-0 shadow-lg z-30">
-            <div className="flex items-center gap-6 h-full">
-                {/* Logo */}
-                <div className="flex items-center gap-2 font-black text-sm text-white tracking-tighter mr-2">
-                    ViewChart
+        <header className="h-14 border-b border-zinc-800 bg-zinc-950 px-4 flex items-center justify-between shrink-0 sticky top-0 z-30">
+            <div className="flex items-center gap-8">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <span className="font-black text-white italic">V</span>
+                    </div>
+                    <span className="text-xl font-black tracking-tighter text-white">
+                        VIEW<span className="text-blue-500">X</span>
+                    </span>
                 </div>
 
-                <div className="h-6 w-[1px] bg-zinc-800 hidden md:block" />
-
-                {/* Integrated Tabs */}
-                <div className="h-full hidden md:block">
+                <div className="hidden lg:block h-full">
                     <TabContainer />
                 </div>
             </div>
 
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 mr-2 pr-4 border-r border-zinc-800">
-                    <button
-                        onClick={toggleRightSidebar}
-                        className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all border",
-                            isRightSidebarOpen
-                                ? "bg-blue-600/10 text-blue-400 border-blue-500/20"
-                                : "bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-300 hover:bg-zinc-800"
-                        )}
-                    >
-                        <PanelRightClose size={16} className={cn("transition-transform", !isRightSidebarOpen && "rotate-180")} />
-                        <span className="hidden sm:inline">PANEL</span>
-                    </button>
-                    <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
-                    <button className="text-zinc-500 hover:text-white transition active:scale-90">
-                        <Search size={18} />
-                    </button>
-                    <button className="text-zinc-500 hover:text-white transition active:scale-90">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg group focus-within:border-blue-500 transition-all">
+                    <Search size={16} className="text-zinc-500 group-focus-within:text-blue-400" />
+                    <input
+                        type="text"
+                        placeholder="Search symbols..."
+                        className="bg-transparent border-none outline-none text-sm text-zinc-300 w-48 placeholder-zinc-700"
+                    />
+                </div>
+
+                <div className="flex items-center gap-1 border-r border-zinc-800 pr-4">
+                    <MobileAccessButton />
+                    <button className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded-lg transition-all relative">
                         <Bell size={18} />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full border-2 border-zinc-950" />
                     </button>
-                    <button className="text-zinc-500 hover:text-white transition active:scale-90">
+                    <button className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded-lg transition-all">
                         <Settings size={18} />
                     </button>
                 </div>
 
-                <div className="flex items-center gap-2 px-1.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-all">
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-[10px] font-black text-white">
-                        UA
+                <div className="flex items-center gap-3 pl-1">
+                    <div className="hidden sm:flex flex-col items-end">
+                        <span className="text-xs font-bold text-zinc-200">Alex Trading</span>
+                        <span className="text-[10px] text-green-500 font-black uppercase">Pro Account</span>
                     </div>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 border-2 border-zinc-800 shadow-md" />
+
+                    <button
+                        onClick={toggleRightSidebar}
+                        className={cn(
+                            "p-2 ml-1 rounded-lg transition-all",
+                            isRightSidebarOpen ? "text-blue-500 bg-blue-500/10" : "text-zinc-500 hover:text-white hover:bg-zinc-900"
+                        )}
+                    >
+                        <PanelRightClose size={18} />
+                    </button>
                 </div>
             </div>
         </header>
     );
-}
+});

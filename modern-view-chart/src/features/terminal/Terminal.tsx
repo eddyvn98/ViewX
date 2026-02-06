@@ -2,15 +2,20 @@
 
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useTerminalResize } from './hooks/use-terminal-resize';
 import { AccountSummary } from './components/AccountSummary';
 import { PositionsTable } from './components/PositionsTable';
+import { MobilePositionsTable } from './components/MobilePositionsTable';
+import { MobileAccountSummary } from './components/MobileAccountSummary';
+import { MobileOrdersTable } from './components/MobileOrdersTable';
+import { MobileHistoryTable } from './components/MobileHistoryTable';
 import { OrdersTable } from './components/OrdersTable';
 import { HistoryTable } from './components/HistoryTable';
 
-export function Terminal() {
+export const Terminal = memo(function Terminal({ forceExpanded = false }: { forceExpanded?: boolean }) {
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
     const tabs = useMarketStore((state) => state.tabs);
@@ -35,12 +40,15 @@ export function Terminal() {
     const setTerminalHeight = useMarketStore(state => state.setTerminalHeight);
     const isTerminalCollapsed = useMarketStore(state => state.isTerminalCollapsed);
     const setTerminalCollapsed = useMarketStore(state => state.setTerminalCollapsed);
-    const { height, isCollapsed, handleDragStart, toggleCollapse } = useTerminalResize(
+
+    const { isCollapsed, handleDragStart, toggleCollapse } = useTerminalResize(
         terminalHeightStore,
         setTerminalHeight,
         isTerminalCollapsed,
         setTerminalCollapsed
     );
+
+    const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
     // Get current account based on active chart source
     const activeChartSource = activeTabId && tabs[activeTabId] && tabs[activeTabId].activeChartId
@@ -95,20 +103,26 @@ export function Terminal() {
         });
     }, [sendMessage]);
 
+    const setIsScrollingPanel = useMarketStore(state => state.setIsScrollingPanel);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleScroll = () => {
+        if (!setIsScrollingPanel) return;
+        setIsScrollingPanel(true);
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+            setIsScrollingPanel(false);
+        }, 1500);
+    };
+
     // Hydration fix: only render content on client
     useEffect(() => {
         setIsMounted(true);
-    }, []);
-
-    // Auto-scroll when expanding terminal to show user it has opened
-    useEffect(() => {
-        if (!isCollapsed && isMounted) {
-            // Wait a frame for height to apply, then scroll
-            requestAnimationFrame(() => {
-                window.scrollBy({ top: 100, behavior: 'smooth' });
-            });
-        }
-    }, [isCollapsed, isMounted]);
+        return () => {
+            if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+            if (setIsScrollingPanel) setIsScrollingPanel(false);
+        };
+    }, [setIsScrollingPanel]);
 
     if (!isMounted) {
         return <div className="h-full bg-[#131722]" />;
@@ -116,93 +130,186 @@ export function Terminal() {
 
     return (
         <div className="flex flex-col h-full bg-[#131722] relative">
-            {/* Resizer Handle */}
-            <div
-                className="absolute top-[-4px] left-0 right-0 h-[8px] cursor-ns-resize hover:bg-blue-500/50 z-50 transition-colors"
-                onMouseDown={handleDragStart}
-            />
+            {/* Resizer Handle - Hidden if forced expanded */}
+            {!forceExpanded && (
+                <div
+                    className="absolute top-[-4px] left-0 right-0 h-[8px] cursor-ns-resize hover:bg-blue-500/50 z-50 transition-colors"
+                    onMouseDown={handleDragStart}
+                />
+            )}
 
-            {/* Header */}
-            <div
-                className={`flex items-center justify-between px-3 h-[40px] bg-[#1e222d] border-t border-b shrink-0 cursor-pointer hover:bg-[#2a2e39] transition-colors group ${!isCollapsed ? 'border-t-blue-500 border-b-[#2a2e39]' : 'border-t-[#2a2e39] border-b-transparent'}`}
-                onClick={toggleCollapse}
-            >
-                <div className="flex items-center gap-2">
-                    <span className={`text-[12px] font-bold tracking-wider uppercase transition-colors ${!isCollapsed ? 'text-blue-400' : 'text-[#d1d4dc]'}`}>
-                        Trading Terminal
-                    </span>
-                    <div
-                        className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${isBridgeOnline ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500'}`}
-                        title={isBridgeOnline ? "Bridge Connected" : "Bridge Disconnected"}
-                    />
+            {/* Header - Hidden if forced expanded */}
+            {!forceExpanded && (
+                <div
+                    className={`flex items-center justify-between px-3 h-[40px] bg-[#1e222d] border-t border-b shrink-0 cursor-pointer hover:bg-[#2a2e39] transition-colors group ${!effectiveCollapsed ? 'border-t-blue-500 border-b-[#2a2e39]' : 'border-t-[#2a2e39] border-b-transparent'}`}
+                    onClick={toggleCollapse}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[12px] font-bold tracking-wider uppercase transition-colors ${!effectiveCollapsed ? 'text-blue-400' : 'text-[#d1d4dc]'}`}>
+                            Trading Terminal
+                        </span>
+                        <div
+                            className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${isBridgeOnline ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500'}`}
+                            title={isBridgeOnline ? "Bridge Connected" : "Bridge Disconnected"}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-zinc-600 font-mono hidden group-hover:block transition-all opacity-0 group-hover:opacity-100">
+                            {effectiveCollapsed ? 'Click to Open' : 'Click to Collapse'}
+                        </span>
+                        <button
+                            className={`p-1 rounded transition-all ${!effectiveCollapsed ? 'text-blue-500 bg-blue-500/10' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
+                        >
+                            {effectiveCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-zinc-600 font-mono hidden group-hover:block transition-all opacity-0 group-hover:opacity-100">
-                        {isCollapsed ? 'Click to Open' : 'Click to Collapse'}
-                    </span>
-                    <button
-                        className={`p-1 rounded transition-all ${!isCollapsed ? 'text-blue-500 bg-blue-500/10' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
-                    >
-                        {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                </div>
-            </div>
+            )}
 
-            {!isCollapsed && (
+            {!effectiveCollapsed && (
                 <div className="flex-1 flex flex-col min-h-0">
                     {/* Fixed Top Section: Tabs & Account */}
-                    <div className="p-3 pb-0 shrink-0">
+                    <div className={cn("shrink-0 pb-0", forceExpanded ? "p-1.5" : "p-3")}>
                         {/* Tabs */}
-                        <div className="flex items-center gap-4 mb-3 border-b border-[#2a2e39] pb-0">
+                        <div className={cn("flex items-center gap-4 border-b border-[#2a2e39] pb-0", forceExpanded ? "mb-1.5" : "mb-3")}>
                             <button
                                 onClick={() => setTerminalTab('positions')}
-                                className={`pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2 ${terminalTab === 'positions' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
+                                className={cn("pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2", terminalTab === 'positions' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]')}
                             >
-                                Positions ({positions.length})
+                                {forceExpanded ? `Pos (${positions.length})` : `Positions (${positions.length})`}
                             </button>
                             <button
                                 onClick={() => setTerminalTab('orders')}
-                                className={`pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2 ${terminalTab === 'orders' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
+                                className={cn("pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2", terminalTab === 'orders' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]')}
                             >
-                                Orders ({orders.length})
+                                {forceExpanded ? `Ord (${orders.length})` : `Orders (${orders.length})`}
                             </button>
                             <button
                                 onClick={() => setTerminalTab('history')}
-                                className={`pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2 ${terminalTab === 'history' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
+                                className={cn("pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2", terminalTab === 'history' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]')}
                             >
-                                History
+                                Hist
                             </button>
                         </div>
 
-                        {/* Account Summary */}
-                        <AccountSummary account={account} />
+                        {/* Account Summary - Different for Mobile */}
+                        {forceExpanded ? (
+                            <MobileAccountSummary account={account} />
+                        ) : (
+                            <AccountSummary account={account} />
+                        )}
                     </div>
 
-                    {/* Scrollable Table Area */}
-                    <div className={`flex-1 min-h-0 p-3 pt-0 relative flex flex-col ${terminalTab !== 'history' ? 'overflow-auto' : 'overflow-x-auto overflow-y-hidden'}`}>
-                        {terminalTab === 'positions' ? (
-                            <PositionsTable
-                                positions={positions}
-                                onClosePosition={handleClosePosition}
-                                onUpdatePosition={handleUpdatePosition}
-                                onSymbolClick={handleSymbolClick}
-                            />
-                        ) : terminalTab === 'orders' ? (
-                            <OrdersTable
-                                orders={orders}
-                                onCancelOrder={handleClosePosition} // Use the same closer for now
-                                onSymbolClick={handleSymbolClick}
-                            />
-                        ) : (
-                            <HistoryTable
-                                history={history}
-                                onSymbolClick={handleSymbolClick}
-                                onAnalyze={handleAnalyze}
-                            />
-                        )}
+                    {/* Scrollable Area - ANIMATED SLIDING TABS */}
+                    <div
+                        className="flex-1 min-h-0 relative overflow-hidden"
+                        onTouchStart={(e) => {
+                            if (!forceExpanded) return;
+                            const touch = e.touches[0];
+                            (window as any)._terminalTouchStart = touch.clientX;
+                        }}
+                        onTouchEnd={(e) => {
+                            if (!forceExpanded) return;
+                            const touchStart = (window as any)._terminalTouchStart;
+                            if (touchStart === undefined) return;
+
+                            const touchEnd = e.changedTouches[0].clientX;
+                            const deltaX = touchEnd - touchStart;
+                            const threshold = 50;
+
+                            const tabs: typeof terminalTab[] = ['positions', 'orders', 'history'];
+                            const currentIndex = tabs.indexOf(terminalTab);
+
+                            if (Math.abs(deltaX) > threshold) {
+                                if (deltaX < 0 && currentIndex < tabs.length - 1) {
+                                    setTerminalTab(tabs[currentIndex + 1]);
+                                } else if (deltaX > 0 && currentIndex > 0) {
+                                    setTerminalTab(tabs[currentIndex - 1]);
+                                }
+                            }
+                            delete (window as any)._terminalTouchStart;
+                        }}
+                    >
+                        <div
+                            className={cn(
+                                "flex h-full w-full",
+                                forceExpanded && "transition-transform duration-300 ease-out"
+                            )}
+                            style={forceExpanded ? {
+                                transform: `translateX(-${(terminalTab === 'positions' ? 0 : terminalTab === 'orders' ? 1 : 2) * 100}%)`
+                            } : {}}
+                        >
+                            {/* POSITIONS TAB */}
+                            <div
+                                onScroll={forceExpanded ? handleScroll : undefined}
+                                className={cn(
+                                    "h-full flex-col p-3 pt-0 px-1 md:px-3 overflow-y-auto custom-scrollbar flex",
+                                    forceExpanded ? "w-full shrink-0" : (terminalTab === 'positions' ? 'w-full' : 'hidden')
+                                )}>
+                                {forceExpanded ? (
+                                    <MobilePositionsTable
+                                        positions={positions}
+                                        onClosePosition={handleClosePosition}
+                                        onUpdatePosition={handleUpdatePosition}
+                                        onSymbolClick={handleSymbolClick}
+                                    />
+                                ) : (
+                                    <PositionsTable
+                                        positions={positions}
+                                        onClosePosition={handleClosePosition}
+                                        onUpdatePosition={handleUpdatePosition}
+                                        onSymbolClick={handleSymbolClick}
+                                    />
+                                )}
+                            </div>
+
+                            {/* ORDERS TAB */}
+                            <div
+                                onScroll={forceExpanded ? handleScroll : undefined}
+                                className={cn(
+                                    "h-full flex-col p-3 pt-0 px-1 md:px-3 overflow-y-auto custom-scrollbar flex",
+                                    forceExpanded ? "w-full shrink-0" : (terminalTab === 'orders' ? 'w-full' : 'hidden')
+                                )}>
+                                {forceExpanded ? (
+                                    <MobileOrdersTable
+                                        orders={orders}
+                                        onCancelOrder={handleClosePosition}
+                                        onSymbolClick={handleSymbolClick}
+                                    />
+                                ) : (
+                                    <OrdersTable
+                                        orders={orders}
+                                        onCancelOrder={handleClosePosition}
+                                        onSymbolClick={handleSymbolClick}
+                                    />
+                                )}
+                            </div>
+
+                            {/* HISTORY TAB */}
+                            <div
+                                onScroll={forceExpanded ? handleScroll : undefined}
+                                className={cn(
+                                    "h-full flex-col p-3 pt-0 px-1 md:px-3 overflow-x-auto custom-scrollbar flex",
+                                    forceExpanded ? "w-full shrink-0" : (terminalTab === 'history' ? 'w-full' : 'hidden')
+                                )}>
+                                {forceExpanded ? (
+                                    <MobileHistoryTable
+                                        history={history}
+                                        onSymbolClick={handleSymbolClick}
+                                        onAnalyze={handleAnalyze}
+                                    />
+                                ) : (
+                                    <HistoryTable
+                                        history={history}
+                                        onSymbolClick={handleSymbolClick}
+                                        onAnalyze={handleAnalyze}
+                                    />
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
-}
+});

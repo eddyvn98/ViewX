@@ -7,7 +7,6 @@ export const mt5Prices = new Map();
 
 import { startBinanceTickerStream } from "./services/binanceTickerService.js";
 import { binanceSimulator } from "../services/binanceSimulator.js";
-import { clients as globalClients } from "./index.js";
 
 export default function initWebSocket(server) {
     const wss = new WebSocketServer({
@@ -48,7 +47,7 @@ export default function initWebSocket(server) {
 
 function broadcastBridgeStatus(online) {
     const payload = JSON.stringify({ topic: "bridgeStatus", online });
-    for (const [clientWs] of globalClients.entries()) {
+    for (const [clientWs] of clients.entries()) {
         if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
         }
@@ -63,7 +62,7 @@ function broadcastBinanceState() {
         history: binanceSimulator.getHistory()
     });
 
-    for (const [clientWs] of globalClients.entries()) {
+    for (const [clientWs] of clients.entries()) {
         if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
         }

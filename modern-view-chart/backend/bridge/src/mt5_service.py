@@ -114,6 +114,26 @@ class MT5Service:
             })
         return order_list
 
+    def _get_filling_mode(self, symbol):
+        """Determine the correct filling mode for the symbol."""
+        # Some MT5 Python versions don't have these constants in the mt5 module
+        # So we define the bitmask values here based on MT5 documentation
+        SYMBOL_FILLING_FOK = 1
+        SYMBOL_FILLING_IOC = 2
+
+        info = mt5.symbol_info(symbol)
+        if not info:
+            return mt5.ORDER_FILLING_IOC  # Default fallback
+        
+        # Check supported filling modes bits
+        filling_mode = info.filling_mode
+        if filling_mode & SYMBOL_FILLING_FOK:
+            return mt5.ORDER_FILLING_FOK
+        elif filling_mode & SYMBOL_FILLING_IOC:
+            return mt5.ORDER_FILLING_IOC
+        else:
+            return mt5.ORDER_FILLING_RETURN
+
     def close_position(self, ticket):
         positions = mt5.positions_get(ticket=ticket)
         if positions:
@@ -131,9 +151,11 @@ class MT5Service:
                 "price": price,
                 "magic": pos.magic,
                 "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_IOC,
+                "type_filling": self._get_filling_mode(pos.symbol),
             }
             result = mt5.order_send(request)
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                print(f"[ERROR] Close position failed: {result.retcode} - {result.comment}")
             return result.retcode == mt5.TRADE_RETCODE_DONE
 
         orders = mt5.orders_get(ticket=ticket)
@@ -188,7 +210,7 @@ class MT5Service:
             "magic": 234000,
             "comment": "ViewChart Web",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": self._get_filling_mode(symbol),
         }
 
         if is_market:

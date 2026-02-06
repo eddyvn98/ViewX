@@ -17,37 +17,45 @@ export function useCrossWindowSync() {
     const isCrosshairSyncEnabled = useMarketStore((state) => state.isCrosshairSyncEnabled);
 
     useEffect(() => {
-        const channel = new BroadcastChannel(CHANNEL_NAME);
-        channelRef.current = channel;
+        let channel: BroadcastChannel | null = null;
+        try {
+            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                channel = new BroadcastChannel(CHANNEL_NAME);
+                channelRef.current = channel;
 
-        channel.onmessage = (event: MessageEvent<SyncMessage>) => {
-            const msg = event.data;
+                channel.onmessage = (event: MessageEvent<SyncMessage>) => {
+                    const msg = event.data;
 
-            switch (msg.type) {
-                case 'SYMBOL_CHANGE':
-                    setChartSymbol(msg.chartId, msg.symbol);
-                    break;
-                case 'GROUP_SYMBOL_CHANGE':
-                    // Manually update all charts in this group across all tabs within the local store
-                    const state = useMarketStore.getState();
-                    Object.values(state.tabs).forEach(tab => {
-                        Object.values(tab.charts).forEach(chart => {
-                            if (chart.group === msg.group) {
-                                setChartSymbol(chart.id, msg.symbol);
+                    switch (msg.type) {
+                        case 'SYMBOL_CHANGE':
+                            setChartSymbol(msg.chartId, msg.symbol);
+                            break;
+                        case 'GROUP_SYMBOL_CHANGE':
+                            const state = useMarketStore.getState();
+                            Object.values(state.tabs).forEach(tab => {
+                                Object.values(tab.charts).forEach(chart => {
+                                    if (chart.group === msg.group) {
+                                        setChartSymbol(chart.id, msg.symbol);
+                                    }
+                                });
+                            });
+                            break;
+                        case 'CROSSHAIR_SYNC':
+                            if (isCrosshairSyncEnabled) {
+                                syncCrosshair(msg.point);
                             }
-                        });
-                    });
-                    break;
-                case 'CROSSHAIR_SYNC':
-                    if (isCrosshairSyncEnabled) {
-                        syncCrosshair(msg.point);
+                            break;
                     }
-                    break;
+                };
             }
-        };
+        } catch (err) {
+            console.warn('⚠️ BroadcastChannel not supported or restricted:', err);
+        }
 
         return () => {
-            channel.close();
+            if (channel) {
+                channel.close();
+            }
             channelRef.current = null;
         };
     }, [setChartSymbol, syncCrosshair, isCrosshairSyncEnabled]);

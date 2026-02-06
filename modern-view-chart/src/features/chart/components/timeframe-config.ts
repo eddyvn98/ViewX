@@ -8,7 +8,7 @@ export const TIMEFRAME_CONFIG = [
     { id: '60', label: '1h', title: '1 giờ', category: 'GIỜ' },
     { id: '120', label: '2h', title: '2 giờ', category: 'GIỜ' },
     { id: '240', label: '4h', title: '4 giờ', category: 'GIỜ' },
-    { id: 'D', label: '1D', title: '1 ngày', category: 'NGÀY' },
-    { id: 'W', label: '1W', title: '1 tuần', category: 'NGÀY' },
-    { id: 'M', label: '1M', title: '1 tháng', category: 'NGÀY' },
+    { id: '1440', label: '1D', title: '1 ngày', category: 'NGÀY' },
+    { id: '10080', label: '1W', title: '1 tuần', category: 'NGÀY' },
+    { id: '43200', label: '1M', title: '1 tháng', category: 'NGÀY' },
 ];

@@ -1,9 +1,8 @@
-'use client';
-
+import React, { memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { ChartItem } from './ChartItem';
 
-export function ChartGrid() {
+export const ChartGrid = memo(function ChartGrid() {
     const activeTab = useMarketStore((state) => state.tabs[state.activeTabId]);
     if (!activeTab) return null;
 
@@ -32,4 +31,4 @@ export function ChartGrid() {
             ))}
         </div>
     );
-}
+});

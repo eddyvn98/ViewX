@@ -1,15 +1,17 @@
 import { useEffect, useCallback } from 'react';
 import { useMarketStore } from '@/lib/store';
 
-const SOCKET_URL = 'ws://127.0.0.1:8091';
+let SOCKET_URL = 'ws://127.0.0.1:8091';
 
 // SINGLETON: Store socket outside the hook to share between components
 let globalSocket: WebSocket | null = null;
 let historyFetched = false;
 
-// Throttle ticker updates to reduce re-renders (batch updates every 500ms)
+// Throttle updates to reduce re-renders
 let tickerUpdateBuffer: Record<string, any> = {};
 let tickerUpdateTimer: NodeJS.Timeout | null = null;
+let positionUpdateTimer: NodeJS.Timeout | null = null;
+let positionUpdateBuffer: any = null;
 
 export function useWebSocket(): { sendMessage: (data: any) => void } {
     const setConnected = useMarketStore((state) => state.setConnected);
@@ -30,7 +32,17 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
         if (globalSocket) return; // Only connect once
 
         const connect = () => {
-            console.log('🔌 Connecting to Global WebSocket:', SOCKET_URL);
+            // Check for WS override from Cloudflare Tunnel param
+            if (typeof window !== 'undefined') {
+                const params = new URLSearchParams(window.location.search);
+                const wsOverride = params.get('ws_url');
+                if (wsOverride) {
+                    SOCKET_URL = wsOverride;
+                    console.log('🌍 Using Remote WebSocket:', SOCKET_URL);
+                }
+            }
+
+            console.log('🔌 Connecting to WebSocket:', SOCKET_URL);
             globalSocket = new WebSocket(SOCKET_URL);
 
             globalSocket.onopen = () => {
@@ -64,7 +76,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                                 updateTickers(tickerUpdateBuffer);
                                 tickerUpdateBuffer = {};
                                 tickerUpdateTimer = null;
-                            }, 500);
+                            }, 800);
                         }
                     }
 
@@ -108,49 +120,58 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
 
                     // 5. Account & Positions Update
                     if (msgType === 'mt5_positions_update') {
-                        if (msg.account) {
-                            setAccount('MT5', {
-                                balance: Number(msg.account.balance) || 0,
-                                equity: Number(msg.account.equity) || 0,
-                                margin: Number(msg.account.margin) || 0,
-                                free_margin: Number(msg.account.free_margin) || 0,
-                                margin_level: Number(msg.account.margin_level) || 0,
-                                profit: Number(msg.account.profit) || 0
-                            });
-                        }
-                        if (msg.positions && Array.isArray(msg.positions)) {
-                            const mappedPositions = msg.positions.map((p: any) => ({
-                                ticket: p.ticket,
-                                symbol: p.symbol,
-                                type: p.type || 'buy', // This is deal type, doesn't collide with msgType
-                                volume: p.volume || 0,
-                                open_price: p.price_open || 0,
-                                current_price: p.price_current || 0,
-                                sl: p.sl || 0,
-                                tp: p.tp || 0,
-                                profit: p.profit || 0,
-                                time: p.time,
-                                magic: p.magic || 0,
-                                source: 'MT5'
-                            }));
-                            setPositions(mappedPositions);
-                        }
-                        if (msg.orders && Array.isArray(msg.orders)) {
-                            const mappedOrders = msg.orders.map((o: any) => ({
-                                ticket: o.ticket,
-                                symbol: o.symbol,
-                                type: o.type,
-                                volume: o.volume,
-                                price_open: o.price_open,
-                                current_price: o.price_current,
-                                sl: o.sl,
-                                tp: o.tp,
-                                profit: o.profit || 0,
-                                time: o.time,
-                                magic: o.magic || 0,
-                                source: 'MT5'
-                            }));
-                            setOrders(mappedOrders);
+                        // Buffer the update and throttle it
+                        positionUpdateBuffer = msg;
+
+                        if (!positionUpdateTimer) {
+                            positionUpdateTimer = setTimeout(() => {
+                                const data = positionUpdateBuffer;
+                                if (data.account) {
+                                    setAccount('MT5', {
+                                        balance: Number(data.account.balance) || 0,
+                                        equity: Number(data.account.equity) || 0,
+                                        margin: Number(data.account.margin) || 0,
+                                        free_margin: Number(data.account.free_margin) || 0,
+                                        margin_level: Number(data.account.margin_level) || 0,
+                                        profit: Number(data.account.profit) || 0
+                                    });
+                                }
+                                if (data.positions && Array.isArray(data.positions)) {
+                                    const mappedPositions = data.positions.map((p: any) => ({
+                                        ticket: p.ticket,
+                                        symbol: p.symbol,
+                                        type: p.type || 'buy',
+                                        volume: p.volume || 0,
+                                        open_price: p.price_open || 0,
+                                        current_price: p.price_current || 0,
+                                        sl: p.sl || 0,
+                                        tp: p.tp || 0,
+                                        profit: p.profit || 0,
+                                        time: p.time,
+                                        magic: p.magic || 0,
+                                        source: 'MT5'
+                                    }));
+                                    setPositions(mappedPositions);
+                                }
+                                if (data.orders && Array.isArray(data.orders)) {
+                                    const mappedOrders = data.orders.map((o: any) => ({
+                                        ticket: o.ticket,
+                                        symbol: o.symbol,
+                                        type: o.type,
+                                        volume: o.volume,
+                                        price_open: o.price_open,
+                                        current_price: o.price_current,
+                                        sl: o.sl,
+                                        tp: o.tp,
+                                        profit: o.profit || 0,
+                                        time: o.time,
+                                        magic: o.magic || 0,
+                                        source: 'MT5'
+                                    }));
+                                    setOrders(mappedOrders);
+                                }
+                                positionUpdateTimer = null;
+                            }, 1200); // 1.2s throttle is plenty for mobile trade updates
                         }
                     }
 

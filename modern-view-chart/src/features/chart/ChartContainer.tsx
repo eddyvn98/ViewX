@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, memo, useEffect, useState } from 'react';
+import React, { useRef, memo, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { useChartInit } from './hooks/use-chart-init';
@@ -13,30 +13,24 @@ import { useChartIndicators } from './hooks/use-chart-indicators';
 import { useChartAlerts } from './hooks/use-chart-alerts';
 import { useChartInteraction } from './hooks/use-chart-interaction';
 import { useChartScaleReset } from './hooks/use-chart-scale-reset';
+import { useChartContextMenu } from './hooks/use-chart-context-menu';
+import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
+import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
+
 import { CandleCountdown } from './components/CandleCountdown';
-
-
 import { ChartOverlay } from './components/ChartOverlay';
 import { SubchartLegend } from './components/SubchartLegend';
 import { SubchartIndicatorsTabs } from './components/SubchartIndicatorsTabs';
 import { ChartLegend } from './components/ChartLegend';
+import { ChartContextMenu } from './components/ChartContextMenu';
 import { PositionModifier } from '../terminal/components/PositionModifier';
-import { Bell, BellOff, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 const EMPTY_CANDLES: any[] = [];
 
 export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }: { chartId: string, isNarrow?: boolean }) {
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
-    const toggleIndicatorVisibility = useMarketStore(state => state.toggleIndicatorVisibility);
-
-    const [contextMenu, setContextMenu] = useState<{
-        visible: boolean;
-        x: number;
-        y: number;
-        price: number;
-        nearAlertId?: string;
-    } | null>(null);
 
     const chartInstance = useMarketStore((state) => {
         for (const tab of Object.values(state.tabs)) {
@@ -100,7 +94,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         getAlertNearPrice,
     } = useChartAlerts(chartId, priceChartRef, seriesRef, symbol);
 
-
     useChartInteraction(
         priceChartRef,
         seriesRef,
@@ -120,153 +113,32 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         timescaleContainerRef
     );
 
-    /* ================= CROSSHAIR STATE ================= */
-    const crosshairPoint = useMarketStore(state => state.crosshairPoint);
-    const isHovering = !!(crosshairPoint?.time && crosshairPoint?.sourceId === chartId);
-
-    /* ================= COUNTDOWN ================= */
-    // Handled by CandleCountdown component below
-
     /* ================= CONTEXT MENU ================= */
-    const handleContextMenu = (e: React.MouseEvent) => {
-        e.preventDefault();
-        if (!priceChartRef.current || !priceContainerRef.current) return;
+    const { contextMenu, handleContextMenu, closeContextMenu } = useChartContextMenu(
+        priceChartRef,
+        priceContainerRef,
+        seriesRef,
+        getAlertNearPrice
+    );
 
-        const rect = priceContainerRef.current.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-        const x = e.clientX - rect.left;
-        const price = seriesRef.current?.coordinateToPrice(y);
-
-        if (price) {
-            const nearAlert = getAlertNearPrice(y, x);
-            setContextMenu({
-                visible: true,
-                x: e.clientX,
-                y: e.clientY,
-                price,
-                nearAlertId: nearAlert?.id,
-            });
-        }
-    };
-
-    useEffect(() => {
-        const close = () => setContextMenu(null);
-        window.addEventListener('click', close);
-        return () => window.removeEventListener('click', close);
-    }, []);
-
-    const lastSwitchRef = useRef<number>(0);
-
-    // Prevent page scroll when wheeling over subchart to switch indicators
-    useEffect(() => {
-        const container = subchartContainerRef.current;
-        if (!container) return;
-
-        const handleWheel = (e: WheelEvent) => {
-            const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
-            const subchartIndicators = indicators.filter(i => i.pane === 'subchart');
-            if (subchartIndicators.length <= 1) return;
-
-            // block page scroll early if we have multiple indicators
-            e.preventDefault();
-            e.stopPropagation();
-
-            const now = Date.now();
-            // Threshold: 200ms between switches and significant deltaY to avoid hair-trigger
-            if (now - lastSwitchRef.current < 200 || Math.abs(e.deltaY) < 20) return;
-
-            const visibleIndex = subchartIndicators.findIndex(i => i.visible);
-            if (e.deltaY === 0) return;
-            const direction = e.deltaY > 0 ? 1 : -1;
-
-            let nextIndex = visibleIndex + direction;
-            if (nextIndex >= subchartIndicators.length) nextIndex = 0;
-            if (nextIndex < 0) nextIndex = subchartIndicators.length - 1;
-
-            if (nextIndex !== visibleIndex) {
-                lastSwitchRef.current = now;
-                if (visibleIndex !== -1) {
-                    toggleIndicatorVisibility(chartId, subchartIndicators[visibleIndex].id);
-                }
-                toggleIndicatorVisibility(chartId, subchartIndicators[nextIndex].id);
-
-                // Auto-fit the new indicator scale so it's always centered
-                requestAnimationFrame(() => {
-                    subchartChartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                });
-            }
-        };
-
-        container.addEventListener('wheel', handleWheel, { passive: false });
-        return () => container.removeEventListener('wheel', handleWheel);
-    }, [chartId, toggleIndicatorVisibility]);
-
+    /* ================= SUBCHART LOGIC ================= */
     const [isSubchartVisible, setIsSubchartVisible] = useState(true);
+    useSubchartSwitcher(chartId, subchartContainerRef, subchartChartRef);
 
-    // Dynamic margin adjustment to keep candles above the subchart overlay
-    useEffect(() => {
-        if (!priceChartRef.current) return;
+    /* ================= LAYOUT EFFECTS ================= */
+    useChartLayoutEffects(
+        priceChartRef,
+        subchartChartRef,
+        timescaleChartRef,
+        timezone,
+        isSubchartVisible
+    );
 
-        const bottomMargin = isSubchartVisible ? 0.32 : 0.08; // 32% if overlay (25%) is visible
-        priceChartRef.current.priceScale('right').applyOptions({
-            scaleMargins: {
-                top: 0.08,
-                bottom: bottomMargin
-            }
-        });
-    }, [isSubchartVisible, priceChartRef]);
+    /* ================= CROSSHAIR STATE ================= */
+    const isHovering = useMarketStore(state => !!(state.crosshairPoint?.time && state.crosshairPoint?.sourceId === chartId));
 
-    // Apply Timezone to Chart Localization & Scale
-    useEffect(() => {
-        if (!priceChartRef.current || !timezone) return;
-
-        const timeFormatter = (timestamp: number) => {
-            return new Intl.DateTimeFormat('en-GB', {
-                timeZone: timezone,
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-            }).format(timestamp * 1000).replace(',', '');
-        };
-
-        const tickMarkFormatter = (time: number) => {
-            const date = new Date(time * 1000);
-            return new Intl.DateTimeFormat('en-GB', {
-                timeZone: timezone,
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-            }).format(date);
-        };
-
-        const localizationOptions = {
-            localization: {
-                timeFormatter,
-            },
-        };
-
-        const timeScaleOptions = {
-            timeScale: {
-                tickMarkFormatter,
-            },
-        };
-
-        priceChartRef.current.applyOptions(localizationOptions);
-        (priceChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
-
-        if (subchartChartRef.current) {
-            subchartChartRef.current.applyOptions(localizationOptions);
-            (subchartChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
-        }
-
-        if (timescaleChartRef.current) {
-            timescaleChartRef.current.applyOptions(localizationOptions);
-            (timescaleChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
-        }
-    }, [timezone, priceChartRef, subchartChartRef, timescaleChartRef]);
+    /* ================= MOBILE VIEW OPTIMIZATION ================= */
+    const isMinimized = useMarketStore(state => (state.activeMobileTab === 'trade' || state.activeMobileTab === 'positions'));
 
     return (
         <div
@@ -297,8 +169,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* PRICE CHART (Main) - Always background */}
                 <div ref={priceContainerRef} className="w-full h-full" />
 
-
-
                 {/* CANDLE COUNTDOWN OVERLAY */}
                 <CandleCountdown
                     chart={priceChartRef.current}
@@ -309,8 +179,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
                 <div
                     className={cn(
-                        "absolute right-[80px] z-30 flex items-end transition-all duration-300",
-                        isSubchartVisible ? "bottom-[25%]" : "bottom-0"
+                        "absolute right-[50px] md:right-[80px] z-30 flex items-end transition-all duration-300",
+                        isMinimized && isSubchartVisible ? "bottom-[32px]" : (isSubchartVisible ? "bottom-[25%]" : "bottom-0")
                     )}
                 >
                     <SubchartIndicatorsTabs
@@ -321,24 +191,32 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     <button
                         onClick={() => setIsSubchartVisible(!isSubchartVisible)}
                         className={cn(
-                            "px-4 py-1.5 rounded-tr-lg border border-zinc-700/50 border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-2 backdrop-blur-md",
+                            "px-3 md:px-4 py-1 rounded-tr-md border border-zinc-700/40 border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md",
                             isSubchartVisible
-                                ? "bg-[#1e222d]/90 text-[#787b86] hover:text-blue-400"
-                                : "bg-blue-600/20 text-blue-400"
+                                ? "bg-[#1e222d]/80 text-[#787b86] hover:text-blue-400"
+                                : "bg-blue-600/30 text-blue-400"
                         )}
                         style={{ marginLeft: '-1px' }}
                     >
-                        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
-                            {isSubchartVisible ? 'Hide' : 'Show Indicator'}
+                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight md:tracking-widest whitespace-nowrap">
+                            {isSubchartVisible ? 'Hide' : (
+                                <>
+                                    <span className="md:inline hidden">Show Indicator</span>
+                                    <span className="md:hidden inline">Show</span>
+                                </>
+                            )}
                         </span>
-                        {isSubchartVisible ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                        {isSubchartVisible ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
                     </button>
                 </div>
 
                 {/* RSI SUBCHART (Overlay) - Floating at bottom */}
                 <div
-                    className={`absolute bottom-0 left-0 right-0 h-[25%] min-h-[100px] z-10 bg-[#131722]/50 backdrop-blur-md border-t border-blue-500/30 shadow-[0_-10px_20px_rgba(0,0,0,0.5)] transition-all duration-300 transform ${isSubchartVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-                        }`}
+                    className={cn(
+                        "absolute bottom-0 left-0 right-0 z-10 border-t border-blue-500/30 transition-all duration-300 transform overflow-hidden",
+                        isSubchartVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
+                        isMinimized && isSubchartVisible ? "h-[32px] bg-[#131722]" : "h-[25%] min-h-[100px] bg-[#131722]/50 backdrop-blur-md"
+                    )}
                 >
                     {/* Visual Border Highlight */}
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -368,44 +246,17 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
             </div>
 
             {/* CONTEXT MENU */}
-            {contextMenu?.visible && (
-                <div
-                    className="fixed z-50 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-xl py-1 w-48"
-                    style={{ left: contextMenu.x, top: contextMenu.y }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {!contextMenu.nearAlertId ? (
-                        <button
-                            className="w-full text-left px-3 py-2 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] flex items-center gap-2"
-                            onClick={() => {
-                                handleAddAlertAtPrice(contextMenu.price);
-                                setContextMenu(null);
-                            }}
-                        >
-                            <Bell size={14} className="text-orange-500" />
-                            Add Alert
-                        </button>
-                    ) : (
-                        <button
-                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
-                            onClick={() => {
-                                handleRemoveAlert(contextMenu.nearAlertId!);
-                                setContextMenu(null);
-                            }}
-                        >
-                            <BellOff size={14} />
-                            Remove Alert
-                        </button>
-                    )}
-                    <div className="h-[1px] bg-[#2a2e39] my-1" />
-                    <button
-                        className="w-full text-left px-3 py-2 text-sm text-[#d1d4dc] hover:bg-[#2a2e39] flex items-center gap-2"
-                        onClick={() => setContextMenu(null)}
-                    >
-                        <X size={14} className="text-zinc-500" />
-                        Cancel
-                    </button>
-                </div>
+            {contextMenu && (
+                <ChartContextMenu
+                    visible={contextMenu.visible}
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    price={contextMenu.price}
+                    nearAlertId={contextMenu.nearAlertId}
+                    onAddAlert={handleAddAlertAtPrice}
+                    onRemoveAlert={handleRemoveAlert}
+                    onClose={closeContextMenu}
+                />
             )}
         </div>
     );

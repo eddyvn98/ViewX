@@ -3,41 +3,123 @@
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { useMarketStore } from "@/lib/store";
+import { useMarketStore, RootState } from "@/lib/store";
+import { useShallow } from "zustand/react/shallow";
 import { MarketList } from "@/features/market/MarketList";
 import { Terminal } from "@/features/terminal/Terminal";
 import { NotificationManager } from "@/features/notifications/NotificationManager";
 import { TabContainer } from "@/components/layout/TabContainer";
-import { ChartsToolbar } from "@/features/chart/components/ChartsToolbar";
+import { ChartsToolbarMemo } from "@/features/chart/components/ChartsToolbar";
 import { ChartGrid } from "@/features/chart/components/ChartGrid";
 import { OrderForm } from "@/features/terminal/components/OrderForm";
 import { RightSidebar } from "@/features/chart/components/RightSidebar";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { MobileMenu } from "@/components/layout/MobileMenu";
+import React from "react";
 
 export default function Home() {
   useWebSocket();
-  const isTerminalVisible = useMarketStore((state) => state.isTerminalVisible);
-  const isTerminalCollapsed = useMarketStore((state) => state.isTerminalCollapsed);
-  const terminalHeight = useMarketStore((state) => state.terminalHeight);
-  const isLeftSidebarOpen = useMarketStore((state) => state.isLeftSidebarOpen);
-  const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
+  const {
+    isTerminalVisible,
+    isTerminalCollapsed,
+    terminalHeight,
+    isLeftSidebarOpen,
+    isRightSidebarOpen,
+    activeMobileTab,
+    isInputFocused,
+    isScrollingPanel
+  } = useMarketStore(useShallow((state: RootState) => ({
+    isTerminalVisible: state.isTerminalVisible,
+    isTerminalCollapsed: state.isTerminalCollapsed,
+    terminalHeight: state.terminalHeight,
+    isLeftSidebarOpen: state.isLeftSidebarOpen,
+    isRightSidebarOpen: state.isRightSidebarOpen,
+    activeMobileTab: state.activeMobileTab,
+    isInputFocused: state.isInputFocused,
+    isScrollingPanel: state.isScrollingPanel
+  })));
+
   const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
+  const setActiveMobileTab = useMarketStore((state) => state.setActiveMobileTab);
+  const setInputFocused = useMarketStore((state) => state.setInputFocused);
+  const setIsScrollingPanel = useMarketStore((state) => state.setIsScrollingPanel);
+  const [isMobileWatchlistAddMode, setIsMobileWatchlistAddMode] = React.useState(false);
+
+  // Keyboard Detection & Layout Reset
+  React.useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+      const isKeyboardVisible = window.visualViewport!.height < window.innerHeight * 0.85;
+      if (!isKeyboardVisible && isInputFocused) {
+        setInputFocused(false);
+        (document.activeElement as HTMLElement)?.blur();
+      }
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+  }, [isInputFocused, setInputFocused]);
+
+  const handleMobileTabChange = (tab: string) => {
+    if (activeMobileTab === tab && (tab === 'trade' || tab === 'positions')) {
+      setActiveMobileTab('chart');
+      setInputFocused(false);
+    } else {
+      setActiveMobileTab(tab);
+    }
+  };
+
+  const handleClosePanel = () => {
+    setActiveMobileTab('chart');
+    setInputFocused(false);
+    (document.activeElement as HTMLElement)?.blur();
+  };
+
+  const scrollTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const handleScroll = () => {
+    if (!setIsScrollingPanel) return;
+    setIsScrollingPanel(true);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrollingPanel(false);
+    }, 1500);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      if (setIsScrollingPanel) setIsScrollingPanel(false);
+    };
+  }, [setIsScrollingPanel]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col font-sans select-none">
+    <div className="fixed inset-0 bg-zinc-950 text-white flex flex-col font-sans select-none">
       <NotificationManager />
-      <Header />
-      <div className="flex flex-1 pt-0 h-[calc(100vh-48px)] overflow-hidden">
+      <div className="hidden md:block">
+        <Header />
+      </div>
+
+      {/* 
+          Mobile Height: 100dvh - 64px (Bottom Nav)
+          Desktop Height: 100vh - 48px (Header) 
+      */}
+      <div className="flex flex-1 pt-0 overflow-hidden">
         {/* LEFT BAR: Icons */}
-        <Sidebar onToggleMarket={toggleLeftSidebar} />
+        <div className="hidden md:flex h-full">
+          <Sidebar onToggleMarket={toggleLeftSidebar} />
+        </div>
 
         {/* BODY AREA */}
-        <div className="flex-1 flex overflow-hidden ml-16 relative">
+        <div className="flex-1 flex overflow-hidden ml-0 md:ml-16 relative">
           {/* OPTIONAL LEFT PANEL: Market List */}
           <div
             className={cn(
-              "border-r border-zinc-800 bg-zinc-950 flex flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0",
+              "border-r border-zinc-800 bg-zinc-950 flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0 hidden md:flex",
               isLeftSidebarOpen ? "w-72 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           >
@@ -55,10 +137,17 @@ export default function Home() {
           </div>
 
           {/* MAIN CENTER: Charts & Terminal */}
-          <main className="flex-1 flex flex-col p-1.5 overflow-hidden relative min-w-0 bg-black/20">
-            <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/40 rounded-lg border border-zinc-800/50 overflow-hidden shadow-2xl">
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-1 gap-1">
-                <ChartsToolbar />
+          <main className={cn(
+            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-black/20",
+            (isScrollingPanel || isInputFocused) ? "pb-0" : "pb-[108px] md:pb-0"
+          )}>
+            {/* Show Chart ONLY if active tab is 'chart' on Mobile, OR always on Desktop */}
+            <div className={cn(
+              "flex-1 flex flex-col min-h-0 bg-zinc-900/40 rounded-none md:rounded-lg border-0 md:border border-zinc-800/50 overflow-hidden shadow-2xl",
+              (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions') ? 'flex' : 'hidden md:flex'
+            )}>
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0 md:p-1 gap-1">
+                <ChartsToolbarMemo />
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <ChartGrid />
                 </div>
@@ -66,7 +155,7 @@ export default function Home() {
 
               <div
                 className={cn(
-                  "transition-all duration-300 ease-in-out overflow-hidden flex flex-col shrink-0 border-zinc-800",
+                  "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-zinc-800 hidden md:flex",
                   isTerminalVisible ? "border-t opacity-100" : "opacity-0 border-t-0"
                 )}
                 style={{ height: isTerminalVisible ? (isTerminalCollapsed ? 40 : terminalHeight) : 0 }}
@@ -74,12 +163,122 @@ export default function Home() {
                 <Terminal />
               </div>
             </div>
+
+            {/* Mobile Place Order Panel - GPU ACCELERATED SLIDE */}
+            <div className={cn(
+              "fixed left-0 right-0 bg-zinc-950 border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-30 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform",
+              isScrollingPanel || isInputFocused ? "bottom-0" : "bottom-[64px]",
+              activeMobileTab === 'trade' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
+              isInputFocused ? "h-[80%]" : "h-[29%]"
+            )}>
+              <div
+                className="h-6 flex items-center justify-center cursor-row-resize active:bg-zinc-900 touch-none shrink-0"
+                onClick={handleClosePanel}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  (window as any)._panelTouchStartY = touch.clientY;
+                }}
+                onTouchEnd={(e) => {
+                  const startY = (window as any)._panelTouchStartY;
+                  if (startY === undefined) return;
+                  const endY = e.changedTouches[0].clientY;
+                  if (endY - startY > 30) { // Swipe down
+                    handleClosePanel();
+                  }
+                  delete (window as any)._panelTouchStartY;
+                }}
+              >
+                <div className="w-12 h-1 bg-zinc-800 rounded-full" />
+              </div>
+              <div
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto custom-scrollbar"
+              >
+                <OrderForm />
+              </div>
+            </div>
+
+            {/* Mobile Watchlist Tab */}
+            {activeMobileTab === 'watchlist' && (
+              <div className="flex-1 flex flex-col bg-zinc-950 md:hidden h-full">
+                <div className="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-900/50">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
+                    {isMobileWatchlistAddMode ? 'Add Symbols' : 'My Watchlist'}
+                  </h2>
+                  <button
+                    onClick={() => setIsMobileWatchlistAddMode(!isMobileWatchlistAddMode)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all",
+                      isMobileWatchlistAddMode
+                        ? "bg-zinc-800 text-zinc-400 hover:text-white"
+                        : "bg-blue-600 text-white shadow-lg shadow-blue-500/20 active:scale-95"
+                    )}
+                  >
+                    {isMobileWatchlistAddMode ? (
+                      <>
+                        <X size={14} />
+                        <span>Close</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={14} />
+                        <span>Add</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 bg-zinc-950 flex flex-col">
+                  <MarketList mode={isMobileWatchlistAddMode ? 'discovery' : 'watchlist'} />
+                </div>
+              </div>
+            )}
+
+            {/* Mobile Terminal Panel - GPU ACCELERATED SLIDE */}
+            <div className={cn(
+              "fixed left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-30 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform",
+              isScrollingPanel || isInputFocused ? "bottom-0" : "bottom-[64px]",
+              activeMobileTab === 'positions' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
+              isInputFocused ? "h-[80%]" : "h-[29%]"
+            )}>
+              <div
+                className="h-6 flex items-center justify-center cursor-row-resize active:bg-zinc-900 touch-none shrink-0"
+                onClick={handleClosePanel}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  (window as any)._panelTouchStartY = touch.clientY;
+                }}
+                onTouchEnd={(e) => {
+                  const startY = (window as any)._panelTouchStartY;
+                  if (startY === undefined) return;
+                  const endY = e.changedTouches[0].clientY;
+                  if (endY - startY > 30) { // Swipe down
+                    handleClosePanel();
+                  }
+                  delete (window as any)._panelTouchStartY;
+                }}
+              >
+                <div className="w-12 h-1 bg-zinc-800 rounded-full" />
+              </div>
+              <div
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto flex flex-col custom-scrollbar"
+              >
+                <Terminal forceExpanded={true} />
+              </div>
+            </div>
+
+
+            {activeMobileTab === 'menu' && (
+              <div className="flex-1 bg-zinc-950 md:hidden overflow-y-auto">
+                <MobileMenu />
+              </div>
+            )}
           </main>
 
           {/* RIGHT SIDEBAR: 3 Tabs (Market, Indicators, Trade) */}
           <div
             className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden flex flex-col shrink-0",
+              "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 hidden md:flex",
               isRightSidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           >
@@ -87,7 +286,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <MobileBottomNav
+        activeTab={activeMobileTab}
+        onTabChange={handleMobileTabChange}
+        isHidden={isScrollingPanel || isInputFocused}
+      />
     </div>
   );
 }
-

@@ -27,12 +27,14 @@ export function useChartInit(
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
 
+        const initialMinW = window.innerWidth < 768 ? 50 : 60;
+
         const commonOptions = {
             layout: { background: { color: '#131722' }, textColor: '#d4d4d8' },
             grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
             crosshair: { mode: 1 },
             timeScale: {
-                rightOffset: 40,
+                rightOffset: 20, // Reduced from 40 for more space
                 barSpacing: 10,
                 fixLeftEdge: true,
                 fixRightEdge: false,
@@ -57,7 +59,7 @@ export function useChartInit(
                 visible: true,
                 scaleMargins: { top: 0.1, bottom: 0.1 },
                 borderVisible: true,
-                minimumWidth: 80,
+                minimumWidth: initialMinW,
             },
             handleScale: { mouseWheel: true, axisPressedMouseMove: { price: true, time: true } as any },
             handleScroll: true,
@@ -75,7 +77,7 @@ export function useChartInit(
                 autoScale: true,
                 scaleMargins: { top: 0.1, bottom: 0.1 },
                 borderVisible: true,
-                minimumWidth: 80,
+                minimumWidth: initialMinW,
             },
             handleScale: { mouseWheel: false, axisPressedMouseMove: { price: true, time: true } as any },
             handleScroll: true,
@@ -89,7 +91,7 @@ export function useChartInit(
             width: timescaleContainerRef.current.clientWidth,
             height: timescaleContainerRef.current.clientHeight,
             timeScale: { ...commonOptions.timeScale, visible: true },
-            rightPriceScale: { visible: true, borderVisible: false, ticksVisible: false, minimumWidth: 80 },
+            rightPriceScale: { visible: true, borderVisible: false, ticksVisible: false, minimumWidth: initialMinW },
             leftPriceScale: { visible: false },
             crosshair: {
                 vertLine: { visible: false, labelVisible: true },
@@ -143,14 +145,19 @@ export function useChartInit(
                     lastSyncX = curX;
                     lastSyncY = curY;
 
-                    const logical = priceChart.timeScale().coordinateToLogical(curX);
-                    store.syncCrosshair({
-                        time: curTime,
-                        price: Number(seriesRef.current?.coordinateToPrice(curY) ?? 0),
-                        sourceId: chartId,
-                        point: { x: curX, y: curY },
-                        logical: logical !== null ? Number(logical) : null
-                    });
+                    const now = Date.now();
+                    const lastSyncAt = (priceChart as any)._lastSyncAt || 0;
+                    if (now - lastSyncAt > 50) {
+                        (priceChart as any)._lastSyncAt = now;
+                        const logical = priceChart.timeScale().coordinateToLogical(curX);
+                        store.syncCrosshair({
+                            time: curTime,
+                            price: Number(seriesRef.current?.coordinateToPrice(curY) ?? 0),
+                            sourceId: chartId,
+                            point: { x: curX, y: curY },
+                            logical: logical !== null ? Number(logical) : null
+                        });
+                    }
                 }
             } else if (!param.time && lastSyncTime !== null) {
                 lastSyncTime = null;
@@ -216,7 +223,7 @@ export function useChartInit(
 
         /* ================= SYNC LAYOUT WIDTH ================= */
         let syncRequestId: number | null = null;
-        let lastMaxW = 80;
+        let lastMaxW = initialMinW;
 
         const autoSyncLayout = () => {
             if (syncRequestId !== null) return;
@@ -227,7 +234,7 @@ export function useChartInit(
 
                 const priceW = priceChart.priceScale('right').width();
                 const subW = subchartChart.priceScale('right').width();
-                const maxW = Math.max(priceW, subW, 80);
+                const maxW = Math.max(priceW, subW, initialMinW);
 
                 if (Math.abs(maxW - lastMaxW) > 1) {
                     lastMaxW = maxW;

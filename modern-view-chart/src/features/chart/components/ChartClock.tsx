@@ -6,9 +6,11 @@ import { Clock } from 'lucide-react';
 
 export function ChartClock() {
     const [time, setTime] = useState<string>('');
-    const activeTab = useMarketStore(state => state.tabs[state.activeTabId]);
-    const activeChart = activeTab?.charts[activeTab.activeChartId || ''];
-    const timezone = activeChart?.timezone || 'Asia/Ho_Chi_Minh';
+    const timezone = useMarketStore(state => {
+        const activeTab = state.tabs[state.activeTabId];
+        const activeChart = activeTab?.charts[activeTab.activeChartId || ''];
+        return activeChart?.timezone || 'Asia/Ho_Chi_Minh';
+    });
 
     useEffect(() => {
         const updateClock = () => {

@@ -98,8 +98,18 @@ export function useChartData(
                 subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
 
                 requestAnimationFrame(() => {
-                    chartRef.current?.timeScale().fitContent();
-                    chartRef.current?.timeScale().scrollToRealTime();
+                    const timeScale = chartRef.current?.timeScale();
+                    if (timeScale && formatted.length > 0) {
+                        // Instead of fitContent (which shows everything tiny), 
+                        // we show a focused range of ~70 bars
+                        const totalBars = formatted.length;
+                        const barsToShow = window.innerWidth < 768 ? 50 : 100; // Fewer bars on mobile = bigger candles
+
+                        timeScale.setVisibleLogicalRange({
+                            from: totalBars - barsToShow,
+                            to: totalBars + 5 // Small offset to the right
+                        });
+                    }
                 });
 
                 isInitialMount.current = false;
@@ -134,7 +144,8 @@ export function useChartData(
                 // Đồng bộ nhịp nhảy cho các thành phần khác
                 const syncUpdate = { time: candleTime as Time, value: 0 } as any;
                 subSyncRef.current?.update(syncUpdate);
-                timescaleSyncRef.current?.update(syncUpdate);
+                // timescaleSyncRef has future points, cannot update current time
+                // timescaleSyncRef.current?.update(syncUpdate);
 
                 lastTimeRef.current = candleTime;
             } catch (err) {
