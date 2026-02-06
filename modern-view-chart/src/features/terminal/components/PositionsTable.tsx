@@ -162,7 +162,8 @@ const PositionRow = React.memo(({
         openPrice: pos.open_price,
         currentPrice: livePrice,
         volume: pos.volume,
-        symbolInfo
+        symbolInfo,
+        symbol: pos.symbol
     });
 
     // Use MT5 profit if price is not available yet, or if it's the first render

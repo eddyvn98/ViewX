@@ -99,8 +99,16 @@ export function useChartPositions(
             const lines = priceLinesRef.current[ticketStr];
 
             // Create/Update Entry line
-            const entryColor = side === 'buy' ? '#2962FF' : '#2962FF';
-            const entryTitle = `${(p.type || '').toUpperCase()} ${p.volume} • ${formatPnL(p.profit || 0)}`;
+            const pnl = p.profit !== undefined ? p.profit : calculatePnL({
+                type: p.type,
+                openPrice: p.open_price,
+                currentPrice: currentPrice || p.open_price,
+                volume: p.volume,
+                symbolInfo,
+                symbol: p.symbol
+            });
+            const entryColor = pnl >= 0 ? '#22c55e' : '#71717a'; // Green if profit, Gray if loss
+            const entryTitle = `${(p.type || '').toUpperCase()} ${p.volume} • ${formatPnL(pnl)}`;
             const entryOptions = {
                 price: p.open_price,
                 color: entryColor,
@@ -128,7 +136,8 @@ export function useChartPositions(
                     openPrice: p.open_price,
                     currentPrice: slPrice,
                     volume: p.volume,
-                    symbolInfo
+                    symbolInfo,
+                    symbol: p.symbol
                 });
                 const slTitle = `SL • ${formatPnL(slPnl)}`;
                 const slOptions = {
@@ -162,7 +171,8 @@ export function useChartPositions(
                     openPrice: p.open_price,
                     currentPrice: tpPrice,
                     volume: p.volume,
-                    symbolInfo
+                    symbolInfo,
+                    symbol: p.symbol
                 });
                 const tpTitle = `TP • ${formatPnL(tpPnl)}`;
                 const tpOptions = {
@@ -246,11 +256,13 @@ export function useChartPositions(
                         openPrice: p.open_price,
                         currentPrice: currentPrice,
                         volume: p.volume,
-                        symbolInfo
+                        symbolInfo,
+                        symbol: p.symbol
                     });
                     const typeStr = (p.type || '').toUpperCase();
                     const entryTitle = `${typeStr} ${p.volume} • ${formatPnL(pnl)}`;
-                    lines.entry.applyOptions({ title: entryTitle });
+                    const entryColor = pnl >= 0 ? '#22c55e' : '#71717a';
+                    lines.entry.applyOptions({ title: entryTitle, color: entryColor });
                 }
 
                 // Update SL PnL if exists
@@ -262,7 +274,8 @@ export function useChartPositions(
                         openPrice: p.open_price,
                         currentPrice: slPrice,
                         volume: p.volume,
-                        symbolInfo
+                        symbolInfo,
+                        symbol: p.symbol
                     });
                     const slTitle = `SL • ${formatPnL(slPnl)}`;
                     lines.sl.applyOptions({ title: slTitle });
@@ -277,7 +290,8 @@ export function useChartPositions(
                         openPrice: p.open_price,
                         currentPrice: tpPrice,
                         volume: p.volume,
-                        symbolInfo
+                        symbolInfo,
+                        symbol: p.symbol
                     });
                     const tpTitle = `TP • ${formatPnL(tpPnl)}`;
                     lines.tp.applyOptions({ title: tpTitle });

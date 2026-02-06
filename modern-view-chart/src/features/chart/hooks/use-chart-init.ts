@@ -1,4 +1,6 @@
-import { useRef, useEffect } from 'react';
+'use client';
+
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import {
     createChart,
     IChartApi,
@@ -6,12 +8,15 @@ import {
     CandlestickSeries,
     LineSeries,
 } from 'lightweight-charts';
+import { useMarketStore } from '@/lib/store';
 
 export function useChartInit(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
     subchartContainerRef: React.RefObject<HTMLDivElement | null>,
-    timescaleContainerRef: React.RefObject<HTMLDivElement | null>
+    timescaleContainerRef: React.RefObject<HTMLDivElement | null>,
+    chartId: string
 ) {
+    const [isReady, setIsReady] = useState(false);
     const priceChartRef = useRef<IChartApi | null>(null);
     const subchartChartRef = useRef<IChartApi | null>(null);
     const timescaleChartRef = useRef<IChartApi | null>(null);
@@ -27,12 +32,12 @@ export function useChartInit(
             grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
             crosshair: { mode: 1 },
             timeScale: {
-                rightOffset: 40, // Khoảng trống sau 100 nến trắng tương lai
+                rightOffset: 40,
                 barSpacing: 10,
                 fixLeftEdge: true,
-                fixRightEdge: false, // Cho phép kéo chart về phía tương lai
+                fixRightEdge: false,
                 lockVisibleTimeRangeOnResize: true,
-                rightBarStaysOnScroll: false, // Cho phép scroll xa khỏi nến cuối cùng
+                rightBarStaysOnScroll: false,
                 borderVisible: false,
                 borderColor: "#2B2B43",
                 visible: true,
@@ -107,7 +112,6 @@ export function useChartInit(
             if (param.time && param.point) {
                 targets.forEach(t => {
                     try {
-                        // FIX: Kiểm tra kĩ time trước khi set để tránh lỗi 'year'
                         t.chart.setCrosshairPosition(0, param.time, t.series);
                     } catch (e) { }
                 });
@@ -116,11 +120,44 @@ export function useChartInit(
             }
         };
 
+        // Cache last sync values to prevent redundant store updates
+        let lastSyncTime: number | null = null;
+        let lastSyncX: number | null = null;
+        let lastSyncY: number | null = null;
+
         priceChart.subscribeCrosshairMove((param) => {
             syncCrosshair(priceChart, [
                 { chart: subchartChart, series: subSyncSeries },
                 { chart: timescaleChart, series: footSyncSeries }
             ], param);
+
+            // Sync to global store - ONLY if we have a point (triggered by user)
+            const store = useMarketStore.getState();
+            if (param.time && param.point) {
+                const curTime = Number(param.time);
+                const curX = param.point.x;
+                const curY = param.point.y;
+
+                if (curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) {
+                    lastSyncTime = curTime;
+                    lastSyncX = curX;
+                    lastSyncY = curY;
+
+                    const logical = priceChart.timeScale().coordinateToLogical(curX);
+                    store.syncCrosshair({
+                        time: curTime,
+                        price: Number(seriesRef.current?.coordinateToPrice(curY) ?? 0),
+                        sourceId: chartId,
+                        point: { x: curX, y: curY },
+                        logical: logical !== null ? Number(logical) : null
+                    });
+                }
+            } else if (!param.time && lastSyncTime !== null) {
+                lastSyncTime = null;
+                lastSyncX = null;
+                lastSyncY = null;
+                store.syncCrosshair(null);
+            }
         });
 
         subchartChart.subscribeCrosshairMove((param) => {
@@ -128,6 +165,34 @@ export function useChartInit(
                 { chart: priceChart, series: candleSeries },
                 { chart: timescaleChart, series: footSyncSeries }
             ], param);
+
+            // Sync to global store - ONLY if we have a point (triggered by user)
+            const store = useMarketStore.getState();
+            if (param.time && param.point) {
+                const curTime = Number(param.time);
+                const curX = param.point.x;
+                const curY = param.point.y;
+
+                if (curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) {
+                    lastSyncTime = curTime;
+                    lastSyncX = curX;
+                    lastSyncY = curY;
+
+                    const logical = subchartChart.timeScale().coordinateToLogical(curX);
+                    store.syncCrosshair({
+                        time: curTime,
+                        price: null,
+                        sourceId: chartId,
+                        point: { x: curX, y: curY },
+                        logical: logical !== null ? Number(logical) : null
+                    });
+                }
+            } else if (!param.time && lastSyncTime !== null) {
+                lastSyncTime = null;
+                lastSyncX = null;
+                lastSyncY = null;
+                store.syncCrosshair(null);
+            }
         });
 
         /* ================= SYNC TIME RANGE ================= */
@@ -158,8 +223,6 @@ export function useChartInit(
 
             syncRequestId = requestAnimationFrame(() => {
                 syncRequestId = null;
-
-                // Check if charts are still valid
                 if (!priceContainerRef.current || !subchartContainerRef.current) return;
 
                 const priceW = priceChart.priceScale('right').width();
@@ -176,11 +239,9 @@ export function useChartInit(
             });
         };
 
-        // Subscribe to events that might change the price scale width
         priceTS.subscribeVisibleLogicalRangeChange(autoSyncLayout);
         subTS.subscribeVisibleLogicalRangeChange(autoSyncLayout);
 
-        // Run initially
         setTimeout(autoSyncLayout, 50);
 
         const resizeObserver = new ResizeObserver(() => {
@@ -199,24 +260,34 @@ export function useChartInit(
         subSyncRef.current = subSyncSeries as any;
         timescaleSyncRef.current = footSyncSeries as any;
 
+        setIsReady(true);
+
         return () => {
+            setIsReady(false);
             if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
             resizeObserver.disconnect();
             priceChart.remove();
             subchartChart.remove();
             timescaleChart.remove();
         };
+    }, [chartId]); // Reduced dependencies to prevent full re-initialization
+
+    const syncRange = useCallback(() => {
+        const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();
+        if (range) {
+            subchartChartRef.current?.timeScale().setVisibleLogicalRange(range);
+            timescaleChartRef.current?.timeScale().setVisibleLogicalRange(range);
+        }
     }, []);
 
-    return {
-        priceChartRef, subchartChartRef, timescaleChartRef,
-        seriesRef, subSyncRef, timescaleSyncRef,
-        syncRange: () => {
-            const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();
-            if (range) {
-                subchartChartRef.current?.timeScale().setVisibleLogicalRange(range);
-                timescaleChartRef.current?.timeScale().setVisibleLogicalRange(range);
-            }
-        },
-    };
+    return useMemo(() => ({
+        isReady,
+        priceChartRef,
+        subchartChartRef,
+        timescaleChartRef,
+        seriesRef,
+        subSyncRef,
+        timescaleSyncRef,
+        syncRange
+    }), [isReady, syncRange]);
 }

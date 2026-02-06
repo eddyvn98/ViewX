@@ -23,7 +23,8 @@ export function AccountSummary({ account }: AccountSummaryProps) {
             openPrice: pos.open_price,
             currentPrice: livePrice,
             volume: pos.volume,
-            symbolInfo
+            symbolInfo,
+            symbol: pos.symbol
         });
 
         return sum + pnl;

@@ -4,7 +4,13 @@ import { Candle } from '../types';
 export interface DataSlice {
     candleData: Record<string, Candle[]>;
     isCrosshairSyncEnabled: boolean;
-    crosshairPoint: { time: number | null, price: number | null, sourceId: string | null } | null;
+    crosshairPoint: {
+        time: number | null,
+        price: number | null,
+        sourceId: string | null,
+        point?: { x: number, y: number } | null,
+        logical?: number | null
+    } | null;
     setCrosshairSync: (enabled: boolean) => void;
     syncCrosshair: (point: DataSlice['crosshairPoint']) => void;
     setCandles: (source: string, symbol: string, interval: string, data: Candle[]) => void;

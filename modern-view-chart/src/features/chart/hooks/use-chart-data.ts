@@ -14,7 +14,8 @@ export function useChartData(
     subchartRef: React.RefObject<IChartApi | null>,
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
-    timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>
+    timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
+    isReady: boolean
 ) {
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
@@ -25,20 +26,17 @@ export function useChartData(
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
     const candles = useMarketStore(state => (key ? state.candleData[key] : null) || EMPTY_CANDLES);
-    const currentPrice = useMarketStore(state => symbol ? state.tickers[symbol]?.price : null);
+    const currentPrice = useMarketStore(state => normSymbol ? state.tickers[normSymbol]?.price : null); // Normalize lookup
 
     const lastSymbolRef = useRef(symbol);
-
     const lastKeyRef = useRef(key);
-
     const isConnected = useMarketStore(state => state.isConnected);
 
     // 1. Đồng bộ toàn bộ dữ liệu (History hoặc New Candle)
     useEffect(() => {
-        if (!seriesRef.current || !symbol || !interval || !source) return;
+        if (!isReady || !seriesRef.current || !symbol || !interval || !source) return;
 
         // Reset chart khi thay đổi Context (Symbol, Interval, Source)
-        // Dùng key để định danh duy nhất
         if (key !== lastKeyRef.current) {
             seriesRef.current.setData([]);
             subSyncRef.current?.setData([]);
@@ -46,12 +44,11 @@ export function useChartData(
 
             lastSymbolRef.current = symbol;
             lastKeyRef.current = key;
-            isInitialMount.current = true; // Để lát nữa có data thì fitContent lại
+            isInitialMount.current = true;
             lastDataLength.current = 0;
         }
 
         if (candles.length === 0) {
-            // Nếu chưa có data, request server
             if (symbol && interval && source === 'MT5' && isConnected) {
                 sendMessage({
                     topic: "mt5_command",
@@ -72,13 +69,11 @@ export function useChartData(
             close: Number(c.close),
         }));
 
-        // Calculate time step for future whitespace points
-        let timeStep = 60; // default 1 min
+        let timeStep = 60;
         if (formatted.length > 1) {
             timeStep = Number(formatted[formatted.length - 1].time) - Number(formatted[formatted.length - 2].time);
         }
 
-        // Generate future whitespace points (at least 100 bars)
         const lastT = Number(formatted[formatted.length - 1].time);
         lastTimeRef.current = lastT;
         const futurePoints: any[] = [];
@@ -87,29 +82,21 @@ export function useChartData(
         }
 
         if (isInitialMount.current || candles.length !== lastDataLength.current) {
-            // 1. Series chính: KHÔNG thêm futurePoints để hàm update() real-time hoạt động được
-            // (Lightweight-charts không cho update nến cũ nếu đã có nến tương lai trong series)
             seriesRef.current.setData(formatted);
 
-            // 2. Subchart Sync: Cũng không thêm để đảm bảo đồng bộ update
             const timeOnly = formatted.map(f => ({ time: f.time, value: 0 }));
             subSyncRef.current?.setData(timeOnly as any);
 
-            // 3. Timescale Footer: THÊM futurePoints vào đây để hiện labels ở vùng tương lai
-            // Vì series này chỉ để hiện timescale nên không cần update() real-time nhảy múa
             const footerData = [
                 ...timeOnly,
-                ...futurePoints.map(p => ({ time: p.time })) // Whitespace points (no value)
+                ...futurePoints.map(p => ({ time: p.time }))
             ];
             timescaleSyncRef.current?.setData(footerData as any);
 
             if (isInitialMount.current && formatted.length > 0) {
-                // Reset Price Scale to Auto
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                 subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
 
-                // Fit content first to get a reasonable zoom level, then scroll to the end
-                // Use a small timeout to ensure data rendering has stabilized
                 requestAnimationFrame(() => {
                     chartRef.current?.timeScale().fitContent();
                     chartRef.current?.timeScale().scrollToRealTime();
@@ -120,7 +107,8 @@ export function useChartData(
         }
 
         lastDataLength.current = candles.length;
-    }, [candles, symbol, interval, source, isConnected]);
+    }, [isReady, candles, symbol, interval, source, isConnected]);
+
 
     // 2. Đồng bộ giá nhảy Real-time từ Ticker
     useEffect(() => {

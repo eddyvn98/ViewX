@@ -13,6 +13,8 @@ import { useChartIndicators } from './hooks/use-chart-indicators';
 import { useChartAlerts } from './hooks/use-chart-alerts';
 import { useChartInteraction } from './hooks/use-chart-interaction';
 import { useChartScaleReset } from './hooks/use-chart-scale-reset';
+import { CandleCountdown } from './components/CandleCountdown';
+import { DataWindow } from './components/DataWindow';
 
 import { ChartOverlay } from './components/ChartOverlay';
 import { SubchartLegend } from './components/SubchartLegend';
@@ -52,7 +54,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
             ? symbol!.replace(/[mM]$/, 'm')
             : symbol;
 
-    const currentPrice = useMarketStore(state => symbol ? state.tickers[symbol]?.price : undefined);
+    const currentPrice = useMarketStore(state => normSymbol ? state.tickers[normSymbol]?.price : undefined);
 
     const key = `${source}:${normSymbol}:${interval}`;
     const candles = useMarketStore((state) => state.candleData[key] || EMPTY_CANDLES);
@@ -62,11 +64,11 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
     const subchartContainerRef = useRef<HTMLDivElement>(null);
     const timescaleContainerRef = useRef<HTMLDivElement>(null);
 
-    const { priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, subSyncRef, timescaleSyncRef, syncRange } =
-        useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef);
+    const { isReady, priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, subSyncRef, timescaleSyncRef, syncRange } =
+        useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId);
 
     /* ================= DATA ================= */
-    useChartData(chartId, symbol, interval, source, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef);
+    useChartData(chartId, symbol, interval, source, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
 
     /* ================= OVERLAYS ================= */
     // useChartCrosshair(chartId, priceChartRef, seriesRef);
@@ -84,7 +86,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         symbol,
         timezone,
         syncRange,
-        currentPrice
+        currentPrice,
+        isReady
     );
 
     /* ================= ALERTS ================= */
@@ -95,6 +98,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         handleUpdateAlertPrice,
         getAlertNearPrice,
     } = useChartAlerts(chartId, priceChartRef, seriesRef, symbol);
+
 
     useChartInteraction(
         priceChartRef,
@@ -114,6 +118,13 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
         subchartContainerRef,
         timescaleContainerRef
     );
+
+    /* ================= CROSSHAIR STATE ================= */
+    const crosshairPoint = useMarketStore(state => state.crosshairPoint);
+    const isHovering = !!(crosshairPoint?.time && crosshairPoint?.sourceId === chartId);
+
+    /* ================= COUNTDOWN ================= */
+    // Handled by CandleCountdown component below
 
     /* ================= CONTEXT MENU ================= */
     const handleContextMenu = (e: React.MouseEvent) => {
@@ -268,27 +279,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                 source={chartInstance?.source}
                 candles={candles}
                 currentPrice={currentPrice}
-                onReset={() => {
-                    if (priceChartRef.current) {
-                        const chart = priceChartRef.current;
-                        const subchart = subchartChartRef.current;
-
-                        // 1. Reset Price Scales for both charts
-                        chart.priceScale('right').applyOptions({ autoScale: true });
-                        if (subchart) {
-                            subchart.priceScale('right').applyOptions({ autoScale: true });
-                        }
-
-                        // 2. Fit Time Scale immediately
-                        chart.timeScale().fitContent();
-
-                        // 3. Fit again after a safe delay to allow layout (width) updates to settle
-                        // This mimics the human delay between clicks and handles the layout shift
-                        setTimeout(() => {
-                            chart.timeScale().fitContent();
-                        }, 100);
-                    }
-                }}
             />
 
             <PositionModifier />
@@ -297,6 +287,22 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
             <div className="flex-1 relative min-h-0">
                 {/* PRICE CHART (Main) - Always background */}
                 <div ref={priceContainerRef} className="w-full h-full" />
+
+                {/* DATA WINDOW (Intelligent Floating Panel) */}
+                <DataWindow
+                    chartId={chartId}
+                    symbol={chartInstance?.symbol}
+                    interval={chartInstance?.interval}
+                    source={chartInstance?.source}
+                    candles={candles}
+                />
+
+                {/* CANDLE COUNTDOWN OVERLAY */}
+                <CandleCountdown
+                    chart={priceChartRef.current}
+                    series={seriesRef.current}
+                    interval={interval}
+                />
 
                 {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
                 <div
@@ -335,14 +341,19 @@ export const ChartContainer = memo(function ChartContainer({ chartId }: { chartI
                     {/* Visual Border Highlight */}
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
 
-                    <SubchartLegend
-                        chartId={chartId}
-                        symbol={chartInstance?.symbol}
-                        interval={chartInstance?.interval}
-                        source={chartInstance?.source}
-                        candles={candles}
-                        currentPrice={currentPrice}
-                    />
+                    <div className={cn(
+                        "transition-opacity duration-200",
+                        isHovering ? "opacity-0" : "opacity-100"
+                    )}>
+                        <SubchartLegend
+                            chartId={chartId}
+                            symbol={chartInstance?.symbol}
+                            interval={chartInstance?.interval}
+                            source={chartInstance?.source}
+                            candles={candles}
+                            currentPrice={currentPrice}
+                        />
+                    </div>
                     <div ref={subchartContainerRef} className="w-full h-full" />
                 </div>
             </div>

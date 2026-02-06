@@ -31,26 +31,24 @@ export function useChartScaleReset(
             const x = e.clientX - rect.left;
             const width = container.clientWidth;
 
-            // Get the actual width of the price scale
-            const priceScale = chart.priceScale('right');
-            const scaleWidth = priceScale.width();
-
-            // Check if click is within the right price scale area (slightly more generous hit test)
-            if (x > width - scaleWidth - 4) {
-                console.log("[Double Click] Resetting scale. Width:", scaleWidth);
-                priceScale.applyOptions({
-                    autoScale: true,
-                });
+            // Use a slightly larger threshold (100px) since minimumWidth is 80px
+            // This ensures clicks on the right scale area are caught
+            if (x > width - 100) {
+                e.stopPropagation();
+                chart.priceScale('right').applyOptions({ autoScale: true });
             }
         };
 
         /**
-         * Resets time scale to fit content when double-clicked on the timescale footer.
+         * Resets time scale to default zoom/position when double-clicked on the timescale footer.
          */
-        const handleTimeScaleDblClick = () => {
+        const handleTimeScaleDblClick = (e: MouseEvent) => {
             const chart = priceChartRef.current;
             if (chart) {
-                // Focus on the most recent candles rather than zooming out to all history
+                e.stopPropagation();
+                // We use the main chart for fit calculations because it doesn't have 
+                // the extra future points that the footer chart has.
+                chart.timeScale().fitContent();
                 chart.timeScale().scrollToRealTime();
             }
         };
@@ -77,3 +75,4 @@ export function useChartScaleReset(
         timescaleContainerRef
     ]);
 }
+

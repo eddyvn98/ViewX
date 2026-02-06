@@ -21,10 +21,16 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
 
         // If crosshair is active, find the corresponding candle
         if (crosshairPoint?.time) {
-            const found = candles.find(c => c.time === crosshairPoint.time);
+            const found = candles.find(c => {
+                const t = typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time);
+                return t === crosshairPoint.time;
+            });
             if (found) {
                 activeCandle = found;
-                isLive = found.time === candles[candles.length - 1].time;
+                const lastT = typeof candles[candles.length - 1].time === 'object'
+                    ? (candles[candles.length - 1].time as any).timestamp
+                    : Number(candles[candles.length - 1].time);
+                isLive = crosshairPoint.time === lastT;
             }
         }
 
@@ -48,7 +54,10 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
 
         // Find index for indicators
         const activeIndex = crosshairPoint?.time
-            ? candles.findIndex(c => c.time === crosshairPoint.time)
+            ? candles.findIndex(c => {
+                const t = typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time);
+                return t === crosshairPoint.time;
+            })
             : candles.length - 1;
 
         return {

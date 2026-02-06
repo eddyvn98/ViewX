@@ -6,37 +6,54 @@ export interface PnLParams {
     currentPrice: number;
     volume: number;
     symbolInfo?: SymbolInfo;
+    symbol?: string; // Add optional symbol for better fallback
 }
 
 /**
  * Calculates Profit/Loss based on MT5 standard formula.
  * Profit = (PriceDiff / TickSize) * TickValue * Volume
  */
-export function calculatePnL({ type, openPrice, currentPrice, volume, symbolInfo }: PnLParams): number {
+export function calculatePnL({ type, openPrice, currentPrice, volume, symbolInfo, symbol: symbolParam }: PnLParams): number {
     const isLong = type.toLowerCase().includes('buy');
     const diff = isLong ? (currentPrice - openPrice) : (openPrice - currentPrice);
 
+    // If we have precise symbol info, use it
     if (symbolInfo && symbolInfo.tick_size > 0 && symbolInfo.tick_value > 0) {
+        // Validation: If tick_value is too small (like 0.01 for gold), 
+        // it might be per-volume-unit instead of per-lot.
+        // Standard MT5 tick_value is per 1.0 lot.
         const ticks = diff / symbolInfo.tick_size;
-        return ticks * symbolInfo.tick_value * volume;
+        let pnl = ticks * symbolInfo.tick_value * volume;
+
+        // Custom correction for common misconfigurations (e.g. Gold showing 100x less)
+        const sym = (symbolParam || symbolInfo.symbol || '').toUpperCase();
+        if (sym.includes('XAU') && pnl < Math.abs(diff * volume * 10)) {
+            // If PnL seems way too small for Gold (e.g. missing 100x multiplier), 
+            // and it's a common USD pair, it's likely a tick_value / contract_size issue.
+            // Many brokers use 100 contracts for Gold.
+            if (pnl * 100 > Math.abs(diff * volume * 10)) {
+                return pnl * 100;
+            }
+        }
+
+        return pnl;
     }
 
     // Fallback logic if symbol info is missing
-    // We try to guess based on common asset types or just use a safer 1:1 if unknown
-    const symbol = symbolInfo?.symbol || '';
+    const symbol = symbolParam || symbolInfo?.symbol || '';
+    const pair = symbol.toUpperCase().replace('M', '');
 
-    // Guess for Forex (often 100,000 contract size, tick value 1.00 for 1 lot at 0.0001/0.001)
-    // Most standard forex: 1 lot move of 1 pip (0.0001) = 10$
-    // So 1 unit move (1.0) = 100,000$ per lot.
-    const forexPairs = ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD', 'USDCHF', 'USDCAD'];
-    const pair = symbol.toUpperCase().replace('M', ''); // remove suffix if any
+    // Guess for Gold/Forex
+    if (pair.includes('XAU') || pair.includes('GOLD')) {
+        return diff * volume * 100; // Standard 100 contracts for Gold
+    }
 
-    if (forexPairs.includes(pair) || symbol.includes('USD')) {
-        // If it looks like BTCUSD or similar, we should check if it's crypto
-        if (symbol.includes('BTC') || symbol.includes('ETH')) {
-            return diff * volume; // Crypto often 1:1 (1 unit change = 1$ profit per lot)
-        }
-        return diff * volume * 100; // Legacy / Forex fallback
+    if (pair.includes('BTC') || pair.includes('ETH')) {
+        return diff * volume; // Crypto often 1:1
+    }
+
+    if (pair.includes('USD')) {
+        return diff * volume * 100; // Standard Forex/Commodity fallback
     }
 
     return diff * volume; // Safest basic fallback

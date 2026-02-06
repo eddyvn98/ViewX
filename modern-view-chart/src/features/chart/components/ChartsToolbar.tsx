@@ -5,6 +5,7 @@ import { useMarketStore } from '@/lib/store';
 import { TimeframeToolbar } from './TimeframeToolbar';
 import { TimezoneSelector } from './TimezoneSelector';
 import { LayoutGridSelector } from './LayoutGridSelector';
+import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
 
 export function ChartsToolbar() {
@@ -93,6 +94,7 @@ export function ChartsToolbar() {
             </div>
 
             <div className="flex items-center gap-3">
+                <ChartClock />
                 <div className="flex items-center gap-2 px-2 py-1 rounded bg-black/20 border border-zinc-800/50">
                     <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500")} />
                     <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">{isConnected ? 'Live' : 'Offline'}</span>

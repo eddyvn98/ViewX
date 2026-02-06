@@ -26,7 +26,8 @@ export function useChartIndicators(
     symbol: string | undefined,
     timezone: string | undefined,
     syncRange: () => void,
-    currentPrice?: number
+    currentPrice?: number,
+    isReady?: boolean
 ) {
     const indicators = useMarketStore(
         useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS)
@@ -54,16 +55,14 @@ export function useChartIndicators(
     /* ===== UPDATE INDICATORS ===== */
     useEffect(() => {
         if (
+            !isReady ||
             !priceChartRef.current ||
             !subchartChartRef.current ||
-            !seriesRef.current ||
             !seriesRef.current ||
             !symbol
         )
             return;
 
-        /* ❌ FIX 2: KHÔNG cộng offset time lần 2 */
-        // Create effective candles with live price for real-time indicator updates
         let effectiveCandles = candles;
         if (currentPrice !== undefined && candles.length > 0) {
             const lastIdx = candles.length - 1;
@@ -79,7 +78,6 @@ export function useChartIndicators(
 
         const formattedCandles = formatCandles(effectiveCandles);
 
-        /* Cleanup removed */
         const currentIds = new Set(indicators.map(i => i.id));
         Object.keys(instancesRef.current).forEach(id => {
             if (!currentIds.has(id)) {
@@ -88,7 +86,6 @@ export function useChartIndicators(
             }
         });
 
-        /* Create / Update */
         indicators.forEach(config => {
             let instance = instancesRef.current[config.id];
 
@@ -126,18 +123,14 @@ export function useChartIndicators(
             }
         });
 
-        /* ❌ FIX 3: BẮT BUỘC sync range sau khi Subchart setData */
         const hasSubchartIndicator = indicators.some(i => i.pane === 'subchart');
-
         if (hasSubchartIndicator) {
             requestAnimationFrame(() => {
                 setTimeout(syncRange, 0);
             });
         }
-
-
-
     }, [
+        isReady,
         chartId,
         indicators,
         candles,
@@ -145,10 +138,10 @@ export function useChartIndicators(
         priceChartRef,
         subchartChartRef,
         seriesRef,
-        seriesRef,
         syncRange,
         currentPrice,
     ]);
+
 
     /* ===== CLEANUP ===== */
     useEffect(() => {
