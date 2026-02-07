@@ -23,9 +23,21 @@ export function useChartInteraction(
 ) {
     const positions = useMarketStore(state => state.positions);
     const draftOrder = useMarketStore(state => state.draftOrder);
+    const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const setDraggingPosition = useMarketStore(state => state.setDraggingPosition);
     const { sendMessage } = useWebSocket();
+
+    // Use Refs to keep store data stable within handlers without triggering re-renders
+    const stateRef = useRef({
+        positions: positions,
+        draftOrder: draftOrder,
+        symbolInfo: symbolInfo
+    });
+
+    useEffect(() => {
+        stateRef.current = { positions, draftOrder, symbolInfo };
+    }, [positions, draftOrder, symbolInfo]);
 
     const dragState = useRef<DragState | null>(null);
     const isDragging = useRef(false);
@@ -45,15 +57,25 @@ export function useChartInteraction(
         const container = containerRef.current;
         if (!series || !container || !symbol) return null;
 
+        const { positions, draftOrder } = stateRef.current;
+        const currentAlerts = useMarketStore.getState().alerts.filter(a => a.symbol === symbol && a.active);
+        const currentPositions = positions.filter(p => p.symbol === symbol);
+
         const width = container.clientWidth;
         const isNearRightEdge = (width - x) < 60; // Tag Zone
+
+        // Early exit: Only check when near interactive areas
+        if (!isNearRightEdge && (width - x) > 120) {
+            return null;
+        }
+
         let pixelTolerance = isNearRightEdge ? 20 : 12;
 
         if (isTouch) {
-            pixelTolerance = 25; // Larger hitbox for fingers
+            pixelTolerance = 25;
         }
 
-        // 1. Check Draft Order (highest priority)
+        // 1. Check Draft Order
         if (draftOrder && draftOrder.symbol === symbol) {
             const draftLines = [
                 { type: 'draft_entry' as const, price: draftOrder.price || 0 },
@@ -68,18 +90,19 @@ export function useChartInteraction(
                     return { type: line.type, originalPrice: line.price };
                 }
             }
+            return null;
         }
 
-        // 2. Check Alerts (medium priority)
-        for (const alert of symbolAlerts) {
+        // 2. Check Alerts
+        for (const alert of currentAlerts) {
             const coords = series.priceToCoordinate(alert.price);
             if (coords !== null && Math.abs(coords - y) < pixelTolerance) {
                 return { type: 'alert' as const, id: alert.id, originalPrice: alert.price };
             }
         }
 
-        // 3. Check Active Positions (SL/TP)
-        for (const pos of activePositions) {
+        // 3. Check Active Positions
+        for (const pos of currentPositions) {
             const lines = [
                 { type: 'sl' as const, price: pos.sl },
                 { type: 'tp' as const, price: pos.tp },
@@ -94,7 +117,8 @@ export function useChartInteraction(
         }
 
         return null;
-    }, [seriesRef, containerRef, symbol, draftOrder, symbolAlerts, activePositions]);
+    }, [seriesRef, containerRef, symbol]);
+
 
     useEffect(() => {
         if (!chartRef.current || !seriesRef.current || !containerRef.current || !symbol) return;
@@ -104,6 +128,7 @@ export function useChartInteraction(
         const container = containerRef.current;
 
         let lastCursorCheck = 0;
+        let frameSkip = 0;
         const handleCrosshairMove = (param: MouseEventParams) => {
             if (isDragging.current) {
                 container.style.cursor = 'grabbing';
@@ -115,9 +140,12 @@ export function useChartInteraction(
                 return;
             }
 
-            // Throttle cursor check to 60ms (~16fps) to save main thread during rapid mouse movement
+            // Aggressive throttle: 100ms + frame skipping for cursor check
+            frameSkip++;
+            if (frameSkip % 2 !== 0) return; // Skip every other frame
+
             const now = Date.now();
-            if (now - lastCursorCheck < 60) return;
+            if (now - lastCursorCheck < 100) return;
             lastCursorCheck = now;
 
             const hit = getNearElement(param.point.y, param.point.x);
@@ -243,12 +271,15 @@ export function useChartInteraction(
             const coordinatePrice = series.coordinateToPrice(y);
             if (coordinatePrice === null) return;
 
-            const newPrice = Math.round((coordinatePrice as number) * 100) / 100;
+            const digits = symbolInfo?.digits || 2;
+            const factor = Math.pow(10, digits);
+            const newPrice = Math.round((coordinatePrice as number) * factor) / factor;
 
             // Skip update if price hasn't changed (reduces store noise)
             if (newPrice === dragState.current.currentPrice) return;
 
             dragState.current.currentPrice = newPrice;
+
             isDeletingZoneRef.current = x < 80;
 
             const type = dragState.current.type;
@@ -350,6 +381,5 @@ export function useChartInteraction(
             window.removeEventListener('mouseup', handleMouseUp);
             window.removeEventListener('touchend', handleTouchEnd);
         };
-
-    }, [chartRef, seriesRef, containerRef, symbol, positions, sendMessage, draftOrder, setDraftOrder, setDraggingPosition, getNearElement, handleUpdateAlert, handleRemoveAlert]);
+    }, [chartRef, seriesRef, containerRef, symbol]); // STABLE!
 }

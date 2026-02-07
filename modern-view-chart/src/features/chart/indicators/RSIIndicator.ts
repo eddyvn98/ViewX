@@ -23,6 +23,7 @@ export class RSIIndicator {
                 visible: this.config.visible,
                 lastValueVisible: true,
                 priceLineVisible: false,
+                crosshairMarkerVisible: false, // Disable for performance
                 priceFormat: {
                     type: 'custom',
                     formatter: (v: number) => v.toFixed(0),
@@ -65,6 +66,7 @@ export class RSIIndicator {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
+                crosshairMarkerVisible: false, // Disable for performance
             });
         }
 

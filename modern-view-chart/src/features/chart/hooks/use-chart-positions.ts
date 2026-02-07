@@ -29,73 +29,15 @@ export function useChartPositions(
         if (draftOrder && draftOrder.symbol === symbol) {
             // Clean up active positions lines
             Object.keys(priceLinesRef.current).forEach(ticket => {
-                if (ticket === 'draft') return;
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
                 if (lines.sl) series.removePriceLine(lines.sl);
                 if (lines.tp) series.removePriceLine(lines.tp);
                 delete priceLinesRef.current[ticket];
             });
-
-            // Handle DRAFT lines
-            if (!priceLinesRef.current['draft']) priceLinesRef.current['draft'] = {};
-            const dLines = priceLinesRef.current['draft'];
-
-            // Draft Entry
-            const entryOpt = {
-                price: draftOrder.price || 0,
-                color: '#3b82f6',
-                lineWidth: 2 as any,
-                lineStyle: LineStyle.Solid,
-                axisLabelVisible: false,
-                title: ''
-            };
-            if (!dLines.entry) dLines.entry = series.createPriceLine(entryOpt);
-            else dLines.entry.applyOptions(entryOpt);
-
-            // Draft SL
-            if (draftOrder.sl && draftOrder.sl > 0) {
-                const slOpt = {
-                    price: draftOrder.sl,
-                    color: '#ef5350',
-                    lineWidth: 1 as any,
-                    lineStyle: LineStyle.Dashed,
-                    axisLabelVisible: false,
-                    title: ''
-                };
-                if (!dLines.sl) dLines.sl = series.createPriceLine(slOpt);
-                else dLines.sl.applyOptions(slOpt);
-            } else if (dLines.sl) {
-                series.removePriceLine(dLines.sl);
-                dLines.sl = undefined;
-            }
-
-            // Draft TP
-            if (draftOrder.tp && draftOrder.tp > 0) {
-                const tpOpt = {
-                    price: draftOrder.tp,
-                    color: '#26a69a',
-                    lineWidth: 1 as any,
-                    lineStyle: LineStyle.Dashed,
-                    axisLabelVisible: false,
-                    title: ''
-                };
-                if (!dLines.tp) dLines.tp = series.createPriceLine(tpOpt);
-                else dLines.tp.applyOptions(tpOpt);
-            } else if (dLines.tp) {
-                series.removePriceLine(dLines.tp);
-                dLines.tp = undefined;
-            }
-
             return;
-        } else if (priceLinesRef.current['draft']) {
-            // Cleanup draft lines if no longer drafting
-            const dLines = priceLinesRef.current['draft'];
-            if (dLines.entry) series.removePriceLine(dLines.entry);
-            if (dLines.sl) series.removePriceLine(dLines.sl);
-            if (dLines.tp) series.removePriceLine(dLines.tp);
-            delete priceLinesRef.current['draft'];
         }
+
 
         let symbolPositions = positions.filter(p => p.symbol === symbol);
 
@@ -188,7 +130,7 @@ export function useChartPositions(
             if (!lines.entry) {
                 lines.entry = series.createPriceLine(entryOptions);
             } else {
-                lines.entry.applyOptions(entryOptions);
+                lines.entry.applyOptions({ price: p.open_price });
             }
 
             // --- SL Logic with Drag Override ---
@@ -219,7 +161,7 @@ export function useChartPositions(
                 if (!lines.sl) {
                     lines.sl = series.createPriceLine(slOptions);
                 } else {
-                    lines.sl.applyOptions(slOptions);
+                    lines.sl.applyOptions({ price: slPrice });
                 }
             } else if (lines.sl) {
                 series.removePriceLine(lines.sl);
@@ -254,7 +196,7 @@ export function useChartPositions(
                 if (!lines.tp) {
                     lines.tp = series.createPriceLine(tpOptions);
                 } else {
-                    lines.tp.applyOptions(tpOptions);
+                    lines.tp.applyOptions({ price: tpPrice });
                 }
             } else if (lines.tp) {
                 series.removePriceLine(lines.tp);
@@ -327,9 +269,7 @@ export function useChartPositions(
                         symbol: p.symbol
                     });
                     const typeStr = (p.type || '').toUpperCase();
-                    const entryTitle = `${typeStr} ${p.volume} • ${formatPnL(pnl)}`;
-                    const entryColor = pnl >= 0 ? '#22c55e' : '#71717a';
-                    lines.entry.applyOptions({ title: entryTitle, color: entryColor });
+                    lines.entry.applyOptions({ price: p.open_price });
                 }
 
                 // Update SL PnL if exists
@@ -344,8 +284,7 @@ export function useChartPositions(
                         symbolInfo,
                         symbol: p.symbol
                     });
-                    const slTitle = `SL • ${formatPnL(slPnl)}`;
-                    lines.sl.applyOptions({ title: slTitle });
+                    lines.sl.applyOptions({ price: slPrice });
                 }
 
                 // Update TP PnL if exists
@@ -360,8 +299,7 @@ export function useChartPositions(
                         symbolInfo,
                         symbol: p.symbol
                     });
-                    const tpTitle = `TP • ${formatPnL(tpPnl)}`;
-                    lines.tp.applyOptions({ title: tpTitle });
+                    lines.tp.applyOptions({ price: tpPrice });
                 }
             });
         }

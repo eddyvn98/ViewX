@@ -1,34 +1,90 @@
-import React from 'react';
+import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Zap, ArrowUp, ArrowDown, Check, X } from 'lucide-react';
+import { Zap, Check, X } from 'lucide-react';
 import { useWebSocket } from '@/hooks/use-websocket';
 
 interface ChartTradingOverlayProps {
     symbol: string | undefined;
 }
 
-export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
+/**
+ * ChartTradingOverlay with DOM-based price updates
+ * Only subscribes to non-ticker state, uses RAF for realtime prices
+ */
+export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
+    const buyPriceRef = useRef<HTMLSpanElement>(null);
+    const sellPriceRef = useRef<HTMLSpanElement>(null);
+    const rafIdRef = useRef<number | null>(null);
+    const lastPriceRef = useRef<string>('');
+
+    // Only subscribe to non-ticker state
     const draftOrder = useMarketStore(state => state.draftOrder);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
-    const tickers = useMarketStore(state => state.tickers);
     const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
     const { sendMessage } = useWebSocket();
 
-    const currentTicker = symbol ? tickers[symbol] : null;
+    const digits = symbolInfo?.digits || 2;
 
-    if (!symbol || !currentTicker) return null;
+    // RAF-based price update
+    const updatePrices = useCallback(() => {
+        if (!symbol) return;
+        const state = useMarketStore.getState();
+        const ticker = state.tickers[symbol];
+        if (!ticker) return;
+
+        const priceStr = ticker.price.toFixed(digits);
+        if (priceStr !== lastPriceRef.current) {
+            lastPriceRef.current = priceStr;
+            if (buyPriceRef.current) buyPriceRef.current.textContent = priceStr;
+            if (sellPriceRef.current) sellPriceRef.current.textContent = priceStr;
+        }
+    }, [symbol, digits]);
+
+    useEffect(() => {
+        if (!symbol) return;
+        let running = true;
+        let lastUpdate = 0;
+        const interval = 100;
+
+        const tick = () => {
+            if (!running) return;
+            const now = Date.now();
+            if (now - lastUpdate >= interval) {
+                lastUpdate = now;
+                updatePrices();
+            }
+            rafIdRef.current = requestAnimationFrame(tick);
+        };
+
+        updatePrices();
+        rafIdRef.current = requestAnimationFrame(tick);
+
+        return () => {
+            running = false;
+            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+        };
+    }, [symbol, updatePrices]);
+
+    // Get initial price for draft (computed once when needed)
+    const getCurrentPrice = useCallback(() => {
+        if (!symbol) return 0;
+        return useMarketStore.getState().tickers[symbol]?.price || 0;
+    }, [symbol]);
 
     const handleStartDraft = (type: 'buy' | 'sell') => {
-        const price = currentTicker.price;
+        const price = getCurrentPrice();
+        if (!price || !symbol) return;
 
-        // Default distances
-        const distance = symbol.includes('JPY') ? 0.3 : (symbol.includes('XAU') || symbol.includes('BTC')) ? 5.0 : 0.00300;
+        let distance = 0.00500;
+        if (symbol.includes('JPY')) distance = 0.50;
+        else if (symbol.includes('XAU')) distance = 10.0;
+        else if (symbol.includes('BTC')) distance = 100.0;
 
         setDraftOrder({
             symbol,
             type,
-            volume: 0.1, // Default lot
+            volume: 0.1,
             price: price,
             isMarket: true,
             sl: type === 'buy' ? price - distance : price + distance,
@@ -51,7 +107,7 @@ export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
         };
 
         if (draftOrder.isMarket) {
-            payload.price = 0; // Current market price
+            payload.price = 0;
         } else {
             payload.price = draftOrder.price;
         }
@@ -64,14 +120,13 @@ export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
     };
 
     const handleCancel = () => setDraftOrder(null);
-
     const toggleMarket = () => {
         if (!draftOrder) return;
-        setDraftOrder({
-            ...draftOrder,
-            isMarket: !draftOrder.isMarket
-        });
+        setDraftOrder({ ...draftOrder, isMarket: !draftOrder.isMarket });
     };
+
+    // Don't render if no symbol
+    if (!symbol) return null;
 
     return (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
@@ -82,9 +137,7 @@ export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
                         className="group flex flex-col items-center justify-center w-16 h-12 hover:bg-emerald-500/20 rounded-l transition-all border-r border-white/5"
                     >
                         <span className="text-[10px] font-bold text-emerald-400 group-hover:text-emerald-300">BUY</span>
-                        <span className="text-xs font-mono text-white tracking-tighter">
-                            {currentTicker.price.toFixed(symbolInfo?.digits || 2)}
-                        </span>
+                        <span ref={buyPriceRef} className="text-xs font-mono text-white tracking-tighter">···</span>
                     </button>
 
                     <div className="px-2 opacity-20">
@@ -96,14 +149,11 @@ export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
                         className="group flex flex-col items-center justify-center w-16 h-12 hover:bg-red-500/20 rounded-r transition-all"
                     >
                         <span className="text-[10px] font-bold text-red-400 group-hover:text-red-300">SELL</span>
-                        <span className="text-xs font-mono text-white tracking-tighter">
-                            {currentTicker.price.toFixed(symbolInfo?.digits || 2)}
-                        </span>
+                        <span ref={sellPriceRef} className="text-xs font-mono text-white tracking-tighter">···</span>
                     </button>
                 </div>
             ) : (
                 <div className="flex items-center gap-1 p-1.5 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl">
-                    {/* Market/Limit Toggle */}
                     <button
                         onClick={toggleMarket}
                         className={cn(
@@ -116,7 +166,6 @@ export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
                         {draftOrder.isMarket ? "Market" : "Limit"}
                     </button>
 
-                    {/* CONFIRM BUTTON */}
                     <button
                         onClick={handleConfirm}
                         className={cn(
@@ -140,4 +189,5 @@ export function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
             )}
         </div>
     );
-}
+});
+

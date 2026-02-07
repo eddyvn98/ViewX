@@ -20,6 +20,7 @@ export class HMAIndicator {
                 // title: `Hull ${this.config.params.period}`, // Moved to Legend
                 priceLineVisible: false,
                 lastValueVisible: false,
+                crosshairMarkerVisible: false, // Disable for performance
                 visible: this.config.visible,
             });
         } else {
@@ -30,6 +31,7 @@ export class HMAIndicator {
                 // title: `Hull ${this.config.params.period}`, // Moved to Legend
                 priceLineVisible: false,
                 lastValueVisible: false,
+                crosshairMarkerVisible: false, // Disable for performance
             });
         }
 

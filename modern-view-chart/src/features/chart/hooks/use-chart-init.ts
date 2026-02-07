@@ -32,7 +32,7 @@ export function useChartInit(
         const commonOptions = {
             layout: { background: { color: '#131722' }, textColor: '#d4d4d8' },
             grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
-            crosshair: { mode: 1 },
+            crosshair: { mode: 0 }, // mode 0 = Normal (free movement), mode 1 = Magnet (snaps to data)
             timeScale: {
                 rightOffset: 20, // Reduced from 40 for more space
                 barSpacing: 10,
@@ -72,6 +72,7 @@ export function useChartInit(
             width: subchartContainerRef.current.clientWidth,
             height: subchartContainerRef.current.clientHeight,
             timeScale: { ...commonOptions.timeScale, visible: false },
+            crosshair: { mode: 0 }, // Explicit: Normal mode - no snap
             rightPriceScale: {
                 visible: true,
                 autoScale: true,
@@ -94,6 +95,7 @@ export function useChartInit(
             rightPriceScale: { visible: true, borderVisible: false, ticksVisible: false, minimumWidth: initialMinW },
             leftPriceScale: { visible: false },
             crosshair: {
+                mode: 0, // Normal mode - no snap
                 vertLine: { visible: false, labelVisible: true },
                 horzLine: { visible: false, labelVisible: false },
             },
@@ -109,16 +111,47 @@ export function useChartInit(
         const subSyncSeries = subchartChart.addSeries(LineSeries as any, { visible: false });
         const footSyncSeries = timescaleChart.addSeries(LineSeries as any, { visible: false });
 
-        /* ================= SAFE SYNC CROSSHAIR ================= */
-        const syncCrosshair = (source: IChartApi, targets: { chart: IChartApi, series: ISeriesApi<any> }[], param: any) => {
-            if (param.time && param.point) {
-                targets.forEach(t => {
-                    try {
-                        t.chart.setCrosshairPosition(0, param.time, t.series);
-                    } catch (e) { }
+        /* ================= DOM-BASED CROSSHAIR SYNC ================= */
+        // Create custom vertical line elements for each chart
+        const createSyncLine = (container: HTMLElement): HTMLDivElement => {
+            const line = document.createElement('div');
+            line.style.cssText = `
+                position: absolute; top: 0; bottom: 0; width: 1px;
+                background: #758696; pointer-events: none; z-index: 10;
+                display: none; transform: translateX(-0.5px);
+            `;
+            container.style.position = 'relative';
+            container.appendChild(line);
+            return line;
+        };
+
+        const priceLineEl = createSyncLine(priceContainerRef.current);
+        const subLineEl = createSyncLine(subchartContainerRef.current);
+        const footLineEl = createSyncLine(timescaleContainerRef.current);
+
+        // Sync all vertical lines using Logical coordinates (precise alignment)
+        const syncVerticalLines = (sourceChart: IChartApi, x: number | null, sourceEl: HTMLDivElement) => {
+            if (x !== null) {
+                // 1. Convert source pixel x to fractional logical index
+                const logical = sourceChart.timeScale().coordinateToLogical(x);
+                if (logical === null) return;
+
+                // 2. Sync to other charts by converting logical back to their specific pixel x
+                [
+                    { chart: priceChart, line: priceLineEl },
+                    { chart: subchartChart, line: subLineEl },
+                    { chart: timescaleChart, line: footLineEl }
+                ].forEach(item => {
+                    const targetX = item.chart.timeScale().logicalToCoordinate(logical);
+                    if (targetX !== null) {
+                        item.line.style.display = 'block';
+                        item.line.style.left = `${targetX}px`;
+                    }
                 });
             } else {
-                targets.forEach(t => t.chart.clearCrosshairPosition());
+                [priceLineEl, subLineEl, footLineEl].forEach(el => {
+                    el.style.display = 'none';
+                });
             }
         };
 
@@ -126,29 +159,31 @@ export function useChartInit(
         let lastSyncTime: number | null = null;
         let lastSyncX: number | null = null;
         let lastSyncY: number | null = null;
+        let lastSideEffectsAt = 0;  // Only throttle side effects
 
-        let lastSyncAt = 0;
         priceChart.subscribeCrosshairMove((param) => {
-            syncCrosshair(priceChart, [
-                { chart: subchartChart, series: subSyncSeries },
-                { chart: timescaleChart, series: footSyncSeries }
-            ], param);
+            // Sync vertical lines to other charts (immediate, no throttle)
+            if (param.point) {
+                syncVerticalLines(priceChart, param.point.x, priceLineEl);
+            } else {
+                syncVerticalLines(priceChart, null, priceLineEl);
+            }
 
-            // Sync to global store - ONLY if we have a point (triggered by user)
-            const store = useMarketStore.getState();
-            const now = Date.now();
-            
             if (param.time && param.point) {
                 const curTime = Number(param.time);
                 const curX = param.point.x;
                 const curY = param.point.y;
 
-                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSyncAt > 32)) {
+                // THROTTLED SIDE EFFECTS: Only update store/events at 30fps
+                const now = Date.now();
+                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSideEffectsAt > 32)) {
                     lastSyncTime = curTime;
                     lastSyncX = curX;
                     lastSyncY = curY;
-                    lastSyncAt = now;
+                    lastSideEffectsAt = now;
 
+                    // Sync to global store
+                    const store = useMarketStore.getState();
                     const logical = priceChart.timeScale().coordinateToLogical(curX);
                     store.syncCrosshair({
                         time: curTime,
@@ -157,36 +192,52 @@ export function useChartInit(
                         point: { x: curX, y: curY },
                         logical: logical !== null ? Number(logical) : null
                     });
+
+                    // Emit custom event for DOM-based components (bypasses React)
+                    window.dispatchEvent(new CustomEvent('chart-crosshair', {
+                        detail: { time: curTime, sourceId: chartId, point: { x: curX, y: curY } }
+                    }));
                 }
             } else if (!param.time && lastSyncTime !== null) {
                 lastSyncTime = null;
                 lastSyncX = null;
                 lastSyncY = null;
-                lastSyncAt = 0;
-                store.syncCrosshair(null);
+                lastSideEffectsAt = 0;
+
+                // Crosshair clear disabled - each chart handles its own
+
+                useMarketStore.getState().syncCrosshair(null);
+
+                // Emit clear event for DOM-based components
+                window.dispatchEvent(new CustomEvent('chart-crosshair', {
+                    detail: { time: null, sourceId: chartId }
+                }));
             }
         });
 
         subchartChart.subscribeCrosshairMove((param) => {
-            syncCrosshair(subchartChart, [
-                { chart: priceChart, series: candleSeries },
-                { chart: timescaleChart, series: footSyncSeries }
-            ], param);
-
-            const store = useMarketStore.getState();
-            const now = Date.now();
+            // Sync vertical lines to other charts (immediate, no throttle)
+            if (param.point) {
+                syncVerticalLines(subchartChart, param.point.x, subLineEl);
+            } else {
+                syncVerticalLines(subchartChart, null, subLineEl);
+            }
 
             if (param.time && param.point) {
                 const curTime = Number(param.time);
                 const curX = param.point.x;
                 const curY = param.point.y;
 
-                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSyncAt > 32)) {
+                // THROTTLED SIDE EFFECTS: Only update store/events at 30fps
+                const now = Date.now();
+                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSideEffectsAt > 32)) {
                     lastSyncTime = curTime;
                     lastSyncX = curX;
                     lastSyncY = curY;
-                    lastSyncAt = now;
+                    lastSideEffectsAt = now;
 
+                    // Sync to global store
+                    const store = useMarketStore.getState();
                     const logical = subchartChart.timeScale().coordinateToLogical(curX);
                     store.syncCrosshair({
                         time: curTime,
@@ -195,13 +246,73 @@ export function useChartInit(
                         point: { x: curX, y: curY },
                         logical: logical !== null ? Number(logical) : null
                     });
+
+                    // Emit custom event for DOM-based components (bypasses React)
+                    window.dispatchEvent(new CustomEvent('chart-crosshair', {
+                        detail: { time: curTime, sourceId: chartId, point: { x: curX, y: curY } }
+                    }));
                 }
             } else if (!param.time && lastSyncTime !== null) {
                 lastSyncTime = null;
                 lastSyncX = null;
                 lastSyncY = null;
-                lastSyncAt = 0;
-                store.syncCrosshair(null);
+                lastSideEffectsAt = 0;
+
+                // Crosshair clear disabled - each chart handles its own
+
+                useMarketStore.getState().syncCrosshair(null);
+
+                // Emit clear event for DOM-based components
+                window.dispatchEvent(new CustomEvent('chart-crosshair', {
+                    detail: { time: null, sourceId: chartId }
+                }));
+            }
+        });
+
+        // ⚡ TIMESCALE FOOTER: Also sync crosshair when hovering on footer
+        timescaleChart.subscribeCrosshairMove((param) => {
+            // Sync vertical lines to other charts (immediate, no throttle)
+            if (param.point) {
+                syncVerticalLines(timescaleChart, param.point.x, footLineEl);
+            } else {
+                syncVerticalLines(timescaleChart, null, footLineEl);
+            }
+
+            if (param.time && param.point) {
+
+                // THROTTLED SIDE EFFECTS
+                const curTime = Number(param.time);
+                const curX = param.point.x;
+                const now = Date.now();
+                if ((curTime !== lastSyncTime || curX !== lastSyncX) && (now - lastSideEffectsAt > 32)) {
+                    lastSyncTime = curTime;
+                    lastSyncX = curX;
+                    lastSideEffectsAt = now;
+
+                    const store = useMarketStore.getState();
+                    const logical = timescaleChart.timeScale().coordinateToLogical(curX);
+                    store.syncCrosshair({
+                        time: curTime,
+                        price: null,
+                        sourceId: chartId,
+                        point: { x: curX, y: 0 },
+                        logical: logical !== null ? Number(logical) : null
+                    });
+
+                    window.dispatchEvent(new CustomEvent('chart-crosshair', {
+                        detail: { time: curTime, sourceId: chartId, point: { x: curX, y: 0 } }
+                    }));
+                }
+            } else if (!param.time && lastSyncTime !== null) {
+                lastSyncTime = null;
+                lastSideEffectsAt = 0;
+
+                // Crosshair clear disabled - each chart handles its own
+
+                useMarketStore.getState().syncCrosshair(null);
+                window.dispatchEvent(new CustomEvent('chart-crosshair', {
+                    detail: { time: null, sourceId: chartId }
+                }));
             }
         });
 
@@ -276,6 +387,12 @@ export function useChartInit(
             setIsReady(false);
             if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
             resizeObserver.disconnect();
+
+            // Remove sync lines
+            if (priceLineEl.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
+            if (subLineEl.parentNode) subLineEl.parentNode.removeChild(subLineEl);
+            if (footLineEl.parentNode) footLineEl.parentNode.removeChild(footLineEl);
+
             priceChart.remove();
             subchartChart.remove();
             timescaleChart.remove();

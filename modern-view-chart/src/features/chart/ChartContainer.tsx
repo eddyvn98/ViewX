@@ -137,8 +137,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         isSubchartVisible
     );
 
-    /* ================= CROSSHAIR STATE ================= */
-    const isHovering = useMarketStore(state => !!(state.crosshairPoint?.time && state.crosshairPoint?.sourceId === chartId));
+    /* ================= CROSSHAIR STATE (Removed - now handled via DOM) ================= */
 
     /* ================= MOBILE VIEW OPTIMIZATION ================= */
     const isMinimized = useMarketStore(state => (state.activeMobileTab === 'trade' || state.activeMobileTab === 'positions'));
@@ -165,6 +164,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 interval={chartInstance?.interval}
                 source={chartInstance?.source}
                 candles={candles}
+                priceChart={priceChartRef.current}
+                series={seriesRef.current}
             />
 
             {/* MAIN CHART AREA WITH OVERLAY */}
@@ -233,11 +234,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 >
                     {/* Visual Border Highlight */}
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-
-                    <div className={cn(
-                        "transition-opacity duration-200",
-                        isHovering ? "opacity-0" : "opacity-100"
-                    )}>
+                    {/* RSI/MACD LEGEND */}
+                    <div className="absolute left-3 top-[5%] z-10 pointer-events-none select-none">
                         <SubchartLegend
                             chartId={chartId}
                             symbol={chartInstance?.symbol}

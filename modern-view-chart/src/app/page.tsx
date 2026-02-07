@@ -155,15 +155,15 @@ export default function Home() {
                 </div>
               </div>
 
-              <div
-                className={cn(
-                  "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-zinc-800 hidden md:flex",
-                  isTerminalVisible ? "border-t opacity-100" : "opacity-0 border-t-0"
-                )}
-                style={{ height: isTerminalVisible ? (isTerminalCollapsed ? 40 : terminalHeight) : 0 }}
-              >
-                <Terminal />
-              </div>
+              {/* Desktop Terminal - CONDITIONAL RENDER to prevent re-renders when hidden */}
+              {isTerminalVisible && (
+                <div
+                  className="transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-zinc-800 hidden md:flex border-t opacity-100"
+                  style={{ height: isTerminalCollapsed ? 40 : terminalHeight }}
+                >
+                  <Terminal />
+                </div>
+              )}
             </div>
 
             {/* Mobile Place Order Panel - GPU ACCELERATED SLIDE */}
@@ -235,39 +235,40 @@ export default function Home() {
               </div>
             )}
 
-            {/* Mobile Terminal Panel - GPU ACCELERATED SLIDE */}
-            <div className={cn(
-              "fixed left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-30 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform",
-              isScrollingPanel || isInputFocused ? "bottom-0" : "bottom-[64px]",
-              activeMobileTab === 'positions' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-              isInputFocused ? "h-[80%]" : "h-[29%]"
-            )}>
-              <div
-                className="h-6 flex items-center justify-center cursor-row-resize active:bg-zinc-900 touch-none shrink-0"
-                onClick={handleClosePanel}
-                onTouchStart={(e) => {
-                  const touch = e.touches[0];
-                  (window as any)._panelTouchStartY = touch.clientY;
-                }}
-                onTouchEnd={(e) => {
-                  const startY = (window as any)._panelTouchStartY;
-                  if (startY === undefined) return;
-                  const endY = e.changedTouches[0].clientY;
-                  if (endY - startY > 30) { // Swipe down
-                    handleClosePanel();
-                  }
-                  delete (window as any)._panelTouchStartY;
-                }}
-              >
-                <div className="w-12 h-1 bg-zinc-800 rounded-full" />
+            {/* Mobile Terminal Panel - CONDITIONAL RENDER to prevent re-renders when hidden */}
+            {activeMobileTab === 'positions' && (
+              <div className={cn(
+                "fixed left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-30 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
+                isScrollingPanel || isInputFocused ? "bottom-0" : "bottom-[64px]",
+                isInputFocused ? "h-[80%]" : "h-[29%]"
+              )}>
+                <div
+                  className="h-6 flex items-center justify-center cursor-row-resize active:bg-zinc-900 touch-none shrink-0"
+                  onClick={handleClosePanel}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    (window as any)._panelTouchStartY = touch.clientY;
+                  }}
+                  onTouchEnd={(e) => {
+                    const startY = (window as any)._panelTouchStartY;
+                    if (startY === undefined) return;
+                    const endY = e.changedTouches[0].clientY;
+                    if (endY - startY > 30) { // Swipe down
+                      handleClosePanel();
+                    }
+                    delete (window as any)._panelTouchStartY;
+                  }}
+                >
+                  <div className="w-12 h-1 bg-zinc-800 rounded-full" />
+                </div>
+                <div
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto flex flex-col custom-scrollbar"
+                >
+                  <Terminal forceExpanded={true} />
+                </div>
               </div>
-              <div
-                onScroll={handleScroll}
-                className="flex-1 overflow-y-auto flex flex-col custom-scrollbar"
-              >
-                <Terminal forceExpanded={true} />
-              </div>
-            </div>
+            )}
 
 
             {activeMobileTab === 'menu' && (

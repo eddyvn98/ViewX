@@ -260,8 +260,10 @@ class MT5Service:
         
         # Use timestamps for better reliability
         if from_date is None:
-            # Last 365 days
-            from_timestamp = int(time.time()) - (365 * 24 * 60 * 60)
+            # OPTIMIZATION: Default to last 30 days if a small limit is requested
+            # instead of a whole year which causes MT5 to scan its entire database.
+            days = 30 if (limit and limit <= 500) else 365
+            from_timestamp = int(time.time()) - (days * 24 * 60 * 60)
         else:
             from_timestamp = int(from_date.timestamp()) if hasattr(from_date, 'timestamp') else int(from_date)
             
@@ -270,8 +272,21 @@ class MT5Service:
         else:
             to_timestamp = int(to_date.timestamp()) if hasattr(to_date, 'timestamp') else int(to_date)
             
+        # If we have a very small limit, we can try to fetch just the last few days first 
+        # to avoid the "16k deals" scan if we only need 100.
+        if limit and limit <= 200 and from_date is None:
+             # Try last 7 days first for small requests
+             test_from = int(time.time()) - (7 * 24 * 60 * 60)
+             deals = mt5.history_deals_get(test_from, to_timestamp)
+             if deals is not None and len(deals) >= limit:
+                 from_timestamp = test_from
+             else:
+                 # Fallback to the 30 days window
+                 pass
+
         print(f"[FETCH] History from TS {from_timestamp} to {to_timestamp}")
         deals = mt5.history_deals_get(from_timestamp, to_timestamp)
+
         
         if deals is None:
             error_code, error_desc = mt5.last_error()

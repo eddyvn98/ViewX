@@ -1,10 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
-import { useChartOHLC } from '../hooks/use-chart-ohlc';
-import { useChartIndicatorValues } from '../hooks/use-chart-indicator-values';
-import { cn } from '@/lib/utils';
+import { useLegendDOMUpdater } from '../hooks/use-legend-dom-updater';
+import { useShallow } from 'zustand/react/shallow';
 
 interface ChartLegendProps {
     chartId: string;
@@ -12,127 +11,98 @@ interface ChartLegendProps {
     interval: string | undefined;
     source: string | undefined;
     candles: Candle[];
+    priceChart?: import('lightweight-charts').IChartApi | null;
+    series?: import('lightweight-charts').ISeriesApi<"Candlestick"> | null;
 }
 
+const EMPTY_INDICATORS: any[] = [];
+
 export function ChartLegend({ chartId, symbol, interval, source, candles }: ChartLegendProps) {
-    const ohlcData = useChartOHLC(symbol, interval, source);
-    const activeIndex = ohlcData?.activeIndex ?? -1;
-    const indicators = useChartIndicatorValues(chartId, candles, activeIndex, ohlcData?.close);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    // Optimize selector: only re-render if this specific chart's hover state changes
-    const isHovering = useMarketStore(state => !!(state.crosshairPoint?.time && state.crosshairPoint?.sourceId === chartId));
+    // Get indicators config (stable, rarely changes)
+    const indicators = useMarketStore(useShallow(
+        state => (state.chartIndicators[chartId] || EMPTY_INDICATORS).filter((i: any) => i.visible && i.pane !== 'subchart')
+    ));
 
+    // DOM-based updates - NO REACT RE-RENDERS on hover!
+    useLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles });
 
-    // VITAL: Early return must happen AFTER all hooks are called
-    if (!ohlcData) return null;
-
-    const { open: o, high: h, low: l, close: c, changeValue, change } = ohlcData;
-    const isPositive = changeValue >= 0;
-    const color = isPositive ? '#22c55e' : '#ef4444';
-
-    const formatPrice = (p: number) => {
-        if (p === 0) return '0.00';
-        if (p < 0.0001) return p.toExponential(4);
-        if (p < 1) return p.toFixed(5);
-        if (p < 100) return p.toFixed(3);
-        return p.toFixed(2);
-    };
+    if (!symbol || !interval || !source || !candles.length) return null;
 
     return (
-        <div className="absolute left-1 top-2 z-[40] pointer-events-none select-none flex flex-col gap-1.5 items-start">
-            {/* Status & Price Cluster - Acts as Data Window when hovering */}
+        <div
+            ref={containerRef}
+            className="absolute left-1 top-2 z-[40] pointer-events-none select-none flex flex-col gap-1.5 items-start"
+        >
+            {/* OHLC Container - Updated via DOM manipulation */}
             <div
-                className={cn(
-                    "flex flex-col gap-1.5 p-2 backdrop-blur-md border rounded-lg shadow-xl min-w-fit transition-colors duration-200",
-                    isHovering
-                        ? "bg-amber-500/10 border-amber-500/40"
-                        : "bg-zinc-950/60 border-white/5"
-                )}
+                data-legend-container
+                className="flex flex-col gap-1.5 p-2 backdrop-blur-md border rounded-lg shadow-xl min-w-fit transition-colors duration-200 bg-zinc-950/60 border-white/5"
             >
                 {/* Status Tag */}
-                <div className={cn(
-                    "flex items-center justify-between gap-3 px-1 pb-1 border-b mb-0.5",
-                    isHovering ? "border-amber-500/20" : "border-white/5"
-                )}>
-                    {isHovering ? (
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1 h-1 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.8)]" />
-                            <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest italic">Historical</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1 h-1 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,1)] animate-pulse" />
-                            <span className="text-[8px] font-black text-green-500 uppercase tracking-widest opacity-80">Live</span>
-                        </div>
-                    )}
-                    <span className={cn(
-                        "text-[8px] font-bold whitespace-nowrap",
-                        isHovering ? "text-amber-500/40" : "text-white/20"
-                    )}>{symbol}</span>
+                <div className="flex items-center justify-between gap-3 px-1 pb-1 border-b border-white/5 mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                        <div
+                            data-status="dot"
+                            className="w-1 h-1 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,1)] animate-pulse"
+                        />
+                        <span
+                            data-status="text"
+                            className="text-[8px] font-black text-green-500 uppercase tracking-widest opacity-80"
+                        >
+                            Live
+                        </span>
+                    </div>
+                    <span className="text-[8px] font-bold whitespace-nowrap text-white/20">{symbol}</span>
                 </div>
 
                 {/* OHLC Vertical List */}
                 <div className="flex flex-col gap-0.5 px-1">
                     <div className="flex items-center justify-between">
-                        <span className={cn("text-[8px] font-bold uppercase", isHovering ? "text-white/40" : "text-white/20")}>Open</span>
-                        <span className="text-[10px] font-mono text-white/70">{formatPrice(o)}</span>
+                        <span className="text-[8px] font-bold uppercase text-white/20">Open</span>
+                        <span data-ohlc="open" className="text-[10px] font-mono text-white/70">···</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className={cn("text-[8px] font-bold uppercase", isHovering ? "text-white/40" : "text-white/20")}>High</span>
-                        <span className="text-[10px] font-mono text-white/70">{formatPrice(h)}</span>
+                        <span className="text-[8px] font-bold uppercase text-white/20">High</span>
+                        <span data-ohlc="high" className="text-[10px] font-mono text-white/70">···</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className={cn("text-[8px] font-bold uppercase", isHovering ? "text-white/40" : "text-white/20")}>Low</span>
-                        <span className="text-[10px] font-mono text-white/70">{formatPrice(l)}</span>
+                        <span className="text-[8px] font-bold uppercase text-white/20">Low</span>
+                        <span data-ohlc="low" className="text-[10px] font-mono text-white/70">···</span>
                     </div>
                 </div>
 
                 {/* Close & Change Highlight Box */}
-                <div className={cn(
-                    "flex flex-col items-start gap-0 px-2 py-1 mt-0.5 rounded-md border w-full",
-                    isHovering ? "bg-amber-500/10 border-amber-500/20" : "bg-white/5 border-white/5"
-                )}>
-                    <span className="text-[11px] font-mono font-black leading-tight" style={{ color }}>{formatPrice(c)}</span>
+                <div className="flex flex-col items-start gap-0 px-2 py-1 mt-0.5 rounded-md border bg-white/5 border-white/5 w-full">
+                    <span data-ohlc="close" className="text-[11px] font-mono font-black leading-tight">···</span>
                     <div className="flex items-center gap-1.5 leading-none mt-0.5">
-                        <span className="text-[8px] font-mono font-bold" style={{ color }}>
-                            {isPositive ? '+' : ''}{formatPrice(changeValue)}
-                        </span>
-                        <span className="text-[8px] font-mono font-bold opacity-80" style={{ color }}>
-                            ({change.toFixed(2)}%)
-                        </span>
+                        <span data-ohlc="change" className="text-[8px] font-mono font-bold">···</span>
+                        <span data-ohlc="change-percent" className="text-[8px] font-mono font-bold opacity-80">···</span>
                     </div>
                 </div>
             </div>
 
-            {/* Indicators Section - Individual Tags */}
-            <div className="flex flex-col gap-1">
-                {indicators.filter(ind => ind.pane !== 'subchart').map((ind) => (
+            {/* Indicators Section - Static structure, values updated via DOM */}
+            <div data-indicators className="flex flex-col gap-1">
+                {indicators.map((ind: any) => (
                     <div
                         key={ind.id}
-                        className={cn(
-                            "flex flex-col gap-0.5 px-2 py-1 backdrop-blur-sm border rounded-md shadow-sm w-fit transition-colors duration-200",
-                            isHovering
-                                ? "bg-amber-500/5 border-amber-500/20"
-                                : "bg-zinc-950/40 border-white/5"
-                        )}
+                        data-indicator-id={ind.id}
+                        className="flex flex-col gap-0.5 px-2 py-1 backdrop-blur-sm border rounded-md shadow-sm w-fit transition-colors duration-200 bg-zinc-950/40 border-white/5"
                     >
-                        <span className={cn(
-                            "text-[7px] font-black uppercase tracking-tighter italic truncate",
-                            isHovering ? "text-white/40" : "text-white/20"
-                        )}>
-                            {ind.name}
+                        <span className="text-[7px] font-black uppercase tracking-tighter italic truncate text-white/20">
+                            {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${ind.params?.period || 14}`}
                         </span>
-                        <div className="flex flex-wrap gap-x-1.5 leading-none">
-                            {ind.values ? (
-                                ind.values.map((v, i) => (
-                                    <span key={i} className="text-[9px] font-mono font-bold" style={{ color: v.color }}>
-                                        {v.value}
-                                    </span>
-                                ))
+                        <div data-indicator-value className="flex flex-wrap gap-x-1.5 leading-none">
+                            {ind.type === 'MACD' ? (
+                                <>
+                                    <span className="text-[9px] font-mono font-bold" style={{ color: ind.color }}>···</span>
+                                    <span className="text-[9px] font-mono font-bold" style={{ color: '#FF6D00' }}>···</span>
+                                    <span className="text-[9px] font-mono font-bold">···</span>
+                                </>
                             ) : (
-                                <span className="text-[9px] font-mono font-bold" style={{ color: ind.color as string }}>
-                                    {ind.value}
-                                </span>
+                                <span className="text-[9px] font-mono font-bold" style={{ color: ind.color }}>···</span>
                             )}
                         </div>
                     </div>

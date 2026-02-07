@@ -19,6 +19,7 @@ export class EMAIndicator {
                 lineWidth: this.config.lineWidth as any,
                 priceLineVisible: false,
                 lastValueVisible: false,
+                crosshairMarkerVisible: false, // Disable for performance
                 visible: this.config.visible,
             });
         } else {
@@ -28,6 +29,7 @@ export class EMAIndicator {
                 visible: this.config.visible,
                 priceLineVisible: false,
                 lastValueVisible: false,
+                crosshairMarkerVisible: false, // Disable for performance
             });
         }
 

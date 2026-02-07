@@ -318,26 +318,48 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                 }));
             }
 
-            // 2. Tab Visibility Recovery
+            // 2. Tab Visibility Recovery (Optimized: Only if data is stale)
             const handleVisibility = () => {
                 if (document.visibilityState === 'visible') {
-                    console.log('👀 Tab visible, syncing charts...');
-                    const tabs = useMarketStore.getState().tabs;
+                    console.log('👀 Tab visible, checking for stale chart data...');
+                    const state = useMarketStore.getState();
+                    const tabs = state.tabs;
+                    const now = Date.now() / 1000;
+
                     Object.values(tabs).forEach(tab => {
                         Object.values(tab.charts).forEach(chart => {
                             if (chart.source === 'MT5') {
-                                globalSocket?.send(JSON.stringify({
-                                    topic: "mt5_command",
-                                    command: "get_candles",
-                                    symbol: chart.symbol,
-                                    interval: chart.interval,
-                                    count: 300
-                                }));
+                                // Check if we should fetch (e.g. if last candle is more than 2 intervals old)
+                                const key = `MT5:${chart.symbol}:${chart.interval}`;
+                                const candles = state.candleData[key] || [];
+                                let shouldFetch = candles.length === 0;
+
+                                if (candles.length > 0) {
+                                    const lastT = Number(candles[candles.length - 1].time);
+                                    const intervalMinutes = parseInt(chart.interval) || 1;
+                                    const secondsGap = now - lastT;
+                                    // If gap is more than 2 candle durations, it's stale
+                                    if (secondsGap > (intervalMinutes * 60 * 2)) {
+                                        shouldFetch = true;
+                                    }
+                                }
+
+                                if (shouldFetch) {
+                                    console.log(`🔄 [SYNC] Fetching stale data for ${chart.symbol} (${chart.interval})`);
+                                    globalSocket?.send(JSON.stringify({
+                                        topic: "mt5_command",
+                                        command: "get_candles",
+                                        symbol: chart.symbol,
+                                        interval: chart.interval,
+                                        count: 300
+                                    }));
+                                }
                             }
                         });
                     });
                 }
             };
+
             document.addEventListener('visibilitychange', handleVisibility);
             return () => document.removeEventListener('visibilitychange', handleVisibility);
         }

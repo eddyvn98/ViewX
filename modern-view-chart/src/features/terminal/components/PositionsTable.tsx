@@ -1,5 +1,5 @@
 import { Position } from "@/lib/store/types";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useMarketStore } from "@/lib/store";
 import { calculatePnL } from "@/lib/utils/pnl";
@@ -14,7 +14,6 @@ interface PositionsTableProps {
 type SortField = 'symbol' | 'ticket' | 'type' | 'volume' | 'open_price' | 'current_price' | 'sl' | 'tp' | 'profit' | 'time' | 'magic';
 type SortDirection = 'asc' | 'desc';
 
-// Internal component
 function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition, onSymbolClick }: PositionsTableProps) {
     const [editingCell, setEditingCell] = useState<{ ticket: number, field: 'sl' | 'tp', value: string } | null>(null);
     const [sortField, setSortField] = useState<SortField>('time');
@@ -33,48 +32,28 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
     const sortedPositions = [...safePositions].sort((a, b) => {
         const aValue = a[sortField];
         const bValue = b[sortField];
-
         if (aValue === bValue) return 0;
-
         const aSafe = aValue ?? 0;
         const bSafe = bValue ?? 0;
-
         if (typeof aSafe === 'string' && typeof bSafe === 'string') {
-            return sortDirection === 'asc'
-                ? aSafe.localeCompare(bSafe)
-                : bSafe.localeCompare(aSafe);
+            return sortDirection === 'asc' ? aSafe.localeCompare(bSafe) : bSafe.localeCompare(aSafe);
         }
-
-        if (sortDirection === 'asc') {
-            return (aSafe as number) - (bSafe as number);
-        } else {
-            return (bSafe as number) - (aSafe as number);
-        }
+        return sortDirection === 'asc' ? (aSafe as number) - (bSafe as number) : (bSafe as number) - (aSafe as number);
     });
 
-    const startEditing = (ticket: number, field: 'sl' | 'tp', current: number) => {
-        setEditingCell({ ticket, field, value: current > 0 ? current.toString() : '' });
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            commitEdit();
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-        }
-    };
-
-    const commitEdit = () => {
+    const commitEdit = useCallback(() => {
         if (!editingCell) return;
         const val = parseFloat(editingCell.value);
         if (!isNaN(val)) {
-            onUpdatePosition(editingCell.ticket,
-                editingCell.field === 'sl' ? val : undefined as any,
-                editingCell.field === 'tp' ? val : undefined as any
-            );
+            onUpdatePosition(editingCell.ticket, editingCell.field === 'sl' ? val : undefined, editingCell.field === 'tp' ? val : undefined);
         }
         setEditingCell(null);
-    };
+    }, [editingCell, onUpdatePosition]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') commitEdit();
+        else if (e.key === 'Escape') setEditingCell(null);
+    }, [commitEdit]);
 
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
@@ -82,14 +61,8 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
     };
 
     const HeaderCell = ({ field, label, className = "" }: { field: SortField, label: string, className?: string }) => (
-        <th
-            className={`p-2 font-medium border-b border-[#2a2e39] cursor-pointer hover:bg-[#2a2e39] transition-colors ${className}`}
-            onClick={() => handleSort(field)}
-        >
-            <div className="flex items-center">
-                {label}
-                <SortIcon field={field} />
-            </div>
+        <th className={`p-2 font-medium border-b border-[#2a2e39] cursor-pointer hover:bg-[#2a2e39] transition-colors ${className}`} onClick={() => handleSort(field)}>
+            <div className="flex items-center">{label}<SortIcon field={field} /></div>
         </th>
     );
 
@@ -112,34 +85,28 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
                 </tr>
             </thead>
             <tbody>
-                {sortedPositions && sortedPositions.length > 0 ? (
-                    sortedPositions.map((pos) => (
-                        <PositionRow
-                            key={pos.ticket}
-                            pos={pos}
-                            onClosePosition={onClosePosition}
-                            onUpdatePosition={onUpdatePosition}
-                            onSymbolClick={onSymbolClick}
-                            editingCell={editingCell}
-                            setEditingCell={setEditingCell}
-                            commitEdit={commitEdit}
-                            handleKeyDown={handleKeyDown}
-                        />
-                    ))
-                ) : (
-                    <tr>
-                        <td colSpan={12} className="p-4 text-center text-[#787b86]">No open positions</td>
-                    </tr>
+                {sortedPositions.length > 0 ? sortedPositions.map((pos) => (
+                    <PositionRow
+                        key={pos.ticket}
+                        pos={pos}
+                        onClosePosition={onClosePosition}
+                        onSymbolClick={onSymbolClick}
+                        editingCell={editingCell}
+                        setEditingCell={setEditingCell}
+                        commitEdit={commitEdit}
+                        handleKeyDown={handleKeyDown}
+                    />
+                )) : (
+                    <tr><td colSpan={12} className="p-4 text-center text-[#787b86]">No open positions</td></tr>
                 )}
             </tbody>
-        </table >
+        </table>
     );
 }
 
 interface PositionRowProps {
     pos: Position;
     onClosePosition: (ticket: number) => void;
-    onUpdatePosition: (ticket: number, sl?: number, tp?: number) => void;
     onSymbolClick: (symbol: string) => void;
     editingCell: { ticket: number, field: 'sl' | 'tp', value: string } | null;
     setEditingCell: (val: { ticket: number, field: 'sl' | 'tp', value: string } | null) => void;
@@ -147,112 +114,118 @@ interface PositionRowProps {
     handleKeyDown: (e: React.KeyboardEvent) => void;
 }
 
-const PositionRow = React.memo(({
-    pos, onClosePosition, onUpdatePosition, onSymbolClick,
-    editingCell, setEditingCell, commitEdit, handleKeyDown
-}: PositionRowProps) => {
-    // Subscribe to real-time price for this specific symbol
-    const tickerPrice = useMarketStore(state => state.tickers[pos.symbol]?.price);
-    const symbolInfo = useMarketStore(state => state.symbolInfo[pos.symbol]);
-
-    // Calculate PnL locally using live price
-    const livePrice = tickerPrice || pos.current_price;
-    const liveProfit = calculatePnL({
-        type: pos.type,
-        openPrice: pos.open_price,
-        currentPrice: livePrice,
-        volume: pos.volume,
-        symbolInfo,
-        symbol: pos.symbol
-    });
-
-    // Use MT5 profit if price is not available yet, or if it's the first render
-    const displayPrice = livePrice || pos.current_price;
-    const displayProfit = tickerPrice ? liveProfit : pos.profit;
+/**
+ * PositionRow with DOM-based updates for realtime fields (price, profit)
+ * Avoids React re-renders on every ticker update
+ */
+const PositionRow = memo(({ pos, onClosePosition, onSymbolClick, editingCell, setEditingCell, commitEdit, handleKeyDown }: PositionRowProps) => {
+    const priceRef = useRef<HTMLTableCellElement>(null);
+    const profitRef = useRef<HTMLTableCellElement>(null);
+    const rafIdRef = useRef<number | null>(null);
+    const lastPriceRef = useRef<string>('');
+    const lastProfitRef = useRef<string>('');
 
     const setHoveredTicket = useMarketStore(state => state.setHoveredTicket);
+
+    // DOM update loop - bypasses React
+    const updateDOM = useCallback(() => {
+        const state = useMarketStore.getState();
+        const tickerPrice = state.tickers[pos.symbol]?.price;
+        const symbolInfo = state.symbolInfo[pos.symbol];
+
+        const livePrice = tickerPrice || pos.current_price;
+        const liveProfit = calculatePnL({
+            type: pos.type,
+            openPrice: pos.open_price,
+            currentPrice: livePrice,
+            volume: pos.volume,
+            symbolInfo,
+            symbol: pos.symbol
+        });
+
+        const displayProfit = tickerPrice ? liveProfit : pos.profit;
+        const priceStr = livePrice.toFixed(5);
+        const profitStr = displayProfit.toFixed(2);
+
+        if (priceRef.current && priceStr !== lastPriceRef.current) {
+            lastPriceRef.current = priceStr;
+            priceRef.current.textContent = priceStr;
+        }
+
+        if (profitRef.current && profitStr !== lastProfitRef.current) {
+            lastProfitRef.current = profitStr;
+            profitRef.current.textContent = profitStr;
+            profitRef.current.className = `p-2 font-bold ${displayProfit >= 0 ? 'text-green-500' : 'text-red-500'}`;
+        }
+    }, [pos]);
+
+    useEffect(() => {
+        let running = true;
+        let lastUpdate = 0;
+        const interval = 100; // 10fps max
+
+        const tick = () => {
+            if (!running) return;
+            const now = Date.now();
+            if (now - lastUpdate >= interval) {
+                lastUpdate = now;
+                updateDOM();
+            }
+            rafIdRef.current = requestAnimationFrame(tick);
+        };
+
+        // Initial update
+        updateDOM();
+        rafIdRef.current = requestAnimationFrame(tick);
+
+        return () => {
+            running = false;
+            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+        };
+    }, [updateDOM]);
 
     const startEditing = (ticket: number, field: 'sl' | 'tp', current: number) => {
         setEditingCell({ ticket, field, value: current > 0 ? current.toString() : '' });
     };
 
     return (
-        <tr
-            className="hover:bg-blue-500/10 text-[#d1d4dc] border-b border-[#2a2e39]"
+        <tr className="hover:bg-blue-500/10 text-[#d1d4dc] border-b border-[#2a2e39]"
             onMouseEnter={() => setHoveredTicket(pos.ticket)}
-            onMouseLeave={() => setHoveredTicket(null)}
-        >
+            onMouseLeave={() => setHoveredTicket(null)}>
             <td className="p-2 whitespace-nowrap">{new Date(pos.time * 1000).toLocaleString()}</td>
-            <td
-                className="p-2 cursor-pointer hover:text-blue-400 font-medium"
-                onClick={() => onSymbolClick(pos.symbol)}
-            >
-                {pos.symbol ?? '--'}
-            </td>
+            <td className="p-2 cursor-pointer hover:text-blue-400 font-medium" onClick={() => onSymbolClick(pos.symbol)}>{pos.symbol ?? '--'}</td>
             <td className="p-2">{pos.ticket ?? '--'}</td>
             <td className="p-2">{pos.magic ?? 0}</td>
-            <td className={`p-2 font-bold ${(pos.type || '').toLowerCase() === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
-                {(pos.type || '--').toUpperCase()}
-            </td>
+            <td className={`p-2 font-bold ${(pos.type || '').toLowerCase() === 'buy' ? 'text-green-500' : 'text-red-500'}`}>{(pos.type || '--').toUpperCase()}</td>
             <td className="p-2">{(pos.volume ?? 0).toFixed(2)}</td>
             <td className="p-2">{(pos.open_price ?? 0).toFixed(5)}</td>
-            <td className="p-2">{displayPrice.toFixed(5)}</td>
+            <td ref={priceRef} className="p-2">{pos.current_price.toFixed(5)}</td>
             <td className="p-2">
                 {editingCell?.ticket === pos.ticket && editingCell.field === 'sl' ? (
-                    <input
-                        autoFocus
-                        type="number"
-                        step="0.00001"
-                        className="w-20 bg-[#2a2e39] text-white px-1 rounded border border-blue-500 outline-none"
-                        value={editingCell.value}
-                        onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                        onBlur={commitEdit}
-                        onKeyDown={handleKeyDown}
-                    />
+                    <input autoFocus type="number" step="0.00001" className="w-20 bg-[#2a2e39] text-white px-1 rounded border border-blue-500 outline-none"
+                        value={editingCell.value} onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })} onBlur={commitEdit} onKeyDown={handleKeyDown} />
                 ) : (
-                    <span
-                        className="cursor-pointer text-blue-500 hover:underline hover:text-blue-400"
-                        onClick={() => startEditing(pos.ticket, 'sl', pos.sl)}
-                    >
+                    <span className="cursor-pointer text-blue-500 hover:underline hover:text-blue-400" onClick={() => startEditing(pos.ticket, 'sl', pos.sl)}>
                         {(pos.sl ?? 0) > 0 ? (pos.sl ?? 0).toFixed(5) : '--'}
                     </span>
                 )}
             </td>
             <td className="p-2">
                 {editingCell?.ticket === pos.ticket && editingCell.field === 'tp' ? (
-                    <input
-                        autoFocus
-                        type="number"
-                        step="0.00001"
-                        className="w-20 bg-[#2a2e39] text-white px-1 rounded border border-blue-500 outline-none"
-                        value={editingCell.value}
-                        onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                        onBlur={commitEdit}
-                        onKeyDown={handleKeyDown}
-                    />
+                    <input autoFocus type="number" step="0.00001" className="w-20 bg-[#2a2e39] text-white px-1 rounded border border-blue-500 outline-none"
+                        value={editingCell.value} onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })} onBlur={commitEdit} onKeyDown={handleKeyDown} />
                 ) : (
-                    <span
-                        className="cursor-pointer text-blue-500 hover:underline hover:text-blue-400"
-                        onClick={() => startEditing(pos.ticket, 'tp', pos.tp)}
-                    >
+                    <span className="cursor-pointer text-blue-500 hover:underline hover:text-blue-400" onClick={() => startEditing(pos.ticket, 'tp', pos.tp)}>
                         {(pos.tp ?? 0) > 0 ? (pos.tp ?? 0).toFixed(5) : '--'}
                     </span>
                 )}
             </td>
-            <td className={`p-2 font-bold ${displayProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {displayProfit.toFixed(2)}
-            </td>
+            <td ref={profitRef} className={`p-2 font-bold ${pos.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>{pos.profit.toFixed(2)}</td>
             <td className="p-2">
-                <button
-                    onClick={() => onClosePosition(pos.ticket)}
-                    className="px-2 py-1 text-[10px] text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white transition-colors"
-                >
-                    Close
-                </button>
+                <button onClick={() => onClosePosition(pos.ticket)} className="px-2 py-1 text-[10px] text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white transition-colors">Close</button>
             </td>
         </tr>
     );
 });
 
-export const PositionsTable = React.memo(PositionsTableImpl);
-
+export const PositionsTable = memo(PositionsTableImpl);

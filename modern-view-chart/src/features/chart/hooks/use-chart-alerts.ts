@@ -14,6 +14,7 @@ export function useChartAlerts(
     const addAlert = useMarketStore((state) => state.addAlert);
     const updateAlert = useMarketStore((state) => state.updateAlert);
     const removeAlert = useMarketStore((state) => state.removeAlert);
+    const draftOrder = useMarketStore((state) => state.draftOrder);
 
     // Chart Interaction Logic
     const { sendMessage } = useWebSocket();
@@ -23,18 +24,25 @@ export function useChartAlerts(
 
     // Refs for interaction
     const priceLinesRef = useRef<Map<string, any>>(new Map());
-    const isDraggingRef = useRef<string | null>(null);
-    const dragStartPriceRef = useRef<number | null>(null);
 
     // 1. Render Alert Lines (Only Active)
     useEffect(() => {
         if (!seriesRef.current || !symbol) return;
 
+        // Hide all alerts if drafting a new order for this symbol
+        if (draftOrder && draftOrder.symbol === symbol) {
+            priceLinesRef.current.forEach((line) => {
+                seriesRef.current?.removePriceLine(line);
+            });
+            priceLinesRef.current.clear();
+            return;
+        }
+
         // Only show active alerts
         const activeAlerts = symbolAlerts.filter(a => a.active);
         const activeIds = new Set(activeAlerts.map(a => a.id));
 
-        // Clear existing lines not in active state
+        // Clear existing lines not in active state or no longer existing
         priceLinesRef.current.forEach((line, id) => {
             if (!activeIds.has(id)) {
                 seriesRef.current?.removePriceLine(line);
@@ -42,7 +50,7 @@ export function useChartAlerts(
             }
         });
 
-        // Add/Update lines for active alerts only
+        // Add/Update lines for active alerts
         activeAlerts.forEach(alert => {
             const lineOptions: CreatePriceLineOptions = {
                 price: alert.price,
@@ -54,11 +62,9 @@ export function useChartAlerts(
             };
 
             if (priceLinesRef.current.has(alert.id)) {
-                // Update existing
                 const line = priceLinesRef.current.get(alert.id);
                 line.applyOptions(lineOptions);
             } else {
-                // Create new
                 const line = seriesRef.current?.createPriceLine(lineOptions);
                 if (line) {
                     priceLinesRef.current.set(alert.id, line);
@@ -66,44 +72,20 @@ export function useChartAlerts(
             }
         });
 
-    }, [symbolAlerts, symbol, seriesRef]);
+    }, [symbolAlerts, symbol, seriesRef, draftOrder]);
 
-    // 2. Drag Interaction Logic
-    useEffect(() => {
-        if (!chartRef.current || !seriesRef.current) return;
-
-        const chart = chartRef.current;
-        const container = chart.chartElement(); // Need access to div for events
-
-        const handleMouseDown = (param: any) => {
-            if (!param.point || !seriesRef.current) return;
-
-            // Check if hovering near a line
-            // Note: Native LWCharts doesn't strictly expose "hovered price line" easily in all versions.
-            // We approximate by checking price proximity or rely on future UI overlay for better drag.
-            // For now, implementing Right-Click logic as primary "Add".
-            // Dragging native price lines is tricky without custom overlay primitives.
-            // We will stick to basic rendering first, and Context Menu for Add/Remove.
-        };
-
-        // chart.subscribeClick(handleMouseDown);
-        // return () => chart.unsubscribeClick(handleMouseDown);
-    }, [chartRef]);
-
-    // 3. Proximity Detection (for Drag/Delete/Context) - Only Active Alerts
+    // 3. Proximity Detection
     const getAlertNearPrice = useCallback((y: number, x: number) => {
         const series = seriesRef.current;
         const chart = chartRef.current;
         if (!series || !chart) return undefined;
 
+        // Don't detect other elements if drafting
+        if (draftOrder && draftOrder.symbol === symbol) return undefined;
+
         const container = chart.chartElement();
         const activeAlerts = symbolAlerts.filter(a => a.active);
-
-        // Define "Tag Zone" as the rightmost 60px where the price labels are
         const isNearRightEdge = (container.clientWidth - x) < 60;
-
-        // Use pixel tolerance for consistent feel regardless of zoom
-        // More generous if clicking near the tags
         const pixelTolerance = isNearRightEdge ? 20 : 10;
 
         return activeAlerts.find(a => {
@@ -111,12 +93,12 @@ export function useChartAlerts(
             if (alertY === null) return false;
             return Math.abs(alertY - y) < pixelTolerance;
         });
-    }, [symbolAlerts, seriesRef, chartRef]);
+    }, [symbolAlerts, seriesRef, chartRef, draftOrder, symbol]);
 
     const handleRemoveAlert = useCallback((id: string) => {
         removeAlert(id);
         sendMessage({
-            type: 'alert_command',
+            topic: 'alert_command',
             command: 'remove',
             id
         });
@@ -125,37 +107,25 @@ export function useChartAlerts(
     const handleUpdateAlertPrice = useCallback((id: string, newPrice: number) => {
         updateAlert(id, { price: newPrice });
         sendMessage({
-            type: 'alert_command',
+            topic: 'alert_command',
             command: 'update',
             id,
             updates: { price: newPrice }
         });
     }, [updateAlert, sendMessage]);
 
-    // 5. Context Menu Logic (Exposed to Parent/Container)
-    // We will attach a native context menu listener to the chart container element in parent
-
     const handleAddAlertAtPrice = useCallback((price: number) => {
         if (!symbol) return;
-
         const id = crypto.randomUUID();
         const alertData: any = {
-            id,
-            symbol,
-            price,
-            active: true,
-            type: 'crossing',
-            note: 'Manual Alert',
-            createdAt: Date.now()
+            id, symbol, price, active: true, type: 'crossing', note: 'Manual Alert', createdAt: Date.now()
         };
-
         addAlert(alertData);
         sendMessage({
-            type: 'alert_command',
+            topic: 'alert_command',
             command: 'add',
             alert: alertData
         });
-
     }, [symbol, addAlert, sendMessage]);
 
     return {
@@ -166,3 +136,4 @@ export function useChartAlerts(
         getAlertNearPrice
     };
 }
+

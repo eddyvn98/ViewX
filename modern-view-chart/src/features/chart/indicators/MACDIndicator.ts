@@ -31,6 +31,7 @@ export class MACDIndicator {
                 lineWidth: 2,
                 priceScaleId: 'right',
                 visible: this.config.visible,
+                crosshairMarkerVisible: false, // Disable for performance
             });
 
             // Signal Line (Slow)
@@ -39,6 +40,7 @@ export class MACDIndicator {
                 lineWidth: 2,
                 priceScaleId: 'right',
                 visible: this.config.visible,
+                crosshairMarkerVisible: false, // Disable for performance
             });
         } else {
             // Update visibility and generic options

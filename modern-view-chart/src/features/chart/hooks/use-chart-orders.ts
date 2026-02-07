@@ -41,11 +41,11 @@ export function useChartOrders(
                     color: '#FF9800', // Orange for pending
                     lineWidth: 2,
                     lineStyle: LineStyle.Dashed,
-                    axisLabelVisible: true,
-                    title: entryTitle
+                    axisLabelVisible: false,
+                    title: ''
                 });
             } else {
-                lines.entry.applyOptions({ price: o.price_open, title: entryTitle });
+                lines.entry.applyOptions({ price: o.price_open });
             }
 
             // SL Line
@@ -57,11 +57,11 @@ export function useChartOrders(
                         color: '#ef5350',
                         lineWidth: 1,
                         lineStyle: LineStyle.Dotted,
-                        axisLabelVisible: true,
-                        title: slTitle
+                        axisLabelVisible: false,
+                        title: ''
                     });
                 } else {
-                    lines.sl.applyOptions({ price: o.sl, title: slTitle });
+                    lines.sl.applyOptions({ price: o.sl });
                 }
             } else if (lines.sl) {
                 series.removePriceLine(lines.sl);
@@ -77,11 +77,11 @@ export function useChartOrders(
                         color: '#26a69a',
                         lineWidth: 1,
                         lineStyle: LineStyle.Dotted,
-                        axisLabelVisible: true,
-                        title: tpTitle
+                        axisLabelVisible: false,
+                        title: ''
                     });
                 } else {
-                    lines.tp.applyOptions({ price: o.tp, title: tpTitle });
+                    lines.tp.applyOptions({ price: o.tp });
                 }
             } else if (lines.tp) {
                 series.removePriceLine(lines.tp);

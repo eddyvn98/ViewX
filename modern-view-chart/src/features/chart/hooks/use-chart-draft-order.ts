@@ -8,8 +8,9 @@ export function useChartDraftOrder(
     seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>
 ) {
     const draftOrder = useMarketStore((state) => state.draftOrder);
-    const tickers = useMarketStore((state) => state.tickers);
+    const currentPrice = useMarketStore((state) => (symbol && state.tickers[symbol]) ? state.tickers[symbol].price : 0);
     const symbolInfo = useMarketStore((state) => state.symbolInfo[symbol || '']);
+
     const linesRef = useRef<{ entry?: IPriceLine, sl?: IPriceLine, tp?: IPriceLine }>({});
 
     useEffect(() => {
@@ -26,8 +27,7 @@ export function useChartDraftOrder(
         }
 
         const series = seriesRef.current;
-        const ticker = tickers[symbol];
-        const bid = ticker?.price || 0;
+        const bid = currentPrice;
         const ask = bid * 1.0001; // Mock spread
         const entryPrice = draftOrder.isMarket ? (draftOrder.type === 'buy' ? ask : bid) : (draftOrder.price || bid);
 
@@ -51,11 +51,11 @@ export function useChartDraftOrder(
                 color: '#71717a', // Zinc 500
                 lineWidth: 1,
                 lineStyle: LineStyle.Dashed,
-                axisLabelVisible: true,
-                title: entryTitle,
+                axisLabelVisible: false,
+                title: '', // Custom tags handle the title
             });
         } else {
-            linesRef.current.entry.applyOptions({ price: entryPrice, title: entryTitle });
+            linesRef.current.entry.applyOptions({ price: entryPrice });
         }
 
         // SL Line
@@ -67,11 +67,11 @@ export function useChartDraftOrder(
                     color: '#ef4444', // Red 500
                     lineWidth: 1,
                     lineStyle: LineStyle.Dotted,
-                    axisLabelVisible: true,
-                    title: slTitle,
+                    axisLabelVisible: false,
+                    title: '',
                 });
             } else {
-                linesRef.current.sl.applyOptions({ price: draftOrder.sl, title: slTitle });
+                linesRef.current.sl.applyOptions({ price: draftOrder.sl });
             }
         } else if (linesRef.current.sl) {
             series.removePriceLine(linesRef.current.sl);
@@ -87,11 +87,11 @@ export function useChartDraftOrder(
                     color: '#22c55e', // Green 500
                     lineWidth: 1,
                     lineStyle: LineStyle.Dotted,
-                    axisLabelVisible: true,
-                    title: tpTitle,
+                    axisLabelVisible: false,
+                    title: '',
                 });
             } else {
-                linesRef.current.tp.applyOptions({ price: draftOrder.tp, title: tpTitle });
+                linesRef.current.tp.applyOptions({ price: draftOrder.tp });
             }
         } else if (linesRef.current.tp) {
             series.removePriceLine(linesRef.current.tp);
@@ -101,7 +101,7 @@ export function useChartDraftOrder(
         return () => {
             // Note: Partial cleanup handled above by dependency array
         };
-    }, [symbol, draftOrder, tickers, seriesRef, symbolInfo]);
+    }, [symbol, draftOrder, currentPrice, seriesRef, symbolInfo]);
 
     // Final cleanup on unmount
     useEffect(() => {
