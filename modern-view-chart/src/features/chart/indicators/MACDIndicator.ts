@@ -83,6 +83,37 @@ export class MACDIndicator {
         this.histogramSeries!.setData(histogramData);
     }
 
+    updateLastPoint(candle: Candle, candles: Candle[]) {
+        if (!this.macdSeries || !this.config.visible || candles.length < this.config.params.slow) return;
+
+        const { fast = 12, slow = 26, signal = 9 } = this.config.params;
+        const lastIdx = candles.length - 1;
+
+        // MACD needs a good amount of history for Signal line stabilization
+        const slice = candles.slice(Math.max(0, lastIdx - (slow + signal) * 2));
+        const prices = slice.map(c => c.close);
+        prices[prices.length - 1] = candle.close;
+
+        const { macd, signal: sig, histogram } = calculateMACD(prices, fast, slow, signal);
+
+        const lastIdxMACD = macd.length - 1;
+        const time = candle.time as any;
+
+        if (!isNaN(macd[lastIdxMACD])) {
+            this.macdSeries.update({ time, value: macd[lastIdxMACD] });
+        }
+        if (!isNaN(sig[lastIdxMACD])) {
+            this.signalSeries!.update({ time, value: sig[lastIdxMACD] });
+        }
+        if (!isNaN(histogram[lastIdxMACD])) {
+            this.histogramSeries!.update({
+                time,
+                value: histogram[lastIdxMACD],
+                color: histogram[lastIdxMACD] >= 0 ? '#26a69a' : '#ef5350'
+            });
+        }
+    }
+
     destroy() {
         if (this.chart) {
             if (this.macdSeries) {

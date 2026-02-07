@@ -9,6 +9,8 @@ export interface DraftOrder {
     sl?: number;
     tp?: number;
     isMarket: boolean;
+    slTouched?: boolean;
+    tpTouched?: boolean;
 }
 
 export interface DraggingPosition {

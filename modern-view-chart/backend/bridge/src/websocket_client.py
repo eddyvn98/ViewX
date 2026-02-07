@@ -89,7 +89,7 @@ class BridgeClient:
                 "request_id": data.get('request_id')
             })
 
-        elif cmd in ["place_order", "buy", "sell"]:
+        elif cmd in ["order", "place_order", "buy", "sell"]:
             order_type = cmd if cmd in ["buy", "sell"] else data.get('order_type')
             success = self.mt5.place_order(
                 data.get('symbol'),

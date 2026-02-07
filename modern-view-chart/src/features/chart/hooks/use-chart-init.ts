@@ -127,6 +127,7 @@ export function useChartInit(
         let lastSyncX: number | null = null;
         let lastSyncY: number | null = null;
 
+        let lastSyncAt = 0;
         priceChart.subscribeCrosshairMove((param) => {
             syncCrosshair(priceChart, [
                 { chart: subchartChart, series: subSyncSeries },
@@ -135,34 +136,33 @@ export function useChartInit(
 
             // Sync to global store - ONLY if we have a point (triggered by user)
             const store = useMarketStore.getState();
+            const now = Date.now();
+            
             if (param.time && param.point) {
                 const curTime = Number(param.time);
                 const curX = param.point.x;
                 const curY = param.point.y;
 
-                if (curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) {
+                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSyncAt > 32)) {
                     lastSyncTime = curTime;
                     lastSyncX = curX;
                     lastSyncY = curY;
+                    lastSyncAt = now;
 
-                    const now = Date.now();
-                    const lastSyncAt = (priceChart as any)._lastSyncAt || 0;
-                    if (now - lastSyncAt > 50) {
-                        (priceChart as any)._lastSyncAt = now;
-                        const logical = priceChart.timeScale().coordinateToLogical(curX);
-                        store.syncCrosshair({
-                            time: curTime,
-                            price: Number(seriesRef.current?.coordinateToPrice(curY) ?? 0),
-                            sourceId: chartId,
-                            point: { x: curX, y: curY },
-                            logical: logical !== null ? Number(logical) : null
-                        });
-                    }
+                    const logical = priceChart.timeScale().coordinateToLogical(curX);
+                    store.syncCrosshair({
+                        time: curTime,
+                        price: Number(seriesRef.current?.coordinateToPrice(curY) ?? 0),
+                        sourceId: chartId,
+                        point: { x: curX, y: curY },
+                        logical: logical !== null ? Number(logical) : null
+                    });
                 }
             } else if (!param.time && lastSyncTime !== null) {
                 lastSyncTime = null;
                 lastSyncX = null;
                 lastSyncY = null;
+                lastSyncAt = 0;
                 store.syncCrosshair(null);
             }
         });
@@ -173,17 +173,19 @@ export function useChartInit(
                 { chart: timescaleChart, series: footSyncSeries }
             ], param);
 
-            // Sync to global store - ONLY if we have a point (triggered by user)
             const store = useMarketStore.getState();
+            const now = Date.now();
+
             if (param.time && param.point) {
                 const curTime = Number(param.time);
                 const curX = param.point.x;
                 const curY = param.point.y;
 
-                if (curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) {
+                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSyncAt > 32)) {
                     lastSyncTime = curTime;
                     lastSyncX = curX;
                     lastSyncY = curY;
+                    lastSyncAt = now;
 
                     const logical = subchartChart.timeScale().coordinateToLogical(curX);
                     store.syncCrosshair({
@@ -198,6 +200,7 @@ export function useChartInit(
                 lastSyncTime = null;
                 lastSyncX = null;
                 lastSyncY = null;
+                lastSyncAt = 0;
                 store.syncCrosshair(null);
             }
         });

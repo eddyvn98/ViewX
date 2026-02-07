@@ -10,7 +10,7 @@ export const Header = memo(function Header() {
     const toggleRightSidebar = useMarketStore((state) => state.toggleRightSidebar);
 
     return (
-        <header className="h-14 border-b border-zinc-800 bg-zinc-950 px-4 flex items-center justify-between shrink-0 sticky top-0 z-30">
+        <header className="hidden md:flex h-14 border-b border-zinc-800 bg-zinc-950 px-4 items-center justify-between shrink-0 sticky top-0 z-30">
             <div className="flex items-center gap-8">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">

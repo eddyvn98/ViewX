@@ -1,0 +1,8 @@
+Tôi đã cập nhật hệ thống để hỗ trợ kéo thả SL/TP trên các thiết bị di động. Các thay đổi chính bao gồm:
+
+1.  **Hỗ trợ sự kiện cảm ứng (Touch Events):** Thêm các xử lý cho `touchstart`, `touchmove`, và `touchend` bên cạnh các sự kiện chuột truyền thống.
+2.  **Tăng vùng nhận diện (Hitbox):** Khi sử dụng cảm ứng, vùng nhận diện xung quanh các đường SL/TP được tăng lên **25px** (so với 12px trên máy tính) để dễ dàng thao tác bằng ngón tay.
+3.  **Ngăn cuộn trang khi kéo:** Đã xử lý để khi người dùng đang giữ và kéo SL/TP, trình duyệt sẽ không cuộn trang hoặc di chuyển biểu đồ, giúp thao tác mượt mà và chính xác hơn.
+4.  **Tối ưu hóa logic:** Tách riêng phần cập nhật vị trí kéo (`updateDragPosition`) và hoàn tất thao tác (`finalizeDrag`) để dùng chung cho cả chuột và cảm ứng, đảm bảo tính nhất quán.
+
+Bạn có thể thử lại trên điện thoại của mình ngay bây giờ. Nếu vẫn gặp khó khăn, hãy cho tôi biết nhé!

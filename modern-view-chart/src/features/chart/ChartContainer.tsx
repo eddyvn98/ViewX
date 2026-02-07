@@ -23,6 +23,8 @@ import { SubchartLegend } from './components/SubchartLegend';
 import { SubchartIndicatorsTabs } from './components/SubchartIndicatorsTabs';
 import { ChartLegend } from './components/ChartLegend';
 import { ChartContextMenu } from './components/ChartContextMenu';
+import { OrderLineTags } from './components/OrderLineTags';
+import { ChartTradingOverlay } from './components/ChartTradingOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -55,6 +57,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     const candles = useMarketStore((state) => state.candleData[key] || EMPTY_CANDLES);
 
     /* ================= REFS ================= */
+    const mainContainerRef = useRef<HTMLDivElement>(null);
     const priceContainerRef = useRef<HTMLDivElement>(null);
     const subchartContainerRef = useRef<HTMLDivElement>(null);
     const timescaleContainerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +101,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         priceChartRef,
         seriesRef,
         symbol,
-        priceContainerRef,
+        mainContainerRef, // Updated to use parent container
         alerts,
         handleUpdateAlertPrice,
         handleRemoveAlert
@@ -108,7 +111,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         priceChartRef,
         subchartChartRef,
         timescaleChartRef,
-        priceContainerRef,
+        mainContainerRef, // Updated to use parent container
         subchartContainerRef,
         timescaleContainerRef
     );
@@ -165,9 +168,16 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
             />
 
             {/* MAIN CHART AREA WITH OVERLAY */}
-            <div className="flex-1 relative min-h-0">
+            <div ref={mainContainerRef} className="flex-1 relative min-h-0">
                 {/* PRICE CHART (Main) - Always background */}
                 <div ref={priceContainerRef} className="w-full h-full" />
+
+                {/* ORDER LINE TAGS (Draggable Handles) */}
+                <OrderLineTags
+                    symbol={symbol}
+                    series={seriesRef.current}
+                    priceChart={priceChartRef.current}
+                />
 
                 {/* CANDLE COUNTDOWN OVERLAY */}
                 <CandleCountdown
@@ -175,6 +185,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     series={seriesRef.current}
                     interval={interval}
                 />
+
+                {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}
+                <ChartTradingOverlay symbol={symbol} />
 
                 {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
                 <div

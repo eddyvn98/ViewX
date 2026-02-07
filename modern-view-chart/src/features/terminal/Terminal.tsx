@@ -18,8 +18,13 @@ import { HistoryTable } from './components/HistoryTable';
 export const Terminal = memo(function Terminal({ forceExpanded = false }: { forceExpanded?: boolean }) {
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
-    const tabs = useMarketStore((state) => state.tabs);
-    const activeTabId = useMarketStore((state) => state.activeTabId);
+
+    // Optimized selector for active chart source to prevent Terminal re-renders on unrelated tab changes
+    const activeChartSource = useMarketStore((state) => {
+        const tab = state.tabs[state.activeTabId];
+        if (!tab?.activeChartId) return 'MT5';
+        return tab.charts[tab.activeChartId]?.source || 'MT5';
+    });
     const accounts = useMarketStore((state) => state.accounts);
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
@@ -50,13 +55,9 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
     const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
-    // Get current account based on active chart source
-    const activeChartSource = activeTabId && tabs[activeTabId] && tabs[activeTabId].activeChartId
-        ? tabs[activeTabId].charts[tabs[activeTabId].activeChartId!].source
-        : 'MT5';
-
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5';
-    const account = accounts[accountSource] || accounts['MT5'];
+    // Select specific account based on source
+    const account = useMarketStore((state) => state.accounts[accountSource] || state.accounts['MT5']);
 
     // Wrap in useCallback to ensure stable references
     const handleClosePosition = useCallback((ticket: number) => {
@@ -89,11 +90,13 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
     }, [sendMessage]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
-        const activeTab = tabs[activeTabId];
+        // We need to access state imperatively here to avoid subscribing to tabs/activeTabId
+        const state = useMarketStore.getState();
+        const activeTab = state.tabs[state.activeTabId];
         if (activeTab && activeTab.activeChartId) {
             setChartSymbol(activeTab.activeChartId, symbol);
         }
-    }, [tabs, activeTabId, setChartSymbol]);
+    }, [setChartSymbol]);
 
     const handleAnalyze = useCallback((deal: any) => {
         console.log("brain", deal);

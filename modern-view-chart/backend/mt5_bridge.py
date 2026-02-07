@@ -6,7 +6,7 @@ import time
 import sys
 
 # Configuration
-NODE_WS_URL = "ws://localhost:8090"
+NODE_WS_URL = "ws://localhost:8091"
 SYMBOLS = ["XAUUSDm", "BTCUSDm", "EURUSDm", "GBPUSDm"]
 
 # Timeframe mapping for historical data

@@ -46,6 +46,28 @@ export class HMAIndicator {
         this.series.setData(data as any);
     }
 
+    updateLastPoint(candle: Candle, candles: Candle[]) {
+        if (!this.series || !this.config.visible || candles.length < this.config.params.period) return;
+
+        const period = this.config.params.period;
+        const lastIdx = candles.length - 1;
+
+        // HMA needs more history than EMA, so we take a larger slice
+        const slice = candles.slice(Math.max(0, lastIdx - period * 4));
+        const prices = slice.map(c => c.close);
+        prices[prices.length - 1] = candle.close;
+
+        const hmaValues = calculateHullMA(prices, period);
+        const lastVal = hmaValues[hmaValues.length - 1];
+
+        if (!isNaN(lastVal)) {
+            this.series.update({
+                time: candle.time as any,
+                value: lastVal
+            });
+        }
+    }
+
     destroy() {
         if (this.series && this.chart) {
             try {

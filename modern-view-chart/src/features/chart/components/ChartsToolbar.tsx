@@ -11,6 +11,16 @@ import { LayoutGridSelector } from './LayoutGridSelector';
 import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
 
+const ConnectionStatus = memo(() => {
+    const isConnected = useMarketStore(state => state.isConnected);
+    return (
+        <div className="flex items-center gap-2 px-2 py-1 rounded bg-black/20 border border-zinc-800/50">
+            <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500")} />
+            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">{isConnected ? 'Live' : 'Offline'}</span>
+        </div>
+    );
+});
+
 export function ChartsToolbar() {
     const { layoutMode, activeChartId, activeChart } = useMarketStore(useShallow((state: RootState) => {
         const activeTab = state.activeTabId ? state.tabs[state.activeTabId] : null;
@@ -23,8 +33,7 @@ export function ChartsToolbar() {
         };
     }));
 
-    const { isConnected, isTerminalVisible, isCrosshairSyncEnabled } = useMarketStore(useShallow((state: RootState) => ({
-        isConnected: state.isConnected,
+    const { isTerminalVisible, isCrosshairSyncEnabled } = useMarketStore(useShallow((state: RootState) => ({
         isTerminalVisible: state.isTerminalVisible,
         isCrosshairSyncEnabled: state.isCrosshairSyncEnabled
     })));
@@ -105,10 +114,7 @@ export function ChartsToolbar() {
 
             <div className="flex items-center gap-3">
                 <ChartClock />
-                <div className="flex items-center gap-2 px-2 py-1 rounded bg-black/20 border border-zinc-800/50">
-                    <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500")} />
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">{isConnected ? 'Live' : 'Offline'}</span>
-                </div>
+                <ConnectionStatus />
                 <button
                     onClick={() => setTerminalVisible(!isTerminalVisible)}
                     className={cn(

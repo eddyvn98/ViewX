@@ -52,33 +52,29 @@ export function useChartIndicators(
         defaultsAppliedRef.current = true;
     }, [chartId, symbol, indicators.length, addIndicators]);
 
-    /* ===== UPDATE INDICATORS ===== */
-    useEffect(() => {
-        if (
-            !isReady ||
-            !priceChartRef.current ||
-            !subchartChartRef.current ||
-            !seriesRef.current ||
-            !symbol
-        )
-            return;
+    /* ===== UPDATE INDICATORS (OPTIMIZED) ===== */
+    const lastBarTimeRef = useRef<number>(0);
+    const stableCandlesRef = useRef<any[]>([]); // Cache for formatted closed candles
 
-        let effectiveCandles = candles;
-        if (currentPrice !== undefined && candles.length > 0) {
-            const lastIdx = candles.length - 1;
-            const lastCandle = candles[lastIdx];
-            const updatedLastCandle = {
-                ...lastCandle,
-                close: currentPrice,
-                high: Math.max(lastCandle.high, currentPrice),
-                low: Math.min(lastCandle.low, currentPrice),
-            };
-            effectiveCandles = [...candles.slice(0, lastIdx), updatedLastCandle];
+    useEffect(() => {
+        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !symbol) return;
+
+        const lastBar = candles[candles.length - 1];
+        if (!lastBar) return; // Safety check
+
+        const lastTime = (typeof lastBar.time === 'object' ? (lastBar.time as any).timestamp : Number(lastBar.time)) || 0;
+        const isNewBar = lastTime !== lastBarTimeRef.current;
+
+        // Update stable candles cache only on new bar or first load
+        if (isNewBar || stableCandlesRef.current.length === 0) {
+            lastBarTimeRef.current = lastTime;
+            // Map bars as stable base
+            stableCandlesRef.current = formatCandles(candles);
         }
 
-        const formattedCandles = formatCandles(effectiveCandles);
-
         const currentIds = new Set(indicators.map(i => i.id));
+
+        // Cleanup old instances
         Object.keys(instancesRef.current).forEach(id => {
             if (!currentIds.has(id)) {
                 instancesRef.current[id].destroy();
@@ -87,47 +83,58 @@ export function useChartIndicators(
         });
 
         indicators.forEach(config => {
+            if (!config.visible) return;
+
             let instance = instancesRef.current[config.id];
 
+            // 1. Create instance if missing
             if (!instance) {
                 const isSubchart = config.pane === 'subchart';
-                const targetChart = isSubchart
-                    ? subchartChartRef.current!
-                    : priceChartRef.current!;
+                const targetChart = isSubchart ? subchartChartRef.current! : priceChartRef.current!;
 
                 switch (config.type) {
-                    case 'EMA':
-                        instance = new EMAIndicator(targetChart, config);
-                        break;
-                    case 'HMA':
-                        instance = new HMAIndicator(targetChart, config);
-                        break;
-                    case 'RSI':
-                        instance = new RSIIndicator(targetChart, config);
-                        break;
-                    case 'MACD':
-                        instance = new MACDIndicator(targetChart, config);
-                        break;
-                    case 'Signals':
-                        instance = new SignalIndicator(seriesRef.current, config);
-                        break;
+                    case 'EMA': instance = new EMAIndicator(targetChart, config); break;
+                    case 'HMA': instance = new HMAIndicator(targetChart, config); break;
+                    case 'RSI': instance = new RSIIndicator(targetChart, config); break;
+                    case 'MACD': instance = new MACDIndicator(targetChart, config); break;
+                    case 'Signals': instance = new SignalIndicator(seriesRef.current, config); break;
                 }
-
                 if (instance) {
                     instancesRef.current[config.id] = instance;
+                    instance._lastConfigJson = JSON.stringify(config);
+                    // Initial full update
+                    instance.update(stableCandlesRef.current, config);
                 }
             }
 
             if (instance) {
-                instance.update(formattedCandles, config);
+                const configJson = JSON.stringify(config);
+                const configChanged = instance._lastConfigJson !== configJson;
+
+                // 2. Full Update (if new bar or config changed)
+                if (isNewBar || configChanged) {
+                    instance.update(stableCandlesRef.current, config);
+                    instance._lastConfigJson = configJson;
+                }
+                // 3. Incremental Update (price tick)
+                else if (currentPrice !== undefined && instance.updateLastPoint) {
+                    const lastIdx = candles.length - 1;
+                    if (lastIdx >= 0 && candles[lastIdx]) {
+                        const lastCandle = {
+                            ...candles[lastIdx],
+                            close: currentPrice,
+                            high: Math.max(candles[lastIdx].high || currentPrice, currentPrice),
+                            low: Math.min(candles[lastIdx].low || currentPrice, currentPrice)
+                        };
+                        instance.updateLastPoint(lastCandle, candles);
+                    }
+                }
             }
         });
 
-        const hasSubchartIndicator = indicators.some(i => i.pane === 'subchart');
-        if (hasSubchartIndicator) {
-            requestAnimationFrame(() => {
-                setTimeout(syncRange, 0);
-            });
+        // Sync timescale if subchart exists
+        if (indicators.some(i => i.pane === 'subchart')) {
+            requestAnimationFrame(() => syncRange());
         }
     }, [
         isReady,
@@ -141,6 +148,7 @@ export function useChartIndicators(
         syncRange,
         currentPrice,
     ]);
+
 
 
     /* ===== CLEANUP ===== */

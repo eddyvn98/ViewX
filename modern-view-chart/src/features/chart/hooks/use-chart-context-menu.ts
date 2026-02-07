@@ -16,6 +16,12 @@ export function useChartContextMenu(
     } | null>(null);
 
     const handleContextMenu = (e: React.MouseEvent) => {
+        // Prevent context menu if clicking on a tag
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-tag-type]')) {
+            return;
+        }
+
         e.preventDefault();
         if (!priceChartRef.current || !priceContainerRef.current) return;
 

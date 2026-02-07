@@ -89,6 +89,28 @@ export class RSIIndicator {
         this.series.setData(data as any);
     }
 
+    updateLastPoint(candle: Candle, candles: Candle[]) {
+        if (!this.series || !this.config.visible || candles.length < this.config.params.period + 1) return;
+
+        const period = this.config.params.period || 14;
+        const lastIdx = candles.length - 1;
+
+        // Use a slice to recalculate only the necessary part for the last point
+        const slice = candles.slice(Math.max(0, lastIdx - period * 3));
+        const prices = slice.map(c => c.close);
+        prices[prices.length - 1] = candle.close;
+
+        const rsiValues = calculateRSI(prices, period);
+        const lastVal = rsiValues[rsiValues.length - 1];
+
+        if (!isNaN(lastVal)) {
+            this.series.update({
+                time: candle.time as any,
+                value: lastVal
+            });
+        }
+    }
+
     destroy() {
         if (this.series && this.chart) {
             try {

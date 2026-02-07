@@ -23,3 +23,4 @@ Tài liệu này tập trung vào các kỹ thuật và tiêu chuẩn riêng cho
 ## 4. Lưu ý quan trọng
 - Luôn kiểm tra tính tồn tại của các Series API trước khi gọi hàm (ví dụ: `rsiSeriesRef.current`).
 - Đảm bảo các Price Scale của Indicators (như RSI 0-100) không bị lẫn lộn với Price Scale của giá.
+- **Hiệu năng**: Luôn tuân thủ các quy tắc trong [performance-chart-expert](../../performance-chart-expert/SKILL.md) để đảm bảo biểu đồ mượt mà.

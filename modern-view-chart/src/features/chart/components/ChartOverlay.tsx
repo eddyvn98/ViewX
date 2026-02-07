@@ -12,10 +12,8 @@ interface ChartOverlayProps {
 }
 
 export function ChartOverlay({ chartId, symbol, interval, source, candles, currentPrice }: ChartOverlayProps) {
-    const data = useChartOHLC(symbol, interval, source);
-    useChartIndicatorValues(chartId, candles, data?.activeIndex ?? -1, currentPrice);
+    if (!symbol || !interval || !source) return null;
 
-    if (!data) return null;
 
     return (
         <div className="absolute top-2 left-3 z-10 flex flex-col gap-1 pointer-events-none select-none">

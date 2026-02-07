@@ -17,6 +17,7 @@ export interface UISlice {
     isInputFocused: boolean;
     isScrollingPanel: boolean;
     notifications: Notification[];
+    focusedTicket: number | null;
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
@@ -28,6 +29,7 @@ export interface UISlice {
     setIsScrollingPanel: (isScrolling: boolean) => void;
     addNotification: (message: string, type?: Notification['type'], alertId?: string) => void;
     removeNotification: (id: string) => void;
+    setFocusedTicket: (ticket: number | null) => void;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
@@ -38,6 +40,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     isInputFocused: false,
     isScrollingPanel: false,
     notifications: [],
+    focusedTicket: null,
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -53,4 +56,5 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     removeNotification: (id) => set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id)
     })),
+    setFocusedTicket: (ticket) => set({ focusedTicket: ticket }),
 });

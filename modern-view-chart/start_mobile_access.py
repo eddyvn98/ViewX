@@ -6,8 +6,7 @@ import os
 import sys
 import json
 
-# Force UTF-8 for stdout
-sys.stdout.reconfigure(encoding='utf-8')
+# sys.stdout.reconfigure(encoding='utf-8') - Removed as it might cause issues
 
 frontend_url = None
 backend_url = None
@@ -16,7 +15,7 @@ def run_tunnel(port, type_name):
     global frontend_url, backend_url
     
     if not os.path.exists("cloudflared.exe"):
-        print("ERROR: cloudflared.exe not found")
+        print(f"[{type_name}] ERROR: cloudflared.exe not found")
         return
 
     cmd = ["cloudflared.exe", "tunnel", "--protocol", "http2", "--url", f"http://localhost:{port}"]
@@ -72,6 +71,10 @@ def save_access_info():
         with open(public_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         print(f"✅ Generated mobile access config: {public_path}")
+        
+        # Also write to a text file for easy reading
+        with open("mobile_link.txt", "w", encoding="utf-8") as f:
+            f.write(final_link)
     except Exception as e:
         print(f"❌ Error writing config: {e}")
 
@@ -87,13 +90,17 @@ if __name__ == "__main__":
     t2 = threading.Thread(target=run_tunnel, args=(8091, "BACKEND"))
 
     t1.daemon = True
-    t2.daemon = True
-
-    t1.start()
     t2.start()
+    time.sleep(1) # Stagger starts
+    t1.start()
 
     try:
+        # Instead of while True, use a counter to detect if threads are still alive
         while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
+            time.sleep(5)
+            # If both links are acquired, we can stay alive or exit if everything is handled by threads
+            # But the tunnels need the process to stay alive if cloudflared is a child.
+            # subprocess.Popen creates a child, so as long as this script lives, children live.
+    except (KeyboardInterrupt, SystemExit):
         print("\nStopping Tunnels...")
+

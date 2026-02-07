@@ -17,7 +17,6 @@ export class EMAIndicator {
             this.series = this.chart.addSeries(LineSeries, {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
-                // title: `${this.config.type} ${this.config.params.period}`, // Moved to ChartOverlay Legend
                 priceLineVisible: false,
                 lastValueVisible: false,
                 visible: this.config.visible,
@@ -27,7 +26,6 @@ export class EMAIndicator {
                 color: this.config.color,
                 lineWidth: this.config.lineWidth as any,
                 visible: this.config.visible,
-                // title: `${this.config.type} ${this.config.params.period}`, // Moved to Legend
                 priceLineVisible: false,
                 lastValueVisible: false,
             });
@@ -44,6 +42,35 @@ export class EMAIndicator {
             .filter(d => !isNaN(d.value));
 
         this.series.setData(data as any);
+    }
+
+    updateLastPoint(candle: Candle, candles: Candle[]) {
+        if (!this.series || !this.config.visible || candles.length < this.config.params.period) return;
+
+        // Very fast incremental EMA calculation for the last point
+        const period = this.config.params.period;
+        const alpha = 2 / (period + 1);
+
+        // We need the PREVIOUS candle's EMA to calculate the current one
+        // Since we don't store it, we have to calculate it or get it from the series
+        // For simplicity here, we can recalculate just the last few points if needed, 
+        // but for TRUE performance, we'd need a more stateful approach.
+        // However, even a small slice calculation is way faster than the full series.
+
+        const lastIdx = candles.length - 1;
+        const slice = candles.slice(Math.max(0, lastIdx - period * 2));
+        const prices = slice.map(c => c.close);
+        prices[prices.length - 1] = candle.close; // Ensure we use the latest price
+
+        const emaValues = calculateEMA(prices, period);
+        const lastVal = emaValues[emaValues.length - 1];
+
+        if (!isNaN(lastVal)) {
+            this.series.update({
+                time: candle.time as any,
+                value: lastVal
+            });
+        }
     }
 
     destroy() {

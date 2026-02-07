@@ -12,8 +12,10 @@ export function useChartPositions(
     // OPTIMIZATION: Only subscribe to specific symbol price instead of entire tickers object
     const currentPrice = useMarketStore((state) => state.tickers[symbol || '']?.price);
     const setEditingPosition = useMarketStore((state) => state.setEditingPosition);
+    const setFocusedTicket = useMarketStore((state) => state.setFocusedTicket);
     const symbolInfo = useMarketStore((state) => state.symbolInfo[symbol || '']);
     const draggingPosition = useMarketStore((state) => state.draggingPosition);
+    const focusedTicket = useMarketStore((state) => state.focusedTicket);
     const draftOrder = useMarketStore((state) => state.draftOrder);
     const hoveredTicket = useMarketStore((state) => state.hoveredTicket);
     const priceLinesRef = useRef<Record<string, { entry?: IPriceLine, sl?: IPriceLine, tp?: IPriceLine }>>({});
@@ -25,23 +27,88 @@ export function useChartPositions(
 
         // HIDE ALL POSITIONS if user is drafting a new order for this symbol
         if (draftOrder && draftOrder.symbol === symbol) {
+            // Clean up active positions lines
             Object.keys(priceLinesRef.current).forEach(ticket => {
+                if (ticket === 'draft') return;
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
                 if (lines.sl) series.removePriceLine(lines.sl);
                 if (lines.tp) series.removePriceLine(lines.tp);
                 delete priceLinesRef.current[ticket];
             });
+
+            // Handle DRAFT lines
+            if (!priceLinesRef.current['draft']) priceLinesRef.current['draft'] = {};
+            const dLines = priceLinesRef.current['draft'];
+
+            // Draft Entry
+            const entryOpt = {
+                price: draftOrder.price || 0,
+                color: '#3b82f6',
+                lineWidth: 2 as any,
+                lineStyle: LineStyle.Solid,
+                axisLabelVisible: false,
+                title: ''
+            };
+            if (!dLines.entry) dLines.entry = series.createPriceLine(entryOpt);
+            else dLines.entry.applyOptions(entryOpt);
+
+            // Draft SL
+            if (draftOrder.sl && draftOrder.sl > 0) {
+                const slOpt = {
+                    price: draftOrder.sl,
+                    color: '#ef5350',
+                    lineWidth: 1 as any,
+                    lineStyle: LineStyle.Dashed,
+                    axisLabelVisible: false,
+                    title: ''
+                };
+                if (!dLines.sl) dLines.sl = series.createPriceLine(slOpt);
+                else dLines.sl.applyOptions(slOpt);
+            } else if (dLines.sl) {
+                series.removePriceLine(dLines.sl);
+                dLines.sl = undefined;
+            }
+
+            // Draft TP
+            if (draftOrder.tp && draftOrder.tp > 0) {
+                const tpOpt = {
+                    price: draftOrder.tp,
+                    color: '#26a69a',
+                    lineWidth: 1 as any,
+                    lineStyle: LineStyle.Dashed,
+                    axisLabelVisible: false,
+                    title: ''
+                };
+                if (!dLines.tp) dLines.tp = series.createPriceLine(tpOpt);
+                else dLines.tp.applyOptions(tpOpt);
+            } else if (dLines.tp) {
+                series.removePriceLine(dLines.tp);
+                dLines.tp = undefined;
+            }
+
             return;
+        } else if (priceLinesRef.current['draft']) {
+            // Cleanup draft lines if no longer drafting
+            const dLines = priceLinesRef.current['draft'];
+            if (dLines.entry) series.removePriceLine(dLines.entry);
+            if (dLines.sl) series.removePriceLine(dLines.sl);
+            if (dLines.tp) series.removePriceLine(dLines.tp);
+            delete priceLinesRef.current['draft'];
         }
 
-        const symbolPositions = positions.filter(p => p.symbol === symbol);
+        let symbolPositions = positions.filter(p => p.symbol === symbol);
+
+        // FOCUS MODE: If a ticket is focused, only show that one
+        if (focusedTicket) {
+            symbolPositions = symbolPositions.filter(p => p.ticket === focusedTicket);
+        }
 
         // --- AGGREGATION LOGIC ---
-        // Group by side (BUY/SELL)
+        // Hide summaries in Focus Mode
         const groups = {
-            buy: symbolPositions.filter(p => (p.type || '').toLowerCase().includes('buy')),
-            sell: symbolPositions.filter(p => (p.type || '').toLowerCase().includes('sell'))
+            buy: focusedTicket ? [] : symbolPositions.filter(p => (p.type || '').toLowerCase().includes('buy')),
+            sell: focusedTicket ? [] : symbolPositions.filter(p => (p.type || '').toLowerCase().includes('sell'))
         };
 
         const summaryLinesToDelete = new Set(Object.keys(priceLinesRef.current).filter(k => k.startsWith('sum_')));
@@ -65,8 +132,8 @@ export function useChartPositions(
                 color: '#9c27b0', // Purple for summary
                 lineWidth: 2 as any,
                 lineStyle: LineStyle.Solid,
-                axisLabelVisible: true,
-                title: title
+                axisLabelVisible: false,
+                title: ''
             };
 
             if (!priceLinesRef.current[sumId]) priceLinesRef.current[sumId] = {};
@@ -114,8 +181,8 @@ export function useChartPositions(
                 color: entryColor,
                 lineWidth: (isFocused ? 2 : 1) as any,
                 lineStyle: LineStyle.Solid,
-                axisLabelVisible: isFocused || !hasMultipleOnSide, // Hide individual entry label if summarized
-                title: entryTitle
+                axisLabelVisible: false,
+                title: ''
             };
 
             if (!lines.entry) {
@@ -145,8 +212,8 @@ export function useChartPositions(
                     color: '#ef5350',
                     lineWidth: 1 as any,
                     lineStyle: isFocused ? LineStyle.Solid : LineStyle.Dashed,
-                    axisLabelVisible: isFocused, // SMART: Only show label if hovered or dragging
-                    title: slTitle
+                    axisLabelVisible: false,
+                    title: ''
                 };
 
                 if (!lines.sl) {
@@ -180,8 +247,8 @@ export function useChartPositions(
                     color: '#26a69a',
                     lineWidth: 1 as any,
                     lineStyle: isFocused ? LineStyle.Solid : LineStyle.Dashed,
-                    axisLabelVisible: isFocused, // SMART: Only show label if hovered or dragging
-                    title: tpTitle
+                    axisLabelVisible: false,
+                    title: ''
                 };
 
                 if (!lines.tp) {
@@ -212,7 +279,7 @@ export function useChartPositions(
         JSON.stringify(positions.filter(p => p.symbol === symbol).map(p => ({
             t: p.ticket, type: p.type, op: p.open_price, sl: p.sl, tp: p.tp, vol: p.volume, prof: p.profit
         }))),
-        symbol, draggingPosition, hoveredTicket, symbolInfo, draftOrder, seriesRef
+        symbol, draggingPosition, hoveredTicket, symbolInfo, draftOrder, seriesRef, focusedTicket
     ]);
 
     // EFFECT 2: Update PnL text when price changes (THROTTLED to prevent flickering)
@@ -343,6 +410,11 @@ export function useChartPositions(
                 if (found) break;
             }
 
+            // If no position line was hit, clear focus mode
+            if (!found && focusedTicket) {
+                setFocusedTicket(null);
+            }
+
             const elapsed = performance.now() - startTime;
             if (elapsed > 50) {
                 console.warn(`[PERF] Position click took ${elapsed.toFixed(0)}ms`);
@@ -351,5 +423,5 @@ export function useChartPositions(
 
         chart.subscribeClick(handleClick);
         return () => chart.unsubscribeClick(handleClick);
-    }, [chartRef, seriesRef, symbol, positions, setEditingPosition]);
+    }, [chartRef, seriesRef, symbol, positions, setEditingPosition, setFocusedTicket, focusedTicket]);
 }

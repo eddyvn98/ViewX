@@ -3,38 +3,56 @@
 import { useMarketStore } from '@/lib/store';
 import { useMemo } from 'react';
 
+const EMPTY_ARRAY: any[] = [];
+
 export function useChartOHLC(symbol: string | undefined, interval: string | undefined, source: string | undefined) {
-    const tickers = useMarketStore((state) => state.tickers);
-    const candleData = useMarketStore((state) => state.candleData);
-    const crosshairPoint = useMarketStore((state) => state.crosshairPoint);
+    const normSymbol = useMemo(() => {
+        if (!symbol) return '';
+        return symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
+    }, [symbol]);
+
+    const key = useMemo(() => {
+        if (!normSymbol || !interval || !source) return '';
+        return `${source}:${normSymbol}:${interval}`;
+    }, [normSymbol, interval, source]);
+
+    const tickerPrice = useMarketStore((state) => symbol ? state.tickers[symbol]?.price : undefined);
+    const candles = useMarketStore((state) => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
+    const crosshairTime = useMarketStore((state) => state.crosshairPoint?.time);
+
 
     return useMemo(() => {
-        if (!symbol || !interval || !source) return null;
+        if (!symbol || !interval || !source || candles.length === 0) return null;
 
-        const normSymbol = symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
-        const key = `${source}:${normSymbol}:${interval}`;
-        const candles = candleData[key] || [];
-        if (candles.length === 0) return null;
+        // Optimized Binary Search for crosshair index
+        let activeIndex = candles.length - 1;
+        if (crosshairTime) {
+            let low = 0;
+            let high = candles.length - 1;
+            while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                const midTime = typeof candles[mid].time === 'object'
+                    ? (candles[mid].time as any).timestamp
+                    : Number(candles[mid].time);
 
-        let activeCandle = candles[candles.length - 1];
-        let isLive = true;
-
-        // If crosshair is active, find the corresponding candle
-        if (crosshairPoint?.time) {
-            const found = candles.find(c => {
-                const t = typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time);
-                return t === crosshairPoint.time;
-            });
-            if (found) {
-                activeCandle = found;
-                const lastT = typeof candles[candles.length - 1].time === 'object'
-                    ? (candles[candles.length - 1].time as any).timestamp
-                    : Number(candles[candles.length - 1].time);
-                isLive = crosshairPoint.time === lastT;
+                if (midTime === crosshairTime) {
+                    activeIndex = mid;
+                    break;
+                } else if (midTime < crosshairTime) {
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
             }
         }
 
-        const ticker = tickers[symbol];
+        const activeCandle = candles[activeIndex];
+        const lastCandle = candles[candles.length - 1];
+        const lastT = typeof lastCandle.time === 'object'
+            ? (lastCandle.time as any).timestamp
+            : Number(lastCandle.time);
+
+        const isLive = !crosshairTime || crosshairTime === lastT;
 
         // Determine price and changes
         let open = activeCandle.open;
@@ -42,8 +60,8 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
         let low = activeCandle.low;
         let close = activeCandle.close;
 
-        if (isLive && ticker?.price) {
-            close = ticker.price;
+        if (isLive && tickerPrice) {
+            close = tickerPrice;
             if (close > high) high = close;
             if (close < low) low = close;
         }
@@ -51,14 +69,6 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
         // Calculate the change relative to the candle's open (OHLC Change)
         const changeValue = close - open;
         const change = open !== 0 ? (changeValue / open * 100) : 0;
-
-        // Find index for indicators
-        const activeIndex = crosshairPoint?.time
-            ? candles.findIndex(c => {
-                const t = typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time);
-                return t === crosshairPoint.time;
-            })
-            : candles.length - 1;
 
         return {
             open,
@@ -73,5 +83,6 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
             isLive,
             activeIndex
         };
-    }, [symbol, interval, source, tickers, candleData, crosshairPoint]);
+    }, [symbol, interval, source, tickerPrice, candles, crosshairTime]);
+
 }

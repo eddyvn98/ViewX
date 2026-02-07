@@ -18,8 +18,10 @@ export function ChartLegend({ chartId, symbol, interval, source, candles }: Char
     const ohlcData = useChartOHLC(symbol, interval, source);
     const activeIndex = ohlcData?.activeIndex ?? -1;
     const indicators = useChartIndicatorValues(chartId, candles, activeIndex, ohlcData?.close);
-    const crosshairPoint = useMarketStore(state => state.crosshairPoint);
-    const isHovering = !!(crosshairPoint?.time && crosshairPoint?.sourceId === chartId);
+
+    // Optimize selector: only re-render if this specific chart's hover state changes
+    const isHovering = useMarketStore(state => !!(state.crosshairPoint?.time && state.crosshairPoint?.sourceId === chartId));
+
 
     // VITAL: Early return must happen AFTER all hooks are called
     if (!ohlcData) return null;
@@ -41,7 +43,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles }: Char
             {/* Status & Price Cluster - Acts as Data Window when hovering */}
             <div
                 className={cn(
-                    "flex flex-col gap-1.5 p-2 backdrop-blur-md border rounded-lg shadow-xl min-w-[130px] transition-colors duration-200",
+                    "flex flex-col gap-1.5 p-2 backdrop-blur-md border rounded-lg shadow-xl min-w-fit transition-colors duration-200",
                     isHovering
                         ? "bg-amber-500/10 border-amber-500/40"
                         : "bg-zinc-950/60 border-white/5"
@@ -87,13 +89,18 @@ export function ChartLegend({ chartId, symbol, interval, source, candles }: Char
 
                 {/* Close & Change Highlight Box */}
                 <div className={cn(
-                    "flex items-center justify-between gap-4 px-2 py-1.5 mt-0.5 rounded-md border",
+                    "flex flex-col items-start gap-0 px-2 py-1 mt-0.5 rounded-md border w-full",
                     isHovering ? "bg-amber-500/10 border-amber-500/20" : "bg-white/5 border-white/5"
                 )}>
-                    <span className="text-[11px] font-mono font-black" style={{ color }}>{formatPrice(c)}</span>
-                    <span className="text-[9px] font-mono font-bold" style={{ color }}>
-                        {isPositive ? '+' : ''}{change.toFixed(2)}%
-                    </span>
+                    <span className="text-[11px] font-mono font-black leading-tight" style={{ color }}>{formatPrice(c)}</span>
+                    <div className="flex items-center gap-1.5 leading-none mt-0.5">
+                        <span className="text-[8px] font-mono font-bold" style={{ color }}>
+                            {isPositive ? '+' : ''}{formatPrice(changeValue)}
+                        </span>
+                        <span className="text-[8px] font-mono font-bold opacity-80" style={{ color }}>
+                            ({change.toFixed(2)}%)
+                        </span>
+                    </div>
                 </div>
             </div>
 

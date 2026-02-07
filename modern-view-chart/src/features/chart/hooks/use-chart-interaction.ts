@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ISeriesApi, IPriceLine, MouseEventParams } from 'lightweight-charts';
 import { Position, useMarketStore, Alert } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
@@ -32,16 +32,26 @@ export function useChartInteraction(
     const isDeletingZoneRef = useRef(false);
 
     // Filter alerts for current symbol
-    const symbolAlerts = alerts.filter(a => a.symbol === symbol && a.active);
+    const symbolAlerts = useMemo(() =>
+        alerts.filter(a => a.symbol === symbol && a.active),
+        [alerts, symbol]);
 
-    const getNearElement = useCallback((y: number, x: number) => {
+    const activePositions = useMemo(() =>
+        positions.filter(p => p.symbol === symbol),
+        [positions, symbol]);
+
+    const getNearElement = useCallback((y: number, x: number, isTouch: boolean = false) => {
         const series = seriesRef.current;
         const container = containerRef.current;
         if (!series || !container || !symbol) return null;
 
         const width = container.clientWidth;
         const isNearRightEdge = (width - x) < 60; // Tag Zone
-        const pixelTolerance = isNearRightEdge ? 20 : 12;
+        let pixelTolerance = isNearRightEdge ? 20 : 12;
+
+        if (isTouch) {
+            pixelTolerance = 25; // Larger hitbox for fingers
+        }
 
         // 1. Check Draft Order (highest priority)
         if (draftOrder && draftOrder.symbol === symbol) {
@@ -69,7 +79,6 @@ export function useChartInteraction(
         }
 
         // 3. Check Active Positions (SL/TP)
-        const activePositions = positions.filter(p => p.symbol === symbol);
         for (const pos of activePositions) {
             const lines = [
                 { type: 'sl' as const, price: pos.sl },
@@ -85,7 +94,7 @@ export function useChartInteraction(
         }
 
         return null;
-    }, [seriesRef, containerRef, symbol, draftOrder, symbolAlerts, positions]);
+    }, [seriesRef, containerRef, symbol, draftOrder, symbolAlerts, activePositions]);
 
     useEffect(() => {
         if (!chartRef.current || !seriesRef.current || !containerRef.current || !symbol) return;
@@ -94,6 +103,7 @@ export function useChartInteraction(
         const series = seriesRef.current;
         const container = containerRef.current;
 
+        let lastCursorCheck = 0;
         const handleCrosshairMove = (param: MouseEventParams) => {
             if (isDragging.current) {
                 container.style.cursor = 'grabbing';
@@ -105,18 +115,89 @@ export function useChartInteraction(
                 return;
             }
 
+            // Throttle cursor check to 60ms (~16fps) to save main thread during rapid mouse movement
+            const now = Date.now();
+            if (now - lastCursorCheck < 60) return;
+            lastCursorCheck = now;
+
             const hit = getNearElement(param.point.y, param.point.x);
             container.style.cursor = hit ? 'grab' : 'default';
         };
+
 
         const handleMouseDown = (e: MouseEvent) => {
             const rect = container.getBoundingClientRect();
             const y = e.clientY - rect.top;
             const x = e.clientX - rect.left;
 
-            const hit = getNearElement(y, x);
+            // Check if dragging from a Tag element
+            const target = e.target as HTMLElement;
+            const tagContainer = target.closest('[data-tag-type]');
+
+            let hit: any = null;
+            if (tagContainer) {
+                const type = tagContainer.getAttribute('data-tag-type');
+                const ticket = tagContainer.getAttribute('data-tag-ticket');
+                const activePositions = positions.filter(p => p.symbol === symbol);
+                const pos = activePositions.find(p => p.ticket.toString() === ticket);
+
+                if (pos && type) {
+                    hit = {
+                        type: type === 'entry' ? 'entry' : type,
+                        ticket: pos.ticket,
+                        originalPrice: type === 'entry' ? pos.open_price : (type === 'sl' ? pos.sl : pos.tp)
+                    };
+                }
+            }
+
+            if (!hit) hit = getNearElement(y, x);
+
             if (hit) {
                 e.preventDefault();
+                e.stopPropagation();
+
+                isDragging.current = true;
+                dragState.current = {
+                    type: hit.type as any,
+                    ticket: (hit as any).ticket,
+                    id: (hit as any).id,
+                    originalPrice: hit.originalPrice,
+                    currentPrice: hit.originalPrice
+                };
+                chart.applyOptions({ handleScroll: false, handleScale: false });
+            }
+        };
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length !== 1) return;
+            const rect = container.getBoundingClientRect();
+            const y = e.touches[0].clientY - rect.top;
+            const x = e.touches[0].clientX - rect.left;
+
+            // Check if dragging from a Tag element
+            const target = e.target as HTMLElement;
+            const tagContainer = target.closest('[data-tag-type]');
+
+            let hit: any = null;
+            if (tagContainer) {
+                const type = tagContainer.getAttribute('data-tag-type');
+                const ticket = tagContainer.getAttribute('data-tag-ticket');
+                const activePositions = positions.filter(p => p.symbol === symbol);
+                const pos = activePositions.find(p => p.ticket.toString() === ticket);
+
+                if (pos && type) {
+                    hit = {
+                        type: type === 'entry' ? 'entry' : type,
+                        ticket: pos.ticket,
+                        originalPrice: type === 'entry' ? pos.open_price : (type === 'sl' ? pos.sl : pos.tp)
+                    };
+                }
+            }
+
+            if (!hit) hit = getNearElement(y, x, true);
+
+            if (hit) {
+                if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
 
                 isDragging.current = true;
@@ -141,6 +222,24 @@ export function useChartInteraction(
             const y = e.clientY - rect.top;
             const x = e.clientX - rect.left;
 
+            updateDragPosition(y, x);
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (!isDragging.current || !dragState.current || e.touches.length !== 1) return;
+
+            if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+
+            const rect = container.getBoundingClientRect();
+            const y = e.touches[0].clientY - rect.top;
+            const x = e.touches[0].clientX - rect.left;
+
+            updateDragPosition(y, x);
+        };
+
+        const updateDragPosition = (y: number, x: number) => {
+            if (!dragState.current) return;
             const coordinatePrice = series.coordinateToPrice(y);
             if (coordinatePrice === null) return;
 
@@ -159,16 +258,17 @@ export function useChartInteraction(
                     const updates: any = {};
                     if (type === 'draft_entry') {
                         updates.price = newPrice;
-                        updates.isMarket = false;
+                        updates.isMarket = false; // Convert to Limit when dragged
                     } else if (type === 'draft_sl') {
                         updates.sl = newPrice;
+                        updates.slTouched = true; // Mark as touched so it's sent on confirm
                     } else if (type === 'draft_tp') {
                         updates.tp = newPrice;
+                        updates.tpTouched = true; // Mark as touched so it's sent on confirm
                     }
                     setDraftOrder({ ...draftOrder, ...updates });
                 }
             } else if (type === 'alert') {
-                // Update store for real-time visual feedback
                 handleUpdateAlert(dragState.current.id!, newPrice);
             } else {
                 setDraggingPosition({
@@ -179,11 +279,11 @@ export function useChartInteraction(
             }
         };
 
-        const handleMouseUp = (e: MouseEvent) => {
-            if (!isDragging.current || !dragState.current) return;
+        const handleMouseUp = (e: MouseEvent) => finalizeDrag();
+        const handleTouchEnd = (e: TouchEvent) => finalizeDrag();
 
-            e.preventDefault();
-            e.stopPropagation();
+        const finalizeDrag = () => {
+            if (!isDragging.current || !dragState.current) return;
 
             const { ticket, id, type, currentPrice } = dragState.current;
 
@@ -234,15 +334,21 @@ export function useChartInteraction(
         chart.subscribeCrosshairMove(handleCrosshairMove);
         chart.subscribeClick(handleClick);
         container.addEventListener('mousedown', handleMouseDown);
+        container.addEventListener('touchstart', handleTouchStart, { passive: true });
         window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('touchmove', handleTouchMove, { passive: false }); // Still need false for dragging
         window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('touchend', handleTouchEnd);
 
         return () => {
             chart.unsubscribeCrosshairMove(handleCrosshairMove);
             chart.unsubscribeClick(handleClick);
             container.removeEventListener('mousedown', handleMouseDown);
+            container.removeEventListener('touchstart', handleTouchStart);
             window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('touchmove', handleTouchMove);
             window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchend', handleTouchEnd);
         };
 
     }, [chartRef, seriesRef, containerRef, symbol, positions, sendMessage, draftOrder, setDraftOrder, setDraggingPosition, getNearElement, handleUpdateAlert, handleRemoveAlert]);

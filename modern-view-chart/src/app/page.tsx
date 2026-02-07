@@ -147,7 +147,9 @@ export default function Home() {
               (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions') ? 'flex' : 'hidden md:flex'
             )}>
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0 md:p-1 gap-1">
-                <ChartsToolbarMemo />
+                <div className="hidden md:block">
+                  <ChartsToolbarMemo />
+                </div>
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <ChartGrid />
                 </div>
