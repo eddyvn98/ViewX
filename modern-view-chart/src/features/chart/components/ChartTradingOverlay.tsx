@@ -13,58 +13,10 @@ interface ChartTradingOverlayProps {
  * Only subscribes to non-ticker state, uses RAF for realtime prices
  */
 export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
-    const buyPriceRef = useRef<HTMLSpanElement>(null);
-    const sellPriceRef = useRef<HTMLSpanElement>(null);
-    const rafIdRef = useRef<number | null>(null);
-    const lastPriceRef = useRef<string>('');
-
     // Only subscribe to non-ticker state
     const draftOrder = useMarketStore(state => state.draftOrder);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
-    const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
     const { sendMessage } = useWebSocket();
-
-    const digits = symbolInfo?.digits || 2;
-
-    // RAF-based price update
-    const updatePrices = useCallback(() => {
-        if (!symbol) return;
-        const state = useMarketStore.getState();
-        const ticker = state.tickers[symbol];
-        if (!ticker) return;
-
-        const priceStr = ticker.price.toFixed(digits);
-        if (priceStr !== lastPriceRef.current) {
-            lastPriceRef.current = priceStr;
-            if (buyPriceRef.current) buyPriceRef.current.textContent = priceStr;
-            if (sellPriceRef.current) sellPriceRef.current.textContent = priceStr;
-        }
-    }, [symbol, digits]);
-
-    useEffect(() => {
-        if (!symbol) return;
-        let running = true;
-        let lastUpdate = 0;
-        const interval = 100;
-
-        const tick = () => {
-            if (!running) return;
-            const now = Date.now();
-            if (now - lastUpdate >= interval) {
-                lastUpdate = now;
-                updatePrices();
-            }
-            rafIdRef.current = requestAnimationFrame(tick);
-        };
-
-        updatePrices();
-        rafIdRef.current = requestAnimationFrame(tick);
-
-        return () => {
-            running = false;
-            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-        };
-    }, [symbol, updatePrices]);
 
     // Get initial price for draft (computed once when needed)
     const getCurrentPrice = useCallback(() => {
@@ -129,31 +81,27 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
     if (!symbol) return null;
 
     return (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
+        <div className="absolute top-1.5 left-1.5 z-50 flex items-center gap-2">
             {(!draftOrder || draftOrder.symbol !== symbol) ? (
-                <div className="flex items-center p-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-2xl overflow-hidden">
+                <div className="flex items-center p-1 bg-zinc-950/80 backdrop-blur-xl rounded-lg border border-white/10 shadow-2xl overflow-hidden">
                     <button
                         onClick={() => handleStartDraft('buy')}
-                        className="group flex flex-col items-center justify-center w-16 h-12 hover:bg-emerald-500/20 rounded-l transition-all border-r border-white/5"
+                        className="group flex flex-col items-center justify-center w-10 h-7 hover:bg-emerald-500/20 rounded transition-all"
                     >
                         <span className="text-[10px] font-bold text-emerald-400 group-hover:text-emerald-300">BUY</span>
-                        <span ref={buyPriceRef} className="text-xs font-mono text-white tracking-tighter">···</span>
                     </button>
 
-                    <div className="px-2 opacity-20">
-                        <Zap size={10} className="text-white" />
-                    </div>
+                    <div className="h-4 w-[1px] bg-white/10 mx-0.5" />
 
                     <button
                         onClick={() => handleStartDraft('sell')}
-                        className="group flex flex-col items-center justify-center w-16 h-12 hover:bg-red-500/20 rounded-r transition-all"
+                        className="group flex flex-col items-center justify-center w-10 h-7 hover:bg-red-500/20 rounded transition-all"
                     >
                         <span className="text-[10px] font-bold text-red-400 group-hover:text-red-300">SELL</span>
-                        <span ref={sellPriceRef} className="text-xs font-mono text-white tracking-tighter">···</span>
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center gap-1 p-1.5 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl">
+                <div className="flex items-center gap-1 p-1 bg-zinc-950/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl">
                     <button
                         onClick={toggleMarket}
                         className={cn(

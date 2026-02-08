@@ -69,10 +69,18 @@ export class EMAIndicator {
 
         if (!isNaN(lastVal)) {
             const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-            this.series.update({
-                time: candleTime as any,
-                value: lastVal
-            });
+
+            if (!candleTime) return;
+
+            try {
+                this.series.update({
+                    time: candleTime as any,
+                    value: lastVal
+                });
+            } catch (err) {
+                // Ignore "Cannot update oldest data" errors which happen during rapid updates/race conditions
+                // console.warn('EMA update failed:', err); 
+            }
         }
     }
 

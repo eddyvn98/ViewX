@@ -33,7 +33,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles }: Char
     return (
         <div
             ref={containerRef}
-            className="absolute left-1.5 top-1.5 z-[40] pointer-events-none select-none flex flex-col gap-1 items-start"
+            className="absolute left-1.5 top-12 z-[40] pointer-events-none select-none flex flex-col gap-1 items-start"
         >
             {/* Main Info Card - Vacuum Packed */}
             <div
