@@ -67,7 +67,7 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
             const pStrFormatted = formatPnL(pnlVal);
             if (cached.pnl.textContent !== pStrFormatted) {
                 cached.pnl.textContent = pStrFormatted;
-                cached.pnl.className = `pnl-text text-[10px] font-bold px-1 rounded bg-black/40 ${pnlVal >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                cached.pnl.className = `pnl-text text-[10px] font-bold px-1 rounded bg-black/40 ${pnlVal >= 0 ? 'text-green-400' : 'text-red-400'} opacity-0 group-hover:opacity-100 transition-opacity duration-200`;
             }
         }
     };
@@ -194,14 +194,14 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
                 let cached = tagElementsMap.current.get(tag.id);
                 if (!cached) {
                     const el = document.createElement('div');
-                    el.className = "absolute right-0 flex items-center pointer-events-none z-[100] group";
+                    el.className = "absolute right-0 flex items-center pointer-events-none z-[100] group"; // parent group
                     el.setAttribute('data-tag-id', tag.id);
                     el.innerHTML = `
-                        <div class="tag-body flex items-center h-6 px-2 rounded-l-md shadow-2xl border border-white/10 backdrop-blur-md bg-black/60">
+                        <div class="tag-body flex items-center h-6 px-2 rounded-l-md shadow-2xl border border-white/10 backdrop-blur-md bg-black/60 pointer-events-auto cursor-pointer transition-all">
                             <span class="tag-label text-[10px] font-black text-white mr-2 uppercase"></span>
-                            <span class="pnl-text text-[10px] font-bold px-1 rounded bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                            <span class="pnl-text text-[10px] font-bold px-1 rounded bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
                         </div>
-                        <div class="price-box h-6 flex items-center px-1.5 bg-black text-white text-[10px] font-bold border border-white/20 min-w-[75px] justify-center">
+                        <div class="price-box h-6 flex items-center px-1.5 bg-black text-white text-[10px] font-bold border border-white/20 min-w-[75px] justify-center pointer-events-auto cursor-row-resize hover:bg-white/10 transition-colors">
                             <span class="price-text font-mono"></span>
                         </div>`;
                     cached = { el, label: el.querySelector('.tag-label') as HTMLElement, pnl: el.querySelector('.pnl-text') as HTMLElement, price: el.querySelector('.price-text') as HTMLElement, priceBox: el.querySelector('.price-box') as HTMLElement };
