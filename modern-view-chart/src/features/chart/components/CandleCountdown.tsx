@@ -11,45 +11,46 @@ interface CandleCountdownProps {
 }
 
 export function CandleCountdown({ chart, series, interval }: CandleCountdownProps) {
-    const [countdown, setCountdown] = useState<string>('');
-    const [top, setTop] = useState<number | null>(null);
-    const [isVisible, setIsVisible] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const countdownRef = useRef<HTMLDivElement>(null);
 
-    // Get current price and candles from store for the active symbol
+    // Use smaller selectors for static config
     const activeChartId = useMarketStore(state => state.tabs[state.activeTabId]?.activeChartId);
-    const chartInstance = useMarketStore(state => {
-        if (!activeChartId) return null;
-        return state.tabs[state.activeTabId]?.charts[activeChartId];
-    });
-
-    const symbol = chartInstance?.symbol;
-    const source = chartInstance?.source;
-    const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
-    const currentPrice = useMarketStore(state => normSymbol ? state.tickers[normSymbol]?.price : null);
-
-    const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
-    const lastCandle = useMarketStore(state => key ? state.candleData[key]?.[state.candleData[key].length - 1] : null);
 
     useEffect(() => {
-        if (!chart || !series || !lastCandle || currentPrice === null) {
-            setIsVisible(false);
-            return;
-        }
+        if (!chart || !series || !activeChartId) return;
 
-        const updatePosition = () => {
+        const chartInstance = useMarketStore.getState().tabs[useMarketStore.getState().activeTabId]?.charts[activeChartId];
+        if (!chartInstance) return;
+
+        const symbol = chartInstance.symbol;
+        const source = chartInstance.source;
+        const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
+        const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
+
+        const updateDOM = () => {
+            const state = useMarketStore.getState();
+            const currentPrice = state.tickers[normSymbol]?.price;
+            const candles = state.candleData[key] || [];
+            const lastCandle = candles[candles.length - 1];
+
+            if (!containerRef.current || !countdownRef.current || !lastCandle || currentPrice === null || currentPrice === undefined) {
+                if (containerRef.current) containerRef.current.style.display = 'none';
+                return;
+            }
+
+            // 1. Update Position
             const coordinate = series.priceToCoordinate(currentPrice);
             if (coordinate !== null) {
-                setTop(coordinate);
-                setIsVisible(true);
+                containerRef.current.style.display = 'flex';
+                containerRef.current.style.top = `${coordinate}px`;
             } else {
-                setIsVisible(false);
+                containerRef.current.style.display = 'none';
             }
-        };
 
-        const updateTime = () => {
+            // 2. Update Countdown Text
             const now = Math.floor(Date.now() / 1000);
             let timeframeSeconds = 60;
-
             if (interval) {
                 if (interval === 'D') timeframeSeconds = 86400;
                 else if (interval === 'W') timeframeSeconds = 604800;
@@ -72,46 +73,45 @@ export function CandleCountdown({ chart, series, interval }: CandleCountdownProp
                 const minutes = Math.floor((secondsLeft % 3600) / 60);
                 const seconds = secondsLeft % 60;
 
-                if (hours > 0) {
-                    setCountdown(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-                } else {
-                    setCountdown(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-                }
+                const text = hours > 0
+                    ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                    : `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                countdownRef.current.textContent = text;
             } else {
-                setCountdown('00:00');
+                countdownRef.current.textContent = '00:00';
             }
         };
 
         const intervalId = setInterval(() => {
-            updateTime();
-            updatePosition();
+            requestAnimationFrame(updateDOM);
         }, 1000);
 
-        updateTime();
-        updatePosition();
+        updateDOM();
 
         // Also update position on chart change/scroll
-        chart.timeScale().subscribeVisibleLogicalRangeChange(updatePosition);
+        chart.timeScale().subscribeVisibleLogicalRangeChange(updateDOM);
 
         return () => {
             clearInterval(intervalId);
-            chart.timeScale().unsubscribeVisibleLogicalRangeChange(updatePosition);
+            chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateDOM);
         };
-    }, [chart, series, lastCandle, currentPrice, interval]);
-
-    if (!isVisible || top === null) return null;
+    }, [chart, series, activeChartId, interval]);
 
     return (
         <div
-            className="absolute right-[80px] z-[100] pointer-events-none select-none flex items-center"
+            ref={containerRef}
+            className="absolute right-[80px] z-[100] pointer-events-none select-none items-center hidden"
             style={{
-                top: `${top}px`,
                 transform: 'translateY(-50%)',
                 height: '22px',
             }}
         >
-            <div className="bg-[#1e222d]/90 backdrop-blur-sm text-[#787b86] text-[10px] font-bold px-1.5 py-0.5 rounded-l-md border border-[#2a2e39] border-r-0 shadow-lg">
-                {countdown}
+            <div
+                ref={countdownRef}
+                className="bg-[#1e222d]/90 backdrop-blur-sm text-[#787b86] text-[10px] font-bold px-1.5 py-0.5 rounded-l-md border border-[#2a2e39] border-r-0 shadow-lg"
+            >
+                --:--
             </div>
         </div>
     );

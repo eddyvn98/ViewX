@@ -14,7 +14,7 @@ const EMPTY_INDICATORS: any[] = [];
 const formatCandles = (candles: Candle[]) =>
     candles.map(c => ({
         ...c,
-        time: c.time as any,
+        time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
     }));
 
 export function useChartIndicators(
@@ -36,6 +36,12 @@ export function useChartIndicators(
 
     const instancesRef = useRef<Record<string, any>>({});
     const defaultsAppliedRef = useRef(false);
+
+    const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
+    const source = useMarketStore.getState().tabs[Object.keys(useMarketStore.getState().tabs)[0]]?.charts[chartId]?.source || 'MT5';
+    const interval = useMarketStore.getState().tabs[Object.keys(useMarketStore.getState().tabs)[0]]?.charts[chartId]?.interval || '1m';
+    const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
+    const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || []) : []);
 
     /* ===== DEFAULT INDICATORS ===== */
     useEffect(() => {
@@ -111,23 +117,9 @@ export function useChartIndicators(
                 const configJson = JSON.stringify(config);
                 const configChanged = instance._lastConfigJson !== configJson;
 
-                // 2. Full Update (if new bar or config changed)
                 if (isNewBar || configChanged) {
                     instance.update(stableCandlesRef.current, config);
                     instance._lastConfigJson = configJson;
-                }
-                // 3. Incremental Update (price tick)
-                else if (currentPrice !== undefined && instance.updateLastPoint) {
-                    const lastIdx = candles.length - 1;
-                    if (lastIdx >= 0 && candles[lastIdx]) {
-                        const lastCandle = {
-                            ...candles[lastIdx],
-                            close: currentPrice,
-                            high: Math.max(candles[lastIdx].high || currentPrice, currentPrice),
-                            low: Math.min(candles[lastIdx].low || currentPrice, currentPrice)
-                        };
-                        instance.updateLastPoint(lastCandle, candles);
-                    }
                 }
             }
         });
@@ -140,14 +132,58 @@ export function useChartIndicators(
         isReady,
         chartId,
         indicators,
-        candles,
+        candles.length, // ⚡ DRAW on load or new bar only
         symbol,
         priceChartRef,
         subchartChartRef,
         seriesRef,
         syncRange,
-        currentPrice,
     ]);
+
+    // ⚡ SEPARATE EFFECT FOR REAL-TIME PRICE UPDATES (OPTIMIZED & THROTTLED)
+    useEffect(() => {
+        if (!isReady || !symbol) return;
+
+        const normSymbol = (symbol || '').toLowerCase().endsWith('m') ? symbol!.replace(/[mM]$/, 'm') : symbol;
+        let lastUpdate = 0;
+        let rafId: number;
+
+        const unsub = useMarketStore.subscribe(
+            state => state.tickers[normSymbol]?.price,
+            (price) => {
+                if (!price) return;
+                const now = Date.now();
+                // Limit real-time indicator updates to ~5fps (200ms) to save CPU
+                // Most indicators don't need to update at 60fps
+                if (now - lastUpdate < 200) return;
+                lastUpdate = now;
+
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    Object.values(instancesRef.current).forEach(instance => {
+                        if (instance.updateLastPoint) {
+                            const currentCandles = getCandles();
+                            const lastIdx = currentCandles.length - 1;
+                            if (lastIdx >= 0 && currentCandles[lastIdx]) {
+                                const lastCandle = {
+                                    ...currentCandles[lastIdx],
+                                    close: price,
+                                    high: Math.max(currentCandles[lastIdx].high || price, price),
+                                    low: Math.min(currentCandles[lastIdx].low || price, price)
+                                };
+                                instance.updateLastPoint(lastCandle, currentCandles);
+                            }
+                        }
+                    });
+                });
+            }
+        );
+
+        return () => {
+            unsub();
+            if (rafId) cancelAnimationFrame(rafId);
+        };
+    }, [isReady, symbol, chartId]);
 
 
 

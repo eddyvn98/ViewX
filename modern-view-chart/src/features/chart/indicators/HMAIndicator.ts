@@ -40,7 +40,7 @@ export class HMAIndicator {
 
         const data = candles
             .map((c, i) => ({
-                time: c.time as any,
+                time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
                 value: hmaValues[i]
             }))
             .filter(d => !isNaN(d.value));
@@ -63,8 +63,9 @@ export class HMAIndicator {
         const lastVal = hmaValues[hmaValues.length - 1];
 
         if (!isNaN(lastVal)) {
+            const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
             this.series.update({
-                time: candle.time as any,
+                time: candleTime as any,
                 value: lastVal
             });
         }

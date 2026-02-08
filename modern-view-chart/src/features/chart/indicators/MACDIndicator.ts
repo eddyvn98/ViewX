@@ -62,7 +62,7 @@ export class MACDIndicator {
         const histogramData = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const time = candles[i].time as any;
+            const time = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time)) as any;
 
             if (!isNaN(macd[i])) {
                 macdData.push({ time, value: macd[i] });
@@ -99,17 +99,17 @@ export class MACDIndicator {
         const { macd, signal: sig, histogram } = calculateMACD(prices, fast, slow, signal);
 
         const lastIdxMACD = macd.length - 1;
-        const time = candle.time as any;
+        const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
 
         if (!isNaN(macd[lastIdxMACD])) {
-            this.macdSeries.update({ time, value: macd[lastIdxMACD] });
+            this.macdSeries.update({ time: candleTime as any, value: macd[lastIdxMACD] });
         }
         if (!isNaN(sig[lastIdxMACD])) {
-            this.signalSeries!.update({ time, value: sig[lastIdxMACD] });
+            this.signalSeries!.update({ time: candleTime as any, value: sig[lastIdxMACD] });
         }
         if (!isNaN(histogram[lastIdxMACD])) {
             this.histogramSeries!.update({
-                time,
+                time: candleTime as any,
                 value: histogram[lastIdxMACD],
                 color: histogram[lastIdxMACD] >= 0 ? '#26a69a' : '#ef5350'
             });

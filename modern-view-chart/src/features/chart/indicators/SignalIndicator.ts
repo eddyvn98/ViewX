@@ -26,9 +26,11 @@ export class SignalIndicator {
             const prev = rsi14[i - 1];
             if (isNaN(prev)) continue;
 
+            const candleTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time)) as any;
+
             if (prev > (this.config.params.upperLimit || 60)) {
                 markers.push({
-                    time: candles[i].time as any,
+                    time: candleTime,
                     position: 'belowBar',
                     color: '#22c55e',
                     shape: 'arrowUp',
@@ -36,7 +38,7 @@ export class SignalIndicator {
                 });
             } else if (prev < (this.config.params.lowerLimit || 40)) {
                 markers.push({
-                    time: candles[i].time as any,
+                    time: candleTime,
                     position: 'aboveBar',
                     color: '#ef4444',
                     shape: 'arrowDown',

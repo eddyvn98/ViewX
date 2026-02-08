@@ -15,9 +15,17 @@ export interface DraftOrder {
 
 export interface DraggingPosition {
     ticket: number;
-    type: 'sl' | 'tp';
+    type: 'sl' | 'tp' | 'entry';
     price: number;
 }
+
+export interface PendingModification {
+    ticket: number;
+    field: 'sl' | 'tp' | 'open_price' | 'price_open';
+    price: number;
+    timestamp: number;
+}
+
 export interface AnalysisResult {
     ticket: number;
     verdict: string;
@@ -63,9 +71,11 @@ export interface TerminalSlice {
     isTerminalCollapsed: boolean;
     terminalHeight: number;
     hoveredTicket: number | null;
+    pendingModifications: Record<string, PendingModification>; // Key: "ticket-field"
     setAccount: (source: string, data: AccountInfo) => void;
     setPositions: (data: Position[] | ((prev: Position[]) => Position[])) => void;
     setOrders: (data: import('../types').Order[] | ((prev: import('../types').Order[]) => import('../types').Order[])) => void;
+    addPendingModification: (ticket: number, field: 'sl' | 'tp' | 'open_price' | 'price_open', price: number) => void;
     setHistory: (data: HistoryDeal[] | ((prev: HistoryDeal[]) => HistoryDeal[])) => void;
     appendHistory: (newData: HistoryDeal[], isReset?: boolean) => void;
     setAnalysisResult: (ticket: number, result: AnalysisResult) => void;
@@ -87,110 +97,120 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     analysisResults: {},
     optimizationResult: null,
     draftOrder: null,
-    editingPosition: null, // Initialized
-    draggingPosition: null, // Initialized
+    editingPosition: null,
+    draggingPosition: null,
     isTerminalVisible: true,
     isTerminalCollapsed: true,
     terminalHeight: 300,
     hoveredTicket: null,
+    pendingModifications: {},
+
+    addPendingModification: (ticket, field, price) => set((state) => {
+        const key = `${ticket}-${field}`;
+        return {
+            pendingModifications: {
+                ...state.pendingModifications,
+                [key]: { ticket, field, price, timestamp: Date.now() }
+            }
+        };
+    }),
 
     setAccount: (source, data) => set((state) => ({
         accounts: { ...state.accounts, [source]: data }
     })),
 
-    // Positions Setter - OPTIMIZED to prevent flickering
     setPositions: (data) => set((state) => {
         const payload = typeof data === 'function' ? data(state.positions) : data;
-
-        // CRITICAL FIX: Get source from first item, but DON'T process empty arrays without source
         const source = (payload as any)[0]?.source;
-
-        // If payload is empty and no source, ignore it - prevents Binance empty arrays from wiping MT5
-        if (!source && payload.length === 0) {
-            return {};
-        }
-
+        if (!source && payload.length === 0) return {};
         const finalSource = source || 'MT5';
-
         const otherPositions = state.positions.filter(p => p.source !== finalSource);
         const newPositionsRaw = [...otherPositions, ...payload];
 
-        // OPTIMIZATION: Only trigger state update if STRUCTURAL fields change
         if (state.positions.length === newPositionsRaw.length) {
             let hasStructuralChange = false;
             const prevMap = new Map(state.positions.map(p => [p.ticket, p]));
 
             for (const newPos of newPositionsRaw) {
-                const prevPos = prevMap.get(newPos.ticket);
-                if (!prevPos) {
-                    hasStructuralChange = true;
-                    break;
-                }
+                // Apply Pending Locks
+                const fields: ('sl' | 'tp' | 'open_price')[] = ['sl', 'tp', 'open_price'];
+                fields.forEach(field => {
+                    const key = `${newPos.ticket}-${field}`;
+                    const pending = state.pendingModifications[key];
+                    if (pending) {
+                        if (Date.now() - pending.timestamp > 3000) return;
+                        const wsValue = newPos[field];
+                        const epsilon = 0.000001;
+                        if (Math.abs(wsValue - pending.price) >= epsilon) {
+                            newPos[field] = pending.price;
+                        }
+                    }
+                });
 
-                // Only compare structural fields (not profit/current_price)
-                if (
-                    prevPos.open_price !== newPos.open_price ||
-                    prevPos.sl !== newPos.sl ||
-                    prevPos.tp !== newPos.tp ||
-                    prevPos.volume !== newPos.volume ||
-                    prevPos.type !== newPos.type
-                ) {
+                const prevPos = prevMap.get(newPos.ticket);
+                if (!prevPos || prevPos.open_price !== newPos.open_price || prevPos.sl !== newPos.sl || prevPos.tp !== newPos.tp || prevPos.volume !== newPos.volume || prevPos.type !== newPos.type) {
                     hasStructuralChange = true;
-                    break;
                 }
             }
 
-            // Trigger state update for profit changes (needed for Terminal UI)
-            // But return the current state if absolutely nothing changed
             if (!hasStructuralChange) {
                 let anyValueChange = false;
                 for (const newPos of newPositionsRaw) {
                     const prevPos = prevMap.get(newPos.ticket);
-                    if (prevPos) {
-                        if (prevPos.profit !== newPos.profit || prevPos.current_price !== newPos.current_price) {
-                            anyValueChange = true;
-                            // Mutate existing object in-place (efficient)
-                            prevPos.profit = newPos.profit;
-                            prevPos.current_price = newPos.current_price;
-                        }
+                    if (prevPos && (prevPos.profit !== newPos.profit || prevPos.current_price !== newPos.current_price)) {
+                        anyValueChange = true;
+                        prevPos.profit = newPos.profit;
+                        prevPos.current_price = newPos.current_price;
                     }
                 }
-
-                if (anyValueChange) {
-                    // Return a NEW array reference to trigger UI re-render
-                    // but the objects inside are the same (mutated in-place)
-                    return { positions: [...state.positions] };
-                }
-                return {}; // No change at all
+                if (anyValueChange) return { positions: [...state.positions] };
+                return {};
             }
         }
 
         return { positions: newPositionsRaw };
     }),
 
-    setOrders: (data) => set((state) => ({
-        orders: typeof data === 'function' ? data(state.orders) : data
-    })),
-    setHistory: (data) => set((state) => {
-        const newData = typeof data === 'function' ? data(state.history) : data;
-        return { history: newData };
+    setOrders: (data) => set((state) => {
+        const payload = typeof data === 'function' ? data(state.orders) : data;
+
+        // 🛡️ Apply protection for Orders
+        const protectedOrders = payload.map(o => {
+            const newOrd = { ...o };
+            const fields: ('sl' | 'tp' | 'price_open')[] = ['sl', 'tp', 'price_open'];
+
+            fields.forEach(field => {
+                const key = `${o.ticket}-${field}`;
+                const pending = state.pendingModifications[key];
+
+                if (pending) {
+                    if (Date.now() - pending.timestamp > 3000) return;
+
+                    const wsValue = newOrd[field];
+                    const epsilon = 0.000001;
+
+                    if (Math.abs(wsValue - pending.price) >= epsilon) {
+                        // WS is old/different -> Keep optimistic
+                        // @ts-ignore
+                        newOrd[field] = pending.price;
+                    }
+                }
+            });
+            return newOrd;
+        });
+
+        return { orders: protectedOrders };
     }),
+    setHistory: (data) => set((state) => ({
+        history: typeof data === 'function' ? data(state.history) : data
+    })),
     appendHistory: (newData, isReset = false) => set((state) => {
         const source = newData[0]?.source || 'MT5';
-
-        // Filter out existing deals from this source if reset is requested
-        let baseHistory = isReset
-            ? state.history.filter(h => h.source !== source)
-            : state.history;
-
-        // Efficient merge using Map
+        let baseHistory = isReset ? state.history.filter(h => h.source !== source) : state.history;
         const map = new Map(baseHistory.map(d => [d.ticket, d]));
         newData.forEach(d => map.set(d.ticket, d));
         const combined = Array.from(map.values());
-
-        // Sort by time desc
         combined.sort((a, b) => b.time - a.time);
-
         return { history: combined };
     }),
     setAnalysisResult: (ticket, result) => set((state) => ({

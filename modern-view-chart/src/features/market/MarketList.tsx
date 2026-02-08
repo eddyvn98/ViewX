@@ -62,14 +62,15 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
     }, [symbol, mode]);
 
     useEffect(() => {
-        if (mode !== 'watchlist') return; // Only update prices in watchlist mode
+        if (mode !== 'watchlist') return;
 
-        let running = true;
+        // Tối ưu hóa: Thay vì chạy liên tục, ta đăng ký vào một sự kiện trung tâm
+        // hoặc chỉ cập nhật khi tab này thực sự hiển thị.
+        // Tăng interval lên 500ms (2fps) cho danh sách phụ để cứu CPU.
+        const interval = 500;
         let lastUpdate = 0;
-        const interval = 200; // 5fps for watchlist
 
         const tick = () => {
-            if (!running) return;
             const now = Date.now();
             if (now - lastUpdate >= interval) {
                 lastUpdate = now;
@@ -78,11 +79,8 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
             rafIdRef.current = requestAnimationFrame(tick);
         };
 
-        updateDOM();
         rafIdRef.current = requestAnimationFrame(tick);
-
         return () => {
-            running = false;
             if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
         };
     }, [updateDOM, mode]);

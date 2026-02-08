@@ -25,18 +25,28 @@ export function useChartData(
     const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
-    const candles = useMarketStore(state => (key ? state.candleData[key] : null) || EMPTY_CANDLES);
+    // ⚡ CPU OPTIMIZATION: Only notify React if the number of candles changes
+    const candlesCount = useMarketStore(state => (key ? (state.candleData[key]?.length || 0) : 0));
+    // Internal access to avoid dependency tracking of the whole array
+    const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || EMPTY_CANDLES) : EMPTY_CANDLES);
 
 
     const lastSymbolRef = useRef(symbol);
     const lastKeyRef = useRef(key);
     const isConnected = useMarketStore(state => state.isConnected);
 
+    // 2. TẬP TRUNG TỐI ƯU: Cập nhật giá nhảy Real-time (Manual Subscription + Frame Throttle)
+    const lastTickRef = useRef({ price: 0 });
+    const currentCandleRef = useRef<any>(null);
+    const frameRequestedRef = useRef<boolean>(false);
+    const lastSentTimeRef = useRef<number | null>(null);
+
     // 1. Đồng bộ toàn bộ dữ liệu (History hoặc New Candle)
     useEffect(() => {
         if (!isReady || !seriesRef.current || !symbol || !interval || !source) return;
 
         const isContextChange = key !== lastKeyRef.current;
+        const currentCandles = getCandles();
 
         // 1. Handle Context Reset
         if (isContextChange) {
@@ -51,16 +61,9 @@ export function useChartData(
         }
 
         const series = seriesRef.current;
-        const formatted = candles.map(c => ({
-            time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as Time,
-            open: Number(c.open),
-            high: Number(c.high),
-            low: Number(c.low),
-            close: Number(c.close),
-        }));
 
         // Request initial candles if none are present
-        if (candles.length === 0) {
+        if (currentCandles.length === 0) {
             if (symbol && interval && source === 'MT5' && isConnected) {
                 sendMessage({
                     topic: "mt5_command",
@@ -74,7 +77,15 @@ export function useChartData(
         }
 
         // 2. Inject Data to Chart (Context Change or New Data Batch)
-        if (isContextChange || candles.length !== lastDataLength.current) {
+        if (isContextChange || currentCandles.length !== lastDataLength.current) {
+            const formatted = currentCandles.map(c => ({
+                time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as Time,
+                open: Number(c.open),
+                high: Number(c.high),
+                low: Number(c.low),
+                close: Number(c.close),
+            }));
+
             series.setData(formatted);
 
             // Calculate time step for future points
@@ -91,10 +102,14 @@ export function useChartData(
             }
 
             // Apply future points to BOTH subchart AND timescale (same pattern)
-            const syncData = [
-                ...formatted.map(f => ({ time: f.time, value: 0 })),
-                ...futurePoints
-            ];
+            const syncData: any[] = [];
+            for (let i = 0; i < formatted.length; i++) {
+                syncData.push({ time: formatted[i].time, value: 0 });
+            }
+            for (let i = 0; i < futurePoints.length; i++) {
+                syncData.push(futurePoints[i]);
+            }
+
             subSyncRef.current?.setData(syncData as any);
             timescaleSyncRef.current?.setData(syncData as any);
 
@@ -110,35 +125,23 @@ export function useChartData(
                             to: totalBars + 5
                         });
                     }
-                    // Force auto-scale on both charts
                     chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                     subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                 });
                 isInitialMount.current = false;
-            } else if (formatted.length > 0) {
-                // Also trigger auto-scale on data updates (not just initial mount)
-                requestAnimationFrame(() => {
-                    chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                    subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                });
             }
         }
 
-        lastDataLength.current = candles.length;
-    }, [isReady, candles, symbol, interval, source, isConnected]);
-
-
-    // 2. TẬP TRUNG TỐI ƯU: Cập nhật giá nhảy Real-time (Manual Subscription + Frame Throttle)
-    const lastTickRef = useRef({ price: 0 });
-    const currentCandleRef = useRef<any>(null);
-    const frameRequestedRef = useRef<boolean>(false);
+        lastDataLength.current = currentCandles.length;
+    }, [isReady, candlesCount, symbol, interval, source, isConnected]);
 
     // Đồng bộ nến cuối cùng từ Store vào Ref mỗi khi nến mới được thêm hoặc Reset
     useEffect(() => {
-        if (candles.length > 0) {
-            currentCandleRef.current = { ...candles[candles.length - 1] };
+        const currentCandles = getCandles();
+        if (currentCandles.length > 0) {
+            currentCandleRef.current = { ...currentCandles[currentCandles.length - 1] };
         }
-    }, [candles]);
+    }, [candlesCount]);
 
     useEffect(() => {
         if (!seriesRef.current || !normSymbol || !isReady) return;
@@ -152,6 +155,14 @@ export function useChartData(
             }
 
             const candleTime = typeof base.time === 'object' ? (base.time as any).timestamp : Number(base.time);
+
+            // Defensive check: lightweight-charts will throw if we update with an older time
+            // We use a small ref to track the last sent time to this series
+            if (lastSentTimeRef.current !== null && candleTime < lastSentTimeRef.current) {
+                frameRequestedRef.current = false;
+                return;
+            }
+            lastSentTimeRef.current = candleTime;
 
             series.update({
                 time: candleTime as Time,

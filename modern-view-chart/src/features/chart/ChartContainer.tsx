@@ -16,6 +16,7 @@ import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 import { useChartContextMenu } from './hooks/use-chart-context-menu';
 import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
 import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 import { CandleCountdown } from './components/CandleCountdown';
 import { ChartOverlay } from './components/ChartOverlay';
@@ -51,10 +52,11 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
             ? symbol!.replace(/[mM]$/, 'm')
             : symbol;
 
-    const currentPrice = useMarketStore(state => normSymbol ? state.tickers[normSymbol]?.price : undefined);
-
     const key = `${source}:${normSymbol}:${interval}`;
-    const candles = useMarketStore((state) => state.candleData[key] || EMPTY_CANDLES);
+    // ⚡ CPU OPTIMIZATION: Only re-render if the COUNT of candles changes (new candle finalized)
+    // For per-tick updates, components use internal subscriptions or DOM-based updates
+    const candlesCount = useMarketStore(state => (state.candleData[key] || EMPTY_CANDLES).length);
+    const candles = useMarketStore.getState().candleData[key] || EMPTY_CANDLES;
 
     /* ================= REFS ================= */
     const mainContainerRef = useRef<HTMLDivElement>(null);
@@ -66,6 +68,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId);
 
     /* ================= DATA ================= */
+    const { sendMessage } = useWebSocket();
     useChartData(chartId, symbol, interval, source, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
 
     /* ================= OVERLAYS ================= */
@@ -84,7 +87,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         symbol,
         timezone,
         syncRange,
-        currentPrice,
+        undefined, // Removed currentPrice from props (hook now handles it if needed)
         isReady
     );
 
@@ -101,11 +104,13 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         priceChartRef,
         seriesRef,
         symbol,
-        mainContainerRef, // Updated to use parent container
+        mainContainerRef,
         alerts,
         handleUpdateAlertPrice,
-        handleRemoveAlert
+        handleRemoveAlert,
+        sendMessage
     );
+
 
     useChartScaleReset(
         priceChartRef,
@@ -153,7 +158,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 interval={chartInstance?.interval}
                 source={chartInstance?.source}
                 candles={candles}
-                currentPrice={currentPrice}
             />
 
             <PositionModifier />
@@ -176,8 +180,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* ORDER LINE TAGS (Draggable Handles) */}
                 <OrderLineTags
                     symbol={symbol}
-                    series={seriesRef.current}
-                    priceChart={priceChartRef.current}
+                    seriesRef={seriesRef}
+                    priceChartRef={priceChartRef}
+                    isReady={isReady}
+                    sendMessage={sendMessage}
                 />
 
                 {/* CANDLE COUNTDOWN OVERLAY */}
@@ -242,7 +248,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                             interval={chartInstance?.interval}
                             source={chartInstance?.source}
                             candles={candles}
-                            currentPrice={currentPrice}
                         />
                     </div>
                     <div ref={subchartContainerRef} className="w-full h-full" />

@@ -32,9 +32,13 @@ export function useChartInit(
         const commonOptions = {
             layout: { background: { color: '#131722' }, textColor: '#d4d4d8' },
             grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
-            crosshair: { mode: 0 }, // mode 0 = Normal (free movement), mode 1 = Magnet (snaps to data)
+            crosshair: {
+                mode: 0,
+                vertLine: { visible: true, labelVisible: true },
+                horzLine: { visible: true, labelVisible: true }
+            },
             timeScale: {
-                rightOffset: 20, // Reduced from 40 for more space
+                rightOffset: 20,
                 barSpacing: 10,
                 fixLeftEdge: true,
                 fixRightEdge: false,
@@ -72,7 +76,11 @@ export function useChartInit(
             width: subchartContainerRef.current.clientWidth,
             height: subchartContainerRef.current.clientHeight,
             timeScale: { ...commonOptions.timeScale, visible: false },
-            crosshair: { mode: 0 }, // Explicit: Normal mode - no snap
+            crosshair: {
+                mode: 0,
+                vertLine: { visible: false, labelVisible: false },
+                horzLine: { visible: false, labelVisible: false }
+            },
             rightPriceScale: {
                 visible: true,
                 autoScale: true,
@@ -95,8 +103,12 @@ export function useChartInit(
             rightPriceScale: { visible: true, borderVisible: false, ticksVisible: false, minimumWidth: initialMinW },
             leftPriceScale: { visible: false },
             crosshair: {
-                mode: 0, // Normal mode - no snap
-                vertLine: { visible: false, labelVisible: true },
+                mode: 0,
+                vertLine: {
+                    visible: true,
+                    labelVisible: true,
+                    color: 'transparent', // ⚡ Trong suốt để không hiện vạch đứt, nhưng buộc label phải hiện
+                },
                 horzLine: { visible: false, labelVisible: false },
             },
             handleScale: { mouseWheel: true, axisPressedMouseMove: { time: true } as any },
@@ -113,7 +125,8 @@ export function useChartInit(
 
         /* ================= DOM-BASED CROSSHAIR SYNC ================= */
         // Create custom vertical line elements for each chart
-        const createSyncLine = (container: HTMLElement): HTMLDivElement => {
+        const createSyncLine = (container: HTMLElement | null): HTMLDivElement | null => {
+            if (!container) return null;
             const line = document.createElement('div');
             line.style.cssText = `
                 position: absolute; top: 0; bottom: 0; width: 1px;
@@ -130,28 +143,35 @@ export function useChartInit(
         const footLineEl = createSyncLine(timescaleContainerRef.current);
 
         // Sync all vertical lines using Logical coordinates (precise alignment)
-        const syncVerticalLines = (sourceChart: IChartApi, x: number | null, sourceEl: HTMLDivElement) => {
-            if (x !== null) {
-                // 1. Convert source pixel x to fractional logical index
-                const logical = sourceChart.timeScale().coordinateToLogical(x);
-                if (logical === null) return;
+        // Sync all vertical lines using Logical coordinates (precise alignment)
+        const syncVerticalLines = (sourceChart: IChartApi, x: number | null, time: number | null, logical: number | null) => {
+            if (x !== null && logical !== null) {
+                const items = [
+                    { chart: priceChart, line: priceLineEl, series: candleSeries },
+                    { chart: subchartChart, line: subLineEl, series: subSyncSeries },
+                    { chart: timescaleChart, line: footLineEl, series: footSyncSeries }
+                ];
 
-                // 2. Sync to other charts by converting logical back to their specific pixel x
-                [
-                    { chart: priceChart, line: priceLineEl },
-                    { chart: subchartChart, line: subLineEl },
-                    { chart: timescaleChart, line: footLineEl }
-                ].forEach(item => {
-                    const targetX = item.chart.timeScale().logicalToCoordinate(logical);
+                items.forEach(item => {
+                    if (!item.line) return;
+                    const targetX = item.chart.timeScale().logicalToCoordinate(logical as any);
                     if (targetX !== null) {
                         item.line.style.display = 'block';
                         item.line.style.left = `${targetX}px`;
+
+                        // ⚡ SYNC NATIVE LABEL ONLY FOR FOOTER (TIMESCALE)
+                        if (item.chart === timescaleChart && sourceChart !== timescaleChart) {
+                            // Using actual timestamp (time) is required for the label to show
+                            item.chart.setCrosshairPosition(0, (time || 0) as any, item.series as any);
+                        }
                     }
                 });
             } else {
-                [priceLineEl, subLineEl, footLineEl].forEach(el => {
-                    el.style.display = 'none';
-                });
+                [priceLineEl, subLineEl, footLineEl].forEach(el => { if (el) el.style.display = 'none'; });
+                // Clear except source
+                if (priceChart !== sourceChart) priceChart.clearCrosshairPosition();
+                if (subchartChart !== sourceChart) subchartChart.clearCrosshairPosition();
+                if (timescaleChart !== sourceChart) timescaleChart.clearCrosshairPosition();
             }
         };
 
@@ -162,12 +182,8 @@ export function useChartInit(
         let lastSideEffectsAt = 0;  // Only throttle side effects
 
         priceChart.subscribeCrosshairMove((param) => {
-            // Sync vertical lines to other charts (immediate, no throttle)
-            if (param.point) {
-                syncVerticalLines(priceChart, param.point.x, priceLineEl);
-            } else {
-                syncVerticalLines(priceChart, null, priceLineEl);
-            }
+            const logical = param.point ? priceChart.timeScale().coordinateToLogical(param.point.x) : null;
+            syncVerticalLines(priceChart, param.point?.x ?? null, Number(param.time ?? 0), Number(logical ?? 0));
 
             if (param.time && param.point) {
                 const curTime = Number(param.time);
@@ -216,12 +232,8 @@ export function useChartInit(
         });
 
         subchartChart.subscribeCrosshairMove((param) => {
-            // Sync vertical lines to other charts (immediate, no throttle)
-            if (param.point) {
-                syncVerticalLines(subchartChart, param.point.x, subLineEl);
-            } else {
-                syncVerticalLines(subchartChart, null, subLineEl);
-            }
+            const logical = param.point ? subchartChart.timeScale().coordinateToLogical(param.point.x) : null;
+            syncVerticalLines(subchartChart, param.point?.x ?? null, Number(param.time ?? 0), Number(logical ?? 0));
 
             if (param.time && param.point) {
                 const curTime = Number(param.time);
@@ -271,12 +283,8 @@ export function useChartInit(
 
         // ⚡ TIMESCALE FOOTER: Also sync crosshair when hovering on footer
         timescaleChart.subscribeCrosshairMove((param) => {
-            // Sync vertical lines to other charts (immediate, no throttle)
-            if (param.point) {
-                syncVerticalLines(timescaleChart, param.point.x, footLineEl);
-            } else {
-                syncVerticalLines(timescaleChart, null, footLineEl);
-            }
+            const logical = param.point ? timescaleChart.timeScale().coordinateToLogical(param.point.x) : null;
+            syncVerticalLines(timescaleChart, param.point?.x ?? null, Number(param.time ?? 0), Number(logical ?? 0));
 
             if (param.time && param.point) {
 
@@ -389,9 +397,9 @@ export function useChartInit(
             resizeObserver.disconnect();
 
             // Remove sync lines
-            if (priceLineEl.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
-            if (subLineEl.parentNode) subLineEl.parentNode.removeChild(subLineEl);
-            if (footLineEl.parentNode) footLineEl.parentNode.removeChild(footLineEl);
+            if (priceLineEl?.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
+            if (subLineEl?.parentNode) subLineEl.parentNode.removeChild(subLineEl);
+            if (footLineEl?.parentNode) footLineEl.parentNode.removeChild(footLineEl);
 
             priceChart.remove();
             subchartChart.remove();

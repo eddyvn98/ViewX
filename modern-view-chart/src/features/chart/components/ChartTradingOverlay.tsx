@@ -130,7 +130,7 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
 
     return (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
-            {!draftOrder ? (
+            {(!draftOrder || draftOrder.symbol !== symbol) ? (
                 <div className="flex items-center p-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-2xl overflow-hidden">
                     <button
                         onClick={() => handleStartDraft('buy')}
@@ -158,25 +158,25 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
                         onClick={toggleMarket}
                         className={cn(
                             "px-3 h-9 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1.5",
-                            draftOrder.isMarket
+                            draftOrder?.isMarket
                                 ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40"
                                 : "bg-zinc-800 text-zinc-400 hover:text-white"
                         )}
                     >
-                        {draftOrder.isMarket ? "Market" : "Limit"}
+                        {draftOrder?.isMarket ? "Market" : "Limit"}
                     </button>
 
                     <button
                         onClick={handleConfirm}
                         className={cn(
                             "flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold transition-all shadow-lg",
-                            draftOrder.type === 'buy'
+                            draftOrder?.type === 'buy'
                                 ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
                                 : "bg-red-600 hover:bg-red-500 shadow-red-900/20"
                         )}
                     >
                         <Check size={14} />
-                        CONFIRM {draftOrder.type.toUpperCase()}
+                        CONFIRM {draftOrder?.type?.toUpperCase()}
                     </button>
 
                     <button

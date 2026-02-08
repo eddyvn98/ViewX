@@ -4,15 +4,8 @@ import { Candle } from '../types';
 export interface DataSlice {
     candleData: Record<string, Candle[]>;
     isCrosshairSyncEnabled: boolean;
-    crosshairPoint: {
-        time: number | null,
-        price: number | null,
-        sourceId: string | null,
-        point?: { x: number, y: number } | null,
-        logical?: number | null
-    } | null;
     setCrosshairSync: (enabled: boolean) => void;
-    syncCrosshair: (point: DataSlice['crosshairPoint']) => void;
+    syncCrosshair: (point: any) => void;
     setCandles: (source: string, symbol: string, interval: string, data: Candle[]) => void;
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Candle) => void;
 }
@@ -22,10 +15,9 @@ const normalizeSymbol = (s: string) => s.toLowerCase().endsWith('m') ? s.replace
 export const createDataSlice: StateCreator<DataSlice> = (set) => ({
     candleData: {},
     isCrosshairSyncEnabled: true,
-    crosshairPoint: null,
 
     setCrosshairSync: (enabled) => set({ isCrosshairSyncEnabled: enabled }),
-    syncCrosshair: (point) => set({ crosshairPoint: point }),
+    syncCrosshair: () => { }, // No longer store in state to prevent global re-renders
 
     setCandles: (source, symbol, interval, data) => set((state) => {
         const normSymbol = normalizeSymbol(symbol);
@@ -42,11 +34,18 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const last = currentCandles[currentCandles.length - 1];
 
         if (last && last.time === candle.time) {
+            // Cập nhật nến hiện tại: Thay thế phần tử cuối, không cần slice mảng lớn
             const newCandles = [...currentCandles];
             newCandles[newCandles.length - 1] = candle;
             return { candleData: { ...state.candleData, [key]: newCandles } };
         } else {
-            return { candleData: { ...state.candleData, [key]: [...currentCandles, candle] } };
+            // Thêm nến mới: Giới hạn tối đa 2000 nến để bảo vệ RAM
+            const MAX_CANDLES = 2000;
+            const newCandles = currentCandles.length >= MAX_CANDLES
+                ? [...currentCandles.slice(1), candle]
+                : [...currentCandles, candle];
+
+            return { candleData: { ...state.candleData, [key]: newCandles } };
         }
     }),
 });

@@ -9,25 +9,39 @@ export function useChartPositions(
     positions: Position[],
     chartRef: React.RefObject<import('lightweight-charts').IChartApi | null>
 ) {
-    // OPTIMIZATION: Only subscribe to specific symbol price instead of entire tickers object
-    const currentPrice = useMarketStore((state) => state.tickers[symbol || '']?.price);
-    const setEditingPosition = useMarketStore((state) => state.setEditingPosition);
-    const setFocusedTicket = useMarketStore((state) => state.setFocusedTicket);
     const symbolInfo = useMarketStore((state) => state.symbolInfo[symbol || '']);
-    const draggingPosition = useMarketStore((state) => state.draggingPosition);
     const focusedTicket = useMarketStore((state) => state.focusedTicket);
     const draftOrder = useMarketStore((state) => state.draftOrder);
     const hoveredTicket = useMarketStore((state) => state.hoveredTicket);
+    const setEditingPosition = useMarketStore((state) => state.setEditingPosition);
+    const setFocusedTicket = useMarketStore((state) => state.setFocusedTicket);
+
     const priceLinesRef = useRef<Record<string, { entry?: IPriceLine, sl?: IPriceLine, tp?: IPriceLine }>>({});
 
-    // EFFECT 1: Create/Remove price lines when positions change (infrequent)
-    useEffect(() => {
-        if (!seriesRef.current || !symbol) return;
-        const series = seriesRef.current;
+    // Stable state ref for high-frequency updates
+    const sharedRef = useRef({
+        symbol,
+        positions,
+        symbolInfo,
+        draggingPosition: null as any,
+        focusedTicket
+    });
 
-        // HIDE ALL POSITIONS if user is drafting a new order for this symbol
-        if (draftOrder && draftOrder.symbol === symbol) {
-            // Clean up active positions lines
+    // Helper to match symbols with or without suffixes like .m
+    const norm = (sym: string | undefined) => (sym || '').toUpperCase().replace('.M', '').replace('.H', '');
+    const targetSymbol = norm(symbol);
+
+    useEffect(() => {
+        sharedRef.current = { symbol, positions, symbolInfo, draggingPosition: useMarketStore.getState().draggingPosition, focusedTicket };
+    }, [symbol, positions, symbolInfo, focusedTicket]);
+
+    // EFFECT 1: Manage Line Existence (Create/Remove)
+    // Runs only when positions or symbol changes, not on price/drag
+    useEffect(() => {
+        const series = seriesRef.current;
+        if (!series || !symbol) return;
+
+        if (draftOrder && norm(draftOrder.symbol) === targetSymbol) {
             Object.keys(priceLinesRef.current).forEach(ticket => {
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
@@ -38,280 +52,144 @@ export function useChartPositions(
             return;
         }
 
-
-        let symbolPositions = positions.filter(p => p.symbol === symbol);
-
-        // FOCUS MODE: If a ticket is focused, only show that one
+        let symbolPositions = positions.filter(p => norm(p.symbol) === targetSymbol);
         if (focusedTicket) {
             symbolPositions = symbolPositions.filter(p => p.ticket === focusedTicket);
         }
 
-        // --- AGGREGATION LOGIC ---
-        // Hide summaries in Focus Mode
-        const groups = {
-            buy: focusedTicket ? [] : symbolPositions.filter(p => (p.type || '').toLowerCase().includes('buy')),
-            sell: focusedTicket ? [] : symbolPositions.filter(p => (p.type || '').toLowerCase().includes('sell'))
-        };
+        const activeTicketsWithGroup = new Set<string>();
 
-        const summaryLinesToDelete = new Set(Object.keys(priceLinesRef.current).filter(k => k.startsWith('sum_')));
-
-        [groups.buy, groups.sell].forEach(group => {
-            if (group.length <= 1) return;
-
-            const type = (group[0].type || '').toUpperCase();
-            const side = type.toLowerCase().includes('BUY') ? 'buy' : 'sell';
-            const sumId = `sum_${side}`;
-            summaryLinesToDelete.delete(sumId);
-
-            const totalVolume = group.reduce((s, p) => s + (p.volume || 0), 0);
-            const totalProfit = group.reduce((s, p) => s + (p.profit || 0), 0);
-            const weightedSum = group.reduce((s, p) => s + (p.open_price * (p.volume || 0)), 0);
-            const avgPrice = weightedSum / totalVolume;
-
-            const title = `AVG ${type} ${totalVolume.toFixed(2)} (${group.length}) • ${formatPnL(totalProfit)}`;
-            const options = {
-                price: avgPrice,
-                color: '#9c27b0', // Purple for summary
-                lineWidth: 2 as any,
-                lineStyle: LineStyle.Solid,
-                axisLabelVisible: false,
-                title: ''
-            };
-
-            if (!priceLinesRef.current[sumId]) priceLinesRef.current[sumId] = {};
-            const lines = priceLinesRef.current[sumId];
-            if (!lines.entry) {
-                lines.entry = series.createPriceLine(options);
-            } else {
-                lines.entry.applyOptions(options);
-            }
-        });
-
-        // Delete old summary lines
-        summaryLinesToDelete.forEach(id => {
-            const lines = priceLinesRef.current[id];
-            if (lines?.entry) series.removePriceLine(lines.entry);
-            delete priceLinesRef.current[id];
-        });
-
-        const activeTickets = symbolPositions.map(p => {
+        // Handle Active Positions
+        symbolPositions.forEach(p => {
             const ticketStr = p.ticket.toString();
-            const isHovered = hoveredTicket === p.ticket;
-            const isDragging = draggingPosition?.ticket === p.ticket;
-            const isFocused = isHovered || isDragging;
-
-            // If we have multiple positions on this side, we might want to hide axis labels for individual entries too
-            const side = (p.type || '').toLowerCase().includes('buy') ? 'buy' : 'sell';
-            const hasMultipleOnSide = groups[side as keyof typeof groups].length > 1;
+            activeTicketsWithGroup.add(ticketStr);
 
             if (!priceLinesRef.current[ticketStr]) priceLinesRef.current[ticketStr] = {};
             const lines = priceLinesRef.current[ticketStr];
 
-            // Create/Update Entry line
-            const pnl = p.profit !== undefined ? p.profit : calculatePnL({
-                type: p.type,
-                openPrice: p.open_price,
-                currentPrice: currentPrice || p.open_price,
-                volume: p.volume,
-                symbolInfo,
-                symbol: p.symbol
-            });
-            const entryColor = pnl >= 0 ? '#22c55e' : '#71717a'; // Green if profit, Gray if loss
-            const entryTitle = `${(p.type || '').toUpperCase()} ${p.volume} • ${formatPnL(pnl)}`;
+            const isFoc = focusedTicket === p.ticket || hoveredTicket === p.ticket;
+
+            // 🛡️ Web-First Priority for Positions
+            const dragging = useMarketStore.getState().draggingPosition;
+            const isDraggingThis = dragging && dragging.ticket === p.ticket;
+
+            // Entry Line
+            const finalEntry = (isDraggingThis && dragging.type === 'entry') ? dragging.price : p.open_price;
             const entryOptions = {
-                price: p.open_price,
-                color: entryColor,
-                lineWidth: (isFocused ? 2 : 1) as any,
+                price: finalEntry,
+                color: '#71717a',
+                lineWidth: (isFoc ? 2 : 1) as any,
                 lineStyle: LineStyle.Solid,
                 axisLabelVisible: false,
                 title: ''
             };
+            if (!lines.entry) lines.entry = series.createPriceLine(entryOptions);
+            else lines.entry.applyOptions(entryOptions);
 
-            if (!lines.entry) {
-                lines.entry = series.createPriceLine(entryOptions);
-            } else {
-                lines.entry.applyOptions({ price: p.open_price });
-            }
-
-            // --- SL Logic with Drag Override ---
-            let slPrice = p.sl;
-            if (isDragging && draggingPosition.type === 'sl') {
-                slPrice = draggingPosition.price;
-            }
-
-            if (slPrice > 0) {
-                const slPnl = calculatePnL({
-                    type: p.type,
-                    openPrice: p.open_price,
-                    currentPrice: slPrice,
-                    volume: p.volume,
-                    symbolInfo,
-                    symbol: p.symbol
-                });
-                const slTitle = `SL • ${formatPnL(slPnl)}`;
+            // SL Line
+            const finalSL = (isDraggingThis && dragging.type === 'sl') ? dragging.price : p.sl;
+            if (finalSL > 0) {
                 const slOptions = {
-                    price: slPrice,
+                    price: finalSL,
                     color: '#ef5350',
                     lineWidth: 1 as any,
-                    lineStyle: isFocused ? LineStyle.Solid : LineStyle.Dashed,
+                    lineStyle: isFoc ? LineStyle.Solid : LineStyle.Dashed,
                     axisLabelVisible: false,
                     title: ''
                 };
-
-                if (!lines.sl) {
-                    lines.sl = series.createPriceLine(slOptions);
-                } else {
-                    lines.sl.applyOptions({ price: slPrice });
-                }
+                if (!lines.sl) lines.sl = series.createPriceLine(slOptions);
+                else lines.sl.applyOptions(slOptions);
             } else if (lines.sl) {
                 series.removePriceLine(lines.sl);
                 lines.sl = undefined;
             }
 
-            // --- TP Logic with Drag Override ---
-            let tpPrice = p.tp;
-            if (isDragging && draggingPosition.type === 'tp') {
-                tpPrice = draggingPosition.price;
-            }
-
-            if (tpPrice > 0) {
-                const tpPnl = calculatePnL({
-                    type: p.type,
-                    openPrice: p.open_price,
-                    currentPrice: tpPrice,
-                    volume: p.volume,
-                    symbolInfo,
-                    symbol: p.symbol
-                });
-                const tpTitle = `TP • ${formatPnL(tpPnl)}`;
+            // TP Line
+            const finalTP = (isDraggingThis && dragging.type === 'tp') ? dragging.price : p.tp;
+            if (finalTP > 0) {
                 const tpOptions = {
-                    price: tpPrice,
+                    price: finalTP,
                     color: '#26a69a',
                     lineWidth: 1 as any,
-                    lineStyle: isFocused ? LineStyle.Solid : LineStyle.Dashed,
+                    lineStyle: isFoc ? LineStyle.Solid : LineStyle.Dashed,
                     axisLabelVisible: false,
                     title: ''
                 };
-
-                if (!lines.tp) {
-                    lines.tp = series.createPriceLine(tpOptions);
-                } else {
-                    lines.tp.applyOptions({ price: tpPrice });
-                }
+                if (!lines.tp) lines.tp = series.createPriceLine(tpOptions);
+                else lines.tp.applyOptions(tpOptions);
             } else if (lines.tp) {
                 series.removePriceLine(lines.tp);
                 lines.tp = undefined;
             }
-            return ticketStr;
         });
 
-        // Remove lines for positions that no longer exist
-        Object.keys(priceLinesRef.current).forEach(ticketStr => {
-            if (ticketStr.startsWith('sum_')) return; // Keep summaries
-            if (!activeTickets.includes(ticketStr)) {
-                const lines = priceLinesRef.current[ticketStr];
+        // Cleanup
+        Object.keys(priceLinesRef.current).forEach(t => {
+            if (!activeTicketsWithGroup.has(t)) {
+                const lines = priceLinesRef.current[t];
                 if (lines.entry) series.removePriceLine(lines.entry);
                 if (lines.sl) series.removePriceLine(lines.sl);
                 if (lines.tp) series.removePriceLine(lines.tp);
-                delete priceLinesRef.current[ticketStr];
+                delete priceLinesRef.current[t];
             }
         });
-    }, [
-        // Dependencies
-        JSON.stringify(positions.filter(p => p.symbol === symbol).map(p => ({
-            t: p.ticket, type: p.type, op: p.open_price, sl: p.sl, tp: p.tp, vol: p.volume, prof: p.profit
-        }))),
-        symbol, draggingPosition, hoveredTicket, symbolInfo, draftOrder, seriesRef, focusedTicket
-    ]);
+    }, [positions.length, symbol, draftOrder, focusedTicket, hoveredTicket]);
 
-    // EFFECT 2: Update PnL text when price changes (THROTTLED to prevent flickering)
-    const lastPnlUpdateRef = useRef<number>(0);
-    const pnlUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
-
+    // EFFECT 2: High-frequency updates (Dragging & Price)
+    // Uses manual subscription for maximum smoothness
     useEffect(() => {
-        if (!seriesRef.current || !symbol || !currentPrice) return;
+        const unsub = useMarketStore.subscribe(
+            state => [state.tickers[symbol || '']?.price, state.draggingPosition] as const,
+            ([price, drag]) => {
+                const series = seriesRef.current;
+                if (!series || !symbol) return;
 
-        const now = Date.now();
-        const timeSinceLastUpdate = now - lastPnlUpdateRef.current;
+                const currentPositions = sharedRef.current.positions.filter(p => p.symbol === symbol);
 
-        // Throttle: Only update every 1000ms (1 second)
-        if (timeSinceLastUpdate < 1000) {
-            // Schedule an update for later if not already scheduled
-            if (!pnlUpdateTimerRef.current) {
-                pnlUpdateTimerRef.current = setTimeout(() => {
-                    updatePnLText();
-                    pnlUpdateTimerRef.current = null;
-                }, 1000 - timeSinceLastUpdate);
+                currentPositions.forEach(p => {
+                    const lines = priceLinesRef.current[p.ticket];
+                    if (!lines) return;
+
+                    // Update prices smoothly bypassing React re-renders
+                    if (lines.entry) {
+                        const pnl = p.profit ?? calculatePnL({ type: p.type, openPrice: p.open_price, currentPrice: price || p.open_price, volume: p.volume, symbolInfo, symbol: p.symbol });
+                        lines.entry.applyOptions({ color: pnl >= 0 ? '#22c55e' : '#71717a' });
+                    }
+
+                    if (lines.sl) {
+                        const slPrice = (drag?.ticket === p.ticket && drag.type === 'sl') ? drag.price : p.sl;
+                        lines.sl.applyOptions({ price: slPrice });
+                    }
+
+                    if (lines.tp) {
+                        const tpPrice = (drag?.ticket === p.ticket && drag.type === 'tp') ? drag.price : p.tp;
+                        lines.tp.applyOptions({ price: tpPrice });
+                    }
+                });
             }
-            return;
-        }
+        );
+        return unsub;
+    }, [symbol, symbolInfo, seriesRef]);
 
-        updatePnLText();
+    // ⚡ FAST-PATH: Listen to direct drag events for instant sync
+    useEffect(() => {
+        const handleFastDrag = (e: any) => {
+            const { ticket, type, price, symbol: eventSymbol } = e.detail;
+            if (eventSymbol !== symbol || ticket === 'draft') return;
 
-        function updatePnLText() {
-            if (!seriesRef.current || !symbol) return;
+            const lines = priceLinesRef.current[ticket];
+            if (!lines) return;
 
-            lastPnlUpdateRef.current = Date.now();
-
-            positions.filter(p => p.symbol === symbol).forEach(p => {
-                const ticket = p.ticket.toString();
-                const lines = priceLinesRef.current[ticket];
-                if (!lines) return;
-
-                // Update Entry line PnL
-                if (lines.entry) {
-                    const pnl = p.profit !== undefined ? p.profit : calculatePnL({
-                        type: p.type,
-                        openPrice: p.open_price,
-                        currentPrice: currentPrice,
-                        volume: p.volume,
-                        symbolInfo,
-                        symbol: p.symbol
-                    });
-                    const typeStr = (p.type || '').toUpperCase();
-                    lines.entry.applyOptions({ price: p.open_price });
-                }
-
-                // Update SL PnL if exists
-                if (lines.sl && p.sl > 0) {
-                    const slPrice = (draggingPosition?.ticket === p.ticket && draggingPosition.type === 'sl')
-                        ? draggingPosition.price : p.sl;
-                    const slPnl = calculatePnL({
-                        type: p.type,
-                        openPrice: p.open_price,
-                        currentPrice: slPrice,
-                        volume: p.volume,
-                        symbolInfo,
-                        symbol: p.symbol
-                    });
-                    lines.sl.applyOptions({ price: slPrice });
-                }
-
-                // Update TP PnL if exists
-                if (lines.tp && p.tp > 0) {
-                    const tpPrice = (draggingPosition?.ticket === p.ticket && draggingPosition.type === 'tp')
-                        ? draggingPosition.price : p.tp;
-                    const tpPnl = calculatePnL({
-                        type: p.type,
-                        openPrice: p.open_price,
-                        currentPrice: tpPrice,
-                        volume: p.volume,
-                        symbolInfo,
-                        symbol: p.symbol
-                    });
-                    lines.tp.applyOptions({ price: tpPrice });
-                }
-            });
-        }
-
-        return () => {
-            if (pnlUpdateTimerRef.current) {
-                clearTimeout(pnlUpdateTimerRef.current);
-                pnlUpdateTimerRef.current = null;
-            }
+            if (type === 'entry' && lines.entry) lines.entry.applyOptions({ price });
+            else if (type === 'sl' && lines.sl) lines.sl.applyOptions({ price });
+            else if (type === 'tp' && lines.tp) lines.tp.applyOptions({ price });
         };
-    }, [currentPrice, symbol, positions, symbolInfo, draggingPosition, seriesRef]);
 
+        window.addEventListener('order-line-drag', handleFastDrag);
+        return () => window.removeEventListener('order-line-drag', handleFastDrag);
+    }, [symbol]);
+
+    // Handle Clicks
     useEffect(() => {
         if (!chartRef.current || !seriesRef.current || !symbol) return;
         const chart = chartRef.current;
@@ -319,27 +197,13 @@ export function useChartPositions(
 
         const handleClick = (param: import('lightweight-charts').MouseEventParams) => {
             if (!param.point || !param.time) return;
-
-            const startTime = performance.now();
-
-            // Get price at click location
-            const price = series.coordinateToPrice(param.point.y);
-            if (!price) return;
-
-            // Hit test against active positions for this symbol
             const activePositions = positions.filter(p => p.symbol === symbol);
-            if (activePositions.length === 0) return; // Early return
-
-            // Hit test using screen coordinates for better UX
             let found = false;
             for (const pos of activePositions) {
                 const pricesToTest = [pos.open_price, pos.sl, pos.tp].filter(p => p > 0);
                 for (const p of pricesToTest) {
-                    const priceCoordinate = series.priceToCoordinate(p);
-                    if (priceCoordinate === null) continue;
-
-                    // Check if click Y is within 10 pixels of the line Y
-                    if (Math.abs(param.point.y - priceCoordinate) < 10) {
+                    const coords = series.priceToCoordinate(p);
+                    if (coords !== null && Math.abs(param.point.y - coords) < 15) {
                         setEditingPosition(pos);
                         found = true;
                         break;
@@ -347,16 +211,7 @@ export function useChartPositions(
                 }
                 if (found) break;
             }
-
-            // If no position line was hit, clear focus mode
-            if (!found && focusedTicket) {
-                setFocusedTicket(null);
-            }
-
-            const elapsed = performance.now() - startTime;
-            if (elapsed > 50) {
-                console.warn(`[PERF] Position click took ${elapsed.toFixed(0)}ms`);
-            }
+            if (!found && focusedTicket) setFocusedTicket(null);
         };
 
         chart.subscribeClick(handleClick);

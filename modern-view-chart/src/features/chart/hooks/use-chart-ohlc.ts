@@ -1,7 +1,7 @@
 'use client';
 
 import { useMarketStore } from '@/lib/store';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 const EMPTY_ARRAY: any[] = [];
 
@@ -18,7 +18,19 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
 
     const tickerPrice = useMarketStore((state) => symbol ? state.tickers[symbol]?.price : undefined);
     const candles = useMarketStore((state) => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
-    const crosshairTime = useMarketStore((state) => state.crosshairPoint?.time);
+
+    // ⚡ PERFORMANCE: We use window events for crosshair updates to avoid React re-renders of the whole chart UI
+    const [crosshairTime, setCrosshairTime] = useState<number | null>(null);
+
+    useEffect(() => {
+        const handler = (e: any) => {
+            if (e.detail?.time !== crosshairTime) {
+                setCrosshairTime(e.detail?.time);
+            }
+        };
+        window.addEventListener('chart-crosshair', handler);
+        return () => window.removeEventListener('chart-crosshair', handler);
+    }, [crosshairTime]);
 
 
     return useMemo(() => {

@@ -209,8 +209,8 @@ def modify_position_by_ticket(ticket, sl, tp):
             "price": ord.price_open, # keep current price or update? for now keep
             "sl": float(sl) if sl is not None else ord.sl,
             "tp": float(tp) if tp is not None else ord.tp,
-            "type_time": ord.type_time,
-            "expiration": ord.expiration
+            "type_time": getattr(ord, 'type_time', mt5.ORDER_TIME_GTC),
+            "expiration": getattr(ord, 'expiration', 0)
         }
         result = mt5.order_send(request)
         return result.retcode == mt5.TRADE_RETCODE_DONE

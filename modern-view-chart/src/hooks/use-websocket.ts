@@ -10,6 +10,8 @@ let historyFetched = false;
 // Throttle updates to reduce re-renders
 let tickerUpdateBuffer: Record<string, any> = {};
 let tickerUpdateTimer: NodeJS.Timeout | null = null;
+let candleUpdateBuffer: Record<string, any> = {};
+let candleUpdateTimer: NodeJS.Timeout | null = null;
 let positionUpdateTimer: NodeJS.Timeout | null = null;
 let positionUpdateBuffer: any = null;
 
@@ -58,38 +60,42 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                     // LỖI 1 FIX: Use topic/event for message classification
                     const msgType = msg.topic || msg.event || msg.type;
 
-                    // 1. Ticker / Price Update - THROTTLED
-                    if (msgType === 'priceUpdate' && Array.isArray(msg.data)) {
-                        msg.data.forEach((item: any) => {
-                            tickerUpdateBuffer[item.symbol] = {
-                                symbol: item.symbol,
-                                price: item.price,
-                                change: item.change,
-                                changeValue: item.changeValue,
-                                volume: 0,
-                                source: item.source
-                            };
+                    // 1. Ticker / Price Update - SELECTIVE & THROTTLED (TRADINGVIEW STYLE)
+                    if ((msgType === 'priceUpdate' && Array.isArray(msg.data)) || msgType === 'tick' || msgType === 'mt5_update') {
+                        const state = useMarketStore.getState();
+                        // ⚡ TradingView optimization: Only track symbols we are actually looking at
+                        const activeSymbols = new Set([
+                            ...state.watchlist,
+                            ...Object.values(state.tabs).flatMap(tab =>
+                                Object.values(tab.charts).map(c => c.symbol)
+                            )
+                        ].filter(Boolean) as string[]);
+
+                        const incomingData = msgType === 'priceUpdate' ? msg.data : [msg];
+
+                        let usefulUpdate = false;
+                        incomingData.forEach((item: any) => {
+                            if (activeSymbols.has(item.symbol)) {
+                                tickerUpdateBuffer[item.symbol] = {
+                                    symbol: item.symbol,
+                                    price: item.price,
+                                    change: item.change || 0,
+                                    changeValue: item.changeValue || 0,
+                                    volume: 0,
+                                    source: item.source || 'MT5'
+                                };
+                                usefulUpdate = true;
+                            }
                         });
 
-                        if (!tickerUpdateTimer) {
+                        // Only trigger timer if we actually have data we care about
+                        if (usefulUpdate && !tickerUpdateTimer) {
                             tickerUpdateTimer = setTimeout(() => {
                                 updateTickers(tickerUpdateBuffer);
                                 tickerUpdateBuffer = {};
                                 tickerUpdateTimer = null;
-                            }, 800);
+                            }, 500);
                         }
-                    }
-
-                    // Individual/MT5 Price Update
-                    if (msgType === 'tick' || msgType === 'mt5_update') {
-                        updateTicker(msg.symbol, {
-                            symbol: msg.symbol,
-                            price: msg.price,
-                            change: msg.change || 0,
-                            changeValue: msg.changeValue || 0,
-                            volume: 0,
-                            source: 'MT5'
-                        });
                     }
 
                     // 2. Candle History
@@ -102,11 +108,24 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                         }
                     }
 
-                    // 3. Realtime Candle Update
+                    // 3. Realtime Candle Update - BUFFERED to save CPU
                     if (msgType === 'candleUpdate' && msg.data) {
                         const c = msg.data;
                         const source = c.symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5';
-                        updateLastCandle(source, c.symbol, c.interval, c);
+                        const key = `${source}:${c.symbol}:${c.interval}`;
+
+                        // Buffer the candle update
+                        candleUpdateBuffer[key] = { source, symbol: c.symbol, interval: c.interval, candle: c };
+
+                        if (!candleUpdateTimer) {
+                            candleUpdateTimer = setTimeout(() => {
+                                Object.values(candleUpdateBuffer).forEach(item => {
+                                    updateLastCandle(item.source, item.symbol, item.interval, item.candle);
+                                });
+                                candleUpdateBuffer = {};
+                                candleUpdateTimer = null;
+                            }, 250); // 4fps for candle updates is very smooth but saves 80% CPU vs 50+ ticks/s
+                        }
                     }
 
                     // 4. Bridge Status

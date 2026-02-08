@@ -165,7 +165,7 @@ class MT5Service:
             return result.retcode == mt5.TRADE_RETCODE_DONE
         return False
 
-    def modify_position(self, ticket, sl, tp):
+    def modify_position(self, ticket, sl=None, tp=None, price=None):
         positions = mt5.positions_get(ticket=ticket)
         if positions:
             pos = positions[0]
@@ -185,14 +185,13 @@ class MT5Service:
             request = {
                 "action": mt5.TRADE_ACTION_MODIFY,
                 "order": ticket,
-                "price": ord.price_open,
+                "price": float(price) if price is not None else ord.price_open,
                 "sl": float(sl) if sl is not None else ord.sl,
                 "tp": float(tp) if tp is not None else ord.tp,
-                "type_time": ord.type_time,
-                "expiration": ord.expiration
+                "type_time": getattr(ord, 'type_time', mt5.ORDER_TIME_GTC),
+                "expiration": getattr(ord, 'expiration', 0)
             }
             result = mt5.order_send(request)
-            return result.retcode == mt5.TRADE_RETCODE_DONE
             return result.retcode == mt5.TRADE_RETCODE_DONE
         return False
 

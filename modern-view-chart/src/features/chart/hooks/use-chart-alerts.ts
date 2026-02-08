@@ -29,15 +29,6 @@ export function useChartAlerts(
     useEffect(() => {
         if (!seriesRef.current || !symbol) return;
 
-        // Hide all alerts if drafting a new order for this symbol
-        if (draftOrder && draftOrder.symbol === symbol) {
-            priceLinesRef.current.forEach((line) => {
-                seriesRef.current?.removePriceLine(line);
-            });
-            priceLinesRef.current.clear();
-            return;
-        }
-
         // Only show active alerts
         const activeAlerts = symbolAlerts.filter(a => a.active);
         const activeIds = new Set(activeAlerts.map(a => a.id));

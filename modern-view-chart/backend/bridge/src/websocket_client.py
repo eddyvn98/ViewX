@@ -3,10 +3,11 @@ import websockets
 import json
 
 class BridgeClient:
-    def __init__(self, ws_url, mt5_service, alert_service=None):
+    def __init__(self, ws_url, mt5_service, alert_service=None, memory_service=None):
         self.ws_url = ws_url
         self.mt5 = mt5_service
         self.alert_service = alert_service
+        self.memory_service = memory_service
         self.websocket = None
 
     async def connect(self):
@@ -27,8 +28,10 @@ class BridgeClient:
                     await self.handle_command(data)
                 elif msg_topic == "alert_command":
                     await self.handle_alert_command(data)
+                elif msg_topic == "memory_command":
+                    await self.handle_memory_command(data)
             except Exception as e:
-                print(f"[ERROR] Command handling error: {e}")
+                print(f"[ERROR] Command handling error (topic:{msg_topic}): {e}")
 
     async def handle_alert_command(self, data):
         if not self.alert_service: 
@@ -51,6 +54,31 @@ class BridgeClient:
             updates = data.get("updates")
             print(f"[ALERT] Updating alert {alert_id}: {updates}")
             self.alert_service.update_alert(alert_id, updates)
+            
+    async def handle_memory_command(self, data):
+        if not self.memory_service:
+            print("[MEMORY] No memory service configured")
+            return
+            
+        cmd = data.get("command")
+        print(f"[MEMORY] Received command: {cmd}")
+        
+        if cmd == "remember":
+            content = data.get("content")
+            mtype = data.get("type", "observation")
+            await self.memory_service.remember(content, mtype)
+            
+        elif cmd == "recall":
+            query = data.get("query")
+            request_id = data.get("request_id")
+            context = await self.memory_service.recall(query)
+            
+            await self.send_json({
+                "topic": "memory_result",
+                "request_id": request_id,
+                "query": query,
+                "context": context
+            })
 
     async def handle_command(self, data):
         cmd = data.get("command")
@@ -61,7 +89,7 @@ class BridgeClient:
             print(f"[CMD] Close {ticket}: {'Done' if res else 'Failed'}")
         
         elif cmd == "modify":
-            res = self.mt5.modify_position(ticket, data.get("sl"), data.get("tp"))
+            res = self.mt5.modify_position(ticket, data.get("sl"), data.get("tp"), data.get("price"))
             print(f"[CMD] Modify {ticket}: {'Done' if res else 'Failed'}")
         
         elif cmd == "get_candles":

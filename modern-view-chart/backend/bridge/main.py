@@ -7,7 +7,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from mt5_service import MT5Service
 from websocket_client import BridgeClient
-from alert_service import AlertService # Import
+from alert_service import AlertService
+from memory_service import MemoryService
 import MetaTrader5 as mt5
 
 # Configuration
@@ -22,13 +23,17 @@ TIMEFRAME_MAP = {
 
 async def main():
     service = MT5Service(SYMBOLS, TIMEFRAME_MAP)
-    alert_service = AlertService() # Instantiate
+    alert_service = AlertService()
+    memory_service = MemoryService()
+    
+    # Init Memory Service
+    await memory_service.initialize()
     
     if not service.initialize():
         return
 
     try:
-        client = BridgeClient(NODE_WS_URL, service, alert_service) # Pass to Client
+        client = BridgeClient(NODE_WS_URL, service, alert_service, memory_service)
         await client.connect()
         
         # Start command listener

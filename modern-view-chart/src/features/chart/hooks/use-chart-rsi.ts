@@ -58,7 +58,7 @@ export function useChartRSI(
 
         // 3. Set Data
         const rsiChartData = candles.map((c, i) => ({
-            time: c.time as any,
+            time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
             value: rsiData[i]
         })).filter(d => !isNaN(d.value));
 

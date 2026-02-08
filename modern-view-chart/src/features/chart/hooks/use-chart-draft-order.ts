@@ -8,100 +8,114 @@ export function useChartDraftOrder(
     seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>
 ) {
     const draftOrder = useMarketStore((state) => state.draftOrder);
+    const focusedTicket = useMarketStore((state) => state.focusedTicket);
     const currentPrice = useMarketStore((state) => (symbol && state.tickers[symbol]) ? state.tickers[symbol].price : 0);
     const symbolInfo = useMarketStore((state) => state.symbolInfo[symbol || '']);
 
     const linesRef = useRef<{ entry?: IPriceLine, sl?: IPriceLine, tp?: IPriceLine }>({});
 
+    // EFFECT 1: Manage Existence (Create/Remove)
     useEffect(() => {
-        if (!seriesRef.current || !symbol || !draftOrder || draftOrder.symbol !== symbol) {
-            // Cleanup if no draft or symbol mismatch
-            const series = seriesRef.current;
-            if (series) {
-                if (linesRef.current.entry) series.removePriceLine(linesRef.current.entry);
-                if (linesRef.current.sl) series.removePriceLine(linesRef.current.sl);
-                if (linesRef.current.tp) series.removePriceLine(linesRef.current.tp);
-            }
+        if (!seriesRef.current || !symbol) return;
+        const series = seriesRef.current;
+
+        const cleanup = () => {
+            if (linesRef.current.entry) series.removePriceLine(linesRef.current.entry);
+            if (linesRef.current.sl) series.removePriceLine(linesRef.current.sl);
+            if (linesRef.current.tp) series.removePriceLine(linesRef.current.tp);
             linesRef.current = {};
+        };
+
+        if (focusedTicket || !draftOrder || draftOrder.symbol !== symbol) {
+            cleanup();
             return;
         }
 
-        const series = seriesRef.current;
-        const bid = currentPrice;
-        const ask = bid * 1.0001; // Mock spread
+        const bid = useMarketStore.getState().tickers[symbol]?.price || 0;
+        const ask = bid * 1.0001;
         const entryPrice = draftOrder.isMarket ? (draftOrder.type === 'buy' ? ask : bid) : (draftOrder.price || bid);
 
-        // Entry Line
-        const formatPnLWrapper = (pPrice: number | undefined) => {
-            if (pPrice === undefined || !bid) return '';
-            const pnl = calculatePnL({
-                type: draftOrder.type,
-                openPrice: entryPrice,
-                currentPrice: pPrice,
-                volume: draftOrder.volume,
-                symbolInfo
-            });
-            return `(${formatPnL(pnl)})`;
-        };
-
-        const entryTitle = `${draftOrder.type.toUpperCase()} ${draftOrder.volume} (Draft)`;
+        // Entry
         if (!linesRef.current.entry) {
             linesRef.current.entry = series.createPriceLine({
                 price: entryPrice,
-                color: '#71717a', // Zinc 500
-                lineWidth: 1,
+                color: '#3b82f6',
+                lineWidth: 2,
                 lineStyle: LineStyle.Dashed,
                 axisLabelVisible: false,
-                title: '', // Custom tags handle the title
+                title: '',
             });
-        } else {
-            linesRef.current.entry.applyOptions({ price: entryPrice });
         }
 
-        // SL Line
-        if (draftOrder.sl) {
-            const slTitle = `SL ${formatPnLWrapper(draftOrder.sl)}`;
+        // SL
+        if (draftOrder.sl && draftOrder.sl > 0) {
             if (!linesRef.current.sl) {
                 linesRef.current.sl = series.createPriceLine({
                     price: draftOrder.sl,
-                    color: '#ef4444', // Red 500
-                    lineWidth: 1,
+                    color: '#ef4444',
+                    lineWidth: 2,
                     lineStyle: LineStyle.Dotted,
                     axisLabelVisible: false,
                     title: '',
                 });
-            } else {
-                linesRef.current.sl.applyOptions({ price: draftOrder.sl });
             }
         } else if (linesRef.current.sl) {
             series.removePriceLine(linesRef.current.sl);
             linesRef.current.sl = undefined;
         }
 
-        // TP Line
-        if (draftOrder.tp) {
-            const tpTitle = `TP ${formatPnLWrapper(draftOrder.tp)}`;
+        // TP
+        if (draftOrder.tp && draftOrder.tp > 0) {
             if (!linesRef.current.tp) {
                 linesRef.current.tp = series.createPriceLine({
                     price: draftOrder.tp,
-                    color: '#22c55e', // Green 500
-                    lineWidth: 1,
+                    color: '#22c55e',
+                    lineWidth: 2,
                     lineStyle: LineStyle.Dotted,
                     axisLabelVisible: false,
                     title: '',
                 });
-            } else {
-                linesRef.current.tp.applyOptions({ price: draftOrder.tp });
             }
         } else if (linesRef.current.tp) {
             series.removePriceLine(linesRef.current.tp);
             linesRef.current.tp = undefined;
         }
 
-        return () => {
-            // Note: Partial cleanup handled above by dependency array
+    }, [symbol, !!draftOrder, draftOrder?.symbol, !!focusedTicket]);
+
+    // EFFECT 2: High-frequency updates (Dragging & Price)
+    useEffect(() => {
+        const unsub = useMarketStore.subscribe(
+            state => [state.tickers[symbol || '']?.price, state.draftOrder] as const,
+            ([price, draft]) => {
+                if (!symbol || !draft || draft.symbol !== symbol || focusedTicket) return;
+
+                const bid = price || 0;
+                const ask = bid * 1.0001;
+                const entryPrice = draft.isMarket ? (draft.type === 'buy' ? ask : bid) : (draft.price || bid);
+
+                if (linesRef.current.entry) linesRef.current.entry.applyOptions({ price: entryPrice });
+                if (linesRef.current.sl && draft.sl) linesRef.current.sl.applyOptions({ price: draft.sl });
+                if (linesRef.current.tp && draft.tp) linesRef.current.tp.applyOptions({ price: draft.tp });
+            }
+        );
+        return unsub;
+    }, [symbol, focusedTicket]);
+
+    // ⚡ FAST-PATH: Listen to direct drag events for instant sync
+    useEffect(() => {
+        const handleFastDrag = (e: any) => {
+            const { ticket, type, price, symbol: eventSymbol } = e.detail;
+            if (eventSymbol !== symbol || ticket !== 'draft') return;
+
+            if (type === 'entry' && linesRef.current.entry) linesRef.current.entry.applyOptions({ price });
+            else if (type === 'sl' && linesRef.current.sl) linesRef.current.sl.applyOptions({ price });
+            else if (type === 'tp' && linesRef.current.tp) linesRef.current.tp.applyOptions({ price });
         };
-    }, [symbol, draftOrder, currentPrice, seriesRef, symbolInfo]);
+
+        window.addEventListener('order-line-drag', handleFastDrag);
+        return () => window.removeEventListener('order-line-drag', handleFastDrag);
+    }, [symbol]);
 
     // Final cleanup on unmount
     useEffect(() => {

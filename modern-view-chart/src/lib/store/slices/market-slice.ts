@@ -26,19 +26,34 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
     setConnected: (status) => set({ isConnected: status }),
     setBridgeOnline: (status) => set({ isBridgeOnline: status }),
 
-    updateTicker: (symbol, data) => set((state) => ({
-        tickers: {
-            ...state.tickers,
-            [symbol]: { ...state.tickers[symbol], ...data } as Ticker
+    updateTicker: (symbol, data) => set((state) => {
+        // Chỉ cập nhật nếu thực sự có giá thay đổi để tránh re-render ảo
+        if (state.tickers[symbol]?.price === data.price) {
+            return state;
         }
-    })),
+        return {
+            tickers: {
+                ...state.tickers,
+                [symbol]: { ...state.tickers[symbol], ...data } as Ticker
+            }
+        };
+    }),
 
     updateTickers: (data) => set((state) => {
         const newTickers = { ...state.tickers };
+        let hasChange = false;
+
         Object.keys(data).forEach(symbol => {
-            newTickers[symbol] = { ...newTickers[symbol], ...data[symbol] } as Ticker;
+            const current = state.tickers[symbol];
+            const incoming = data[symbol];
+
+            if (current?.price !== incoming.price) {
+                newTickers[symbol] = { ...current, ...incoming } as Ticker;
+                hasChange = true;
+            }
         });
-        return { tickers: newTickers };
+
+        return hasChange ? { tickers: newTickers } : state;
     }),
 
     setSymbolInfo: (data) => set((state) => ({

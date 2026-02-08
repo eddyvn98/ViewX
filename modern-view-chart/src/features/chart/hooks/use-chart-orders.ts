@@ -10,12 +10,27 @@ export function useChartOrders(
     const draftOrder = useMarketStore((state) => state.draftOrder);
     const priceLinesRef = useRef<Record<string, { entry?: IPriceLine, sl?: IPriceLine, tp?: IPriceLine }>>({});
 
-    useEffect(() => {
-        if (!seriesRef.current || !symbol) return;
-        const series = seriesRef.current;
+    const sharedRef = useRef({
+        symbol,
+        orders,
+        draggingPosition: null as any,
+    });
 
-        // HIDE ALL PENDING ORDERS if user is drafting a new order for this symbol
-        if (draftOrder && draftOrder.symbol === symbol) {
+    // Helper to match symbols with or without suffixes like .m
+    const norm = (sym: string | undefined) => (sym || '').toUpperCase().replace('.M', '').replace('.H', '');
+    const targetSymbol = norm(symbol);
+
+    useEffect(() => {
+        sharedRef.current = { symbol, orders, draggingPosition: useMarketStore.getState().draggingPosition };
+    }, [symbol, orders]);
+
+    // EFFECT 1: Manage Line Existence (Create/Remove)
+    // Runs only when orders or symbol changes, not on price/drag
+    useEffect(() => {
+        const series = seriesRef.current;
+        if (!series || !symbol) return;
+
+        if (draftOrder && norm(draftOrder.symbol) === targetSymbol) {
             Object.keys(priceLinesRef.current).forEach(ticket => {
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
@@ -26,74 +41,70 @@ export function useChartOrders(
             return;
         }
 
-        const activeTickets = orders.filter(o => o.symbol === symbol).map(o => {
+        const activeTickets = new Set<string>();
+        orders.filter(o => norm(o.symbol) === targetSymbol).forEach(o => {
             const ticket = o.ticket.toString();
+            activeTickets.add(ticket);
+
             if (!priceLinesRef.current[ticket]) priceLinesRef.current[ticket] = {};
             const lines = priceLinesRef.current[ticket];
 
-            const typeStr = (o.type || '').toUpperCase();
-            const entryTitle = `${typeStr} ${o.volume}`;
+            // 🛡️ Web-First Priority: If dragging, use drag price, not store price
+            const dragging = useMarketStore.getState().draggingPosition;
+            const isDraggingThis = dragging && dragging.ticket === o.ticket;
 
-            // Entry Line (Pending Price)
-            if (!lines.entry) {
-                lines.entry = series.createPriceLine({
-                    price: o.price_open,
-                    color: '#FF9800', // Orange for pending
-                    lineWidth: 2,
-                    lineStyle: LineStyle.Dashed,
-                    axisLabelVisible: false,
-                    title: ''
-                });
-            } else {
-                lines.entry.applyOptions({ price: o.price_open });
-            }
+            // Entry Line
+            const finalEntry = (isDraggingThis && dragging.type === 'entry') ? dragging.price : o.price_open;
+            const entryOptions = {
+                price: finalEntry,
+                color: '#FF9800',
+                lineWidth: 2 as any,
+                lineStyle: LineStyle.Dashed,
+                axisLabelVisible: false,
+                title: ''
+            };
+            if (!lines.entry) lines.entry = series.createPriceLine(entryOptions);
+            else lines.entry.applyOptions(entryOptions);
 
             // SL Line
-            if (o.sl > 0) {
-                const slTitle = `SL (Pending)`;
-                if (!lines.sl) {
-                    lines.sl = series.createPriceLine({
-                        price: o.sl,
-                        color: '#ef5350',
-                        lineWidth: 1,
-                        lineStyle: LineStyle.Dotted,
-                        axisLabelVisible: false,
-                        title: ''
-                    });
-                } else {
-                    lines.sl.applyOptions({ price: o.sl });
-                }
+            const finalSL = (isDraggingThis && dragging.type === 'sl') ? dragging.price : o.sl;
+            if (finalSL > 0) {
+                const slOptions = {
+                    price: finalSL,
+                    color: '#ef5350',
+                    lineWidth: 1 as any,
+                    lineStyle: LineStyle.Dotted,
+                    axisLabelVisible: false,
+                    title: ''
+                };
+                if (!lines.sl) lines.sl = series.createPriceLine(slOptions);
+                else lines.sl.applyOptions(slOptions);
             } else if (lines.sl) {
                 series.removePriceLine(lines.sl);
                 lines.sl = undefined;
             }
 
             // TP Line
-            if (o.tp > 0) {
-                const tpTitle = `TP (Pending)`;
-                if (!lines.tp) {
-                    lines.tp = series.createPriceLine({
-                        price: o.tp,
-                        color: '#26a69a',
-                        lineWidth: 1,
-                        lineStyle: LineStyle.Dotted,
-                        axisLabelVisible: false,
-                        title: ''
-                    });
-                } else {
-                    lines.tp.applyOptions({ price: o.tp });
-                }
+            const finalTP = (isDraggingThis && dragging.type === 'tp') ? dragging.price : o.tp;
+            if (finalTP > 0) {
+                const tpOptions = {
+                    price: finalTP,
+                    color: '#26a69a',
+                    lineWidth: 1 as any,
+                    lineStyle: LineStyle.Dotted,
+                    axisLabelVisible: false,
+                    title: ''
+                };
+                if (!lines.tp) lines.tp = series.createPriceLine(tpOptions);
+                else lines.tp.applyOptions(tpOptions);
             } else if (lines.tp) {
                 series.removePriceLine(lines.tp);
                 lines.tp = undefined;
             }
-
-            return ticket;
         });
 
-        // Cleanup removed orders
         Object.keys(priceLinesRef.current).forEach(ticket => {
-            if (!activeTickets.includes(ticket)) {
+            if (!activeTickets.has(ticket)) {
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
                 if (lines.sl) series.removePriceLine(lines.sl);
@@ -101,5 +112,28 @@ export function useChartOrders(
                 delete priceLinesRef.current[ticket];
             }
         });
-    }, [orders, symbol, draftOrder]);
+    }, [orders.length, symbol, draftOrder]);
+
+    // EFFECT 2: Fast Drag Sync for Orders
+    useEffect(() => {
+        const unsub = useMarketStore.subscribe(
+            state => state.draggingPosition,
+            (drag) => {
+                const series = seriesRef.current;
+                if (!series || !symbol || !drag) return;
+
+                const lines = priceLinesRef.current[drag.ticket];
+                if (!lines) return;
+
+                if (drag.type === 'sl' && lines.sl) {
+                    lines.sl.applyOptions({ price: drag.price });
+                } else if (drag.type === 'tp' && lines.tp) {
+                    lines.tp.applyOptions({ price: drag.price });
+                } else if (drag.type === 'entry' && lines.entry) {
+                    lines.entry.applyOptions({ price: drag.price });
+                }
+            }
+        );
+        return unsub;
+    }, [symbol, seriesRef]);
 }
