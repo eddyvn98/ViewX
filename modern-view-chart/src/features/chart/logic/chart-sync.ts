@@ -1,0 +1,101 @@
+import { IChartApi, ISeriesApi } from 'lightweight-charts';
+
+/* ================= DOM-BASED CROSSHAIR SYNC ================= */
+
+export const createSyncLine = (container: HTMLElement | null): HTMLDivElement | null => {
+    if (!container) return null;
+    const line = document.createElement('div');
+    line.style.cssText = `
+        position: absolute; top: 0; bottom: 0; width: 1px;
+        background: #758696; pointer-events: none; z-index: 10;
+        display: none; transform: translateX(-0.5px);
+    `;
+    container.style.position = 'relative';
+    container.appendChild(line);
+    return line;
+};
+
+export const syncVerticalLines = (
+    sourceChart: IChartApi,
+    charts: {
+        priceChart: IChartApi,
+        subchartChart: IChartApi,
+        timescaleChart: IChartApi
+    },
+    elements: {
+        priceLineEl: HTMLDivElement | null,
+        subLineEl: HTMLDivElement | null,
+        footLineEl: HTMLDivElement | null
+    },
+    series: {
+        candleSeries: ISeriesApi<"Candlestick">,
+        subSyncSeries: ISeriesApi<"Line">,
+        footSyncSeries: ISeriesApi<"Line">
+    },
+    x: number | null,
+    time: number | null,
+    logical: number | null
+) => {
+    if (x !== null && logical !== null) {
+        const items = [
+            { chart: charts.priceChart, line: elements.priceLineEl, series: series.candleSeries },
+            { chart: charts.subchartChart, line: elements.subLineEl, series: series.subSyncSeries },
+            { chart: charts.timescaleChart, line: elements.footLineEl, series: series.footSyncSeries }
+        ];
+
+        items.forEach(item => {
+            if (!item.line) return;
+            const targetX = item.chart.timeScale().logicalToCoordinate(logical as any);
+            if (targetX !== null) {
+                item.line.style.display = 'block';
+                item.line.style.left = `${targetX}px`;
+
+                // SYNC NATIVE LABEL ONLY FOR FOOTER (TIMESCALE)
+                if (item.chart === charts.timescaleChart && sourceChart !== charts.timescaleChart) {
+                    item.chart.setCrosshairPosition(0, (time || 0) as any, item.series as any);
+                }
+            }
+        });
+    } else {
+        [elements.priceLineEl, elements.subLineEl, elements.footLineEl].forEach(el => { if (el) el.style.display = 'none'; });
+        // Clear except source
+        if (charts.priceChart !== sourceChart) charts.priceChart.clearCrosshairPosition();
+        if (charts.subchartChart !== sourceChart) charts.subchartChart.clearCrosshairPosition();
+        if (charts.timescaleChart !== sourceChart) charts.timescaleChart.clearCrosshairPosition();
+    }
+};
+
+/* ================= SYNC LAYOUT WIDTH ================= */
+export const autoSyncLayout = (
+    priceChart: IChartApi,
+    subchartChart: IChartApi,
+    timescaleChart: IChartApi,
+    priceContainer: HTMLElement | null,
+    subchartContainer: HTMLElement | null,
+    initialMinW: number,
+    lastMaxW: number,
+    syncRequestId: number | null,
+    setSyncRequestId: (id: number | null) => void,
+    setLastMaxW: (w: number) => void
+) => {
+    if (syncRequestId !== null) return;
+
+    const id = requestAnimationFrame(() => {
+        setSyncRequestId(null);
+        if (!priceContainer || !subchartContainer) return;
+
+        const priceW = priceChart.priceScale('right').width();
+        const subW = subchartChart.priceScale('right').width();
+        const maxW = Math.max(priceW, subW, initialMinW);
+
+        if (Math.abs(maxW - lastMaxW) > 1) {
+            setLastMaxW(maxW);
+            const opt = { rightPriceScale: { minimumWidth: maxW } };
+            priceChart.applyOptions(opt);
+            subchartChart.applyOptions(opt);
+            timescaleChart.applyOptions(opt);
+        }
+    });
+
+    setSyncRequestId(id);
+};

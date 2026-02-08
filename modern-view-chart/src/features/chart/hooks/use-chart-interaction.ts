@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ISeriesApi } from 'lightweight-charts';
-import { useMarketStore, Alert, Position, Order } from '@/lib/store';
+import { useMarketStore, Alert, Order } from '@/lib/store';
+import { getNearElement } from '../logic/chart-hit-test';
 
 export function useChartInteraction(
     chartRef: React.RefObject<import('lightweight-charts').IChartApi | null>,
@@ -15,17 +16,14 @@ export function useChartInteraction(
     const positions = useMarketStore(state => state.positions);
     const orders = useMarketStore(state => state.orders);
     const draftOrder = useMarketStore(state => state.draftOrder);
-    const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const setDraggingPosition = useMarketStore(state => state.setDraggingPosition);
 
+    // Subscribe to symbol info changes separately to avoid unnecessary re-renders of the hook
+    const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
+
     const stateRef = useRef({
-        positions,
-        orders,
-        draftOrder,
-        symbolInfo,
-        alerts,
-        currentPrice: 0
+        positions, orders, draftOrder, symbolInfo, alerts, currentPrice: 0
     });
 
     useEffect(() => {
@@ -35,69 +33,14 @@ export function useChartInteraction(
     useEffect(() => {
         if (!symbol) return;
         return useMarketStore.subscribe(
-            state => state.tickers[symbol]?.price,
-            price => { if (price) stateRef.current.currentPrice = price; }
+            (state: any) => state.tickers[symbol]?.price,
+            (price: number) => { if (price) stateRef.current.currentPrice = price; }
         );
     }, [symbol]);
 
     const isDragging = useRef(false);
     const dragState = useRef<any>(null);
     const mouseDownPos = useRef<{ x: number, y: number } | null>(null);
-
-    const getNearElement = (y: number, x: number, isTouch: boolean = false) => {
-        const series = seriesRef.current;
-        const container = containerRef.current;
-        if (!series || !container || !symbol) return null;
-
-        const { positions, orders, draftOrder, alerts } = stateRef.current;
-
-        // Helper to match symbols with or without suffixes like .m
-        const norm = (sym: string) => sym.toUpperCase().replace('.M', '').replace('.H', '');
-        const targetSymbol = norm(symbol);
-
-        const width = container.clientWidth;
-        const isNearRightEdge = (width - x) < 100;
-        let tolerance = isNearRightEdge ? 25 : 12;
-        if (isTouch) tolerance = 30;
-
-        // 1. Alerts
-        const symbolAlerts = alerts.filter(a => norm(a.symbol) === targetSymbol && a.active);
-        for (const a of symbolAlerts) {
-            const cy = series.priceToCoordinate(a.price);
-            if (cy !== null && Math.abs(cy - y) < tolerance) return { type: 'alert', id: a.id, price: a.price, ticket: a.id };
-        }
-
-        // 2. Draft
-        if (draftOrder && norm(draftOrder.symbol) === targetSymbol) {
-            const bid = stateRef.current.currentPrice || 0;
-            const ask = bid * 1.0005;
-            const entryPrice = draftOrder.isMarket ? (draftOrder.type === 'buy' ? ask : bid) : (draftOrder.price || bid);
-            const lines = [{ type: 'entry', price: entryPrice }, { type: 'sl', price: draftOrder.sl || 0 }, { type: 'tp', price: draftOrder.tp || 0 }];
-            for (const l of lines) {
-                if (l.price <= 0) continue;
-                const cy = series.priceToCoordinate(l.price);
-                if (cy !== null && Math.abs(cy - y) < tolerance) return { ...l, ticket: 'draft' };
-            }
-        }
-
-        // 3. Positions & Orders
-        const items = [
-            ...positions.filter(p => norm(p.symbol) === targetSymbol),
-            ...orders.filter(o => norm(o.symbol) === targetSymbol)
-        ];
-
-        for (const item of items) {
-            const isPos = 'open_price' in item;
-            const openPrice = isPos ? (item as Position).open_price : (item as Order).price_open;
-            const lines = [{ type: 'entry', price: openPrice }, { type: 'sl', price: item.sl }, { type: 'tp', price: item.tp }];
-            for (const l of lines) {
-                if (l.price <= 0) continue;
-                const cy = series.priceToCoordinate(l.price);
-                if (cy !== null && Math.abs(cy - y) < tolerance) return { ...l, ticket: item.ticket };
-            }
-        }
-        return null;
-    };
 
     useEffect(() => {
         if (!chartRef.current || !seriesRef.current || !containerRef.current || !symbol) return;
@@ -109,7 +52,7 @@ export function useChartInteraction(
             const rect = container.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            const hit = getNearElement(y, x);
+            const hit = getNearElement(y, x, series, container, symbol, stateRef.current);
 
             if (hit) {
                 mouseDownPos.current = { x, y };
@@ -137,29 +80,31 @@ export function useChartInteraction(
             if (price === null) return;
             const finalPrice = Number((price as number).toFixed(stateRef.current.symbolInfo?.digits || 2));
 
-            // 🛡️ VALIDATION LOGIC: Prevent SL/TP from crossing Entry in the wrong direction
+            // Validation logic simplified in this view for brevity, but retaining core logic
             let validatedPrice = finalPrice;
             const digits = stateRef.current.symbolInfo?.digits || 2;
+            const currentItemIdx = dragState.current;
 
-            if (dragState.current.ticket === 'draft') {
+            // Logic to validate entry/sl/tp relationships
+            if (currentItemIdx.ticket === 'draft') {
                 const dr = stateRef.current.draftOrder;
                 if (dr) {
                     const entry = dr.isMarket ? stateRef.current.currentPrice : (dr.price || stateRef.current.currentPrice);
-                    if (dragState.current.type === 'sl') {
+                    if (currentItemIdx.type === 'sl') {
                         validatedPrice = dr.type === 'buy' ? Math.min(finalPrice, entry) : Math.max(finalPrice, entry);
-                    } else if (dragState.current.type === 'tp') {
+                    } else if (currentItemIdx.type === 'tp') {
                         validatedPrice = dr.type === 'buy' ? Math.max(finalPrice, entry) : Math.min(finalPrice, entry);
                     }
                 }
-            } else if (dragState.current.type !== 'alert' && dragState.current.type !== 'entry') {
-                const item = [...stateRef.current.positions, ...stateRef.current.orders].find(i => i.ticket === dragState.current.ticket);
+            } else if (currentItemIdx.type !== 'alert' && currentItemIdx.type !== 'entry') {
+                const item = [...stateRef.current.positions, ...stateRef.current.orders].find(i => i.ticket === currentItemIdx.ticket);
                 if (item) {
                     const isPos = 'open_price' in item;
                     const entry = isPos ? (item as any).open_price : (item as any).price_open;
                     const isBuy = item.type.toLowerCase().includes('buy');
-                    if (dragState.current.type === 'sl') {
+                    if (currentItemIdx.type === 'sl') {
                         validatedPrice = isBuy ? Math.min(finalPrice, entry) : Math.max(finalPrice, entry);
-                    } else if (dragState.current.type === 'tp') {
+                    } else if (currentItemIdx.type === 'tp') {
                         validatedPrice = isBuy ? Math.max(finalPrice, entry) : Math.min(finalPrice, entry);
                     }
                 }
@@ -167,15 +112,12 @@ export function useChartInteraction(
 
             dragState.current.currentPrice = validatedPrice;
 
-            // ⚡ ZERO-LAG SYNC: Update both Line and HTML Tag DOM directly in the same frame
+            // DOM Update for dragging item
             const tagId = dragState.current.ticket === 'draft' ? `draft-${dragState.current.type}` : `${dragState.current.ticket}-${dragState.current.type}`;
             const tagElement = container.querySelector(`[data-tag-id="${tagId}"]`) as HTMLElement;
 
             if (tagElement) {
-                // ⚡ Sync the cached price so that sync() calls during panning use the new position
-                const td = (tagElement as any)._tagData;
-                if (td) td.price = validatedPrice;
-
+                (tagElement as any)._tagData = { ...(tagElement as any)._tagData, price: validatedPrice };
                 const newY = series.priceToCoordinate(validatedPrice);
                 if (newY !== null) {
                     tagElement.style.transform = `translateY(${newY - 12}px)`;
@@ -184,18 +126,18 @@ export function useChartInteraction(
                 }
             }
 
-            // ⚡ FAST-PATH for Canvas Lines: Dispatch event for PriceLine hooks
             window.dispatchEvent(new CustomEvent('order-line-drag', {
                 detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: validatedPrice, symbol }
             }));
 
             if (dragState.current.ticket === 'draft') {
                 const { draftOrder } = stateRef.current;
-                const updates: any = {};
-                if (dragState.current.type === 'entry') { updates.price = validatedPrice; updates.isMarket = false; }
-                else if (dragState.current.type === 'sl') { updates.sl = validatedPrice; updates.slTouched = true; }
-                else if (dragState.current.type === 'tp') { updates.tp = validatedPrice; updates.tpTouched = true; }
-                setDraftOrder({ ...draftOrder, ...updates });
+                // Type guarded updates
+                const updates: Partial<typeof draftOrder> = {};
+                if (dragState.current.type === 'entry') { (updates as any).price = validatedPrice; (updates as any).isMarket = false; }
+                else if (dragState.current.type === 'sl') { (updates as any).sl = validatedPrice; (updates as any).slTouched = true; }
+                else if (dragState.current.type === 'tp') { (updates as any).tp = validatedPrice; (updates as any).tpTouched = true; }
+                if (draftOrder) setDraftOrder({ ...draftOrder, ...updates });
             } else if (dragState.current.type === 'alert') {
                 handleUpdateAlert(dragState.current.id, validatedPrice);
             } else {
@@ -217,25 +159,17 @@ export function useChartInteraction(
                     const mappedType = type === 'entry' ? 'price' : type;
                     const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: currentPrice };
 
-                    // 🚀 OPTIMISTIC UPDATE: Update store immediately so UI doesn't snap back
                     const store = useMarketStore.getState();
                     const isPos = store.positions.some(p => p.ticket === ticket);
 
                     if (isPos) {
                         const field = type === 'entry' ? 'open_price' : type;
-                        store.addPendingModification(Number(ticket), field, currentPrice); // 🛡️ LOCK
-                        store.setPositions(prev => prev.map(p =>
-                            p.ticket === ticket ? { ...p, [field]: currentPrice } : p
-                        ));
+                        store.addPendingModification(Number(ticket), field, currentPrice);
+                        store.setPositions(prev => prev.map(p => p.ticket === ticket ? { ...p, [field]: currentPrice } : p));
                     } else {
                         const field = type === 'entry' ? 'price_open' : type;
-                        // @ts-ignore
-                        store.addPendingModification(Number(ticket), field, currentPrice); // 🛡️ LOCK
-                        store.setOrders(prev => prev.map(o =>
-                            o.ticket === ticket
-                                ? { ...o, [field as keyof Order]: currentPrice }
-                                : o
-                        ));
+                        store.addPendingModification(Number(ticket), field, currentPrice);
+                        store.setOrders(prev => prev.map(o => o.ticket === ticket ? { ...o, [field as keyof Order]: currentPrice } : o));
                     }
 
                     if (sendMessage) sendMessage(command);

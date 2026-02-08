@@ -82,11 +82,12 @@ class BridgeClient:
 
     async def handle_command(self, data):
         cmd = data.get("command")
-        ticket = data.get("ticket")
+        ticket = int(data.get("ticket")) if data.get("ticket") else 0
         
-        if cmd == "close":
+        if cmd == "close" or cmd == "delete":
+            # MT5Service.close_position handles both market positions (DEAL) and pending orders (REMOVE)
             res = self.mt5.close_position(ticket)
-            print(f"[CMD] Close {ticket}: {'Done' if res else 'Failed'}")
+            print(f"[CMD] {cmd.capitalize()} {ticket}: {'Done' if res else 'Failed'}")
         
         elif cmd == "modify":
             res = self.mt5.modify_position(ticket, data.get("sl"), data.get("tp"), data.get("price"))

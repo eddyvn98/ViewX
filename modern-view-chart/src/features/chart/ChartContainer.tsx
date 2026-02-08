@@ -17,6 +17,7 @@ import { useChartContextMenu } from './hooks/use-chart-context-menu';
 import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
 import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { getNearElement } from './logic/chart-hit-test';
 
 import { CandleCountdown } from './components/CandleCountdown';
 import { ChartOverlay } from './components/ChartOverlay';
@@ -122,11 +123,28 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     );
 
     /* ================= CONTEXT MENU ================= */
+    const contextMenuHitTest = (y: number, x: number) => {
+        const store = useMarketStore.getState();
+        const state = {
+            positions: store.positions,
+            orders: store.orders,
+            draftOrder: store.draftOrder,
+            symbolInfo: symbol ? store.symbolInfo[symbol] : undefined,
+            alerts: alerts, // From useChartAlerts hook
+            currentPrice: symbol ? (store.tickers[symbol]?.price || 0) : 0
+        };
+
+        return getNearElement(
+            y, x, seriesRef.current, mainContainerRef.current, symbol, state
+        );
+    };
+
     const { contextMenu, handleContextMenu, closeContextMenu } = useChartContextMenu(
         priceChartRef,
         priceContainerRef,
         seriesRef,
-        getAlertNearPrice
+        getAlertNearPrice,
+        contextMenuHitTest
     );
 
     /* ================= SUBCHART LOGIC ================= */
@@ -269,8 +287,18 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     y={contextMenu.y}
                     price={contextMenu.price}
                     nearAlertId={contextMenu.nearAlertId}
+                    hitItem={contextMenu.hitItem}
                     onAddAlert={handleAddAlertAtPrice}
                     onRemoveAlert={handleRemoveAlert}
+                    onCancelOrder={(ticket) => {
+                        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket) });
+                    }}
+                    onClosePosition={(ticket) => {
+                        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket) });
+                    }}
+                    onCancelDraft={() => {
+                        useMarketStore.getState().setDraftOrder(null);
+                    }}
                     onClose={closeContextMenu}
                 />
             )}
