@@ -61,9 +61,28 @@ export function useChartIndicators(
     /* ===== UPDATE INDICATORS (OPTIMIZED) ===== */
     const lastBarTimeRef = useRef<number>(0);
     const stableCandlesRef = useRef<any[]>([]); // Cache for formatted closed candles
+    const lastKeyRef = useRef<string>('');
 
     useEffect(() => {
         if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !symbol) return;
+
+        // ⚡ RESET ON SYMBOL/INTERVAL CHANGE
+        if (key !== lastKeyRef.current) {
+            lastKeyRef.current = key;
+            lastBarTimeRef.current = 0;
+            stableCandlesRef.current = [];
+
+            // ⚡ CRITICAL: Destroy all existing indicator instances and clear them
+            // This ensures all old series are removed from the chart and we start fresh
+            Object.values(instancesRef.current).forEach(instance => {
+                try {
+                    instance.destroy?.();
+                } catch (err) {
+                    console.warn('[Indicators] Cleanup failed during symbol change:', err);
+                }
+            });
+            instancesRef.current = {};
+        }
 
         const lastBar = candles[candles.length - 1];
         if (!lastBar) return; // Safety check
@@ -117,7 +136,8 @@ export function useChartIndicators(
                 const configJson = JSON.stringify(config);
                 const configChanged = instance._lastConfigJson !== configJson;
 
-                if (isNewBar || configChanged) {
+                // ⚡ Force update if it's a new bar, config changed, or stableCandles just reset
+                if (isNewBar || configChanged || stableCandlesRef.current.length === candles.length) {
                     instance.update(stableCandlesRef.current, config);
                     instance._lastConfigJson = configJson;
                 }
@@ -134,6 +154,8 @@ export function useChartIndicators(
         indicators,
         candles.length, // ⚡ DRAW on load or new bar only
         symbol,
+        interval,
+        key,
         priceChartRef,
         subchartChartRef,
         seriesRef,

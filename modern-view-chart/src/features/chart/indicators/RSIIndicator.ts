@@ -107,10 +107,12 @@ export class RSIIndicator {
 
         if (!isNaN(lastVal)) {
             const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-            this.series.update({
-                time: candleTime as any,
-                value: lastVal
-            });
+            try {
+                this.series.update({
+                    time: candleTime as any,
+                    value: lastVal
+                });
+            } catch (err) { }
         }
     }
 

@@ -49,6 +49,38 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
     const handleConfirm = () => {
         if (!draftOrder) return;
 
+        // 🛡️ Final Validation Logic (Front-end Gatekeeper)
+        const isBuy = draftOrder.type === 'buy';
+        const entryPrice = draftOrder.isMarket ? getCurrentPrice() : (draftOrder.price || getCurrentPrice());
+
+        let errorMsg = '';
+
+        if (draftOrder.sl && draftOrder.sl > 0) {
+            if (isBuy && draftOrder.sl >= entryPrice) errorMsg = 'Invalid Buy SL: Must be below Entry';
+            if (!isBuy && draftOrder.sl <= entryPrice) errorMsg = 'Invalid Sell SL: Must be above Entry';
+        }
+
+        if (draftOrder.tp && draftOrder.tp > 0) {
+            if (isBuy && draftOrder.tp <= entryPrice) errorMsg = 'Invalid Buy TP: Must be above Entry';
+            if (!isBuy && draftOrder.tp >= entryPrice) errorMsg = 'Invalid Sell TP: Must be below Entry';
+        }
+
+        if (errorMsg) {
+            useMarketStore.getState().addNotification(errorMsg, 'error');
+            // Play error sound
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                osc.frequency.setValueAtTime(150, ctx.currentTime);
+                osc.type = 'sawtooth';
+                osc.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.2);
+            }
+            return;
+        }
+
         const payload: any = {
             topic: 'mt5_command',
             command: 'order',
@@ -58,14 +90,16 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
             is_market: draftOrder.isMarket
         };
 
+        const digits = useMarketStore.getState().symbolInfo?.[draftOrder.symbol]?.digits || 5;
+
         if (draftOrder.isMarket) {
             payload.price = 0;
         } else {
-            payload.price = draftOrder.price;
+            payload.price = Number((draftOrder.price ?? 0).toFixed(digits));
         }
 
-        if (draftOrder.slTouched) payload.sl = draftOrder.sl;
-        if (draftOrder.tpTouched) payload.tp = draftOrder.tp;
+        if (draftOrder.sl && draftOrder.sl > 0) payload.sl = Number(draftOrder.sl.toFixed(digits));
+        if (draftOrder.tp && draftOrder.tp > 0) payload.tp = Number(draftOrder.tp.toFixed(digits));
 
         sendMessage(payload);
         setDraftOrder(null);

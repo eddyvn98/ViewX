@@ -11,13 +11,14 @@ interface ChartLegendProps {
     interval: string | undefined;
     source: string | undefined;
     candles: Candle[];
+    chartType?: string;
     priceChart?: import('lightweight-charts').IChartApi | null;
     series?: import('lightweight-charts').ISeriesApi<"Candlestick"> | null;
 }
 
 const EMPTY_INDICATORS: any[] = [];
 
-export function ChartLegend({ chartId, symbol, interval, source, candles }: ChartLegendProps) {
+export function ChartLegend({ chartId, symbol, interval, source, candles, chartType = 'candles' }: ChartLegendProps) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Get indicators config (stable, rarely changes)
@@ -26,7 +27,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles }: Char
     ));
 
     // DOM-based updates - NO REACT RE-RENDERS on hover!
-    useLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles });
+    useLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles, chartType });
 
     if (!symbol || !interval || !source || !candles.length) return null;
 

@@ -40,7 +40,7 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
             }
 
             // Update Visuals (PnL, Color, Label)
-            updateTagVisuals(elements, tag, symbolInfo, currentPrice, draftOrder);
+            updateTagVisuals(elements, tag, symbolInfo, currentPrice, draftOrder, symbol);
 
             // Update Position (Y-Axis)
             // Note: If dragging, the hook usually provides the dragged price in tag.price

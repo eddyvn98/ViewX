@@ -89,11 +89,34 @@ export function useChartInteraction(
             if (currentItemIdx.ticket === 'draft') {
                 const dr = stateRef.current.draftOrder;
                 if (dr) {
-                    const entry = dr.isMarket ? stateRef.current.currentPrice : (dr.price || stateRef.current.currentPrice);
-                    if (currentItemIdx.type === 'sl') {
-                        validatedPrice = dr.type === 'buy' ? Math.min(finalPrice, entry) : Math.max(finalPrice, entry);
+                    const isBuy = dr.type === 'buy';
+                    // Gap safety to prevent 10016 error
+                    const digits = stateRef.current.symbolInfo?.digits || 2;
+                    const minGap = 5 * Math.pow(10, -digits);
+
+                    if (currentItemIdx.type === 'entry') {
+                        // Validate Entry against SL/TP
+                        let min = -Infinity;
+                        let max = Infinity;
+
+                        if (dr.sl && dr.sl > 0) {
+                            if (isBuy) min = dr.sl + minGap; // Entry must be > SL + gap
+                            else max = dr.sl - minGap;       // Entry must be < SL - gap
+                        }
+
+                        if (dr.tp && dr.tp > 0) {
+                            if (isBuy) max = dr.tp - minGap; // Entry must be < TP - gap
+                            else min = dr.tp + minGap;       // Entry must be > TP + gap
+                        }
+
+                        validatedPrice = Math.max(min, Math.min(max, finalPrice));
+
+                    } else if (currentItemIdx.type === 'sl') {
+                        const entry = dr.isMarket ? stateRef.current.currentPrice : (dr.price || stateRef.current.currentPrice);
+                        validatedPrice = isBuy ? Math.min(finalPrice, entry - minGap) : Math.max(finalPrice, entry + minGap);
                     } else if (currentItemIdx.type === 'tp') {
-                        validatedPrice = dr.type === 'buy' ? Math.max(finalPrice, entry) : Math.min(finalPrice, entry);
+                        const entry = dr.isMarket ? stateRef.current.currentPrice : (dr.price || stateRef.current.currentPrice);
+                        validatedPrice = isBuy ? Math.max(finalPrice, entry + minGap) : Math.min(finalPrice, entry - minGap);
                     }
                 }
             } else if (currentItemIdx.type !== 'alert' && currentItemIdx.type !== 'entry') {
@@ -102,10 +125,14 @@ export function useChartInteraction(
                     const isPos = 'open_price' in item;
                     const entry = isPos ? (item as any).open_price : (item as any).price_open;
                     const isBuy = item.type.toLowerCase().includes('buy');
+                    // Gap safety to prevent 10016 error
+                    const digits = stateRef.current.symbolInfo?.digits || 2;
+                    const minGap = 5 * Math.pow(10, -digits);
+
                     if (currentItemIdx.type === 'sl') {
-                        validatedPrice = isBuy ? Math.min(finalPrice, entry) : Math.max(finalPrice, entry);
+                        validatedPrice = isBuy ? Math.min(finalPrice, entry - minGap) : Math.max(finalPrice, entry + minGap);
                     } else if (currentItemIdx.type === 'tp') {
-                        validatedPrice = isBuy ? Math.max(finalPrice, entry) : Math.min(finalPrice, entry);
+                        validatedPrice = isBuy ? Math.max(finalPrice, entry + minGap) : Math.min(finalPrice, entry - minGap);
                     }
                 }
             }

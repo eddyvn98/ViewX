@@ -27,7 +27,8 @@ class MT5Service:
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
         print(f"[FETCH] {symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")
         rates = mt5.copy_rates_from_pos(symbol, tf, 0, count)
-        if rates is None:
+        if rates is None or len(rates) == 0:
+            print(f"[WARN] No rates found for {symbol} {interval}")
             return []
         
         return [{
@@ -209,29 +210,33 @@ class MT5Service:
             "magic": 234000,
             "comment": "ViewChart Web",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": self._get_filling_mode(symbol),
         }
 
         if is_market:
             request["action"] = mt5.TRADE_ACTION_DEAL
             request["price"] = tick.ask if order_type == "buy" else tick.bid
             request["type"] = mt5.ORDER_TYPE_BUY if order_type == "buy" else mt5.ORDER_TYPE_SELL
+            request["type_filling"] = self._get_filling_mode(symbol) # Market uses symbol specific mode
         else:
             request["action"] = mt5.TRADE_ACTION_PENDING
             request["price"] = float(price)
+            request["type_filling"] = mt5.ORDER_FILLING_RETURN # Pending always uses RETURN
             
             # Determine Limit vs Stop
             if order_type == "buy":
+                # Buy Limit if Price < Ask, Buy Stop if Price > Ask
                 if request["price"] < tick.ask:
-                    request["type"] = mt5.ORDER_TYPE_BUY_LIMIT
-                else:
+                    request["type"] = mt5.ORDER_TYPE_BUY_LIMIT 
+                else: 
                     request["type"] = mt5.ORDER_TYPE_BUY_STOP
-            else: # sell
+            else: 
+                # Sell Limit if Price > Bid, Sell Stop if Price < Bid
                 if request["price"] > tick.bid:
                     request["type"] = mt5.ORDER_TYPE_SELL_LIMIT
                 else:
                     request["type"] = mt5.ORDER_TYPE_SELL_STOP
 
+        print(f"[DEBUG] Sending Order: {request}")
         result = mt5.order_send(request)
         if result.retcode != mt5.TRADE_RETCODE_DONE:
              print(f"[ERROR] Order send failed: {result.retcode} - {result.comment}")

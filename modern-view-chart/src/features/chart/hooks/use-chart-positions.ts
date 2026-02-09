@@ -28,8 +28,8 @@ export function useChartPositions(
     });
 
     // Helper to match symbols with or without suffixes like .m
-    const norm = (sym: string | undefined) => (sym || '').toUpperCase().replace('.M', '').replace('.H', '');
-    const targetSymbol = norm(symbol);
+    const normalizeSymbol = (s: string | undefined) => (s || '').toUpperCase().replace(/[.-]?[MH]$/, '');
+    const targetSymbol = normalizeSymbol(symbol);
 
     useEffect(() => {
         sharedRef.current = { symbol, positions, symbolInfo, draggingPosition: useMarketStore.getState().draggingPosition, focusedTicket };
@@ -41,7 +41,8 @@ export function useChartPositions(
         const series = seriesRef.current;
         if (!series || !symbol) return;
 
-        if (draftOrder && norm(draftOrder.symbol) === targetSymbol) {
+        // Note: We might want to show positions even during draft, but for now filtering is key
+        if (draftOrder && normalizeSymbol(draftOrder.symbol) === targetSymbol) {
             Object.keys(priceLinesRef.current).forEach(ticket => {
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
@@ -52,7 +53,7 @@ export function useChartPositions(
             return;
         }
 
-        let symbolPositions = positions.filter(p => norm(p.symbol) === targetSymbol);
+        let symbolPositions = positions.filter(p => normalizeSymbol(p.symbol) === targetSymbol);
         if (focusedTicket) {
             symbolPositions = symbolPositions.filter(p => p.ticket === focusedTicket);
         }

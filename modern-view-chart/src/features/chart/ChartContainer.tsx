@@ -69,14 +69,17 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId);
 
     /* ================= DATA ================= */
+    const chartType = chartInstance?.chartType || 'candles';
+
+    /* ================= DATA ================= */
     const { sendMessage } = useWebSocket();
-    useChartData(chartId, symbol, interval, source, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
+    useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
 
     /* ================= OVERLAYS ================= */
     // useChartCrosshair(chartId, priceChartRef, seriesRef);
     useChartPositions(symbol, seriesRef, positions, priceChartRef);
     useChartOrders(symbol, seriesRef, orders);
-    useChartDraftOrder(symbol, seriesRef);
+    useChartDraftOrder(symbol, seriesRef, isReady);
 
     /* ================= INDICATORS ================= */
     useChartIndicators(
@@ -186,6 +189,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 interval={chartInstance?.interval}
                 source={chartInstance?.source}
                 candles={candles}
+                chartType={chartType}
                 priceChart={priceChartRef.current}
                 series={seriesRef.current}
             />

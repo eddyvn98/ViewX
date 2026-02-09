@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
 import { calculateIndicators, IndicatorCache } from '../logic/indicator-calculations';
 import { getOHLCRefs, getIndicatorRefs, renderOHLC, renderStatus, renderIndicators, OHLCRefs } from '../logic/legend-renderer';
+import { calculateHeikinAshi } from '../utils/indicator-math';
 
 interface LegendDOMUpdaterProps {
     chartId: string;
@@ -11,11 +12,12 @@ interface LegendDOMUpdaterProps {
     interval: string | undefined;
     source: string | undefined;
     candles: Candle[];
+    chartType?: string;
 }
 
 export function useLegendDOMUpdater(
     containerRef: React.RefObject<HTMLDivElement | null>,
-    { chartId, symbol, interval, source, candles }: LegendDOMUpdaterProps
+    { chartId, symbol, interval, source, candles, chartType = 'candles' }: LegendDOMUpdaterProps
 ) {
     const indicatorCacheRef = useRef<IndicatorCache[]>([]);
     const rafIdRef = useRef<number | null>(null);
@@ -29,12 +31,31 @@ export function useLegendDOMUpdater(
     const lastUpdateAtRef = useRef(0);
     const lastIsLiveRef = useRef<boolean | null>(null);
 
-    // Refresh indicator calculations when candles change
+    // Memoize display candles (HA vs Raw)
+    const displayCandles = useMemo(() => {
+        if (!candles.length) return [];
+        if (chartType === 'heikin_ashi') {
+            const haData = calculateHeikinAshi(candles);
+            return haData.map(c => ({
+                ...c,
+                open: c.ha_open,
+                high: c.ha_high,
+                low: c.ha_low,
+                close: c.ha_close
+            }));
+        }
+        return candles;
+    }, [candles, chartType]);
+
+    // Refresh indicator calculations when candles change (Use displayCandles for indicators?)
+    // Usually indicators are calculated on standard candles, but some prefer HA.
+    // TradingView calculates indicators on HA candles if HA is selected? 
+    // Usually yes because the visual chart is HA.
     useEffect(() => {
-        if (!candles.length) return;
+        if (!displayCandles.length) return;
         const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
-        indicatorCacheRef.current = calculateIndicators(candles, indicators);
-    }, [candles.length, chartId, candles[candles.length - 2]?.time]);
+        indicatorCacheRef.current = calculateIndicators(displayCandles, indicators);
+    }, [displayCandles, chartId]);
 
     useEffect(() => {
         if (!containerRef.current || !symbol || !interval || !source) return;
@@ -50,15 +71,39 @@ export function useLegendDOMUpdater(
             if (isLive && (now - lastUpdateAtRef.current < 32)) return;
             lastUpdateAtRef.current = now;
 
-            const candle = candles[activeIndex] || candles[candles.length - 1];
+            // Use displayCandles for base values
+            const candle = displayCandles[activeIndex] || displayCandles[displayCandles.length - 1];
             if (!candle) return;
 
             let { open, high, low, close } = candle;
 
+            // Real-time update logic
             if (isLive && currentPrice) {
-                close = currentPrice;
-                if (close > high) high = close;
-                if (close < low) low = close;
+                if (chartType === 'heikin_ashi') {
+                    // For HA, we need to recalculate based on RAW Price Update
+                    const rawCandle = candles[activeIndex] || candles[candles.length - 1];
+                    const haOpen = Number(candle.open); // Fixed for this candle (HA Open)
+
+                    let rawClose = Number(currentPrice);
+                    let rawHigh = Math.max(Number(rawCandle.high), rawClose);
+                    let rawLow = Math.min(Number(rawCandle.low), rawClose);
+                    let rawOpen = Number(rawCandle.open);
+
+                    // HA Recalc
+                    const haClose = (rawOpen + rawHigh + rawLow + rawClose) / 4;
+                    const haHigh = Math.max(rawHigh, haOpen, haClose);
+                    const haLow = Math.min(rawLow, haOpen, haClose);
+
+                    open = haOpen;
+                    high = haHigh;
+                    low = haLow;
+                    close = haClose;
+                } else {
+                    // Standard Candles
+                    close = currentPrice;
+                    if (close > high) high = close;
+                    if (close < low) low = close;
+                }
             }
 
             renderOHLC(ohlcRefsRef.current, open, high, low, close);
@@ -125,5 +170,5 @@ export function useLegendDOMUpdater(
             unsubTicker();
             if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
         };
-    }, [chartId, symbol, interval, source, candles.length, containerRef, indicatorCacheRef.current]);
+    }, [chartId, symbol, interval, source, candles, displayCandles, chartType, containerRef]);
 }

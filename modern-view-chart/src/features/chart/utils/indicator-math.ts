@@ -126,23 +126,28 @@ export function calculateHeikinAshi(candles: Candle[]): HACandle[] {
     const result: HACandle[] = [];
 
     // Initial HA Open is regular Open
-    let prevHaOpen = candles[0].open;
-    let prevHaClose = (candles[0].open + candles[0].high + candles[0].low + candles[0].close) / 4;
+    let prevHaOpen = Number(candles[0].open);
+    let prevHaClose = (Number(candles[0].open) + Number(candles[0].high) + Number(candles[0].low) + Number(candles[0].close)) / 4;
 
     result.push({
         ...candles[0],
         ha_open: prevHaOpen,
         ha_close: prevHaClose,
-        ha_high: candles[0].high,
-        ha_low: candles[0].low
+        ha_high: Number(candles[0].high),
+        ha_low: Number(candles[0].low)
     });
 
     for (let i = 1; i < candles.length; i++) {
         const c = candles[i];
-        const haClose = (c.open + c.high + c.low + c.close) / 4;
+        const open = Number(c.open);
+        const high = Number(c.high);
+        const low = Number(c.low);
+        const close = Number(c.close);
+
+        const haClose = (open + high + low + close) / 4;
         const haOpen = (prevHaOpen + prevHaClose) / 2;
-        const haHigh = Math.max(c.high, haOpen, haClose);
-        const haLow = Math.min(c.low, haOpen, haClose);
+        const haHigh = Math.max(high, haOpen, haClose);
+        const haLow = Math.min(low, haOpen, haClose);
 
         result.push({
             ...c,

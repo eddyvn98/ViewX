@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { calculateHeikinAshi } from '../utils/indicator-math';
 
 const EMPTY_CANDLES: any[] = [];
 
@@ -10,6 +11,7 @@ export function useChartData(
     symbol: string | undefined,
     interval: string | undefined,
     source: string | undefined,
+    chartType: 'candles' | 'heikin_ashi',
     chartRef: React.RefObject<IChartApi | null>,
     subchartRef: React.RefObject<IChartApi | null>,
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
@@ -33,19 +35,22 @@ export function useChartData(
 
     const lastSymbolRef = useRef(symbol);
     const lastKeyRef = useRef(key);
+    const lastChartTypeRef = useRef(chartType);
     const isConnected = useMarketStore(state => state.isConnected);
 
     // 2. TẬP TRUNG TỐI ƯU: Cập nhật giá nhảy Real-time (Manual Subscription + Frame Throttle)
     const lastTickRef = useRef({ price: 0 });
-    const currentCandleRef = useRef<any>(null);
+    const currentCandleRef = useRef<any>(null); // Always stores RAW candle
+    const currentHaCandleRef = useRef<any>(null); // Stores HA state snapshot
     const frameRequestedRef = useRef<boolean>(false);
     const lastSentTimeRef = useRef<number | null>(null);
+    const lastFetchRequestTimeRef = useRef<number>(0);
 
     // 1. Đồng bộ toàn bộ dữ liệu (History hoặc New Candle)
     useEffect(() => {
         if (!isReady || !seriesRef.current || !symbol || !interval || !source) return;
 
-        const isContextChange = key !== lastKeyRef.current;
+        const isContextChange = key !== lastKeyRef.current || chartType !== lastChartTypeRef.current;
         const currentCandles = getCandles();
 
         // 1. Handle Context Reset
@@ -55,16 +60,44 @@ export function useChartData(
             timescaleSyncRef.current?.setData([]);
 
             lastKeyRef.current = key;
+            lastChartTypeRef.current = chartType;
             lastSymbolRef.current = symbol; // Keep track for ticker sync
             isInitialMount.current = true;
             lastDataLength.current = 0;
+
+            // Reset references to prevent stale data usage
+            currentCandleRef.current = null;
+            currentHaCandleRef.current = null;
+
+            // ⚡ CRITICAL: Reset the last sent time and last tick price 
+            // to allow fresh updates for the new symbol
+            lastSentTimeRef.current = null;
+            lastFetchRequestTimeRef.current = 0;
+            lastTickRef.current.price = 0;
+
+            // Reset scales immediately to avoid "distortion" from previous symbol's price range
+            requestAnimationFrame(() => {
+                if (!chartRef.current || !subchartRef.current) return;
+
+                chartRef.current.timeScale().scrollToRealTime();
+
+                // Set autoScale to true but also force a reset of the price scale
+                // by momentarily disabling autoScale if it was already on
+                const priceScale = chartRef.current.priceScale('right');
+                priceScale.applyOptions({ autoScale: true });
+                subchartRef.current.priceScale('right').applyOptions({ autoScale: true });
+            });
         }
 
         const series = seriesRef.current;
 
         // Request initial candles if none are present
-        if (currentCandles.length === 0) {
-            if (symbol && interval && source === 'MT5' && isConnected) {
+        if (currentCandles.length === 0 && symbol && interval && source === 'MT5' && isConnected) {
+            const now = Date.now();
+            // ⚡ LOOP PROTECTION: Prevent spamming requests if backend returns empty/null
+            // Only retry every 2 seconds instead of every render frame
+            if (now - lastFetchRequestTimeRef.current > 2000) {
+                lastFetchRequestTimeRef.current = now;
                 sendMessage({
                     topic: "mt5_command",
                     command: "get_candles",
@@ -72,13 +105,33 @@ export function useChartData(
                     interval: interval,
                     count: 300
                 });
+                // Also fetch symbol info for PnL accuracy
+                sendMessage({
+                    topic: "mt5_command",
+                    command: "get_symbol_info",
+                    symbol: symbol
+                });
+                console.log(`📡 [FETCH] Requesting init candles & info for ${symbol}`);
             }
             return;
         }
 
         // 2. Inject Data to Chart (Context Change or New Data Batch)
         if (isContextChange || currentCandles.length !== lastDataLength.current) {
-            const formatted = currentCandles.map(c => ({
+            let displayCandles = currentCandles;
+
+            if (chartType === 'heikin_ashi') {
+                const haData = calculateHeikinAshi(currentCandles);
+                displayCandles = haData.map(c => ({
+                    ...c,
+                    open: c.ha_open,
+                    high: c.ha_high,
+                    low: c.ha_low,
+                    close: c.ha_close
+                }));
+            }
+
+            const formatted = displayCandles.map(c => ({
                 time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as Time,
                 open: Number(c.open),
                 high: Number(c.high),
@@ -133,22 +186,31 @@ export function useChartData(
         }
 
         lastDataLength.current = currentCandles.length;
-    }, [isReady, candlesCount, symbol, interval, source, isConnected]);
+    }, [isReady, candlesCount, symbol, interval, source, isConnected, chartType]);
 
     // Đồng bộ nến cuối cùng từ Store vào Ref mỗi khi nến mới được thêm hoặc Reset
     useEffect(() => {
         const currentCandles = getCandles();
         if (currentCandles.length > 0) {
             currentCandleRef.current = { ...currentCandles[currentCandles.length - 1] };
+
+            if (chartType === 'heikin_ashi') {
+                const haData = calculateHeikinAshi(currentCandles);
+                if (haData.length > 0) {
+                    currentHaCandleRef.current = haData[haData.length - 1];
+                }
+            }
         }
-    }, [candlesCount]);
+    }, [candlesCount, chartType]);
 
     useEffect(() => {
         if (!seriesRef.current || !normSymbol || !isReady) return;
 
         const updateChartFrame = () => {
             const series = seriesRef.current;
-            const base = currentCandleRef.current;
+            const base = currentCandleRef.current; // RAW candle (updated in place)
+            const haBase = currentHaCandleRef.current; // HA Base for Open
+
             if (!series || !base) {
                 frameRequestedRef.current = false;
                 return;
@@ -157,22 +219,44 @@ export function useChartData(
             const candleTime = typeof base.time === 'object' ? (base.time as any).timestamp : Number(base.time);
 
             // Defensive check: lightweight-charts will throw if we update with an older time
-            // We use a small ref to track the last sent time to this series
             if (lastSentTimeRef.current !== null && candleTime < lastSentTimeRef.current) {
                 frameRequestedRef.current = false;
                 return;
             }
             lastSentTimeRef.current = candleTime;
 
+            let open = Number(base.open);
+            let high = Number(base.high);
+            let low = Number(base.low);
+            let close = Number(base.close);
+
+            // Real-time HA Calculation
+            if (chartType === 'heikin_ashi' && haBase) {
+                const haOpen = Number(haBase.ha_open); // Fixed for this candle
+                // Recalculate based on LATEST raw values
+                const haClose = (open + high + low + close) / 4;
+                const haHigh = Math.max(high, haOpen, haClose);
+                const haLow = Math.min(low, haOpen, haClose);
+
+                open = haOpen;
+                high = haHigh;
+                low = haLow;
+                close = haClose;
+            }
+
+            if (isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+                frameRequestedRef.current = false;
+                return;
+            }
+
             series.update({
                 time: candleTime as Time,
-                open: Number(base.open),
-                high: Number(base.high),
-                low: Number(base.low),
-                close: Number(base.close),
+                open,
+                high,
+                low,
+                close,
             });
 
-            // Note: subSyncRef doesn't need real-time updates - it has future points for crosshair
             frameRequestedRef.current = false;
         };
 
@@ -205,6 +289,6 @@ export function useChartData(
             unsub();
             frameRequestedRef.current = false;
         };
-    }, [normSymbol, isReady]);
+    }, [normSymbol, isReady, chartType]);
 
 }

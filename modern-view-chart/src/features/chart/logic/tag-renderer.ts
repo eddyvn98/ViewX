@@ -40,7 +40,8 @@ export function updateTagVisuals(
     tag: TagData,
     symbolInfo: any,
     currentPrice: number,
-    draftOrder: any
+    draftOrder: any,
+    symbol?: string // Add symbol fallback
 ) {
     // 1. Label & Color
     if (elements.label.textContent !== tag.label) {
@@ -84,7 +85,7 @@ export function updateTagVisuals(
             currentPrice: currentPrice,
             volume: (tag.pOriginal && 'volume' in tag.pOriginal ? tag.pOriginal.volume : 0) || draftOrder?.volume || 0,
             symbolInfo,
-            symbol: symbolInfo?.symbol
+            symbol: symbol || symbolInfo?.symbol
         });
     } else {
         pnlVal = calculatePnL({
@@ -93,7 +94,7 @@ export function updateTagVisuals(
             currentPrice: tag.price, // Projected price
             volume: (tag.pOriginal && 'volume' in tag.pOriginal ? tag.pOriginal.volume : 0) || draftOrder?.volume || 0,
             symbolInfo,
-            symbol: symbolInfo?.symbol
+            symbol: symbol || symbolInfo?.symbol
         });
     }
 

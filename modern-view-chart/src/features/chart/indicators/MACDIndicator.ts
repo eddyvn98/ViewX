@@ -101,18 +101,22 @@ export class MACDIndicator {
         const lastIdxMACD = macd.length - 1;
         const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
 
-        if (!isNaN(macd[lastIdxMACD])) {
-            this.macdSeries.update({ time: candleTime as any, value: macd[lastIdxMACD] });
-        }
-        if (!isNaN(sig[lastIdxMACD])) {
-            this.signalSeries!.update({ time: candleTime as any, value: sig[lastIdxMACD] });
-        }
-        if (!isNaN(histogram[lastIdxMACD])) {
-            this.histogramSeries!.update({
-                time: candleTime as any,
-                value: histogram[lastIdxMACD],
-                color: histogram[lastIdxMACD] >= 0 ? '#26a69a' : '#ef5350'
-            });
+        try {
+            if (!isNaN(macd[lastIdxMACD])) {
+                this.macdSeries.update({ time: candleTime as any, value: macd[lastIdxMACD] });
+            }
+            if (!isNaN(sig[lastIdxMACD])) {
+                this.signalSeries!.update({ time: candleTime as any, value: sig[lastIdxMACD] });
+            }
+            if (!isNaN(histogram[lastIdxMACD])) {
+                this.histogramSeries!.update({
+                    time: candleTime as any,
+                    value: histogram[lastIdxMACD],
+                    color: histogram[lastIdxMACD] >= 0 ? '#26a69a' : '#ef5350'
+                });
+            }
+        } catch (err) {
+            // Ignore update errors
         }
     }
 

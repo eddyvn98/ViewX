@@ -17,8 +17,8 @@ export function useChartOrders(
     });
 
     // Helper to match symbols with or without suffixes like .m
-    const norm = (sym: string | undefined) => (sym || '').toUpperCase().replace('.M', '').replace('.H', '');
-    const targetSymbol = norm(symbol);
+    const normalizeSymbol = (s: string | undefined) => (s || '').toUpperCase().replace(/[.-]?[MH]$/, '');
+    const targetSymbol = normalizeSymbol(symbol);
 
     useEffect(() => {
         sharedRef.current = { symbol, orders, draggingPosition: useMarketStore.getState().draggingPosition };
@@ -30,7 +30,7 @@ export function useChartOrders(
         const series = seriesRef.current;
         if (!series || !symbol) return;
 
-        if (draftOrder && norm(draftOrder.symbol) === targetSymbol) {
+        if (draftOrder && normalizeSymbol(draftOrder.symbol) === targetSymbol) {
             Object.keys(priceLinesRef.current).forEach(ticket => {
                 const lines = priceLinesRef.current[ticket];
                 if (lines.entry) series.removePriceLine(lines.entry);
@@ -42,7 +42,7 @@ export function useChartOrders(
         }
 
         const activeTickets = new Set<string>();
-        orders.filter(o => norm(o.symbol) === targetSymbol).forEach(o => {
+        orders.filter(o => normalizeSymbol(o.symbol) === targetSymbol).forEach(o => {
             const ticket = o.ticket.toString();
             activeTickets.add(ticket);
 

@@ -75,7 +75,7 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
 
             return { config, results, period };
         }).filter(Boolean) as { config: any, results: any, period: number }[];
-    }, [indicators, candles.length, (candles.length > 1 ? (candles[candles.length - 2] as any).time : 0)]);
+    }, [indicators, candles.length, chartId, (candles.length > 0 ? (candles[0] as any).time : 0)]);
 
 
     // 2. Adjust for realtime price if needed (only for the LATEST index)

@@ -5,7 +5,8 @@ import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
 
 export function useChartDraftOrder(
     symbol: string | undefined,
-    seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>
+    seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>,
+    isReady: boolean
 ) {
     const draftOrder = useMarketStore((state) => state.draftOrder);
     const focusedTicket = useMarketStore((state) => state.focusedTicket);
@@ -16,18 +17,18 @@ export function useChartDraftOrder(
 
     // EFFECT 1: Manage Existence (Create/Remove)
     useEffect(() => {
-        if (!seriesRef.current || !symbol) return;
+        if (!seriesRef.current || !symbol || !isReady) return;
         const series = seriesRef.current;
 
         const cleanup = () => {
-            if (linesRef.current.entry) series.removePriceLine(linesRef.current.entry);
-            if (linesRef.current.sl) series.removePriceLine(linesRef.current.sl);
-            if (linesRef.current.tp) series.removePriceLine(linesRef.current.tp);
+            if (linesRef.current.entry) { series.removePriceLine(linesRef.current.entry); linesRef.current.entry = undefined; }
+            if (linesRef.current.sl) { series.removePriceLine(linesRef.current.sl); linesRef.current.sl = undefined; }
+            if (linesRef.current.tp) { series.removePriceLine(linesRef.current.tp); linesRef.current.tp = undefined; }
             linesRef.current = {};
         };
 
         if (focusedTicket || !draftOrder || draftOrder.symbol !== symbol) {
-            cleanup();
+            if (Object.keys(linesRef.current).length > 0) cleanup();
             return;
         }
 
@@ -81,7 +82,7 @@ export function useChartDraftOrder(
             linesRef.current.tp = undefined;
         }
 
-    }, [symbol, !!draftOrder, draftOrder?.symbol, !!focusedTicket]);
+    }, [symbol, !!draftOrder, draftOrder?.symbol, !!focusedTicket, isReady]);
 
     // EFFECT 2: High-frequency updates (Dragging & Price)
     useEffect(() => {
@@ -94,6 +95,7 @@ export function useChartDraftOrder(
                 const ask = bid * 1.0001;
                 const entryPrice = draft.isMarket ? (draft.type === 'buy' ? ask : bid) : (draft.price || bid);
 
+                // console.log('[DraftOrder] Update prices', entryPrice);
                 if (linesRef.current.entry) linesRef.current.entry.applyOptions({ price: entryPrice });
                 if (linesRef.current.sl && draft.sl) linesRef.current.sl.applyOptions({ price: draft.sl });
                 if (linesRef.current.tp && draft.tp) linesRef.current.tp.applyOptions({ price: draft.tp });
