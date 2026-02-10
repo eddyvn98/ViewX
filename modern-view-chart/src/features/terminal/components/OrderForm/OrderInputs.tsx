@@ -10,10 +10,11 @@ interface OrderInputsProps {
     setSl: (v: string) => void;
     tp: string;
     setTp: (v: string) => void;
-    slPnl: string | null;
-    tpPnl: string | null;
+    slPnl: { label: string; percent: number } | null;
+    tpPnl: { label: string; percent: number } | null;
     adjustVolume: (val: string, step: number) => string;
     adjustValue: (val: string, step: number, isSL: boolean) => string;
+    formatPrice: (p: number) => string;
 }
 
 export function OrderInputs({
@@ -64,7 +65,12 @@ export function OrderInputs({
                             <button onClick={() => setSl(adjustValue(sl, 1, true))} className="p-1 text-zinc-600 hover:text-white"><Plus size={10} /></button>
                         </div>
                     </div>
-                    {slPnl && <span className="text-[9px] font-bold text-red-500 block">{slPnl}</span>}
+                    {slPnl && (
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-[9px] font-bold text-red-500">{slPnl.label.split(' (')[0]}</span>
+                            <span className="text-[9px] font-black text-red-500">{slPnl.percent.toFixed(2)}%</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Take Profit (Chốt lời) */}
@@ -85,7 +91,12 @@ export function OrderInputs({
                             <button onClick={() => setTp(adjustValue(tp, 1, false))} className="p-1 text-zinc-600 hover:text-white"><Plus size={10} /></button>
                         </div>
                     </div>
-                    {tpPnl && <span className="text-[9px] font-bold text-blue-500 block">{tpPnl}</span>}
+                    {tpPnl && (
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-[9px] font-bold text-blue-500">{tpPnl.label.split(' (')[0]}</span>
+                            <span className="text-[9px] font-black text-blue-500">{tpPnl.percent.toFixed(2)}%</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

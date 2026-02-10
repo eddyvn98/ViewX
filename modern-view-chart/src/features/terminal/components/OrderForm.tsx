@@ -12,23 +12,23 @@ import { SideButtons } from './OrderForm/SideButtons';
 import { OrderInputs } from './OrderForm/OrderInputs';
 import { OrderDetails } from './OrderForm/OrderDetails';
 import { SentimentBar } from './OrderForm/SentimentBar';
+import { MobileTradeFlow } from './OrderForm/MobileTradeFlow';
 
 type OrderType = 'market' | 'pending';
 type Side = 'buy' | 'sell';
 
-export const OrderForm = memo(function OrderForm() {
+/**
+ * Mobile-specific order logic hook
+ */
+export function useOrderFormLogic() {
     const [orderType, setOrderType] = useState<OrderType>('market');
     const [side, setSide] = useState<Side>('buy');
     const [volume, setVolume] = useState('0.1');
     const [sl, setSl] = useState('');
     const [tp, setTp] = useState('');
-    const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
     const [isDrafting, setIsDrafting] = useState(false);
 
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
-    const positions = useMarketStore(state => state.positions);
-    const setPositions = useMarketStore(state => state.setPositions);
-    const isInputFocused = useMarketStore(state => state.isInputFocused);
     const setInputFocused = useMarketStore(state => state.setInputFocused);
     const { sendMessage } = useWebSocket();
 
@@ -56,20 +56,6 @@ export const OrderForm = memo(function OrderForm() {
     }, [symbol, side, volume, sl, tp, orderType, isDrafting, setDraftOrder]);
 
     const resetForm = () => { setSl(''); setTp(''); setIsDrafting(false); setDraftOrder(null); };
-    const formatPrice = (p: number) => p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    const pnlCalculation = (price: string) => {
-        const targetPrice = parseFloat(price);
-        if (isNaN(targetPrice) || !bid) return null;
-        const volNum = parseFloat(volume) || 0;
-        const entry = side === 'buy' ? ask : bid;
-        const diff = side === 'buy' ? targetPrice - entry : entry - targetPrice;
-        const pnl = diff * volNum * 100;
-        return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USD`;
-    };
-
-    const slPnl = useMemo(() => pnlCalculation(sl), [sl, side, volume, bid, ask]);
-    const tpPnl = useMemo(() => pnlCalculation(tp), [tp, side, volume, bid, ask]);
 
     const adjustValue = (val: string, step: number, isSL: boolean) => {
         let current = parseFloat(val);
@@ -88,15 +74,6 @@ export const OrderForm = memo(function OrderForm() {
     };
 
     const handleSubmit = () => {
-        const newPosition: any = {
-            ticket: Math.floor(Math.random() * 1000000),
-            symbol, type: side, volume: parseFloat(volume),
-            open_price: side === 'buy' ? ask : bid,
-            current_price: side === 'buy' ? bid : ask,
-            sl: parseFloat(sl) || 0, tp: parseFloat(tp) || 0,
-            profit: 0, time: Math.floor(Date.now() / 1000), magic: 0
-        };
-
         sendMessage({
             topic: isCrypto ? 'binance_command' : 'mt5_command',
             command: isCrypto ? side : 'place_order',
@@ -106,156 +83,55 @@ export const OrderForm = memo(function OrderForm() {
             sl: parseFloat(sl) || 0, tp: parseFloat(tp) || 0,
             is_market: orderType === 'market'
         });
-
         resetForm();
     };
 
+    const formatPrice = (p: number) => p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const calculatePnl = (targetPriceStr: string) => {
+        const targetPrice = parseFloat(targetPriceStr);
+        if (isNaN(targetPrice) || !bid) return null;
+        const volNum = parseFloat(volume) || 0;
+        const entry = side === 'buy' ? ask : bid;
+        const diff = side === 'buy' ? targetPrice - entry : entry - targetPrice;
+
+        // Basic calculation (can be refined with actual contract sizes)
+        const pnlValue = diff * volNum * 100;
+        const pnlPercent = (diff / entry) * 100;
+
+        return {
+            value: pnlValue,
+            percent: pnlPercent,
+            label: `${pnlValue >= 0 ? '+' : ''}${pnlValue.toFixed(2)} USD (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`
+        };
+    };
+
+    return {
+        symbol, side, setSide, orderType, setOrderType, volume, setVolume,
+        sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
+        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl
+    };
+}
+
+export const OrderForm = memo(function OrderForm() {
+    const {
+        symbol, side, setSide, orderType, setOrderType, volume, setVolume,
+        sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
+        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl
+    } = useOrderFormLogic();
+
+    const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+
+    const slPnl = useMemo(() => calculatePnl(sl), [sl, calculatePnl]);
+    const tpPnl = useMemo(() => calculatePnl(tp), [tp, calculatePnl]);
+
+    const resetForm = () => { setSl(''); setTp(''); setIsDrafting(false); };
+
+    const isCrypto = symbol.includes('BTC') || symbol.includes('ETH'); // Simplified check for display
+
     return (
         <div className="flex-1 bg-[#0b0e14] flex flex-col overflow-hidden select-none">
-            {/* MOBILE ELEGANT LAYOUT */}
-            <div
-                className="md:hidden flex flex-col p-3 pb-20 space-y-3 h-full justify-start overflow-y-auto custom-scrollbar"
-            >
-                {/* ROW 1: Info Header */}
-                <div className="flex items-center justify-between shrink-0">
-                    <div className="flex flex-col">
-                        <span className="font-bold text-white text-xs tracking-tight">{symbol.replace('m', '')}</span>
-                        <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-sm w-fit mt-0.5", isCrypto ? "bg-yellow-500/10 text-yellow-100/60" : "bg-blue-500/10 text-blue-100/60")}>
-                            {isCrypto ? 'BINANCE' : 'MT5 GATEWAY'}
-                        </span>
-                    </div>
-                    <div className="w-36">
-                        <OrderTypeTabs orderType={orderType} setOrderType={setOrderType} />
-                    </div>
-                </div>
-
-                {/* ROW 2: Price Action */}
-                <div className="shrink-0 bg-white/[0.02] p-0.5 rounded-xl">
-                    <SideButtons
-                        side={side} setSide={setSide} setIsDrafting={setIsDrafting}
-                        bid={bid} ask={ask} spread={spread} formatPrice={formatPrice}
-                    />
-                </div>
-
-                {/* ROW 3: Configuration Grid (Volume & Action) */}
-                <div className="grid grid-cols-2 gap-3 shrink-0">
-                    <div className="flex flex-col">
-                        <span className="block text-[9px] text-zinc-500 font-bold mb-1 ml-1 uppercase">Volume</span>
-                        <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden h-10">
-                            <button
-                                onClick={() => setVolume(adjustVolume(volume, -0.01))}
-                                className="w-9 h-full flex items-center justify-center text-zinc-500 active:bg-zinc-800 active:text-white transition-colors"
-                            >
-                                <Minus size={14} />
-                            </button>
-                            <div className="flex-1 relative flex items-center justify-center min-w-0">
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={volume}
-                                    onFocus={() => setInputFocused(true)}
-                                    onBlur={() => setInputFocused(false)}
-                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                    onChange={(e) => setVolume(e.target.value)}
-                                    className="w-full bg-transparent text-center text-xs text-white focus:outline-none font-bold"
-                                />
-                                <span className="absolute right-1 text-[7px] text-zinc-600 font-black pointer-events-none">LOT</span>
-                            </div>
-                            <button
-                                onClick={() => setVolume(adjustVolume(volume, 0.01))}
-                                className="w-9 h-full flex items-center justify-center text-zinc-500 active:bg-zinc-800 active:text-white transition-colors"
-                            >
-                                <Plus size={14} />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="block text-[9px] mb-1 opacity-0">Action</span>
-                        <button
-                            onClick={handleSubmit}
-                            className={cn(
-                                "flex-1 h-10 rounded-lg text-xs font-black shadow-2xl active:scale-[0.98] transition-all uppercase tracking-wider flex items-center justify-center gap-1",
-                                side === 'buy' ? "bg-blue-600 shadow-blue-600/20 text-white" : "bg-red-600 shadow-red-600/20 text-white"
-                            )}
-                        >
-                            <span>{side === 'buy' ? 'Buy' : 'Sell'}</span>
-                            <span className="text-[10px] opacity-70">{volume}</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* ROW 4: SL & TP */}
-                <div className="grid grid-cols-2 gap-3 shrink-0 pt-0.5">
-                    <div className="flex flex-col">
-                        <span className="text-[9px] text-red-500/60 font-bold mb-1 ml-1 uppercase">Stop Loss</span>
-                        <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden h-10">
-                            <button
-                                onClick={() => setSl(adjustValue(sl, -10, true))}
-                                className="w-9 h-full flex items-center justify-center text-zinc-500 active:bg-zinc-800 active:text-red-500 transition-colors"
-                            >
-                                <Minus size={14} />
-                            </button>
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="Auto"
-                                value={sl}
-                                onFocus={() => setInputFocused(true)}
-                                onBlur={() => setInputFocused(false)}
-                                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                onChange={(e) => setSl(e.target.value)}
-                                className="flex-1 bg-transparent text-center text-xs text-red-400 focus:outline-none font-bold placeholder:text-zinc-800"
-                            />
-                            <button
-                                onClick={() => setSl(adjustValue(sl, 10, true))}
-                                className="w-9 h-full flex items-center justify-center text-zinc-500 active:bg-zinc-800 active:text-red-500 transition-colors"
-                            >
-                                <Plus size={14} />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-[9px] text-blue-500/60 font-bold mb-1 ml-1 uppercase">Take Profit</span>
-                        <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden h-10">
-                            <button
-                                onClick={() => setTp(adjustValue(tp, -10, false))}
-                                className="w-8 h-full flex items-center justify-center text-zinc-500 active:bg-zinc-800 active:text-blue-500 transition-colors"
-                            >
-                                <Minus size={14} />
-                            </button>
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="Auto"
-                                value={tp}
-                                onFocus={() => setInputFocused(true)}
-                                onBlur={() => setInputFocused(false)}
-                                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                onChange={(e) => setTp(e.target.value)}
-                                className="flex-1 bg-transparent text-center text-xs text-blue-400 focus:outline-none font-bold placeholder:text-zinc-800"
-                            />
-                            <button
-                                onClick={() => setTp(adjustValue(tp, 10, false))}
-                                className="w-8 h-full flex items-center justify-center text-zinc-500 active:bg-zinc-800 active:text-blue-500 transition-colors"
-                            >
-                                <Plus size={14} />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {isInputFocused && (
-                    <div className="flex justify-center pt-2">
-                        <button
-                            onClick={() => (document.activeElement as HTMLElement)?.blur()}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-800 text-zinc-400 text-xs font-bold animate-in fade-in slide-in-from-bottom-2"
-                        >
-                            <ChevronDown size={14} />
-                            <span>Đóng bàn phím</span>
-                        </button>
-                    </div>
-                )}
-            </div>
+            {/* MOBILE LAYOUT REMOVED - NOW IN BOTTOM NAV */}
 
             {/* DESKTOP LAYOUT (Existing) */}
             <div className="hidden md:flex flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3 flex-col">
@@ -282,6 +158,7 @@ export const OrderForm = memo(function OrderForm() {
                     sl={sl} setSl={setSl} tp={tp} setTp={setTp}
                     slPnl={slPnl} tpPnl={tpPnl}
                     adjustVolume={adjustVolume} adjustValue={adjustValue}
+                    formatPrice={formatPrice}
                 />
 
                 <div className="pt-0 space-y-2">
@@ -300,3 +177,4 @@ export const OrderForm = memo(function OrderForm() {
         </div>
     );
 });
+

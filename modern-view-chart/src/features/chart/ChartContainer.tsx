@@ -182,7 +182,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     /* ================= CROSSHAIR STATE (Removed - now handled via DOM) ================= */
 
     /* ================= MOBILE VIEW OPTIMIZATION ================= */
-    const isMinimized = useMarketStore(state => (state.activeMobileTab === 'trade' || state.activeMobileTab === 'positions'));
+    const isMinimized = useMarketStore(state => state.activeMobileTab === 'positions');
 
     return (
         <div

@@ -165,39 +165,8 @@ export default function Home() {
               )}
             </div>
 
-            {/* Mobile Place Order Panel - GPU ACCELERATED SLIDE */}
-            <div className={cn(
-              "fixed left-0 right-0 bg-zinc-950 border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform",
-              "bottom-0",
-              activeMobileTab === 'trade' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-              isInputFocused ? "h-[80%]" : "h-[29%]"
-            )}>
-              <div
-                className="h-6 flex items-center justify-center cursor-row-resize active:bg-zinc-900 touch-none shrink-0"
-                onClick={handleClosePanel}
-                onTouchStart={(e) => {
-                  const touch = e.touches[0];
-                  (window as any)._panelTouchStartY = touch.clientY;
-                }}
-                onTouchEnd={(e) => {
-                  const startY = (window as any)._panelTouchStartY;
-                  if (startY === undefined) return;
-                  const endY = e.changedTouches[0].clientY;
-                  if (endY - startY > 30) { // Swipe down
-                    handleClosePanel();
-                  }
-                  delete (window as any)._panelTouchStartY;
-                }}
-              >
-                <div className="w-12 h-1 bg-zinc-800 rounded-full" />
-              </div>
-              <div
-                onScroll={handleScroll}
-                className="flex-1 overflow-y-auto custom-scrollbar"
-              >
-                <OrderForm />
-              </div>
-            </div>
+            {/* Mobile Place Order Panel Removed (Integrated into Bottom Nav) */}
+
 
             {/* Mobile Watchlist Tab */}
             {activeMobileTab === 'watchlist' && (
@@ -292,7 +261,7 @@ export default function Home() {
       <MobileBottomNav
         activeTab={activeMobileTab}
         onTabChange={handleMobileTabChange}
-        isHidden={isScrollingPanel || isInputFocused}
+        isHidden={isScrollingPanel}
       />
     </div>
   );

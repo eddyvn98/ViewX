@@ -5,13 +5,17 @@ import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-export function MobileSymbolCarousel() {
+interface MobileSymbolCarouselProps {
+    onSymbolTap?: () => void;
+    isDimmed?: boolean;
+}
+
+export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSymbolCarouselProps) {
     const watchlist = useMarketStore(state => state.watchlist);
     const activeTabId = useMarketStore(state => state.activeTabId);
     const activeTab = useMarketStore(state => state.tabs[activeTabId]);
     const tickers = useMarketStore(state => state.tickers);
     const setChartSymbol = useMarketStore(state => state.setChartSymbol);
-    const setChartTimeframe = useMarketStore(state => state.setChartTimeframe);
 
     const activeChartId = activeTab?.activeChartId || 'default';
     const currentSymbol = activeTab?.charts[activeChartId]?.symbol;
@@ -19,54 +23,6 @@ export function MobileSymbolCarousel() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
     const lastEmittedSymbol = useRef(currentSymbol);
-
-    // Long Press State
-    const [longPressTarget, setLongPressTarget] = useState<{ symbol: string; chartId: string } | null>(null);
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-    const pressCoords = useRef<{ x: number, y: number } | null>(null);
-    const isLongPressing = useRef(false);
-
-    const timeframes = ['1', '5', '15', '60', '240', 'D'];
-
-    const handlePressStart = (e: React.PointerEvent, symbol: string) => {
-        isLongPressing.current = false;
-        pressCoords.current = { x: e.clientX, y: e.clientY };
-        longPressTimer.current = setTimeout(() => {
-            isLongPressing.current = true;
-            setLongPressTarget({ symbol, chartId: activeChartId });
-            if (window.navigator.vibrate) window.navigator.vibrate(50);
-        }, 600);
-    };
-
-    const handlePressMove = (e: React.PointerEvent, symbol: string) => {
-        if (pressCoords.current) {
-            const deltaX = Math.abs(e.clientX - pressCoords.current.x);
-            const deltaY = pressCoords.current.y - e.clientY; // Positive = swipe up
-
-            // If user swipes up more than 30px, open TF menu
-            if (deltaY > 30 && !longPressTarget) {
-                setLongPressTarget({ symbol, chartId: activeChartId });
-                if (window.navigator.vibrate) window.navigator.vibrate(50);
-                handlePressEnd();
-                return;
-            }
-
-            if (deltaX > 10 || Math.abs(deltaY) > 10) {
-                if (longPressTimer.current) {
-                    clearTimeout(longPressTimer.current);
-                    longPressTimer.current = null;
-                }
-            }
-        }
-    };
-
-    const handlePressEnd = () => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-            longPressTimer.current = null;
-        }
-        pressCoords.current = null;
-    };
 
     // Effect to handle visual updates during scroll
     useEffect(() => {
@@ -140,16 +96,15 @@ export function MobileSymbolCarousel() {
 
     return (
         <div
-            className="relative w-full h-10 bg-transparent flex flex-col justify-center"
-            onClick={() => longPressTarget && setLongPressTarget(null)}
+            className={cn(
+                "relative w-full h-10 bg-transparent flex flex-col justify-center transition-all duration-300",
+                isDimmed ? "opacity-10 scale-95 pointer-events-none" : "opacity-100 scale-100"
+            )}
         >
             {/* Horizontal Scroll Wheel */}
             <div
                 ref={scrollRef}
-                className={cn(
-                    "flex items-center h-full overflow-x-auto no-scrollbar scroll-smooth transition-all",
-                    longPressTarget ? "overflow-hidden touch-none opacity-20 scale-95" : "touch-pan-x"
-                )}
+                className="flex items-center h-full overflow-x-auto no-scrollbar scroll-smooth touch-pan-x"
                 style={{
                     scrollSnapType: 'x mandatory',
                     paddingLeft: 'calc(50% - 40px)',
@@ -173,25 +128,15 @@ export function MobileSymbolCarousel() {
                         <div
                             key={symbol}
                             data-symbol={symbol}
-                            className="flex-shrink-0 w-20 flex items-center justify-center transition-all duration-300 select-none py-1 gap-1.5"
+                            className="flex-shrink-0 w-20 flex items-center justify-center transition-all duration-300 select-none py-1 gap-1.5 active:scale-95"
                             style={{ scrollSnapAlign: 'center' }}
-                            onContextMenu={(e) => e.preventDefault()}
-                            onPointerDown={(e) => handlePressStart(e, symbol)}
-                            onPointerMove={(e) => handlePressMove(e, symbol)}
-                            onPointerUp={handlePressEnd}
-                            onPointerLeave={handlePressEnd}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (longPressTarget) {
-                                    setLongPressTarget(null);
+                                if (isActive) {
+                                    if (window.navigator.vibrate) window.navigator.vibrate(10);
+                                    onSymbolTap?.();
                                     return;
                                 }
-                                if (isActive && !isLongPressing.current) {
-                                    setLongPressTarget({ symbol, chartId: activeChartId });
-                                    if (window.navigator.vibrate) window.navigator.vibrate(50);
-                                    return;
-                                }
-                                if (isLongPressing.current) return;
                                 const container = scrollRef.current;
                                 if (container) {
                                     const index = watchlist.indexOf(symbol);
@@ -226,37 +171,6 @@ export function MobileSymbolCarousel() {
                     );
                 })}
             </div>
-
-            {/* Timeframe Selector - Floating ABOVE the row */}
-            {longPressTarget && (
-                <div
-                    className="absolute bottom-full left-0 right-0 z-[60] flex items-center justify-center p-2 mb-1 animate-in slide-in-from-bottom-2 zoom-in-95 fade-in duration-200"
-                    onClick={() => setLongPressTarget(null)}
-                >
-                    <div
-                        className="bg-zinc-950/90 backdrop-blur-2xl border border-white/10 rounded-xl p-1 flex items-stretch gap-1 shadow-[0_10px_30px_rgba(0,0,0,0.7)]"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="px-3 py-1 border-r border-white/5 flex flex-col justify-center bg-white/5 rounded-l-lg">
-                            <span className="text-[11px] font-black text-white leading-none uppercase">{longPressTarget.symbol}</span>
-                        </div>
-                        <div className="flex items-center gap-0.5 px-0.5">
-                            {timeframes.map(tf => (
-                                <button
-                                    key={tf}
-                                    onClick={() => {
-                                        setChartTimeframe(longPressTarget.chartId, tf);
-                                        setLongPressTarget(null);
-                                    }}
-                                    className="w-9 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-zinc-400 active:bg-blue-600 active:text-white transition-all hover:text-white active:scale-90"
-                                >
-                                    {tf === '60' ? '1H' : tf === '240' ? '4H' : tf + (tf === 'D' ? '' : 'm')}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Selection Highlight Overlays */}
             <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-zinc-950/20 to-transparent pointer-events-none z-10" />

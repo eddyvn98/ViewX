@@ -97,27 +97,40 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground min-h-screen;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
-/* Custom Scrollbar - Global */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
+  width: 3px;
+  height: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #2a2e39;
-  border-radius: 4px;
+  border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+/* 🚀 Utilities */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .safe-viewport {
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    position: fixed;
+  }
 }
 
 /* TradingView Layout: Subchart Legend & Debug */
@@ -127,15 +140,10 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Hide TradingView Logo and Branding - FINAL BOSS MODE */
+/* TradingView Branding Hide */
 [class*="tv-lightweight-charts-logo"],
 a[href*="tradingview.com"] {
   display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  width: 0 !important;
-  pointer-events: none !important;
 }
 
 /* 🛡️ Interaction Refinement */
@@ -143,8 +151,4 @@ a[href*="tradingview.com"] {
   .cancel-btn {
     display: none !important;
   }
-}
-
-.touch-action-none {
-  touch-action: none !important;
 }

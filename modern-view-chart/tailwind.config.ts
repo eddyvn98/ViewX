@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-    darkMode: ["class"],
+    darkMode: "class",
     content: [
         "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
         "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -56,6 +56,40 @@ const config: Config = {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)'
+            },
+            keyframes: {
+                'wheel-up-out': {
+                    '0%': { transform: 'translateY(0) rotateX(0deg)', opacity: '1', filter: 'brightness(1)' },
+                    '100%': { transform: 'translateY(-100%) rotateX(-90deg)', opacity: '0', filter: 'brightness(0.5)' }
+                },
+                'wheel-up-in': {
+                    '0%': { transform: 'translateY(100%) rotateX(90deg)', opacity: '0', filter: 'brightness(0.5)' },
+                    '100%': { transform: 'translateY(0) rotateX(0deg)', opacity: '1', filter: 'brightness(1)' }
+                },
+                'wheel-down-out': {
+                    '0%': { transform: 'translateY(0) rotateX(0deg)', opacity: '1', filter: 'brightness(1)' },
+                    '100%': { transform: 'translateY(100%) rotateX(90deg)', opacity: '0', filter: 'brightness(0.5)' }
+                },
+                'wheel-down-in': {
+                    '0%': { transform: 'translateY(-100%) rotateX(-90deg)', opacity: '0', filter: 'brightness(0.5)' },
+                    '100%': { transform: 'translateY(0) rotateX(0deg)', opacity: '1', filter: 'brightness(1)' }
+                },
+                'slide-in-right-custom': {
+                    '0%': { transform: 'translateX(20px)', opacity: '0' },
+                    '100%': { transform: 'translateX(0)', opacity: '1' }
+                },
+                'slide-out-left-custom': {
+                    '0%': { transform: 'translateX(0)', opacity: '1' },
+                    '100%': { transform: 'translateX(-20px)', opacity: '0' }
+                }
+            },
+            animation: {
+                'wheel-up-in': 'wheel-in-bottom 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+                'wheel-up-out': 'wheel-out-top 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+                'wheel-down-in': 'wheel-in-top 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+                'wheel-down-out': 'wheel-out-bottom 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+                'slide-in-right': 'slide-in-right-custom 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+                'slide-out-left': 'slide-out-left-custom 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards'
             }
         }
     },
