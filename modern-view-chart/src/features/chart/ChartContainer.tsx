@@ -16,6 +16,7 @@ import { useChartScaleReset } from './hooks/use-chart-scale-reset';
 import { useChartContextMenu } from './hooks/use-chart-context-menu';
 import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
 import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
+import { useChartShortcuts } from './hooks/use-chart-shortcuts';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { getNearElement } from './logic/chart-hit-test';
 
@@ -76,10 +77,22 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
 
     /* ================= OVERLAYS ================= */
+    const filteredPositions = React.useMemo(() => {
+        const result = positions.filter(p => !source || ((p as any).source || 'MT5') === source);
+        // console.log(`[DEBUG] Chart ${source} filtered ${result.length}/${positions.length} positions`);
+        return result;
+    }, [positions, source]);
+
+    const filteredOrders = React.useMemo(() => {
+        const result = orders.filter(o => !source || ((o as any).source || 'MT5') === source);
+        // console.log(`[DEBUG] Chart ${source} filtered ${result.length}/${orders.length} orders`);
+        return result;
+    }, [orders, source]);
+
     // useChartCrosshair(chartId, priceChartRef, seriesRef);
-    useChartPositions(symbol, seriesRef, positions, priceChartRef);
-    useChartOrders(symbol, seriesRef, orders);
-    useChartDraftOrder(symbol, seriesRef, isReady);
+    useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef, source);
+    useChartOrders(symbol, seriesRef, filteredOrders, source);
+    useChartDraftOrder(symbol, seriesRef, isReady, source);
 
     /* ================= INDICATORS ================= */
     useChartIndicators(
@@ -134,7 +147,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
             draftOrder: store.draftOrder,
             symbolInfo: symbol ? store.symbolInfo[symbol] : undefined,
             alerts: alerts, // From useChartAlerts hook
-            currentPrice: symbol ? (store.tickers[symbol]?.price || 0) : 0
+            currentPrice: symbol ? (store.tickers[`${source}:${symbol}`]?.price || store.tickers[symbol]?.price || 0) : 0
         };
 
         return getNearElement(
@@ -162,6 +175,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         timezone,
         isSubchartVisible
     );
+    useChartShortcuts(chartId);
 
     /* ================= CROSSHAIR STATE (Removed - now handled via DOM) ================= */
 
@@ -206,6 +220,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     priceChartRef={priceChartRef}
                     isReady={isReady}
                     sendMessage={sendMessage}
+                    source={source}
                 />
 
                 {/* CANDLE COUNTDOWN OVERLAY */}
@@ -216,7 +231,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 />
 
                 {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}
-                <ChartTradingOverlay symbol={symbol} />
+                <ChartTradingOverlay symbol={symbol} source={source} />
 
                 {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
                 <div
@@ -269,7 +284,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                             symbol={chartInstance?.symbol}
                             interval={chartInstance?.interval}
                             source={chartInstance?.source}
-                            candles={candles}
                         />
                     </div>
                     <div ref={subchartContainerRef} className="w-full h-full" />
@@ -295,10 +309,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     onAddAlert={handleAddAlertAtPrice}
                     onRemoveAlert={handleRemoveAlert}
                     onCancelOrder={(ticket) => {
-                        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket) });
+                        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket), target: source || 'MT5' });
                     }}
                     onClosePosition={(ticket) => {
-                        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket) });
+                        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5' });
                     }}
                     onCancelDraft={() => {
                         useMarketStore.getState().setDraftOrder(null);

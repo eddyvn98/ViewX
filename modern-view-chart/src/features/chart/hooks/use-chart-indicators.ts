@@ -63,6 +63,19 @@ export function useChartIndicators(
     const stableCandlesRef = useRef<any[]>([]); // Cache for formatted closed candles
     const lastKeyRef = useRef<string>('');
 
+    // ⚡ CRITICAL: Use the proper source for this specific chart
+    // We can find it from the chartInstance in the store
+    const chartInstance = useMarketStore(useShallow(state => {
+        for (const tab of Object.values(state.tabs)) {
+            if (tab.charts[chartId]) return tab.charts[chartId];
+        }
+        return null;
+    }));
+
+    const chartSource = chartInstance?.source || 'MT5';
+    const chartInterval = chartInstance?.interval || '1m';
+    const tickerKey = symbol ? `${chartSource}:${normSymbol}` : '';
+
     useEffect(() => {
         if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !symbol) return;
 
@@ -73,7 +86,6 @@ export function useChartIndicators(
             stableCandlesRef.current = [];
 
             // ⚡ CRITICAL: Destroy all existing indicator instances and clear them
-            // This ensures all old series are removed from the chart and we start fresh
             Object.values(instancesRef.current).forEach(instance => {
                 try {
                     instance.destroy?.();
@@ -93,26 +105,27 @@ export function useChartIndicators(
         // Update stable candles cache only on new bar or first load
         if (isNewBar || stableCandlesRef.current.length === 0) {
             lastBarTimeRef.current = lastTime;
-            // Map bars as stable base
             stableCandlesRef.current = formatCandles(candles);
         }
 
         const currentIds = new Set(indicators.map(i => i.id));
 
-        // Cleanup old instances
+        // 1. Cleanup old OR hidden instances
         Object.keys(instancesRef.current).forEach(id => {
-            if (!currentIds.has(id)) {
+            const config = indicators.find(i => i.id === id);
+            if (!currentIds.has(id) || (config && !config.visible)) {
                 instancesRef.current[id].destroy();
                 delete instancesRef.current[id];
             }
         });
 
+        // 2. Create/Update visible indicators
         indicators.forEach(config => {
             if (!config.visible) return;
 
             let instance = instancesRef.current[config.id];
 
-            // 1. Create instance if missing
+            // Create instance if missing
             if (!instance) {
                 const isSubchart = config.pane === 'subchart';
                 const targetChart = isSubchart ? subchartChartRef.current! : priceChartRef.current!;
@@ -127,7 +140,6 @@ export function useChartIndicators(
                 if (instance) {
                     instancesRef.current[config.id] = instance;
                     instance._lastConfigJson = JSON.stringify(config);
-                    // Initial full update
                     instance.update(stableCandlesRef.current, config);
                 }
             }
@@ -145,14 +157,14 @@ export function useChartIndicators(
         });
 
         // Sync timescale if subchart exists
-        if (indicators.some(i => i.pane === 'subchart')) {
+        if (indicators.some(i => i.pane === 'subchart' && i.visible)) {
             requestAnimationFrame(() => syncRange());
         }
     }, [
         isReady,
         chartId,
         indicators,
-        candles.length, // ⚡ DRAW on load or new bar only
+        candles.length,
         symbol,
         interval,
         key,
@@ -164,19 +176,16 @@ export function useChartIndicators(
 
     // ⚡ SEPARATE EFFECT FOR REAL-TIME PRICE UPDATES (OPTIMIZED & THROTTLED)
     useEffect(() => {
-        if (!isReady || !symbol) return;
+        if (!isReady || !symbol || !tickerKey) return;
 
-        const normSymbol = (symbol || '').toLowerCase().endsWith('m') ? symbol!.replace(/[mM]$/, 'm') : symbol;
         let lastUpdate = 0;
         let rafId: number;
 
         const unsub = useMarketStore.subscribe(
-            state => state.tickers[normSymbol]?.price,
+            state => state.tickers[tickerKey]?.price || state.tickers[normSymbol]?.price,
             (price) => {
                 if (!price) return;
                 const now = Date.now();
-                // Limit real-time indicator updates to ~5fps (200ms) to save CPU
-                // Most indicators don't need to update at 60fps
                 if (now - lastUpdate < 200) return;
                 lastUpdate = now;
 
@@ -189,9 +198,9 @@ export function useChartIndicators(
                             if (lastIdx >= 0 && currentCandles[lastIdx]) {
                                 const lastCandle = {
                                     ...currentCandles[lastIdx],
-                                    close: price,
-                                    high: Math.max(currentCandles[lastIdx].high || price, price),
-                                    low: Math.min(currentCandles[lastIdx].low || price, price)
+                                    close: Number(price),
+                                    high: Math.max(currentCandles[lastIdx].high || Number(price), Number(price)),
+                                    low: Math.min(currentCandles[lastIdx].low || Number(price), Number(price))
                                 };
                                 instance.updateLastPoint(lastCandle, currentCandles);
                             }
@@ -205,7 +214,7 @@ export function useChartIndicators(
             unsub();
             if (rafId) cancelAnimationFrame(rafId);
         };
-    }, [isReady, symbol, chartId]);
+    }, [isReady, symbol, tickerKey, chartId]);
 
 
 

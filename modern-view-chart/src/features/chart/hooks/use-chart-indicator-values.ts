@@ -15,33 +15,11 @@ export interface IndicatorValueItem {
     values?: { label: string; value: string; color?: string }[]; // For Multi-value indicators like MACD
 }
 
-// Helper to get only the last value of an indicator incrementally
-function calculateLastValue(type: string, prices: number[], baseResults: any, period: number, currentPrice: number) {
-    if (prices.length < period) return NaN;
-
-    const lastIdx = prices.length - 1;
-
-    switch (type) {
-        case 'EMA': {
-            const alpha = 2 / (period + 1);
-            const prevEma = baseResults[lastIdx - 1];
-            if (isNaN(prevEma)) return baseResults[lastIdx]; // Fallback to full calc if no prev
-            return (currentPrice - prevEma) * alpha + prevEma;
-        }
-        case 'RSI': {
-            // Simplification: for the legend preview, we can just use the latest full calc
-            // or a simplified incremental RSI. For now, let's keep it simple.
-            return baseResults[lastIdx];
-        }
-        default:
-            return baseResults[lastIdx];
-    }
-}
-
 export function useChartIndicatorValues(chartId: string, candles: Candle[], activeIndex: number, currentPrice?: number) {
     const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
+    const lastCandleClose = candles.length > 0 ? candles[candles.length - 1].close : 0;
 
-    // 1. Calculate full series data ONLY when candles count or config changes
+    // 1. Calculate full series data
     const baseCalculatedIndicators = useMemo(() => {
         if (!indicators.length || !candles.length) return [];
 
@@ -54,15 +32,9 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
 
             try {
                 switch (config.type) {
-                    case 'EMA':
-                        results = calculateEMA(prices, period);
-                        break;
-                    case 'HMA':
-                        results = calculateHullMA(prices, period);
-                        break;
-                    case 'RSI':
-                        results = calculateRSI(prices, period);
-                        break;
+                    case 'EMA': results = calculateEMA(prices, period); break;
+                    case 'HMA': results = calculateHullMA(prices, period); break;
+                    case 'RSI': results = calculateRSI(prices, period); break;
                     case 'MACD': {
                         const { fast = 12, slow = 26, signal = 9 } = config.params;
                         results = calculateMACD(prices, fast, slow, signal);
@@ -75,41 +47,78 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
 
             return { config, results, period };
         }).filter(Boolean) as { config: any, results: any, period: number }[];
-    }, [indicators, candles.length, chartId, (candles.length > 0 ? (candles[0] as any).time : 0)]);
+    }, [indicators, candles.length, lastCandleClose, chartId]);
 
 
-    // 2. Adjust for realtime price if needed (only for the LATEST index)
+    // 2. Adjust for realtime price if needed
     const indicatorsWithRealtime = useMemo(() => {
-        if (currentPrice === undefined || !baseCalculatedIndicators.length) return baseCalculatedIndicators;
+        if (!currentPrice || !baseCalculatedIndicators.length) return baseCalculatedIndicators;
 
         return baseCalculatedIndicators.map(item => {
             const { config, results, period } = item;
 
-            // If we are at the last candle, we might want to update the value with currentPrice
-            // However, most indicators in math.ts already calculated for the last candle in baseCalculated
-            // If currentPrice differs from the last candle's close, we could refine.
-            // For simplicity and speed, we'll keep the base results for now as they are recalculated 
-            // anyway when 'candles' changes (which usually happens on every bar).
-            // If 'candles' includes the unclosed bar, then 'baseCalculated' is already "realtime enough"
-            // if triggered by store updates.
+            // Recalculate ONLY the last point if we have a currentPrice
+            // This ensures the legend jumps in real-time
+            const prices = candles.map(c => c.close);
+            if (prices.length > 0) {
+                prices[prices.length - 1] = currentPrice;
+            }
 
-            return item;
+            let realtimeResults = results;
+            try {
+                switch (config.type) {
+                    case 'EMA': {
+                        const alpha = 2 / (period + 1);
+                        const prevEma = results[results.length - 2];
+                        if (!isNaN(prevEma)) {
+                            const newLast = (currentPrice - prevEma) * alpha + prevEma;
+                            realtimeResults = [...results];
+                            realtimeResults[realtimeResults.length - 1] = newLast;
+                        }
+                        break;
+                    }
+                    case 'RSI': {
+                        // For RSI, full recalculation of the last point is safest due to smoothing
+                        const latestRSI = calculateRSI(prices.slice(-period * 2), period);
+                        realtimeResults = [...results];
+                        realtimeResults[realtimeResults.length - 1] = latestRSI[latestRSI.length - 1];
+                        break;
+                    }
+                    case 'MACD': {
+                        const { fast = 12, slow = 26, signal = 9 } = config.params;
+                        const latestMACD = calculateMACD(prices.slice(-(slow + signal) * 2), fast, slow, signal);
+
+                        realtimeResults = {
+                            macd: [...results.macd],
+                            signal: [...results.signal],
+                            histogram: [...results.histogram]
+                        };
+                        realtimeResults.macd[realtimeResults.macd.length - 1] = latestMACD.macd[latestMACD.macd.length - 1];
+                        realtimeResults.signal[realtimeResults.signal.length - 1] = latestMACD.signal[latestMACD.signal.length - 1];
+                        realtimeResults.histogram[realtimeResults.histogram.length - 1] = latestMACD.histogram[latestMACD.histogram.length - 1];
+                        break;
+                    }
+                }
+            } catch (e) { }
+
+            return { ...item, results: realtimeResults };
         });
-    }, [baseCalculatedIndicators, currentPrice]);
+    }, [baseCalculatedIndicators, currentPrice, candles.length]);
 
     // 3. Cheap lookup when activeIndex changes (mouse move)
     return useMemo(() => {
         if (!indicatorsWithRealtime.length) return [];
 
         return indicatorsWithRealtime.map(({ config, results, period }) => {
-            const len = Array.isArray(results) ? results.length : (results.macd?.length || 0);
+            const isMACD = config.type === 'MACD';
+            const len = isMACD ? (results.macd?.length || 0) : results.length;
             let idx = activeIndex;
 
             if (idx < 0 || idx >= len) {
                 idx = len - 1;
             }
 
-            if (config.type === 'MACD') {
+            if (isMACD) {
                 const macdVal = results.macd[idx];
                 const sigVal = results.signal[idx];
                 const histVal = results.histogram[idx];

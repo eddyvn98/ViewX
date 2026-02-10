@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useChartOHLC } from '../hooks/use-chart-ohlc';
 import { useChartIndicatorValues, IndicatorValueItem } from '../hooks/use-chart-indicator-values';
-import { Candle } from '@/lib/store';
+import { Candle, useMarketStore } from '@/lib/store';
 
 interface SubchartLegendProps {
     chartId: string;
@@ -9,15 +9,20 @@ interface SubchartLegendProps {
     interval?: string;
     source?: string;
     candles: Candle[];
-    currentPrice?: number;
 }
 
-export function SubchartLegend({ chartId, symbol, interval, source, candles, currentPrice }: SubchartLegendProps) {
+const EMPTY_ARRAY: Candle[] = [];
+
+export function SubchartLegend({ chartId, symbol, interval, source }: Omit<SubchartLegendProps, 'candles'>) {
+    const normSymbol = symbol?.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
+    const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
+    const candles = useMarketStore(state => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
+
     const data = useChartOHLC(symbol, interval, source);
     const activeIndex = data?.activeIndex ?? -1;
 
-    // Get all indicators, but we only filter for 'subchart' pane
-    const allIndicators = useChartIndicatorValues(chartId, candles, activeIndex, currentPrice);
+    // Get all indicators with real-time price from data.close
+    const allIndicators = useChartIndicatorValues(chartId, candles, activeIndex, data?.close);
 
     const subchartIndicators = useMemo(() => {
         return allIndicators.filter(i => i.pane === 'subchart');
@@ -36,7 +41,6 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles, cur
                         <div className="flex items-center gap-3">
                             {item.values.map((v, i) => (
                                 <div key={i} className="flex items-center gap-1">
-                                    {/* <span className="text-[9px] text-zinc-600">{v.label}</span> */}
                                     <span style={{ color: v.color }}>{v.value}</span>
                                 </div>
                             ))}

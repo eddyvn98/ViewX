@@ -16,7 +16,12 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
         return `${source}:${normSymbol}:${interval}`;
     }, [normSymbol, interval, source]);
 
-    const tickerPrice = useMarketStore((state) => symbol ? state.tickers[symbol]?.price : undefined);
+    const tickerKey = useMemo(() => {
+        if (!symbol || !source) return '';
+        return `${source}:${normSymbol}`;
+    }, [symbol, source, normSymbol]);
+
+    const tickerPrice = useMarketStore((state) => tickerKey ? (state.tickers[tickerKey]?.price || state.tickers[normSymbol]?.price) : undefined);
     const candles = useMarketStore((state) => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
 
     // ⚡ PERFORMANCE: We use window events for crosshair updates to avoid React re-renders of the whole chart UI

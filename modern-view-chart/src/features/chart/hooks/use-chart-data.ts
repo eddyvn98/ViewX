@@ -92,7 +92,7 @@ export function useChartData(
         const series = seriesRef.current;
 
         // Request initial candles if none are present
-        if (currentCandles.length === 0 && symbol && interval && source === 'MT5' && isConnected) {
+        if (currentCandles.length === 0 && symbol && interval && source && source !== 'BINANCE' && isConnected) {
             const now = Date.now();
             // ⚡ LOOP PROTECTION: Prevent spamming requests if backend returns empty/null
             // Only retry every 2 seconds instead of every render frame
@@ -103,15 +103,17 @@ export function useChartData(
                     command: "get_candles",
                     symbol: symbol,
                     interval: interval,
-                    count: 300
+                    count: 300,
+                    target: source // ROUTING: Ensure request goes to the correct bridge (e.g. demo/real)
                 });
                 // Also fetch symbol info for PnL accuracy
                 sendMessage({
                     topic: "mt5_command",
                     command: "get_symbol_info",
-                    symbol: symbol
+                    symbol: symbol,
+                    target: source
                 });
-                console.log(`📡 [FETCH] Requesting init candles & info for ${symbol}`);
+                console.log(`📡 [FETCH] Requesting init candles & info for ${symbol} from ${source}`);
             }
             return;
         }
@@ -140,6 +142,12 @@ export function useChartData(
             }));
 
             series.setData(formatted);
+
+            // ⚡ SYNC: Update lastSentTime to the latest candle time from history 
+            // This prevents the ticker listener from blocking updates for the current candle
+            if (formatted.length > 0) {
+                lastSentTimeRef.current = Number(formatted[formatted.length - 1].time);
+            }
 
             // Calculate time step for future points
             let timeStep = 60;
@@ -260,8 +268,10 @@ export function useChartData(
             frameRequestedRef.current = false;
         };
 
+        const tickerKey = `${source}:${normSymbol}`;
+
         const unsub = useMarketStore.subscribe(
-            (state) => state.tickers[normSymbol]?.price,
+            (state) => state.tickers[tickerKey]?.price || state.tickers[normSymbol]?.price,
             (newPrice) => {
                 const base = currentCandleRef.current;
                 if (!newPrice || !base) return;
@@ -289,6 +299,6 @@ export function useChartData(
             unsub();
             frameRequestedRef.current = false;
         };
-    }, [normSymbol, isReady, chartType]);
+    }, [normSymbol, source, isReady, chartType]);
 
 }
