@@ -97,9 +97,7 @@ export class RSIIndicator {
         const period = this.config.params.period || 14;
         const lastIdx = candles.length - 1;
 
-        // Use a slice to recalculate only the necessary part for the last point
-        const slice = candles.slice(Math.max(0, lastIdx - period * 3));
-        const prices = slice.map(c => c.close);
+        const prices = candles.map(c => c.close);
         prices[prices.length - 1] = candle.close;
 
         const rsiValues = calculateRSI(prices, period);

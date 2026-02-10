@@ -23,13 +23,15 @@ export function useChartContextMenu(
     } | null>(null);
 
     const handleContextMenu = (e: React.MouseEvent) => {
-        // Prevent context menu if clicking on a tag
+        // 🛡️ Always prevent default on chart interaction to avoid browser context menu on mobile
+        e.preventDefault();
+
         const target = e.target as HTMLElement;
-        if (target.closest('[data-tag-type]')) {
+        // Ignore if clicking on a tag OR the edit overlay components
+        if (target.closest('[data-tag-id], [data-is-tag], [data-tag-type], .tag-body, .delete-btn, .edit-overlay')) {
             return;
         }
 
-        e.preventDefault();
         if (!priceChartRef.current || !priceContainerRef.current) return;
 
         const rect = priceContainerRef.current.getBoundingClientRect();

@@ -47,15 +47,12 @@ export function useLegendDOMUpdater(
         return candles;
     }, [candles, chartType]);
 
-    // Refresh indicator calculations when candles change (Use displayCandles for indicators?)
-    // Usually indicators are calculated on standard candles, but some prefer HA.
-    // TradingView calculates indicators on HA candles if HA is selected? 
-    // Usually yes because the visual chart is HA.
+    // Refresh indicator calculations when candles change - ALWAYS use raw candles for math
     useEffect(() => {
-        if (!displayCandles.length) return;
+        if (!candles.length) return;
         const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
-        indicatorCacheRef.current = calculateIndicators(displayCandles, indicators);
-    }, [displayCandles, chartId]);
+        indicatorCacheRef.current = calculateIndicators(candles, indicators);
+    }, [candles, chartId]);
 
     useEffect(() => {
         if (!containerRef.current || !symbol || !interval || !source) return;
@@ -71,25 +68,22 @@ export function useLegendDOMUpdater(
             if (isLive && (now - lastUpdateAtRef.current < 32)) return;
             lastUpdateAtRef.current = now;
 
-            // Use displayCandles for base values
+            // Use displayCandles for base values (OHLC display)
             const candle = displayCandles[activeIndex] || displayCandles[displayCandles.length - 1];
             if (!candle) return;
 
             let { open, high, low, close } = candle;
 
-            // Real-time update logic
+            // Real-time update logic for OHLC
             if (isLive && currentPrice) {
                 if (chartType === 'heikin_ashi') {
-                    // For HA, we need to recalculate based on RAW Price Update
                     const rawCandle = candles[activeIndex] || candles[candles.length - 1];
-                    const haOpen = Number(candle.open); // Fixed for this candle (HA Open)
+                    const haOpen = Number(candle.open);
+                    const rawClose = Number(currentPrice);
+                    const rawHigh = Math.max(Number(rawCandle.high), rawClose);
+                    const rawLow = Math.min(Number(rawCandle.low), rawClose);
+                    const rawOpen = Number(rawCandle.open);
 
-                    let rawClose = Number(currentPrice);
-                    let rawHigh = Math.max(Number(rawCandle.high), rawClose);
-                    let rawLow = Math.min(Number(rawCandle.low), rawClose);
-                    let rawOpen = Number(rawCandle.open);
-
-                    // HA Recalc
                     const haClose = (rawOpen + rawHigh + rawLow + rawClose) / 4;
                     const haHigh = Math.max(rawHigh, haOpen, haClose);
                     const haLow = Math.min(rawLow, haOpen, haClose);
@@ -99,7 +93,6 @@ export function useLegendDOMUpdater(
                     low = haLow;
                     close = haClose;
                 } else {
-                    // Standard Candles
                     close = currentPrice;
                     if (close > high) high = close;
                     if (close < low) low = close;
@@ -108,13 +101,39 @@ export function useLegendDOMUpdater(
 
             renderOHLC(ohlcRefsRef.current, open, high, low, close);
 
-            // Update status styles ONLY if changed
             if (lastIsLiveRef.current !== isLive) {
                 lastIsLiveRef.current = isLive;
                 renderStatus(ohlcRefsRef.current, isLive);
             }
 
-            renderIndicators(activeIndex, indicatorCacheRef.current, indicatorRefsRef.current);
+            // Real-time update for Indicators on Legend
+            if (isLive && currentPrice && activeIndex === candles.length - 1) {
+                const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
+                const updatedCandles = candles.map((c, idx) =>
+                    idx === candles.length - 1 ? { ...c, close: currentPrice } : c
+                );
+
+                // Recalculate ALL indicators for the final tick ONCE
+                const recalculated = calculateIndicators(updatedCandles, indicators);
+
+                const tempCaches = indicatorCacheRef.current.map(cache => {
+                    const match = recalculated.find(r => r.id === cache.id);
+                    if (!match) return cache;
+
+                    const res = match.results;
+                    const lastValue = Array.isArray(res)
+                        ? res[res.length - 1]
+                        : (res as any).macd?.[(res as any).macd.length - 1];
+
+                    return {
+                        ...cache,
+                        results: [...(Array.isArray(cache.results) ? cache.results.slice(0, -1) : []), lastValue]
+                    };
+                });
+                renderIndicators(activeIndex, tempCaches as any, indicatorRefsRef.current);
+            } else {
+                renderIndicators(activeIndex, indicatorCacheRef.current, indicatorRefsRef.current);
+            }
         };
 
         const findCandleIndex = (targetTime: number): number => {

@@ -54,9 +54,8 @@ export class HMAIndicator {
         const period = this.config.params.period;
         const lastIdx = candles.length - 1;
 
-        // HMA needs more history than EMA, so we take a larger slice
-        const slice = candles.slice(Math.max(0, lastIdx - period * 4));
-        const prices = slice.map(c => c.close);
+        // Use full history for 100% accuracy matching the chart
+        const prices = candles.map(c => c.close);
         prices[prices.length - 1] = candle.close;
 
         const hmaValues = calculateHullMA(prices, period);

@@ -1,56 +1,75 @@
-import { useMemo } from 'react';
-import { useChartOHLC } from '../hooks/use-chart-ohlc';
-import { useChartIndicatorValues, IndicatorValueItem } from '../hooks/use-chart-indicator-values';
+import { useRef } from 'react';
+import { useSubchartLegendDOMUpdater } from '../hooks/use-subchart-legend-dom-updater';
 import { Candle, useMarketStore } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 
 interface SubchartLegendProps {
     chartId: string;
     symbol?: string;
     interval?: string;
     source?: string;
-    candles: Candle[];
+    candles?: Candle[]; // Optional, will fetch if not provided
 }
 
 const EMPTY_ARRAY: Candle[] = [];
+const EMPTY_INDICATORS: any[] = [];
 
-export function SubchartLegend({ chartId, symbol, interval, source }: Omit<SubchartLegendProps, 'candles'>) {
+export function SubchartLegend({ chartId, symbol, interval, source, candles: propCandles }: SubchartLegendProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // 1. Get Candles (Prop or Store)
     const normSymbol = symbol?.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
-    const candles = useMarketStore(state => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
+    const storeCandles = useMarketStore(state => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
+    const candles = propCandles || storeCandles;
 
-    const data = useChartOHLC(symbol, interval, source);
-    const activeIndex = data?.activeIndex ?? -1;
+    // 2. Get Indicators Config (Stable)
+    const indicators = useMarketStore(useShallow(
+        state => (state.chartIndicators[chartId] || EMPTY_INDICATORS).filter((i: any) => i.visible && i.pane === 'subchart')
+    ));
 
-    // Get all indicators with real-time price from data.close
-    const allIndicators = useChartIndicatorValues(chartId, candles, activeIndex, data?.close);
+    // 3. ZERO-RENDER UPDATE HOOK
+    useSubchartLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles });
 
-    const subchartIndicators = useMemo(() => {
-        return allIndicators.filter(i => i.pane === 'subchart');
-    }, [allIndicators]);
-
-    if (!subchartIndicators.length) return null;
+    if (!symbol || !interval || !source || !indicators.length) return null;
 
     return (
-        <div className="absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none">
-            {subchartIndicators.map((item: IndicatorValueItem) => (
-                <div key={item.id} className="flex flex-wrap items-center gap-2 text-[11px] font-mono font-bold bg-[#131722]/60 px-1 rounded backdrop-blur-[2px]">
-                    <span className="text-zinc-500 uppercase">{item.name}</span>
+        <div
+            ref={containerRef}
+            className="absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none"
+        >
+            <div data-indicators className="flex flex-col gap-1">
+                {indicators.map((ind: any) => (
+                    <div
+                        key={ind.id}
+                        data-indicator-id={ind.id} // Hook targets this
+                        className="flex flex-wrap items-center gap-2 text-[11px] font-mono font-bold bg-[#131722]/60 px-1 rounded backdrop-blur-[2px]"
+                    >
+                        <span className="text-zinc-500 uppercase">
+                            {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${ind.params?.period || 14}`}
+                        </span>
 
-                    {/* Render Multi-values (MACD) */}
-                    {item.values ? (
-                        <div className="flex items-center gap-3">
-                            {item.values.map((v, i) => (
-                                <div key={i} className="flex items-center gap-1">
-                                    <span style={{ color: v.color }}>{v.value}</span>
+                        {/* Hook updates textContent inside here */}
+                        <div data-indicator-value className="flex items-center gap-1">
+                            {ind.type === 'MACD' ? (
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1">
+                                        <span style={{ color: ind.color }}>···</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span style={{ color: '#FF6D00' }}>···</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span>···</span>
+                                    </div>
                                 </div>
-                            ))}
+                            ) : (
+                                <span style={{ color: ind.color }}>···</span>
+                            )}
                         </div>
-                    ) : (
-                        // Render Single Value (RSI)
-                        <span style={{ color: item.color }}>{item.value}</span>
-                    )}
-                </div>
-            ))}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

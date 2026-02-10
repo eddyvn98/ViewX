@@ -12,6 +12,12 @@ export interface DataSlice {
 
 const normalizeSymbol = (s: string) => s.toLowerCase().endsWith('m') ? s.replace(/[mM]$/, 'm') : s;
 
+// Normalize time to seconds for consistent comparison (handles both ms and sec formats)
+const toSeconds = (t: any): number => {
+    const n = typeof t === 'object' ? (t as any).timestamp : Number(t);
+    return n > 10000000000 ? Math.floor(n / 1000) : n;
+};
+
 export const createDataSlice: StateCreator<DataSlice> = (set) => ({
     candleData: {},
     isCrosshairSyncEnabled: true,
@@ -33,8 +39,9 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const currentCandles = state.candleData[key] || [];
         const last = currentCandles[currentCandles.length - 1];
 
-        if (last && last.time === candle.time) {
-            // Cập nhật nến hiện tại: Thay thế phần tử cuối, không cần slice mảng lớn
+        // ⚡ FIX: Compare NORMALIZED seconds to prevent append-spam from format mismatch
+        if (last && toSeconds(last.time) === toSeconds(candle.time)) {
+            // Cập nhật nến hiện tại: Thay thế phần tử cuối
             const newCandles = [...currentCandles];
             newCandles[newCandles.length - 1] = candle;
             return { candleData: { ...state.candleData, [key]: newCandles } };

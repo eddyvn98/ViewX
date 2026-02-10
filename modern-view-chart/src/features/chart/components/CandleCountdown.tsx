@@ -8,11 +8,13 @@ interface CandleCountdownProps {
     chart: IChartApi | null;
     series: ISeriesApi<'Candlestick'> | null;
     interval: string | undefined;
+    realTimeRef: React.MutableRefObject<any> | undefined;
 }
 
-export function CandleCountdown({ chart, series, interval }: CandleCountdownProps) {
+export function CandleCountdown({ chart, series, interval, realTimeRef }: CandleCountdownProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const countdownRef = useRef<HTMLDivElement>(null);
+    const priceRef = useRef<HTMLDivElement>(null);
 
     // Use smaller selectors for static config
     const activeChartId = useMarketStore(state => state.tabs[state.activeTabId]?.activeChartId);
@@ -29,32 +31,45 @@ export function CandleCountdown({ chart, series, interval }: CandleCountdownProp
         const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
         const updateDOM = () => {
+            if (!containerRef.current) return;
             const state = useMarketStore.getState();
-            const currentPrice = state.tickers[normSymbol]?.price;
+            const symbolInfo = state.symbolInfo[normSymbol];
+            const currentPrice = realTimeRef?.current?.close ?? state.tickers[normSymbol]?.price;
             const candles = state.candleData[key] || [];
-            const lastCandle = candles[candles.length - 1];
+            let lastCandle = realTimeRef?.current || candles[candles.length - 1];
 
-            if (!containerRef.current || !countdownRef.current || !lastCandle || currentPrice === null || currentPrice === undefined) {
-                if (containerRef.current) containerRef.current.style.display = 'none';
+            if (!lastCandle || currentPrice === null || currentPrice === undefined) {
+                containerRef.current.style.display = 'none';
                 return;
             }
 
-            // 1. Update Position
+            // 1. Update Position & Color
             const coordinate = series.priceToCoordinate(currentPrice);
             if (coordinate !== null) {
                 containerRef.current.style.display = 'flex';
                 containerRef.current.style.top = `${coordinate}px`;
+
+                // Color based on trend
+                const isUp = currentPrice >= (lastCandle.open || currentPrice);
+                containerRef.current.className = `absolute right-0 z-40 flex flex-col items-center pointer-events-none select-none transition-colors duration-200 ${isUp ? 'bg-emerald-600' : 'bg-red-600'} rounded-l shadow-xl border-y border-l border-white/20 px-1 py-0.5 min-w-[70px]`;
             } else {
                 containerRef.current.style.display = 'none';
             }
 
-            // 2. Update Countdown Text
+            // 2. Update Price Text
+            if (priceRef.current) {
+                priceRef.current.textContent = currentPrice.toFixed(symbolInfo?.digits || 2);
+            }
+
+            // 3. Update Countdown Text
             const now = Math.floor(Date.now() / 1000);
             let timeframeSeconds = 60;
             if (interval) {
-                if (interval === 'D') timeframeSeconds = 86400;
-                else if (interval === 'W') timeframeSeconds = 604800;
-                else if (interval === 'M') timeframeSeconds = 2592000;
+                if (interval === '1D' || interval === 'D') timeframeSeconds = 86400;
+                else if (interval === '1W' || interval === 'W') timeframeSeconds = 604800;
+                else if (interval === '1M' || interval === 'M') timeframeSeconds = 2592000;
+                else if (interval.endsWith('h') || interval.endsWith('H')) timeframeSeconds = parseInt(interval) * 3600;
+                else if (interval.endsWith('d') || interval.endsWith('D')) timeframeSeconds = parseInt(interval) * 86400;
                 else {
                     const parsed = parseInt(interval);
                     if (!isNaN(parsed)) timeframeSeconds = parsed * 60;
@@ -66,53 +81,40 @@ export function CandleCountdown({ chart, series, interval }: CandleCountdownProp
                 : Number(lastCandle.time);
 
             const nextCandleTime = lastCandleTime + timeframeSeconds;
-            const secondsLeft = nextCandleTime - now;
+            let secondsLeft = nextCandleTime - now;
+            if (secondsLeft < 0) secondsLeft = 0;
 
-            if (secondsLeft > 0) {
+            if (secondsLeft >= 0) {
                 const hours = Math.floor(secondsLeft / 3600);
                 const minutes = Math.floor((secondsLeft % 3600) / 60);
                 const seconds = secondsLeft % 60;
-
                 const text = hours > 0
                     ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
                     : `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-                countdownRef.current.textContent = text;
-            } else {
-                countdownRef.current.textContent = '00:00';
+                if (countdownRef.current) {
+                    countdownRef.current.textContent = text;
+                }
             }
         };
 
-        const intervalId = setInterval(() => {
-            requestAnimationFrame(updateDOM);
-        }, 1000);
-
+        const intervalId = setInterval(() => requestAnimationFrame(updateDOM), 1000);
         updateDOM();
-
-        // Also update position on chart change/scroll
         chart.timeScale().subscribeVisibleLogicalRangeChange(updateDOM);
 
         return () => {
             clearInterval(intervalId);
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateDOM);
         };
-    }, [chart, series, activeChartId, interval]);
+    }, [chart, series, activeChartId, interval, realTimeRef]);
 
     return (
         <div
             ref={containerRef}
-            className="absolute right-[80px] z-[100] pointer-events-none select-none items-center hidden"
-            style={{
-                transform: 'translateY(-50%)',
-                height: '22px',
-            }}
+            className="absolute right-0 z-40 flex flex-col items-center pointer-events-none select-none hidden"
+            style={{ transform: 'translateY(-50%)' }}
         >
-            <div
-                ref={countdownRef}
-                className="bg-[#1e222d]/90 backdrop-blur-sm text-[#787b86] text-[10px] font-bold px-1.5 py-0.5 rounded-l-md border border-[#2a2e39] border-r-0 shadow-lg"
-            >
-                --:--
-            </div>
+            <div ref={priceRef} className="text-white text-[11px] font-black leading-tight">--</div>
+            <div ref={countdownRef} className="text-white/70 text-[10px] font-bold leading-tight">--:--</div>
         </div>
     );
 }

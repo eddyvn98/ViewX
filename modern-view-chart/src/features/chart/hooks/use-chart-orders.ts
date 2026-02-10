@@ -16,9 +16,8 @@ export function useChartOrders(
         draggingPosition: null as any,
     });
 
-    // Helper to match symbols with or without suffixes like .m
-    const normalizeSymbol = (s: string | undefined) => (s || '').toUpperCase().replace(/[.-]?[MH]$/, '');
-    const targetSymbol = normalizeSymbol(symbol);
+    // Use centralized normalization from symbol.ts
+    const targetSymbol = (symbol || '').trim();
 
     useEffect(() => {
         sharedRef.current = { symbol, orders, draggingPosition: useMarketStore.getState().draggingPosition };
@@ -30,19 +29,13 @@ export function useChartOrders(
         const series = seriesRef.current;
         if (!series || !symbol) return;
 
-        if (draftOrder && normalizeSymbol(draftOrder.symbol) === targetSymbol) {
-            Object.keys(priceLinesRef.current).forEach(ticket => {
-                const lines = priceLinesRef.current[ticket];
-                if (lines.entry) series.removePriceLine(lines.entry);
-                if (lines.sl) series.removePriceLine(lines.sl);
-                if (lines.tp) series.removePriceLine(lines.tp);
-                delete priceLinesRef.current[ticket];
-            });
-            return;
-        }
+        // Show orders even during draft for context
 
         const activeTickets = new Set<string>();
-        orders.filter(o => normalizeSymbol(o.symbol) === targetSymbol).forEach(o => {
+        const norm = (s: string) => s.toLowerCase().replace(/[.-]?[mh]$/, '');
+        const targetNorm = norm(targetSymbol);
+
+        orders.filter(o => norm(o.symbol) === targetNorm).forEach(o => {
             const ticket = o.ticket.toString();
             activeTickets.add(ticket);
 
@@ -112,7 +105,7 @@ export function useChartOrders(
                 delete priceLinesRef.current[ticket];
             }
         });
-    }, [orders.length, symbol, draftOrder]);
+    }, [orders, symbol, draftOrder]);
 
     // EFFECT 2: Fast Drag Sync for Orders
     useEffect(() => {

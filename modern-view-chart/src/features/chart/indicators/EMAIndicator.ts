@@ -60,8 +60,7 @@ export class EMAIndicator {
         // However, even a small slice calculation is way faster than the full series.
 
         const lastIdx = candles.length - 1;
-        const slice = candles.slice(Math.max(0, lastIdx - period * 2));
-        const prices = slice.map(c => c.close);
+        const prices = candles.map(c => c.close);
         prices[prices.length - 1] = candle.close; // Ensure we use the latest price
 
         const emaValues = calculateEMA(prices, period);

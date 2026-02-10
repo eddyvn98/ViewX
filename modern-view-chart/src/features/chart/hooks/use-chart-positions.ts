@@ -27,9 +27,10 @@ export function useChartPositions(
         focusedTicket
     });
 
-    // Helper to match symbols with or without suffixes like .m
-    const normalizeSymbol = (s: string | undefined) => (s || '').toUpperCase().replace(/[.-]?[MH]$/, '');
-    const targetSymbol = normalizeSymbol(symbol);
+    // Use centralized normalization from symbol.ts
+    const targetSymbol = (symbol || '').trim();
+    const norm = (s: string) => s.toLowerCase().replace(/[.-]?[mh]$/, '');
+    const targetNorm = norm(targetSymbol);
 
     useEffect(() => {
         sharedRef.current = { symbol, positions, symbolInfo, draggingPosition: useMarketStore.getState().draggingPosition, focusedTicket };
@@ -41,19 +42,9 @@ export function useChartPositions(
         const series = seriesRef.current;
         if (!series || !symbol) return;
 
-        // Note: We might want to show positions even during draft, but for now filtering is key
-        if (draftOrder && normalizeSymbol(draftOrder.symbol) === targetSymbol) {
-            Object.keys(priceLinesRef.current).forEach(ticket => {
-                const lines = priceLinesRef.current[ticket];
-                if (lines.entry) series.removePriceLine(lines.entry);
-                if (lines.sl) series.removePriceLine(lines.sl);
-                if (lines.tp) series.removePriceLine(lines.tp);
-                delete priceLinesRef.current[ticket];
-            });
-            return;
-        }
+        // Show positions even during draft for context
 
-        let symbolPositions = positions.filter(p => normalizeSymbol(p.symbol) === targetSymbol);
+        let symbolPositions = positions.filter(p => norm(p.symbol) === targetNorm);
         if (focusedTicket) {
             symbolPositions = symbolPositions.filter(p => p.ticket === focusedTicket);
         }
@@ -134,7 +125,7 @@ export function useChartPositions(
                 delete priceLinesRef.current[t];
             }
         });
-    }, [positions.length, symbol, draftOrder, focusedTicket, hoveredTicket]);
+    }, [positions, symbol, draftOrder, focusedTicket, hoveredTicket]);
 
     // EFFECT 2: High-frequency updates (Dragging & Price)
     // Uses manual subscription for maximum smoothness
@@ -198,6 +189,14 @@ export function useChartPositions(
 
         const handleClick = (param: import('lightweight-charts').MouseEventParams) => {
             if (!param.point || !param.time) return;
+
+            // 🛡️ Safeguard: Only block IF the target isn't a tag/draggable
+            const target = (param.sourceEvent as any)?.target as HTMLElement;
+            const isTag = target?.closest('[data-is-tag="true"]') || target?.closest('.tag-body');
+
+            if (!isTag && (document.querySelector('.delete-btn') || document.activeElement?.tagName === 'INPUT')) {
+                return;
+            }
             const activePositions = positions.filter(p => p.symbol === symbol);
             let found = false;
             for (const pos of activePositions) {

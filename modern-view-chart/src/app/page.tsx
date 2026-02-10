@@ -138,8 +138,7 @@ export default function Home() {
 
           {/* MAIN CENTER: Charts & Terminal */}
           <main className={cn(
-            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-black/20",
-            (isScrollingPanel || isInputFocused) ? "pb-0" : "pb-[108px] md:pb-0"
+            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-black/20"
           )}>
             {/* Show Chart ONLY if active tab is 'chart' on Mobile, OR always on Desktop */}
             <div className={cn(
@@ -168,8 +167,8 @@ export default function Home() {
 
             {/* Mobile Place Order Panel - GPU ACCELERATED SLIDE */}
             <div className={cn(
-              "fixed left-0 right-0 bg-zinc-950 border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-30 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform",
-              isScrollingPanel || isInputFocused ? "bottom-0" : "bottom-[64px]",
+              "fixed left-0 right-0 bg-zinc-950 border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform",
+              "bottom-0",
               activeMobileTab === 'trade' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
               isInputFocused ? "h-[80%]" : "h-[29%]"
             )}>
@@ -238,8 +237,8 @@ export default function Home() {
             {/* Mobile Terminal Panel - CONDITIONAL RENDER to prevent re-renders when hidden */}
             {activeMobileTab === 'positions' && (
               <div className={cn(
-                "fixed left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-30 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
-                isScrollingPanel || isInputFocused ? "bottom-0" : "bottom-[64px]",
+                "fixed left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
+                "bottom-0",
                 isInputFocused ? "h-[80%]" : "h-[29%]"
               )}>
                 <div

@@ -72,10 +72,12 @@ export interface TerminalSlice {
     terminalHeight: number;
     hoveredTicket: number | null;
     pendingModifications: Record<string, PendingModification>; // Key: "ticket-field"
+    pendingDeletions: Record<number, number>; // Key: ticket, Value: timestamp
     setAccount: (source: string, data: AccountInfo) => void;
     setPositions: (data: Position[] | ((prev: Position[]) => Position[])) => void;
     setOrders: (data: import('../types').Order[] | ((prev: import('../types').Order[]) => import('../types').Order[])) => void;
     addPendingModification: (ticket: number, field: 'sl' | 'tp' | 'open_price' | 'price_open', price: number) => void;
+    addPendingDeletion: (ticket: number) => void;
     setHistory: (data: HistoryDeal[] | ((prev: HistoryDeal[]) => HistoryDeal[])) => void;
     appendHistory: (newData: HistoryDeal[], isReset?: boolean) => void;
     setAnalysisResult: (ticket: number, result: AnalysisResult) => void;
@@ -104,6 +106,18 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     terminalHeight: 300,
     hoveredTicket: null,
     pendingModifications: {},
+    pendingDeletions: {},
+
+    addPendingDeletion: (ticket) => set((state) => {
+        const ticketNum = typeof ticket === 'string' ? parseInt(ticket) : ticket;
+        if (isNaN(ticketNum)) return state;
+
+        return {
+            pendingDeletions: { ...state.pendingDeletions, [ticketNum]: Date.now() },
+            positions: state.positions.filter(p => Number(p.ticket) !== ticketNum),
+            orders: state.orders.filter(o => Number(o.ticket) !== ticketNum)
+        };
+    }),
 
     addPendingModification: (ticket, field, price) => set((state) => {
         const key = `${ticket}-${field}`;
@@ -125,7 +139,15 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         if (!source && payload.length === 0) return {};
         const finalSource = source || 'MT5';
         const otherPositions = state.positions.filter(p => p.source !== finalSource);
-        const newPositionsRaw = [...otherPositions, ...payload];
+        const newPositionsRaw = [...otherPositions, ...payload].filter(p => {
+            const ticketNum = Number(p.ticket);
+            const pending = state.pendingDeletions[ticketNum];
+            if (pending) {
+                if (Date.now() - pending > 10000) return true; // 10s expiry
+                return false; // Skip deleted item
+            }
+            return true;
+        });
 
         if (state.positions.length === newPositionsRaw.length) {
             let hasStructuralChange = false;
@@ -175,29 +197,39 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         const payload = typeof data === 'function' ? data(state.orders) : data;
 
         // 🛡️ Apply protection for Orders
-        const protectedOrders = payload.map(o => {
-            const newOrd = { ...o };
-            const fields: ('sl' | 'tp' | 'price_open')[] = ['sl', 'tp', 'price_open'];
-
-            fields.forEach(field => {
-                const key = `${o.ticket}-${field}`;
-                const pending = state.pendingModifications[key];
-
+        const protectedOrders = payload
+            .filter(o => {
+                const ticketNum = Number(o.ticket);
+                const pending = state.pendingDeletions[ticketNum];
                 if (pending) {
-                    if (Date.now() - pending.timestamp > 3000) return;
-
-                    const wsValue = newOrd[field];
-                    const epsilon = 0.000001;
-
-                    if (Math.abs(wsValue - pending.price) >= epsilon) {
-                        // WS is old/different -> Keep optimistic
-                        // @ts-ignore
-                        newOrd[field] = pending.price;
-                    }
+                    if (Date.now() - pending > 10000) return true; // 10s expiry
+                    return false;
                 }
+                return true;
+            })
+            .map(o => {
+                const newOrd = { ...o };
+                const fields: ('sl' | 'tp' | 'price_open')[] = ['sl', 'tp', 'price_open'];
+
+                fields.forEach(field => {
+                    const key = `${o.ticket}-${field}`;
+                    const pending = state.pendingModifications[key];
+
+                    if (pending) {
+                        if (Date.now() - pending.timestamp > 3000) return;
+
+                        const wsValue = newOrd[field];
+                        const epsilon = 0.000001;
+
+                        if (Math.abs(wsValue - pending.price) >= epsilon) {
+                            // WS is old/different -> Keep optimistic
+                            // @ts-ignore
+                            newOrd[field] = pending.price;
+                        }
+                    }
+                });
+                return newOrd;
             });
-            return newOrd;
-        });
 
         return { orders: protectedOrders };
     }),

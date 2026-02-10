@@ -27,81 +27,112 @@ export function calculateEMA(data: number[], period: number): number[] {
 }
 
 /**
+ * Calculate Simple Moving Average (SMA)
+ */
+export function calculateSMA(data: number[], period: number): number[] {
+    const p = Math.max(1, Math.floor(Number(period)));
+    const sma: number[] = new Array(data.length).fill(NaN);
+    if (data.length < p) return sma;
+
+    let sum = 0;
+    for (let i = 0; i < p; i++) sum += Number(data[i]);
+    sma[p - 1] = sum / p;
+
+    for (let i = p; i < data.length; i++) {
+        sum = sum - Number(data[i - p]) + Number(data[i]);
+        sma[i] = sum / p;
+    }
+    return sma;
+}
+
+/**
  * Calculate Weighted Moving Average (WMA)
+ * Matches TradingView's wma(src, length)
  */
 export function calculateWMA(data: number[], period: number): number[] {
-    const wma: number[] = new Array(data.length).fill(NaN);
-    if (data.length < period) return wma;
+    const len = data.length;
+    const p = Math.max(1, Math.floor(Number(period)));
+    const wma: number[] = new Array(len).fill(NaN);
+    if (len < p) return wma;
 
-    const weightSum = (period * (period + 1)) / 2;
+    const weightSum = (p * (p + 1)) / 2;
 
-    for (let i = period - 1; i < data.length; i++) {
+    for (let i = p - 1; i < len; i++) {
         let sum = 0;
-        for (let j = 0; j < period; j++) {
-            sum += data[i - j] * (period - j);
+        let isWindowValid = true;
+        for (let j = 0; j < p; j++) {
+            const val = data[i - j];
+            if (val === null || val === undefined || isNaN(val)) {
+                isWindowValid = false;
+                break;
+            }
+            // Weight logic: j=0 (current) -> weight=p, j=p-1 (oldest) -> weight=1
+            sum += val * (p - j);
         }
-        wma[i] = sum / weightSum;
+        if (isWindowValid) {
+            wma[i] = sum / weightSum;
+        }
     }
-
     return wma;
 }
 
 /**
  * Calculate Hull Moving Average (HMA)
- * HMA = WMA(2*WMA(n/2) - WMA(n)), sqrt(n))
+ * HMA = WMA(2 * WMA(src, n/2) - WMA(src, n), sqrt(n))
+ * Matches TradingView's ta.hma(src, length)
  */
 export function calculateHullMA(data: number[], period: number): number[] {
-    const halfPeriod = Math.floor(period / 2);
-    const sqrtPeriod = Math.floor(Math.sqrt(period));
+    const len = data.length;
+    const p = Math.max(2, Math.floor(Number(period)));
+
+    // Pine Script uses floor for both according to official docs/built-ins
+    const halfPeriod = Math.floor(p / 2);
+    const sqrtPeriod = Math.floor(Math.sqrt(p));
 
     const wmaHalf = calculateWMA(data, halfPeriod);
-    const wmaFull = calculateWMA(data, period);
+    const wmaFull = calculateWMA(data, p);
 
-    const rawHma: number[] = new Array(data.length).fill(NaN);
-    for (let i = 0; i < data.length; i++) {
-        if (!isNaN(wmaHalf[i]) && !isNaN(wmaFull[i])) {
-            rawHma[i] = 2 * wmaHalf[i] - wmaFull[i];
+    const rawHma: number[] = new Array(len).fill(NaN);
+    for (let i = 0; i < len; i++) {
+        const vHalf = wmaHalf[i];
+        const vFull = wmaFull[i];
+        if (!isNaN(vHalf) && !isNaN(vFull)) {
+            // HMA recursive projection: 2 * Fast - Slow
+            rawHma[i] = (2 * vHalf) - vFull;
         }
     }
 
-    // Filter out leading NaNs from rawHma for the second WMA
-    const firstValidIdx = rawHma.findIndex(v => !isNaN(v));
-    if (firstValidIdx === -1) return new Array(data.length).fill(NaN);
-
-    const result = calculateWMA(rawHma.slice(firstValidIdx), sqrtPeriod);
-
-    // Prepend the NaNs back
-    const finalHma = new Array(firstValidIdx).fill(NaN).concat(result);
-    return finalHma;
+    return calculateWMA(rawHma, sqrtPeriod);
 }
 
 /**
  * Calculate Relative Strength Index (RSI)
  */
 export function calculateRSI(data: number[], period: number = 14): number[] {
+    const p = Math.max(1, Math.floor(Number(period)));
     const rsi: number[] = new Array(data.length).fill(NaN);
-    if (data.length < period + 1) return rsi;
+    if (data.length < p + 1) return rsi;
 
     const gains: number[] = [0];
     const losses: number[] = [0];
 
     for (let i = 1; i < data.length; i++) {
-        const diff = data[i] - data[i - 1];
+        const diff = Number(data[i]) - Number(data[i - 1]);
         gains.push(diff > 0 ? diff : 0);
         losses.push(diff < 0 ? -diff : 0);
     }
 
     // Initial SMA for Gains and Losses
-    let avgGain = gains.slice(1, period + 1).reduce((a, b) => a + b, 0) / period;
-    let avgLoss = losses.slice(1, period + 1).reduce((a, b) => a + b, 0) / period;
+    let avgGain = gains.slice(1, p + 1).reduce((a, b) => a + b, 0) / p;
+    let avgLoss = losses.slice(1, p + 1).reduce((a, b) => a + b, 0) / p;
 
-    if (avgLoss === 0) rsi[period] = 100;
-    else rsi[period] = 100 - (100 / (1 + avgGain / avgLoss));
+    if (avgLoss === 0) rsi[p] = 100;
+    else rsi[p] = 100 - (100 / (1 + avgGain / avgLoss));
 
     // Wilders smoothing (EWM alpha=1/period)
-    for (let i = period + 1; i < data.length; i++) {
-        avgGain = (avgGain * (period - 1) + gains[i]) / period;
-        avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+    for (let i = p + 1; i < data.length; i++) {
+        avgGain = (avgGain * (p - 1) + gains[i]) / p;
+        avgLoss = (avgLoss * (p - 1) + losses[i]) / p;
 
         if (avgLoss === 0) rsi[i] = 100;
         else rsi[i] = 100 - (100 / (1 + avgGain / avgLoss));

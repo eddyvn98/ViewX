@@ -106,10 +106,11 @@ export const renderStatus = (refs: OHLCRefs, isLive: boolean) => {
 export const renderIndicators = (
     activeIndex: number,
     indicators: IndicatorCache[],
-    indicatorRefs: Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>
+    indicatorRefs: Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>,
+    targetPane?: string
 ) => {
     indicators
-        .filter(ind => ind.pane !== 'subchart')
+        .filter(ind => targetPane ? ind.pane === targetPane : ind.pane !== 'subchart')
         .forEach(ind => {
             const cached = indicatorRefs.get(ind.id);
             if (!cached) return;

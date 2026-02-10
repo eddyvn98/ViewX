@@ -2,10 +2,12 @@ import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Zap, Check, X } from 'lucide-react';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useWebSocket } from '@/hooks/use-websocket';
 
 interface ChartTradingOverlayProps {
     symbol: string | undefined;
+    source?: string;
 }
 
 /**
@@ -21,7 +23,8 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
     // Get initial price for draft (computed once when needed)
     const getCurrentPrice = useCallback(() => {
         if (!symbol) return 0;
-        return useMarketStore.getState().tickers[symbol]?.price || 0;
+        const normSym = normalizeSymbol(symbol);
+        return useMarketStore.getState().tickers[normSym]?.price || 0;
     }, [symbol]);
 
     const handleStartDraft = (type: 'buy' | 'sell') => {
@@ -33,14 +36,15 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
         else if (symbol.includes('XAU')) distance = 10.0;
         else if (symbol.includes('BTC')) distance = 100.0;
 
+        const normSym = normalizeSymbol(symbol);
         setDraftOrder({
-            symbol,
+            symbol: normSym,
             type,
             volume: 0.1,
             price: price,
             isMarket: true,
-            sl: type === 'buy' ? price - distance : price + distance,
-            tp: type === 'buy' ? price + distance : price - distance,
+            sl: 0,
+            tp: 0,
             slTouched: false,
             tpTouched: false
         });
@@ -90,7 +94,8 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
             is_market: draftOrder.isMarket
         };
 
-        const digits = useMarketStore.getState().symbolInfo?.[draftOrder.symbol]?.digits || 5;
+        const normSym = normalizeSymbol(draftOrder.symbol);
+        const digits = useMarketStore.getState().symbolInfo?.[normSym]?.digits || 5;
 
         if (draftOrder.isMarket) {
             payload.price = 0;
@@ -115,34 +120,34 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
     if (!symbol) return null;
 
     return (
-        <div className="absolute top-1.5 left-1.5 z-50 flex items-center gap-2">
+        <div className="absolute top-2 left-2 z-50 flex items-center gap-1.5">
             {(!draftOrder || draftOrder.symbol !== symbol) ? (
-                <div className="flex items-center p-1 bg-zinc-950/80 backdrop-blur-xl rounded-lg border border-white/10 shadow-2xl overflow-hidden">
+                <div className="flex items-center p-0.5 bg-zinc-950/90 backdrop-blur-xl rounded-lg border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
                     <button
                         onClick={() => handleStartDraft('buy')}
-                        className="group flex flex-col items-center justify-center w-10 h-7 hover:bg-emerald-500/20 rounded transition-all"
+                        className="group flex items-center justify-center px-3 h-7 bg-emerald-500/10 hover:bg-emerald-500 rounded-md transition-all duration-200"
                     >
-                        <span className="text-[10px] font-bold text-emerald-400 group-hover:text-emerald-300">BUY</span>
+                        <span className="text-[11px] font-black text-emerald-400 group-hover:text-white uppercase tracking-wider">BUY</span>
                     </button>
 
-                    <div className="h-4 w-[1px] bg-white/10 mx-0.5" />
+                    <div className="h-3 w-[1px] bg-white/10 mx-1" />
 
                     <button
                         onClick={() => handleStartDraft('sell')}
-                        className="group flex flex-col items-center justify-center w-10 h-7 hover:bg-red-500/20 rounded transition-all"
+                        className="group flex items-center justify-center px-3 h-7 bg-red-500/10 hover:bg-red-500 rounded-md transition-all duration-200"
                     >
-                        <span className="text-[10px] font-bold text-red-400 group-hover:text-red-300">SELL</span>
+                        <span className="text-[11px] font-black text-red-400 group-hover:text-white uppercase tracking-wider">SELL</span>
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center gap-1 p-1 bg-zinc-950/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl">
+                <div className="flex items-center gap-1 p-1 bg-zinc-950/90 backdrop-blur-xl border border-white/10 rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                     <button
                         onClick={toggleMarket}
                         className={cn(
-                            "px-3 h-9 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1.5",
+                            "px-2.5 h-7 rounded-md text-[11px] font-black uppercase transition-all duration-200 border",
                             draftOrder?.isMarket
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40"
-                                : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                ? "bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-900/40"
+                                : "bg-zinc-800 text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
                         )}
                     >
                         {draftOrder?.isMarket ? "Market" : "Limit"}
@@ -151,21 +156,21 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
                     <button
                         onClick={handleConfirm}
                         className={cn(
-                            "flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold transition-all shadow-lg",
+                            "flex items-center gap-1.5 px-3.5 h-7 rounded-md text-[11px] font-black transition-all duration-200 shadow-md uppercase tracking-tight",
                             draftOrder?.type === 'buy'
-                                ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
-                                : "bg-red-600 hover:bg-red-500 shadow-red-900/20"
+                                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40 border-t border-emerald-400/30"
+                                : "bg-red-600 hover:bg-red-500 text-white shadow-red-900/40 border-t border-red-400/30"
                         )}
                     >
-                        <Check size={14} />
-                        CONFIRM {draftOrder?.type?.toUpperCase()}
+                        <Check size={12} strokeWidth={3} />
+                        CONFIRM {draftOrder?.type}
                     </button>
 
                     <button
                         onClick={handleCancel}
-                        className="w-9 h-9 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-lg transition-all"
+                        className="w-7 h-7 flex items-center justify-center bg-zinc-800 hover:bg-zinc-600 text-zinc-400 hover:text-white rounded-md border border-white/5 transition-all duration-200"
                     >
-                        <X size={16} />
+                        <X size={14} strokeWidth={2.5} />
                     </button>
                 </div>
             )}

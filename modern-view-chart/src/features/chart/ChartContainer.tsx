@@ -74,7 +74,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
 
     /* ================= DATA ================= */
     const { sendMessage } = useWebSocket();
-    useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
+    const { realTimeCandleRef } = useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
 
     /* ================= OVERLAYS ================= */
     const filteredPositions = React.useMemo(() => {
@@ -90,9 +90,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     }, [orders, source]);
 
     // useChartCrosshair(chartId, priceChartRef, seriesRef);
-    useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef, source);
-    useChartOrders(symbol, seriesRef, filteredOrders, source);
-    useChartDraftOrder(symbol, seriesRef, isReady, source);
+    useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef);
+    useChartOrders(symbol, seriesRef, filteredOrders);
+    useChartDraftOrder(symbol, seriesRef, isReady);
 
     /* ================= INDICATORS ================= */
     useChartIndicators(
@@ -102,6 +102,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         seriesRef,
         candles,
         symbol,
+        interval,
+        source,
         timezone,
         syncRange,
         undefined, // Removed currentPrice from props (hook now handles it if needed)
@@ -213,6 +215,14 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* PRICE CHART (Main) - Always background */}
                 <div ref={priceContainerRef} className="w-full h-full" />
 
+                {/* CANDLE COUNTDOWN OVERLAY */}
+                <CandleCountdown
+                    chart={priceChartRef.current}
+                    series={seriesRef.current}
+                    interval={interval}
+                    realTimeRef={realTimeCandleRef}
+                />
+
                 {/* ORDER LINE TAGS (Draggable Handles) */}
                 <OrderLineTags
                     symbol={symbol}
@@ -221,13 +231,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     isReady={isReady}
                     sendMessage={sendMessage}
                     source={source}
-                />
-
-                {/* CANDLE COUNTDOWN OVERLAY */}
-                <CandleCountdown
-                    chart={priceChartRef.current}
-                    series={seriesRef.current}
-                    interval={interval}
                 />
 
                 {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}
@@ -272,7 +275,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     className={cn(
                         "absolute bottom-0 left-0 right-0 z-10 border-t border-blue-500/30 transition-all duration-300 transform overflow-hidden",
                         isSubchartVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-                        isMinimized && isSubchartVisible ? "h-[32px] bg-[#131722]" : "h-[25%] min-h-[100px] bg-[#131722]/50 backdrop-blur-md"
+                        isMinimized && isSubchartVisible ? "h-[80px] bg-[#131722]" : "h-[25%] min-h-[100px] bg-[#131722]/50 backdrop-blur-md"
                     )}
                 >
                     {/* Visual Border Highlight */}
@@ -284,6 +287,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                             symbol={chartInstance?.symbol}
                             interval={chartInstance?.interval}
                             source={chartInstance?.source}
+                            candles={candles}
                         />
                     </div>
                     <div ref={subchartContainerRef} className="w-full h-full" />

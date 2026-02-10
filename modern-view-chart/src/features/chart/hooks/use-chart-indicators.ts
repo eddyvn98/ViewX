@@ -24,6 +24,8 @@ export function useChartIndicators(
     seriesRef: React.RefObject<any>,
     candles: Candle[],
     symbol: string | undefined,
+    interval: string | undefined,
+    source: string | undefined,
     timezone: string | undefined,
     syncRange: () => void,
     currentPrice?: number,
@@ -38,8 +40,6 @@ export function useChartIndicators(
     const defaultsAppliedRef = useRef(false);
 
     const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
-    const source = useMarketStore.getState().tabs[Object.keys(useMarketStore.getState().tabs)[0]]?.charts[chartId]?.source || 'MT5';
-    const interval = useMarketStore.getState().tabs[Object.keys(useMarketStore.getState().tabs)[0]]?.charts[chartId]?.interval || '1m';
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
     const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || []) : []);
 
@@ -195,14 +195,57 @@ export function useChartIndicators(
                         if (instance.updateLastPoint) {
                             const currentCandles = getCandles();
                             const lastIdx = currentCandles.length - 1;
+
                             if (lastIdx >= 0 && currentCandles[lastIdx]) {
-                                const lastCandle = {
-                                    ...currentCandles[lastIdx],
-                                    close: Number(price),
-                                    high: Math.max(currentCandles[lastIdx].high || Number(price), Number(price)),
-                                    low: Math.min(currentCandles[lastIdx].low || Number(price), Number(price))
-                                };
-                                instance.updateLastPoint(lastCandle, currentCandles);
+                                const baseCandle = currentCandles[lastIdx];
+                                const currentPrice = Number(price);
+
+                                // Parse interval to calculate correct time
+                                let intervalSeconds = 60;
+                                if (interval) {
+                                    const unit = interval.slice(-1);
+                                    const val = parseInt(interval);
+                                    if (unit === 'm') intervalSeconds = val * 60;
+                                    else if (unit === 'h' || unit === 'H') intervalSeconds = val * 3600;
+                                    else if (unit === 'd' || unit === 'D') intervalSeconds = val * 86400;
+                                    else if (unit === 'w' || unit === 'W') intervalSeconds = val * 604800;
+                                    else if (!isNaN(Number(interval))) intervalSeconds = Number(interval) * 60;
+                                }
+
+                                const lastCandleTime = typeof baseCandle.time === 'object' ? (baseCandle.time as any).timestamp : Number(baseCandle.time);
+
+                                // Heuristic: If time > 10 billion, it's Milliseconds
+                                const isMillis = lastCandleTime > 10000000000;
+                                const lastCandleTimeSec = isMillis ? Math.floor(lastCandleTime / 1000) : lastCandleTime;
+
+                                const nowSec = Math.floor(Date.now() / 1000);
+                                const currentIntervalStartSec = Math.floor(nowSec / intervalSeconds) * intervalSeconds;
+
+                                let candleToUpdate;
+
+                                // ⚡ CLIENT-SIDE NEW BAR DETECTION FOR INDICATORS
+                                if (currentIntervalStartSec > lastCandleTimeSec) {
+                                    const newTime = isMillis ? currentIntervalStartSec * 1000 : currentIntervalStartSec;
+                                    // New Bar Mode: projected candle
+                                    candleToUpdate = {
+                                        time: newTime as any,
+                                        open: currentPrice,
+                                        high: currentPrice,
+                                        low: currentPrice,
+                                        close: currentPrice,
+                                        volume: 0
+                                    };
+                                } else {
+                                    // Update Existing Mode
+                                    candleToUpdate = {
+                                        ...baseCandle,
+                                        close: currentPrice,
+                                        high: Math.max(baseCandle.high || currentPrice, currentPrice),
+                                        low: Math.min(baseCandle.low || currentPrice, currentPrice)
+                                    };
+                                }
+
+                                instance.updateLastPoint(candleToUpdate, currentCandles);
                             }
                         }
                     });
@@ -214,7 +257,7 @@ export function useChartIndicators(
             unsub();
             if (rafId) cancelAnimationFrame(rafId);
         };
-    }, [isReady, symbol, tickerKey, chartId]);
+    }, [isReady, symbol, tickerKey, chartId, interval]);
 
 
 

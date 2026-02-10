@@ -84,7 +84,7 @@ class BridgeClient:
         cmd = data.get("command")
         ticket = int(data.get("ticket")) if data.get("ticket") else 0
         
-        if cmd == "close" or cmd == "delete":
+        if cmd in ["close", "delete", "cancel"]:
             # MT5Service.close_position handles both market positions (DEAL) and pending orders (REMOVE)
             res = self.mt5.close_position(ticket)
             print(f"[CMD] {cmd.capitalize()} {ticket}: {'Done' if res else 'Failed'}")

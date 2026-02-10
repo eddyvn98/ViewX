@@ -50,8 +50,9 @@ export const getNearElement = (
     // 2. Draft
     if (draftOrder && norm(draftOrder.symbol) === targetSymbol) {
         const bid = currentPrice || 0;
-        // Fix: Use simple currentPrice (Bid) to match rendering logic in getDraftTags
-        const entryPrice = draftOrder.isMarket ? bid : (draftOrder.price || bid);
+        const isBuy = draftOrder.type === 'buy';
+        const ask = bid * 1.0001;
+        const entryPrice = draftOrder.isMarket ? (isBuy ? ask : bid) : (draftOrder.price || bid);
         const lines = [{ type: 'entry', price: entryPrice }, { type: 'sl', price: draftOrder.sl || 0 }, { type: 'tp', price: draftOrder.tp || 0 }];
         for (const l of lines) {
             if (l.price <= 0) continue;

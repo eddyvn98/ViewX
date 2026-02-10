@@ -62,5 +62,5 @@ export function calculatePnL({ type, openPrice, currentPrice, volume, symbolInfo
 export function formatPnL(val: number): string {
     const prefix = val >= 0 ? '+' : '-';
     const absVal = Math.abs(val);
-    return `${prefix}$${absVal.toFixed(2)}`;
+    return `${prefix}${absVal.toFixed(2)} USD`;
 }

@@ -91,9 +91,7 @@ export class MACDIndicator {
         const { fast = 12, slow = 26, signal = 9 } = this.config.params;
         const lastIdx = candles.length - 1;
 
-        // MACD needs a good amount of history for Signal line stabilization
-        const slice = candles.slice(Math.max(0, lastIdx - (slow + signal) * 2));
-        const prices = slice.map(c => c.close);
+        const prices = candles.map(c => c.close);
         prices[prices.length - 1] = candle.close;
 
         const { macd, signal: sig, histogram } = calculateMACD(prices, fast, slow, signal);

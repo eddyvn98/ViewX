@@ -137,3 +137,14 @@ a[href*="tradingview.com"] {
   width: 0 !important;
   pointer-events: none !important;
 }
+
+/* 🛡️ Interaction Refinement */
+@media (max-width: 768px) {
+  .cancel-btn {
+    display: none !important;
+  }
+}
+
+.touch-action-none {
+  touch-action: none !important;
+}
