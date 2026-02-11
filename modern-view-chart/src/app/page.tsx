@@ -98,7 +98,7 @@ export default function Home() {
   }, [setIsScrollingPanel]);
 
   return (
-    <div className="fixed inset-0 bg-zinc-950 text-white flex flex-col font-sans select-none">
+    <div className="app-root bg-zinc-950 text-white font-sans select-none relative">
       <NotificationManager />
       <div className="hidden md:block">
         <Header />
@@ -108,14 +108,14 @@ export default function Home() {
           Mobile Height: 100dvh - 64px (Bottom Nav)
           Desktop Height: 100vh - 48px (Header) 
       */}
-      <div className="flex flex-1 pt-0 overflow-hidden">
+      <div className="flex flex-1 pt-0 overflow-hidden min-h-0">
         {/* LEFT BAR: Icons */}
         <div className="hidden md:flex h-full">
           <Sidebar onToggleMarket={toggleLeftSidebar} />
         </div>
 
         {/* BODY AREA */}
-        <div className="flex-1 flex overflow-hidden ml-0 md:ml-16 relative">
+        <div className="flex-1 flex overflow-hidden ml-0 md:ml-16 relative min-h-0">
           {/* OPTIONAL LEFT PANEL: Market List */}
           <div
             className={cn(
@@ -138,7 +138,7 @@ export default function Home() {
 
           {/* MAIN CENTER: Charts & Terminal */}
           <main className={cn(
-            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-black/20"
+            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-black/20 pb-0 md:pb-0"
           )}>
             {/* Show Chart ONLY if active tab is 'chart' on Mobile, OR always on Desktop */}
             <div className={cn(
@@ -170,7 +170,7 @@ export default function Home() {
 
             {/* Mobile Watchlist Tab */}
             {activeMobileTab === 'watchlist' && (
-              <div className="flex-1 flex flex-col bg-zinc-950 md:hidden h-full">
+              <div className="flex-1 flex flex-col bg-zinc-950 md:hidden h-full min-h-0">
                 <div className="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-900/50">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
                     {isMobileWatchlistAddMode ? 'Add Symbols' : 'My Watchlist'}
@@ -206,8 +206,8 @@ export default function Home() {
             {/* Mobile Terminal Panel - CONDITIONAL RENDER to prevent re-renders when hidden */}
             {activeMobileTab === 'positions' && (
               <div className={cn(
-                "fixed left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
-                "bottom-0",
+                "absolute left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
+                "bottom-[calc(48px+env(safe-area-inset-bottom))]",
                 isInputFocused ? "h-[80%]" : "h-[29%]"
               )}>
                 <div
@@ -240,7 +240,7 @@ export default function Home() {
 
 
             {activeMobileTab === 'menu' && (
-              <div className="flex-1 bg-zinc-950 md:hidden overflow-y-auto">
+              <div className="flex-1 bg-zinc-950 md:hidden overflow-y-auto min-h-0">
                 <MobileMenu />
               </div>
             )}

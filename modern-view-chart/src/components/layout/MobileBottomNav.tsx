@@ -1,8 +1,9 @@
 import React, { memo, useState, useRef, useCallback } from "react";
-import { BarChart2, List, Menu, ArrowLeftRight, Briefcase, ChevronUp } from "lucide-react";
+import { BarChart2, List, Menu, ArrowLeftRight, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileSymbolCarousel } from "./MobileSymbolCarousel";
 import { MobileTimeframeSlide } from "./MobileTimeframeSlide";
+import { MobileDrawingToolbar } from "./MobileDrawingToolbar";
 
 import { useOrderFormLogic } from "@/features/terminal/components/OrderForm";
 import { MobileTradeFlow } from "@/features/terminal/components/OrderForm/MobileTradeFlow";
@@ -13,108 +14,186 @@ interface MobileBottomNavProps {
     isHidden?: boolean;
 }
 
-type NavMode = 'symbol' | 'actions' | 'timeframe';
+type NavMode = 'symbol' | 'drawing' | 'actions' | 'timeframe';
 
 export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabChange, isHidden = false }: MobileBottomNavProps) {
+    // Thứ tự modes: Actions (up) -> Symbol (center, default) -> Drawing (down)
+    const MODES: NavMode[] = ['actions', 'symbol', 'drawing'];
+    const ITEM_HEIGHT = 48;
+
     const [mode, setMode] = useState<NavMode>('symbol');
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [prevMode, setPrevMode] = useState<NavMode | null>(null);
-    const [direction, setDirection] = useState<'up' | 'down'>('up');
-    const touchStartY = useRef<number | null>(null);
-    const touchStartX = useRef<number | null>(null);
+    const [isTimeframe, setIsTimeframe] = useState(false);
+
+    const wheelRef = useRef<HTMLDivElement>(null);
+    const touchState = useRef({
+        startY: 0,
+        startX: 0,
+        currentTranslate: 0,
+        lastTranslate: 0,
+        isDragging: false,
+        lockDirection: 'none' as 'horizontal' | 'vertical' | 'none',
+    });
 
     const orderLogic = useOrderFormLogic();
 
     const navItems = [
         { id: 'watchlist', label: 'Watchlist', icon: List },
-        { id: 'chart', label: 'Biểu đồ', icon: BarChart2 },
         { id: 'trade', label: 'Trade', icon: ArrowLeftRight },
         { id: 'positions', label: 'Terminal', icon: Briefcase },
         { id: 'menu', label: 'Menu', icon: Menu },
     ];
 
-    const transition = (newMode: NavMode, dir: 'up' | 'down') => {
-        if (newMode === mode || isTransitioning) return;
-        setPrevMode(mode);
-        setMode(newMode);
-        setDirection(dir);
-        setIsTransitioning(true);
-        if (window.navigator.vibrate) window.navigator.vibrate(10);
+    // Apply translate to wheel
+    const applyTranslate = useCallback((translateY: number, animate = false) => {
+        if (!wheelRef.current) return;
+        wheelRef.current.style.transition = animate ? 'transform 300ms ease-out' : 'none';
+        wheelRef.current.style.transform = `translateY(${translateY}px)`;
+    }, []);
 
-        setTimeout(() => {
-            setIsTransitioning(false);
-            setPrevMode(null);
-        }, 300); // Perfect sync with 3D animation
-    };
+    // Snap to nearest position
+    const snapToNearest = useCallback((currentY: number) => {
+        const steps = Math.round(currentY / ITEM_HEIGHT);
+        return steps * ITEM_HEIGHT;
+    }, []);
+
+    // Get mode from translate position
+    const getModeFromTranslate = useCallback((translateY: number) => {
+        const steps = Math.round(translateY / ITEM_HEIGHT);
+        const currentModeIndex = MODES.indexOf(mode);
+        const newIndex = ((currentModeIndex + steps) % MODES.length + MODES.length) % MODES.length;
+        return MODES[newIndex];
+    }, [mode]);
+
+    // Touch handlers
+    const [isAnimating, setIsAnimating] = useState(false);
 
     const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartY.current = e.touches[0].clientY;
-        touchStartX.current = e.touches[0].clientX;
+        if (isTimeframe || isAnimating) return;
+        touchState.current.startY = e.touches[0].clientY;
+        touchState.current.startX = e.touches[0].clientX;
+        touchState.current.isDragging = true;
+        touchState.current.lockDirection = 'none';
     };
 
-    const handleTouchEnd = (e: React.TouchEvent) => {
-        if (touchStartY.current === null || touchStartX.current === null) return;
-        const touchEndY = e.changedTouches[0].clientY;
-        const touchEndX = e.changedTouches[0].clientX;
-        const diffY = touchStartY.current - touchEndY;
-        const diffX = touchStartX.current - touchEndX;
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!touchState.current.isDragging || isTimeframe || isAnimating) return;
 
-        if (Math.abs(diffY) > 30 && Math.abs(diffY) > Math.abs(diffX)) {
-            const dir = diffY > 0 ? 'up' : 'down';
-            if (activeTab === 'trade') return; // Disable swipe while in trade flow
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const deltaX = currentX - touchState.current.startX;
+        const deltaY = currentY - touchState.current.startY;
 
-            if (mode === 'symbol') {
-                transition('actions', dir);
-            } else if (mode === 'actions') {
-                transition('symbol', dir);
+        // Determine or enforce direction lock
+        if (touchState.current.lockDirection === 'none') {
+            if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                touchState.current.lockDirection = 'horizontal';
+                return;
+            } else if (Math.abs(deltaY) > 5) {
+                touchState.current.lockDirection = 'vertical';
             }
         }
 
-        touchStartY.current = null;
-        touchStartX.current = null;
+        if (touchState.current.lockDirection === 'horizontal') return;
+
+        const newTranslate = touchState.current.lastTranslate + deltaY;
+        touchState.current.currentTranslate = newTranslate;
+        applyTranslate(newTranslate);
     };
 
-    const handleSymbolTap = useCallback(() => {
-        transition('timeframe', 'up');
-    }, [mode, isTransitioning]);
+    const handleTouchEnd = () => {
+        if (!touchState.current.isDragging || isTimeframe || isAnimating) return;
 
+        const wasVertical = touchState.current.lockDirection === 'vertical';
+        touchState.current.isDragging = false;
+        touchState.current.lockDirection = 'none';
+
+        if (!wasVertical) {
+            // If it wasn't a vertical swipe, reset any minor vertical shift
+            applyTranslate(0, true);
+            touchState.current.currentTranslate = 0;
+            touchState.current.lastTranslate = 0;
+            return;
+        }
+
+        // Snap to nearest position
+        const snapped = snapToNearest(touchState.current.currentTranslate);
+        const newMode = getModeFromTranslate(snapped);
+
+        if (newMode !== mode) {
+            setIsAnimating(true);
+            applyTranslate(snapped, true);
+
+            // ATOMIC SWAP: Wait for animation to finish, then swap state and reset translate
+            setTimeout(() => {
+                if (window.navigator.vibrate) window.navigator.vibrate(10);
+
+                // 1. Update mode state (this triggers re-centering visually)
+                setMode(newMode);
+
+                // 2. Intelligent Navigation: Auto-switch to chart tab
+                if ((newMode === 'symbol' || newMode === 'drawing') && activeTab !== 'chart') {
+                    onTabChange('chart');
+                }
+
+                // 3. Immediately reset translate to 0 without transition
+                // This must happen after or during the same render cycle as setMode
+                applyTranslate(0, false);
+                touchState.current.currentTranslate = 0;
+                touchState.current.lastTranslate = 0;
+
+                setIsAnimating(false);
+            }, 300);
+        } else {
+            // If mode didn't change, snap back to center
+            applyTranslate(0, true);
+            touchState.current.currentTranslate = 0;
+            touchState.current.lastTranslate = 0;
+        }
+    };
+
+    // Symbol tap handler
+    const handleSymbolTap = useCallback(() => {
+        setIsTimeframe(true);
+    }, []);
+
+    // Timeframe select handler
     const handleTimeframeSelect = useCallback(() => {
-        transition('symbol', 'down');
-    }, [mode, isTransitioning]);
+        setIsTimeframe(false);
+    }, []);
 
     if (isHidden) return null;
 
     const isTradeActive = activeTab === 'trade';
-    const isEnteringActions = mode === 'actions' || (isTransitioning && prevMode === 'actions') || isTradeActive;
 
-    const renderContent = (targetMode: NavMode, isOld: boolean) => {
-        const animClass = isOld
-            ? (direction === 'up' ? "animate-wheel-up-out" : "animate-wheel-down-out")
-            : (direction === 'up' ? "animate-wheel-up-in" : "animate-wheel-down-in");
-
-        const contentStyle = {
-            backfaceVisibility: 'hidden' as const,
-            transformStyle: 'preserve-3d' as const,
+    // Render mode content
+    const renderModeContent = (targetMode: NavMode) => {
+        const itemStyle = {
+            height: `${ITEM_HEIGHT}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            flexShrink: 0,
         };
 
         switch (targetMode) {
             case 'symbol':
                 return (
-                    <div key="symbol" className={cn("absolute inset-0 flex items-center justify-center", animClass, isOld ? "z-0" : "z-10")} style={contentStyle}>
+                    <div style={itemStyle}>
                         <MobileSymbolCarousel onSymbolTap={handleSymbolTap} />
                     </div>
                 );
-            case 'timeframe':
+            case 'drawing':
                 return (
-                    <div key="timeframe" className={cn("absolute inset-0 flex items-center justify-center bg-zinc-950/40 backdrop-blur-md", animClass, isOld ? "z-0" : "z-10")} style={contentStyle}>
-                        <MobileTimeframeSlide onSelect={handleTimeframeSelect} />
+                    <div style={itemStyle}>
+                        <MobileDrawingToolbar onToolSelect={(toolId) => console.log('Tool selected:', toolId)} />
                     </div>
                 );
             case 'actions':
                 return (
-                    <div key="actions" className={cn("absolute inset-0 flex flex-col", animClass, isOld ? "z-0" : "z-10")} style={contentStyle}>
+                    <div style={itemStyle}>
                         {isTradeActive ? (
-                            <div className="flex-1 overflow-hidden">
+                            <div className="w-full h-full overflow-hidden">
                                 <MobileTradeFlow
                                     {...orderLogic}
                                     formatPrice={orderLogic.formatPrice}
@@ -122,80 +201,80 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
                                 />
                             </div>
                         ) : (
-                            <>
-                                <div className="h-4 flex items-center justify-center pt-2">
-                                    <div className="w-10 h-1 bg-white/20 rounded-full" />
-                                </div>
-                                <div className="flex-1 flex items-center justify-around px-2 pb-2">
-                                    {navItems.map((item) => {
-                                        const isActive = activeTab === item.id;
-                                        return (
-                                            <button
-                                                key={item.id}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onTabChange(item.id);
-                                                }}
-                                                className={cn(
-                                                    "relative flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-300 active:scale-90",
-                                                    isActive ? "text-white" : "text-zinc-500"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "p-1.5 rounded-lg transition-all",
-                                                    isActive ? "bg-blue-600/20 text-blue-400" : "bg-transparent text-zinc-500"
-                                                )}>
-                                                    <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                                                </div>
-                                                <span className={cn(
-                                                    "text-[8px] font-bold uppercase tracking-widest transition-opacity duration-300",
-                                                    isActive ? "opacity-100" : "opacity-40"
-                                                )}>
-                                                    {item.label}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </>
+                            <div className="w-full h-full flex items-center justify-around px-2">
+                                {navItems.map((item) => {
+                                    const isActive = activeTab === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onTabChange(item.id);
+                                            }}
+                                            className={cn(
+                                                "relative flex flex-row items-center justify-center px-2 py-1 gap-1.5 transition-all duration-300 active:scale-90",
+                                                isActive ? "text-white" : "text-zinc-500"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "p-1 rounded-lg transition-all",
+                                                isActive ? "bg-blue-600/20 text-blue-400 shadow-lg shadow-blue-500/10" : "bg-transparent"
+                                            )}>
+                                                <item.icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+                                            </div>
+                                            <span className={cn(
+                                                "text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap",
+                                                isActive ? "opacity-100 scale-105" : "opacity-40"
+                                            )}>
+                                                {item.label}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
                 );
+            default:
+                return null;
         }
     };
 
     return (
-        <div className="md:hidden fixed inset-x-0 bottom-0 z-[99] flex flex-col items-center pointer-events-none">
+        <div className="md:hidden w-full z-[99] flex flex-col items-center pointer-events-auto shrink-0 relative bg-[#0b0e14] overflow-x-hidden">
             <div
                 className={cn(
-                    "relative w-[92%] mb-8 pointer-events-auto transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] transform-gpu",
-                    "backdrop-blur-2xl border border-white/10 shadow-[0_12px_48px_rgba(0,0,0,0.7)] flex flex-col",
-                    "rounded-[28px] touch-pan-x",
-                    "bg-zinc-950/60 h-[48px]"
+                    "w-full z-[100] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                    "backdrop-blur-2xl border-t border-white/5 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center",
+                    "touch-pan-x pb-safe",
+                    "bg-[#0b0e14]/98 h-auto overflow-hidden"
                 )}
                 onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{ perspective: '1200px' }}
             >
-
-                {/* 
-                   Gesture Hotspot: 
-                   Expands hit area 40px below the bar to catch swipes starting from the edge.
-                */}
-                <div className="absolute inset-x-0 -bottom-10 h-10 pointer-events-auto bg-transparent" />
-
-                {/* Content Area with Overflow Hidden and 3D Support */}
-                <div className="relative flex-1 w-full overflow-hidden" style={{ transformStyle: 'preserve-3d' }}>
-                    {prevMode && renderContent(prevMode, true)}
-                    {renderContent(mode, false)}
+                {/* Vertical Wheel Container */}
+                <div className="w-full relative overflow-hidden flex items-center shrink-0" style={{ height: `${ITEM_HEIGHT}px` }}>
+                    {!isTimeframe ? (
+                        <div
+                            ref={wheelRef}
+                            className="w-full flex flex-col will-change-transform"
+                            style={{ transform: `translateY(${touchState.current.currentTranslate}px)` }}
+                        >
+                            {/* Render infinite scroll: 5 items visible */}
+                            {[-2, -1, 0, 1, 2].map((offset) => {
+                                const currentModeIndex = MODES.indexOf(mode);
+                                const targetIndex = ((currentModeIndex - offset) % MODES.length + MODES.length) % MODES.length;
+                                const targetMode = MODES[targetIndex];
+                                return <div key={offset}>{renderModeContent(targetMode)}</div>;
+                            })}
+                        </div>
+                    ) : (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-md animate-in fade-in zoom-in duration-200">
+                            <MobileTimeframeSlide onSelect={handleTimeframeSelect} />
+                        </div>
+                    )}
                 </div>
-
-                {/* Optional bounce indicator */}
-                {!isEnteringActions && mode === 'symbol' && !isTransitioning && (
-                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-30 animate-bounce pointer-events-none">
-                        <ChevronUp size={14} className="text-white" />
-                    </div>
-                )}
             </div>
         </div>
     );

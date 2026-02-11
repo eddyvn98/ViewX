@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface MobileSymbolCarouselProps {
     onSymbolTap?: () => void;
@@ -14,7 +13,6 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
     const watchlist = useMarketStore(state => state.watchlist);
     const activeTabId = useMarketStore(state => state.activeTabId);
     const activeTab = useMarketStore(state => state.tabs[activeTabId]);
-    const tickers = useMarketStore(state => state.tickers);
     const setChartSymbol = useMarketStore(state => state.setChartSymbol);
 
     const activeChartId = activeTab?.activeChartId || 'default';
@@ -23,11 +21,14 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
     const lastEmittedSymbol = useRef(currentSymbol);
+    const initialCentered = useRef(false);
 
-    // Effect to handle visual updates during scroll
+    const infiniteSymbols = [...watchlist, ...watchlist, ...watchlist];
+
+    // Effect to handle visual updates and infinite loop jumping
     useEffect(() => {
         const container = scrollRef.current;
-        if (!container) return;
+        if (!container || watchlist.length === 0) return;
 
         const updateVisuals = () => {
             const center = container.scrollLeft + container.clientWidth / 2;
@@ -35,20 +36,27 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
             let closestSymbol = '';
             let minDistance = Infinity;
 
+            // 1. Handle Infinite Jumping (Invisible to user)
+            const singleSetWidth = container.scrollWidth / 3;
+            if (container.scrollLeft < singleSetWidth * 0.5) {
+                container.scrollLeft += singleSetWidth;
+            } else if (container.scrollLeft > singleSetWidth * 1.5) {
+                container.scrollLeft -= singleSetWidth;
+            }
+
+            // 2. Update Scales and Find Center Symbol
             for (let i = 0; i < items.length; i++) {
                 const item = items[i] as HTMLElement;
                 const itemCenter = item.offsetLeft + item.clientWidth / 2;
                 const distance = Math.abs(itemCenter - center);
 
-                // Wheel transformation: Center is 1.0, sides remain readable
+                // Emphasis transformation: Center is 1.25, sides are 1.0
                 const normalizedDistance = Math.min(distance / 120, 1);
-                const opacity = 1 - (normalizedDistance * 0.5); // Fades to 0.5
-                const scale = 1.1 - (normalizedDistance * 0.2); // Scales to 0.9
-                const blur = normalizedDistance * 0.8; // Reduced blur to 0.8px
+                const scale = 1.25 - (normalizedDistance * 0.25);
 
-                item.style.opacity = opacity.toString();
+                item.style.opacity = '1';
                 item.style.transform = `scale(${scale})`;
-                item.style.filter = distance > 50 ? `blur(${blur}px)` : 'none';
+                item.style.filter = 'none';
 
                 if (distance < minDistance) {
                     minDistance = distance;
@@ -77,19 +85,21 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
         }
     }, [centerSymbol, activeChartId, setChartSymbol]);
 
-    // Initial sync
+    // Initial sync - Center the MIDDLE section
     useEffect(() => {
-        if (scrollRef.current && currentSymbol && currentSymbol !== centerSymbol) {
+        if (scrollRef.current && currentSymbol && !initialCentered.current && watchlist.length > 0) {
             const index = watchlist.indexOf(currentSymbol);
             if (index !== -1) {
                 const container = scrollRef.current;
+                const middleIndex = index + watchlist.length;
                 setTimeout(() => {
-                    const item = container.children[index] as HTMLElement;
+                    const item = container.children[middleIndex] as HTMLElement;
                     if (item) {
                         const targetScroll = item.offsetLeft - (container.clientWidth / 2) + (item.clientWidth / 2);
-                        container.scrollTo({ left: targetScroll, behavior: 'smooth' });
+                        container.scrollTo({ left: targetScroll, behavior: 'auto' });
+                        initialCentered.current = true;
                     }
-                }, 100);
+                }, 50);
             }
         }
     }, [currentSymbol, watchlist]);
@@ -97,21 +107,15 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
     return (
         <div
             className={cn(
-                "relative w-full h-10 bg-transparent flex flex-col justify-center transition-all duration-300",
+                "relative w-full h-full bg-transparent flex items-center justify-center transition-all duration-300",
                 isDimmed ? "opacity-10 scale-95 pointer-events-none" : "opacity-100 scale-100"
             )}
         >
-            {/* Horizontal Scroll Wheel */}
             <div
                 ref={scrollRef}
-                className="flex items-center h-full overflow-x-auto no-scrollbar scroll-smooth touch-pan-x"
-                style={{
-                    scrollSnapType: 'x mandatory',
-                    paddingLeft: 'calc(50% - 40px)',
-                    paddingRight: 'calc(50% - 40px)'
-                }}
+                className="flex items-center gap-12 overflow-x-auto no-scrollbar snap-x snap-mandatory h-full touch-horizontal"
             >
-                {watchlist.map((symbol) => {
+                {infiniteSymbols.map((symbol, idx) => {
                     const isBinance = symbol.toUpperCase().includes('USDT') && !symbol.endsWith('m');
                     const baseSymbol = symbol.endsWith('m') ? symbol.slice(0, -1) : symbol.replace('USDT', '');
                     const isForex = symbol.length === 7 && symbol.endsWith('m');
@@ -126,9 +130,9 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
 
                     return (
                         <div
-                            key={symbol}
+                            key={`${symbol}-${idx}`}
                             data-symbol={symbol}
-                            className="flex-shrink-0 w-20 flex items-center justify-center transition-all duration-300 select-none py-1 gap-1.5 active:scale-95"
+                            className="flex-shrink-0 w-max px-3 flex items-center justify-center transition-all duration-300 select-none active:scale-95"
                             style={{ scrollSnapAlign: 'center' }}
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -137,47 +141,54 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
                                     onSymbolTap?.();
                                     return;
                                 }
+                                const item = e.currentTarget;
                                 const container = scrollRef.current;
                                 if (container) {
-                                    const index = watchlist.indexOf(symbol);
-                                    const item = container.children[index] as HTMLElement;
                                     const targetScroll = item.offsetLeft - (container.clientWidth / 2) + (item.clientWidth / 2);
                                     container.scrollTo({ left: targetScroll, behavior: 'smooth' });
                                 }
                             }}
                         >
                             <div className={cn(
-                                "w-4 h-4 rounded-full overflow-hidden bg-white/5 flex items-center justify-center border border-white/10 shrink-0 transition-transform duration-300",
-                                isActive && "border-blue-500 scale-110 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                                "flex flex-row items-center gap-1.5 transition-all duration-300",
+                                isActive ? "text-white" : "text-zinc-500"
                             )}>
-                                <img
-                                    src={logoUrl}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        const parent = (e.target as HTMLImageElement).parentElement;
-                                        if (parent) parent.innerHTML = `<span class="text-[7px] font-bold text-zinc-500">${symbol[0]}</span>`;
-                                    }}
-                                />
+                                <div className={cn(
+                                    "p-1 rounded-lg transition-all flex items-center justify-center shrink-0",
+                                    isActive ? "bg-blue-600/20 shadow-lg shadow-blue-500/10" : "bg-transparent"
+                                )}>
+                                    <div className={cn(
+                                        "w-3.5 h-3.5 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-300",
+                                        isActive && "scale-110"
+                                    )}>
+                                        <img
+                                            src={logoUrl}
+                                            alt=""
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                const parent = (e.target as HTMLImageElement).parentElement;
+                                                if (parent) parent.innerHTML = `<span class="text-[7px] font-black text-zinc-500">${symbol[0]}</span>`;
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                {isActive && (
+                                    <span className={cn(
+                                        "text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-left-2 duration-300"
+                                    )}>
+                                        {symbol}
+                                    </span>
+                                )}
                             </div>
-                            <span className={cn(
-                                "text-[12px] font-bold uppercase tracking-tight transition-colors duration-300",
-                                isActive ? "text-white" : "text-zinc-600"
-                            )}>
-                                {symbol}
-                            </span>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Selection Highlight Overlays */}
             <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-zinc-950/20 to-transparent pointer-events-none z-10" />
             <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-zinc-950/20 to-transparent pointer-events-none z-10" />
-
-            {/* Center Marker */}
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 w-4 h-0.5 bg-blue-500/50 rounded-full pointer-events-none z-20" />
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-1 w-4 h-0.5 bg-blue-500/50 rounded-full pointer-events-none z-20" />
         </div>
     );
 }

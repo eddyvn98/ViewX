@@ -72,7 +72,7 @@ export function MobileTradeFlow({
     );
 
     return (
-        <div className="relative w-full h-[48px] overflow-hidden bg-transparent">
+        <div className="relative w-full h-[48px] overflow-x-hidden overflow-y-hidden bg-transparent">
             {/* ULTRA-THIN PROGRESS (Bottom aligned) */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5 flex overflow-hidden">
                 <div

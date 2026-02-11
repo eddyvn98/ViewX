@@ -34,3 +34,16 @@ Tài liệu này cung cấp các tiêu chuẩn và kỹ thuật để xử lý b
 - Luôn kiểm tra fps và độ trễ hover bằng Profiler khi thêm tính năng mới cho Chart.
 - Đảm bảo các component Chart chỉ re-render khi dữ liệu liên quan thực sự thay đổi.
 
+## 6. Quản lý Bộ nhớ và RAM (Advanced)
+
+Khi làm việc với hàng trăm cặp tiền và dữ liệu lịch sử lớn, việc kiểm soát RAM là tối quan trọng:
+- **Giới hạn Buffer dữ liệu**: Luôn thiết lập một ngưỡng tối đa cho dữ liệu lịch sử (ví dụ: `MAX_CANDLES = 2000`). Khi vượt quá, hãy dùng `slice(1)` để đẩy nến cũ nhất ra ngoài.
+- **Dọn dẹp Instance**: Khi đổi Symbol hoặc Timeframe, phải gọi hàm `destroy()` cho tất cả các chỉ báo (Indicators) và giải phóng bộ nhớ (`instancesRef.current = {}`).
+- **Caching Formatted Data**: Tránh map/filter các mảng dữ liệu lớn (như nến) bên trong hàm render hoặc effect chạy liên tục. Hãy cache kết quả đã format vào `useRef` và chỉ cập nhật khi nến mới xuất hiện.
+
+## 7. Kỹ thuật Đồng bộ và Giảm tải CPU
+
+- **Throttling Crosshair Sync**: Sự kiện di chuyển chuột (Crosshair) xảy ra liên tục. Hãy sử dụng bộ lọc thời gian (ví dụ: `now - lastUpdate > 32ms`) trước khi thực hiện các logic đồng bộ hoặc cập nhật Store.
+- **Bypass React State**: Đối với các giá trị thay đổi cực nhanh (như tọa độ chuột, giá nhảy tick), hãy sử dụng `window.dispatchEvent` hoặc Direct DOM manipulation thay vì đẩy vào React State để tránh toàn bộ ứng dụng bị re-render không cần thiết.
+- **Zustand Subscription**: Sử dụng `store.subscribe` để lắng nghe các thay đổi cụ thể (như `draggingPosition`) và cập nhật trực tiếp vào đối tượng Canvas/PriceLine của thư viện mà không thông qua chu kỳ render của React.
+- **RAF for UI Visuals**: Luôn bọc các logic cập nhật vị trí overlay (nhãn giá, đường kẻ) trong `requestAnimationFrame` để đảm bảo khớp hoàn hảo với tần số quét của màn hình.
