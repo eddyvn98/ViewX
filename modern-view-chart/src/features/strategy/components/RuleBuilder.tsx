@@ -1,6 +1,126 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ConditionGroup, Condition, IndicatorType, Comparator } from '../types';
-import { Plus, Trash2, Settings2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+
+interface RuleSectionProps {
+    title: string;
+    group: ConditionGroup;
+    onChange: (group: ConditionGroup) => void;
+    accentColor: string;
+}
+
+function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) {
+    const addCondition = () => {
+        const newCondition: Condition = {
+            id: Math.random().toString(36).substring(7),
+            left: { type: 'RSI', params: [14] },
+            comparator: '>',
+            right: 60
+        };
+        onChange({
+            ...group,
+            conditions: [...group.conditions, newCondition]
+        });
+    };
+
+    const removeCondition = (id: string) => {
+        onChange({
+            ...group,
+            conditions: group.conditions.filter(c => !('id' in c) || c.id !== id)
+        });
+    };
+
+    const updateCondition = (id: string, updates: Partial<Condition>) => {
+        onChange({
+            ...group,
+            conditions: group.conditions.map(c =>
+                ('id' in c && c.id === id) ? { ...(c as Condition), ...updates } : c
+            )
+        });
+    };
+
+    return (
+        <div className="flex flex-col gap-2.5 overflow-x-hidden">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${accentColor}`}>{title}</span>
+                    <select
+                        value={group.operator}
+                        onChange={(e) => onChange({ ...group, operator: e.target.value as any })}
+                        className="bg-[#131722]/60 text-[9px] font-black px-1.5 py-0.5 rounded border border-[#363a45]/30 outline-none text-[#5d606b] appearance-none cursor-pointer hover:border-blue-500/30"
+                    >
+                        <option value="AND">AND</option>
+                        <option value="OR">OR</option>
+                    </select>
+                </div>
+                <button
+                    onClick={addCondition}
+                    className="text-[9px] font-black text-blue-500/60 hover:text-blue-500 flex items-center gap-1 transition-colors uppercase"
+                >
+                    <Plus size={10} /> Add
+                </button>
+            </div>
+
+            <div className="flex flex-col gap-1.5 min-h-[40px] justify-center">
+                {group.conditions.length === 0 ? (
+                    <div className="py-3 flex justify-center border border-dashed border-[#363a45]/20 rounded text-[9px] text-[#2a2e39] font-black uppercase tracking-tighter">
+                        No {title} rules defined
+                    </div>
+                ) : (
+                    group.conditions.filter(c => !('operator' in c)).map((c: any) => (
+                        <div key={c.id} className="flex items-center gap-1.5 group animate-in slide-in-from-left-2 duration-200">
+                            <select
+                                value={c.left.type}
+                                onChange={(e) => updateCondition(c.id, { left: { ...c.left, type: e.target.value as IndicatorType } })}
+                                className="bg-[#131722]/80 text-[10px] h-7 px-1 rounded border border-[#363a45]/50 outline-none w-[72px] font-bold text-white appearance-none cursor-pointer"
+                            >
+                                <option value="RSI">RSI</option>
+                                <option value="EMA">EMA</option>
+                                <option value="SMA">SMA</option>
+                                <option value="MACD">MACD</option>
+                                <option value="HMA">HMA</option>
+                                <option value="Price">Price</option>
+                            </select>
+
+                            <input
+                                type="number"
+                                value={c.left.params[0]}
+                                onChange={(e) => updateCondition(c.id, { left: { ...c.left, params: [parseInt(e.target.value)] } })}
+                                className="w-[38px] h-7 bg-[#131722]/80 text-center text-[10px] rounded border border-[#363a45]/50 outline-none font-mono text-blue-400 font-bold"
+                            />
+
+                            <select
+                                value={c.comparator}
+                                onChange={(e) => updateCondition(c.id, { comparator: e.target.value as Comparator })}
+                                className="bg-transparent text-[11px] h-7 text-blue-500 font-black outline-none w-6 text-center appearance-none cursor-pointer"
+                            >
+                                <option value=">">{'>'}</option>
+                                <option value="<">{'<'}</option>
+                                <option value="==">{'='}</option>
+                                <option value="crosses_above">↑</option>
+                                <option value="crosses_below">↓</option>
+                            </select>
+
+                            <input
+                                type="number"
+                                value={c.right}
+                                onChange={(e) => updateCondition(c.id, { right: parseFloat(e.target.value) })}
+                                className="w-[76px] h-7 bg-[#131722]/80 text-center text-[10px] rounded border border-[#363a45]/50 outline-none font-mono font-bold text-white px-1 focus:border-blue-500/50"
+                            />
+
+                            <button
+                                onClick={() => removeCondition(c.id)}
+                                className="w-6 h-7 flex items-center justify-center text-[#2a2e39] hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}
 
 interface RuleBuilderProps {
     entry: ConditionGroup;
@@ -10,147 +130,28 @@ interface RuleBuilderProps {
 }
 
 export function RuleBuilder({ entry, exit, onChangeEntry, onChangeExit }: RuleBuilderProps) {
-    const [activeTab, setActiveTab] = useState<'entry' | 'exit'>('entry');
-
-    const currentGroup = activeTab === 'entry' ? entry : (exit || { operator: 'AND', conditions: [] });
-    const setCurrentGroup = activeTab === 'entry' ? onChangeEntry : onChangeExit;
-
-    const addCondition = () => {
-        const newCondition: Condition = {
-            id: Math.random().toString(36).substring(7),
-            left: { type: 'RSI', params: [14] },
-            comparator: '<',
-            right: 30
-        };
-        setCurrentGroup({
-            ...currentGroup,
-            conditions: [...currentGroup.conditions, newCondition]
-        });
-    };
-
-    const removeCondition = (id: string) => {
-        setCurrentGroup({
-            ...currentGroup,
-            conditions: currentGroup.conditions.filter(c => !('id' in c) || c.id !== id)
-        });
-    };
-
-    const updateCondition = (id: string, updates: Partial<Condition>) => {
-        setCurrentGroup({
-            ...currentGroup,
-            conditions: currentGroup.conditions.map(c =>
-                ('id' in c && c.id === id) ? { ...(c as Condition), ...updates } : c
-            )
-        });
-    };
-
     return (
-        <div className="flex flex-col gap-4 bg-[#2a2e39]/30 p-4 rounded-lg border border-[#363a45]">
-            <div className="flex bg-[#131722] p-1 rounded-md mb-2">
-                <button
-                    onClick={() => setActiveTab('entry')}
-                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded transition-all ${activeTab === 'entry' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
-                >
-                    Entry Rules
-                </button>
-                <button
-                    onClick={() => setActiveTab('exit')}
-                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded transition-all ${activeTab === 'exit' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/20' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
-                >
-                    Exit Rules
-                </button>
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black text-[#5d606b] uppercase tracking-widest">Strategy Rules</span>
+                <div className="h-[1px] bg-[#363a45]/30 w-full" />
             </div>
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Settings2 size={14} className="text-blue-500" />
-                    <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-wider">
-                        {activeTab === 'entry' ? 'Buy/Long Conditions' : 'Close/Exit Conditions'}
-                    </span>
-                </div>
-                <select
-                    value={currentGroup.operator}
-                    onChange={(e) => setCurrentGroup({ ...currentGroup, operator: e.target.value as any })}
-                    className="bg-[#131722] text-[10px] font-bold border border-[#363a45] rounded px-2 py-1 outline-none text-blue-400"
-                >
-                    <option value="AND">ALL (AND)</option>
-                    <option value="OR">ANY (OR)</option>
-                </select>
+            <div className="flex flex-col gap-6 pl-1 bg-black/10 p-3 rounded border border-[#363a45]/20">
+                <RuleSection
+                    title="ENTRY"
+                    group={entry}
+                    onChange={onChangeEntry}
+                    accentColor="text-blue-500"
+                />
+                <div className="h-[1px] bg-[#363a45]/10 w-full" />
+                <RuleSection
+                    title="EXIT"
+                    group={exit || { operator: 'OR', conditions: [] }}
+                    onChange={onChangeExit}
+                    accentColor="text-orange-500"
+                />
             </div>
-
-            <div className="flex flex-col gap-2">
-                {currentGroup.conditions.length === 0 && (activeTab === 'exit') && (
-                    <div className="py-4 text-center border-2 border-dashed border-[#363a45] rounded-md">
-                        <span className="text-[10px] text-[#787b86]">Optional: Use exit rules for flexible closure</span>
-                    </div>
-                )}
-
-                {currentGroup.conditions.filter(c => !('operator' in c)).map((c: any) => (
-                    <div key={c.id} className="flex flex-col gap-2 bg-[#131722] p-3 rounded border border-[#363a45] hover:border-blue-500/30 transition-colors">
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={c.left.type}
-                                onChange={(e) => updateCondition(c.id, { left: { ...c.left, type: e.target.value as IndicatorType } })}
-                                className="bg-[#2a2e39] text-xs p-1.5 rounded border border-[#363a45] outline-none flex-1"
-                            >
-                                <option value="RSI">RSI</option>
-                                <option value="EMA">EMA</option>
-                                <option value="SMA">SMA</option>
-                                <option value="MACD">MACD</option>
-                                <option value="HMA">HMA</option>
-                            </select>
-                            <input
-                                type="number"
-                                value={c.left.params[0]}
-                                onChange={(e) => updateCondition(c.id, { left: { ...c.left, params: [parseInt(e.target.value)] } })}
-                                className="w-14 bg-[#2a2e39] text-center text-xs p-1.5 rounded border border-[#363a45] outline-none"
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={c.comparator}
-                                onChange={(e) => updateCondition(c.id, { comparator: e.target.value as Comparator })}
-                                className="bg-[#1e222d] text-xs p-1.5 rounded border border-blue-500/20 text-blue-400 font-bold outline-none flex-1"
-                            >
-                                <option value=">">{'>'}</option>
-                                <option value="<">{'<'}</option>
-                                <option value="==">{'=='}</option>
-                                <option value="crosses_above">Crosses Above</option>
-                                <option value="crosses_below">Crosses Below</option>
-                            </select>
-
-                            <div className="flex items-center gap-1 flex-1">
-                                {typeof c.right === 'number' ? (
-                                    <input
-                                        type="number"
-                                        value={c.right}
-                                        onChange={(e) => updateCondition(c.id, { right: parseFloat(e.target.value) })}
-                                        className="w-full bg-[#2a2e39] text-xs p-1.5 rounded border border-[#363a45] outline-none"
-                                    />
-                                ) : (
-                                    <span className="text-xs text-[#787b86]">Indicator...</span>
-                                )}
-                            </div>
-
-                            <button
-                                onClick={() => removeCondition(c.id)}
-                                className="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors"
-                                title="Remove condition"
-                            >
-                                <Trash2 size={14} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <button
-                onClick={addCondition}
-                className="flex items-center justify-center gap-2 py-2 border-2 border-dashed border-[#363a45] hover:border-blue-500/50 hover:bg-blue-500/5 rounded-md text-[10px] font-bold text-[#787b86] hover:text-blue-400 transition-all uppercase tracking-widest"
-            >
-                <Plus size={14} /> Add Condition
-            </button>
         </div>
     );
 }

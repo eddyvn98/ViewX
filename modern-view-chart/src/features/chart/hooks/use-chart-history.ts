@@ -110,7 +110,9 @@ export function useChartHistory({
                 time: toSec(c.time) as Time,
                 open: Number(c.open), high: Number(c.high),
                 low: Number(c.low), close: Number(c.close),
-            }));
+            }))
+                .sort((a, b) => (Number(a.time) - Number(b.time))) // FIX: Ensure strict ascending order
+                .filter((item, index, array) => !index || item.time !== array[index - 1].time); // FIX: Remove duplicates
 
             // SET DATA
             seriesRef.current.setData(formatted);
@@ -139,16 +141,21 @@ export function useChartHistory({
             // Auto Fit on First Load
             if (isInitialMount.current && formatted.length > 0) {
                 requestAnimationFrame(() => {
-                    chartRef.current?.timeScale().setVisibleLogicalRange({
-                        from: formatted.length - (window.innerWidth < 768 ? 50 : 100),
-                        to: formatted.length + 5
-                    });
-                    // FIX: Force price scale reset on new symbol load
-                    chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                    subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                    try {
+                        chartRef.current?.timeScale().setVisibleLogicalRange({
+                            from: formatted.length - (window.innerWidth < 768 ? 50 : 100),
+                            to: formatted.length + 5
+                        });
+                        // FIX: Wrap scale options in try-catch to prevent "incorrect pane index" crash
+                        chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                        subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                    } catch (e) {
+                        console.warn('[Chart] Auto-fit failed:', e);
+                    }
                 });
                 isInitialMount.current = false;
             }
+
 
             lastDataLength.current = currentCandles.length;
         }

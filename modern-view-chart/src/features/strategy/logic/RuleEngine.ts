@@ -31,12 +31,34 @@ export class RuleEngine {
 
         const { activePositions, currentPrice, symbol, lastSignalTime } = context;
         const strategyPositions = activePositions.filter(p => p.symbol === symbol && p.strategyId === strategy.id);
-        const hasPosition = strategyPositions.length > 0;
+        const hasOpenPosition = strategyPositions.some(p => p.status === 'open');
+        const pendingPosition = strategyPositions.find(p => p.status === 'pending');
 
-        if (Math.random() < 0.1) console.log(`[RuleEngine] Checking ${strategy.name} (${strategy.id}) pos=${hasPosition} mode=${strategy.positionMode}`);
+        if (Math.random() < 0.1) console.log(`[RuleEngine] Checking ${strategy.name} (${strategy.id}) open=${hasOpenPosition} pending=${!!pendingPosition}`);
 
-        // 1. EXIT PRIORITY: If we have position, check Exit rules first
-        if (hasPosition && strategy.exit) {
+        // 0. CANCEL PRIORITY: If we have PENDING order, check Cancel rules
+        if (pendingPosition && strategy.cancelConditions) {
+            const shouldCancel = this.evaluateGroup(strategy.cancelConditions, candles);
+            console.log(`[RuleEngine] Checking Cancel for ${strategy.name}: result=${shouldCancel}`);
+
+            if (shouldCancel) {
+                return {
+                    type: "CANCEL",
+                    symbol,
+                    strategyId: strategy.id,
+                    timestamp: Date.now(),
+                    price: currentPrice,
+                    risk: strategy.risk
+                };
+            }
+        } else if (pendingPosition) {
+            // Log if we have a pending position but NO cancel conditions
+            if (Math.random() < 0.05) console.warn(`[RuleEngine] ${strategy.name} has PENDING order but NO cancel conditions defined.`);
+        }
+
+
+        // 1. EXIT PRIORITY: If we have OPEN position, check Exit rules
+        if (hasOpenPosition && strategy.exit) {
             const shouldExit = this.evaluateGroup(strategy.exit, candles);
             if (shouldExit) {
                 return {
@@ -52,13 +74,14 @@ export class RuleEngine {
 
         // 2. ENTRY EVALUATION (Only if flat or scaling)
         const canEnter =
-            !hasPosition ||
+            (!hasOpenPosition && !pendingPosition) ||
             (strategy.positionMode === "scale_in" && strategyPositions.length < (strategy.risk.maxTrades || 1));
 
         if (!canEnter) {
-            if (Math.random() < 0.1) console.log(`[RuleEngine] Cannot Enter: ${strategy.name} (HasPos: ${hasPosition}, Mode: ${strategy.positionMode})`);
+            if (Math.random() < 0.1) console.log(`[RuleEngine] Cannot Enter: ${strategy.name} (Open: ${hasOpenPosition}, Pending: ${!!pendingPosition}, Mode: ${strategy.positionMode})`);
             return null;
         }
+
 
         // 3. COOLDOWN CHECK (Wait minutes since last signal)
         if (lastSignalTime && strategy.risk.cooldownMinutes) {
@@ -74,8 +97,21 @@ export class RuleEngine {
             if (Math.random() < 0.1) console.log(`[RuleEngine] Entry conditions FAILED for ${strategy.name}`);
         }
         if (isEntry) {
+            // FIX: Smart fallback for legacy strategies
+            let type = strategy.side;
+
+            if (!type) {
+                const nameLower = strategy.name.toLowerCase();
+                if (nameLower.includes('sell') || nameLower.includes('short')) type = 'SELL';
+                else if (nameLower.includes('buy') || nameLower.includes('long')) type = 'BUY';
+                else type = 'BUY'; // Final fallback
+
+                console.warn(`[RuleEngine] Strategy ${strategy.name} missing side. Inferred: ${type}`);
+            }
+
+
             return {
-                type: "BUY",
+                type,
                 symbol,
                 strategyId: strategy.id,
                 timestamp: Date.now(),
@@ -83,6 +119,8 @@ export class RuleEngine {
                 risk: strategy.risk
             };
         }
+
+
 
         return null;
     }

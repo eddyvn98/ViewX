@@ -2,12 +2,16 @@ import { supabase } from '@/lib/supabase'; // Assuming supabase client exists he
 
 export class TradeLogger {
     static async logEntry(signal: any, metrics: any) {
+        if (!signal.type) {
+            console.warn('[TradeLogger] Signal type missing, defaulting to BUY. Strategy:', signal.strategyId);
+        }
+
         const { data, error } = await supabase
             .from('trade_logs')
             .insert([{
                 strategy_id: signal.strategyId,
                 symbol: signal.symbol,
-                type: signal.type,
+                type: signal.type || 'BUY', // Fallback to BUY
                 entry_price: signal.price,
                 lot_size: signal.risk.lotSize,
                 volatility: metrics.volatility > 60 ? 'high' : metrics.volatility > 30 ? 'medium' : 'low',
@@ -17,7 +21,13 @@ export class TradeLogger {
             }])
             .select();
 
-        if (error) console.error('[TradeLogger] Error logging entry:', error);
+        if (error) {
+            console.error('[TradeLogger] Error logging entry:', JSON.stringify(error, null, 2));
+            console.error('Signal Data:', JSON.stringify(signal, null, 2));
+        } else {
+            // console.log('[TradeLogger] Entry logged successfully:', data?.[0]?.id);
+        }
+
         return data?.[0];
     }
 

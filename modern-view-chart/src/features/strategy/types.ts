@@ -22,14 +22,29 @@ export interface ConditionGroup {
 
 export type PositionMode = "single_position" | "hedge" | "scale_in";
 
+export type SLTPMode = 'fixed' | 'candle' | 'indicator' | 'percentage' | 'amount' | 'winrate';
+export type LotMode = 'fixed' | 'percentage' | 'amount';
+
+export interface LotConfig {
+    mode: LotMode;
+    value: number;
+}
+
+export interface SLTPConfig {
+    mode: SLTPMode;
+    value?: number;          // Fixed points, %, or amount
+    candleOffset?: number;    // How many candles back from entry
+    candleField?: 'high' | 'low' | 'close' | 'open';
+    indicator?: Indicator;    // For indicator-based SL/TP
+    offset?: number;          // Additional points/pips offset
+}
+
 export interface StrategyRisk {
-    sl: number; // pips or points
-    tp: number;
+    sl?: number | SLTPConfig;
+    tp?: number | SLTPConfig;
     trailing: boolean;
-    slSource?: 'fixed' | 'HA_Low' | 'HA_High';
-    tpSource?: 'fixed' | 'HA_Low' | 'HA_High';
     trailingSource?: 'HA_Low' | 'HA_High';
-    lotSize?: number;
+    lotSize: number | LotConfig;
     maxTrades?: number;
     cooldownMinutes?: number;
 }
@@ -37,8 +52,11 @@ export interface StrategyRisk {
 export interface Strategy {
     id: string;
     name: string;
+    side: 'BUY' | 'SELL';
     entry: ConditionGroup;
+
     exit?: ConditionGroup;
+    cancelConditions?: ConditionGroup; // For pending orders
     risk: StrategyRisk;
     active: boolean;
     symbol?: string;
@@ -66,7 +84,7 @@ export interface AiResponse {
 }
 
 export interface StrategySignal {
-    type: "BUY" | "SELL" | "EXIT";
+    type: "BUY" | "SELL" | "EXIT" | "CANCEL";
     symbol: string;
     strategyId: string;
     timestamp: number;
@@ -75,6 +93,7 @@ export interface StrategySignal {
     confidence?: number;
     aiAnalysis?: AiResponse;
 }
+
 // 0-100
 
 export interface VirtualPosition {
@@ -89,5 +108,6 @@ export interface VirtualPosition {
     timestamp: number;
     status: 'open' | 'closed' | 'pending';
     exitPrice?: number;
+    exitTimestamp?: number;
     pnl?: number;
 }

@@ -49,6 +49,7 @@ export function useChartTicker({
         if (!symbol || !source || !seriesRef.current) return;
 
         let lastStoreSync = 0;
+        const lastSeriesUpdateTimeRef = { current: null as number | null };
         const { updateLastCandle } = useMarketStore.getState();
 
         // Throttled sync to store (for legend accuracy)
@@ -68,23 +69,33 @@ export function useChartTicker({
         const handleTick = (price: number) => {
             if (!price) return;
 
-            // 1. Get Base Candle (with store fallback)
+            // 1. Get Base Candle (with store priority)
+            const storeKey = `${source}:${normSymbol}:${interval}`;
+            const storeCandles = useMarketStore.getState().candleData[storeKey];
+            const lastStoreCandle = storeCandles?.length ? storeCandles[storeCandles.length - 1] : null;
+
             let base = realTimeCandleRef.current;
 
-            if (!base) {
-                const storeKey = `${source}:${normSymbol}:${interval}`;
-                const storeCandles = useMarketStore.getState().candleData[storeKey];
-                if (storeCandles?.length) {
-                    base = { ...storeCandles[storeCandles.length - 1] };
+            // ⚡ RACE CONDITION FIX: If store has a NEWER candle, always sync to it
+            if (lastStoreCandle) {
+                const storeTime = toSec(lastStoreCandle.time);
+                const baseTime = base ? toSec(base.time) : 0;
+
+                if (!base || storeTime > baseTime) {
+                    base = { ...lastStoreCandle };
                     realTimeCandleRef.current = base;
-                } else {
-                    return;
                 }
             }
+
+            if (!base) return;
 
             // 2. Determine Current Time (Server Aligned)
             const intervalSec = getIntervalSeconds(interval || '1');
             const lastCandleTime = toSec(base.time);
+
+            // Safety: if toSec failed, ignore
+            if (isNaN(lastCandleTime)) return;
+
             const nextBarTime = lastCandleTime + intervalSec;
 
             // 3. Client-side New Bar Generation
@@ -108,6 +119,7 @@ export function useChartTicker({
                 };
 
                 realTimeCandleRef.current = newCandle;
+                lastSeriesUpdateTimeRef.current = nextBarTime;
 
                 // Visual Update
                 if (isHA) {
@@ -129,6 +141,15 @@ export function useChartTicker({
             }
 
             // 4. Update Current Candle
+            const updateTime = lastCandleTime;
+
+            // ⚡ CRITICAL FIX: NEVER update a candle older than what's already on the chart
+            // This prevents "Cannot update oldest data" crash during rapid state transitions
+            if (lastSeriesUpdateTimeRef.current !== null && updateTime < lastSeriesUpdateTimeRef.current) {
+                return;
+            }
+            lastSeriesUpdateTimeRef.current = updateTime;
+
             const rOpen = base.rawOpen ?? base.open;
             const rHigh = Math.max(base.rawHigh ?? base.high, price);
             const rLow = Math.min(base.rawLow ?? base.low, price);
@@ -142,7 +163,7 @@ export function useChartTicker({
                 const haOpen = base.ha_open ?? base.open;
                 const haClose = (rOpen + rHigh + rLow + rClose) / 4;
                 const haData = {
-                    time: toSec(base.time) as Time,
+                    time: updateTime as Time,
                     open: haOpen,
                     high: Math.max(rHigh, haOpen, haClose),
                     low: Math.min(rLow, haOpen, haClose),
@@ -159,7 +180,7 @@ export function useChartTicker({
                 base.low = rLow;
                 base.close = rClose;
                 seriesRef.current?.update({
-                    time: toSec(base.time) as Time,
+                    time: updateTime as Time,
                     open: base.open,
                     high: base.high,
                     low: base.low,

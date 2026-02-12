@@ -1,0 +1,96 @@
+'use client';
+
+import React, { useMemo } from 'react';
+import { useStrategyStore } from '@/features/strategy/store/strategy-store';
+import { PerformanceAnalyzer } from '@/features/strategy/logic/PerformanceAnalyzer';
+import { DashboardStats } from '@/features/strategy/components/dashboard/DashboardStats';
+import { TradeHistory } from '@/features/strategy/components/dashboard/TradeHistory';
+import { EquityChart } from '@/features/strategy/components/dashboard/EquityChart';
+import { LayoutDashboard, LogOut, RefreshCcw } from 'lucide-react';
+import Link from 'next/link';
+
+export default function StrategyDashboardPage() {
+    const { virtualPositions, initialVirtualBalance, virtualBalance } = useStrategyStore();
+
+    const metrics = useMemo(() => {
+        return PerformanceAnalyzer.analyze(virtualPositions, initialVirtualBalance);
+    }, [virtualPositions, initialVirtualBalance]);
+
+    const handleRefresh = () => {
+        window.location.reload();
+    };
+
+    // Auto-refresh when localStorage changes (e.g. from Reset All in another tab)
+    React.useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'strategy-storage') {
+                window.location.reload();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    return (
+        <div className="h-screen overflow-y-auto bg-[#0b0e14] text-[#d1d4dc] p-4 md:p-8 font-sans selection:bg-blue-500/30">
+            <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-10">
+
+                {/* HEADER */}
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#363a45] pb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20 shadow-lg shadow-blue-500/5">
+                            <LayoutDashboard className="text-blue-500" size={24} />
+                        </div>
+                        <div className="flex flex-col">
+                            <h1 className="text-2xl font-black text-white tracking-tight uppercase">Strategy Performance</h1>
+                            <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-widest">Real-time Analysis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleRefresh}
+                            className="flex items-center gap-2 px-4 h-10 rounded-xl bg-[#1e222d] hover:bg-[#2a2e39] text-[#d1d4dc] text-xs font-bold transition-all border border-[#363a45]"
+                        >
+                            <RefreshCcw size={14} />
+                            REFRESH
+                        </button>
+                        <Link
+                            href="/"
+                            className="flex items-center gap-2 px-4 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black transition-all shadow-lg shadow-blue-500/20"
+                        >
+                            <LogOut size={14} />
+                            BACK TO CHART
+                        </Link>
+                    </div>
+                </header>
+
+                {/* KPI SECTION */}
+                <section>
+                    <DashboardStats metrics={metrics} />
+                </section>
+
+                {/* MAIN CONTENT GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* CHART SECTION (2/3) */}
+                    <section className="lg:col-span-2 flex flex-col gap-4">
+                        <EquityChart data={metrics.equityCurve} />
+                    </section>
+
+                    {/* RECENT TRADES SECTION (1/3) */}
+                    <section className="flex flex-col gap-4">
+                        <TradeHistory positions={virtualPositions} />
+                    </section>
+                </div>
+
+                <footer className="mt-8 border-t border-[#363a45]/30 pt-4 flex flex-col md:flex-row justify-between items-center gap-4 opacity-50">
+                    <span className="text-[10px] font-bold text-[#4a4f5d] uppercase">ViewX High-Performance Rule Engine v2.0</span>
+                    <span className="text-[9px] font-mono text-[#4a4f5d]">Total Volume: {(virtualPositions.reduce((sum, p) => sum + (p.lotSize || 0), 0)).toFixed(2)} Lot</span>
+                </footer>
+            </div>
+        </div>
+    );
+}
