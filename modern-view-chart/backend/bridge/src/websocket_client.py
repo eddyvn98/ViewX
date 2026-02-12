@@ -118,6 +118,12 @@ class BridgeClient:
                 "request_id": data.get('request_id')
             })
 
+        elif cmd == "close_by_magic":
+            symbol = data.get("symbol")
+            magic = int(data.get("magic")) if data.get("magic") else 0
+            success = self.mt5.close_by_magic(symbol, magic)
+            print(f"[CMD] Close By Magic {symbol} ({magic}): {'Done' if success else 'Failed'}")
+
         elif cmd in ["order", "place_order", "buy", "sell"]:
             order_type = cmd if cmd in ["buy", "sell"] else (data.get('order_type') or data.get('type'))
             success = self.mt5.place_order(
@@ -127,7 +133,9 @@ class BridgeClient:
                 data.get('sl'),
                 data.get('tp'),
                 data.get('price', 0),
-                data.get('is_market', True)
+                data.get('is_market', True),
+                data.get('magic'),
+                data.get('comment')
             )
             print(f"[CMD] {cmd.capitalize()} {data.get('symbol')}: {'Done' if success else 'Failed'}")
             

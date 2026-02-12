@@ -12,6 +12,7 @@
     "server:start": "node backend/index.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
     "axios": "^1.13.4",
     "body-parser": "^2.2.2",
     "class-variance-authority": "^0.7.1",
@@ -38,6 +39,7 @@
     "react-qr-code": "^2.0.18",
     "react-virtualized-auto-sizer": "^2.0.2",
     "react-window": "^2.2.6",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "technicalindicators": "^3.1.0",
     "use-sync-external-store": "^1.6.0",

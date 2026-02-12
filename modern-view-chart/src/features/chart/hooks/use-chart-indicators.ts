@@ -7,6 +7,7 @@ import { HMAIndicator } from '../indicators/HMAIndicator';
 import { RSIIndicator } from '../indicators/RSIIndicator';
 import { SignalIndicator } from '../indicators/SignalIndicator';
 import { MACDIndicator } from '../indicators/MACDIndicator';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 const EMPTY_INDICATORS: any[] = [];
 
@@ -39,7 +40,7 @@ export function useChartIndicators(
     const instancesRef = useRef<Record<string, any>>({});
     const defaultsAppliedRef = useRef(false);
 
-    const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
+    const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
     const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || []) : []);
 

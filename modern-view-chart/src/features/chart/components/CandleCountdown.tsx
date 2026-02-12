@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ISeriesApi, IChartApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 interface CandleCountdownProps {
     chart: IChartApi | null;
@@ -22,12 +23,14 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
     useEffect(() => {
         if (!chart || !series || !activeChartId) return;
 
-        const chartInstance = useMarketStore.getState().tabs[useMarketStore.getState().activeTabId]?.charts[activeChartId];
+        const stateSnapshot = useMarketStore.getState();
+        const activeTab = stateSnapshot.tabs[stateSnapshot.activeTabId];
+        const chartInstance = activeTab?.charts[activeChartId];
         if (!chartInstance) return;
 
         const symbol = chartInstance.symbol;
         const source = chartInstance.source;
-        const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
+        const normSymbol = normalizeSymbol(symbol);
         const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
         const updateDOM = () => {

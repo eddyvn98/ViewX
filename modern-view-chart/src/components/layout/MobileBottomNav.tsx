@@ -1,5 +1,5 @@
 import React, { memo, useState, useRef, useCallback } from "react";
-import { BarChart2, List, Menu, ArrowLeftRight, Briefcase } from "lucide-react";
+import { BarChart2, List, Menu, ArrowLeftRight, Briefcase, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileSymbolCarousel } from "./MobileSymbolCarousel";
 import { MobileTimeframeSlide } from "./MobileTimeframeSlide";
@@ -39,6 +39,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
     const navItems = [
         { id: 'watchlist', label: 'Watchlist', icon: List },
         { id: 'trade', label: 'Trade', icon: ArrowLeftRight },
+        { id: 'strategy', label: 'Strategy', icon: Brain },
         { id: 'positions', label: 'Terminal', icon: Briefcase },
         { id: 'menu', label: 'Menu', icon: Menu },
     ];

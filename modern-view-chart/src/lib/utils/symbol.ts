@@ -6,6 +6,7 @@
 export function normalizeSymbol(symbol: string | undefined): string {
     if (!symbol) return '';
 
+    // console.log(`[Symbol] Normalizing: ${symbol}`); // DEBUG LOG
     let s = symbol.trim();
 
     // Convert to uppercase for base comparison, but keep the suffix logic

@@ -19,6 +19,7 @@ import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
 import { useChartShortcuts } from './hooks/use-chart-shortcuts';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { getNearElement } from './logic/chart-hit-test';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 import { CandleCountdown } from './components/CandleCountdown';
 import { ChartOverlay } from './components/ChartOverlay';
@@ -30,6 +31,7 @@ import { OrderLineTags } from './components/OrderLineTags';
 import { ChartTradingOverlay } from './components/ChartTradingOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { StrategyMarkers } from '../strategy/components/StrategyMarkers';
 
 const EMPTY_CANDLES: any[] = [];
 
@@ -49,10 +51,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     const source = chartInstance?.source;
     const timezone = chartInstance?.timezone || 'Asia/Ho_Chi_Minh';
 
-    const normSymbol =
-        (symbol || '').toLowerCase().endsWith('m')
-            ? symbol!.replace(/[mM]$/, 'm')
-            : symbol;
+    const normSymbol = normalizeSymbol(symbol);
 
     const key = `${source}:${normSymbol}:${interval}`;
     // ⚡ CPU OPTIMIZATION: Only re-render if the COUNT of candles changes (new candle finalized)
@@ -235,6 +234,15 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
 
                 {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}
                 <ChartTradingOverlay symbol={symbol} source={source} />
+
+                {/* STRATEGY VISUAL MARKERS (Virtual Trades) */}
+                {isReady && priceChartRef.current && seriesRef.current && symbol && (
+                    <StrategyMarkers
+                        chart={priceChartRef.current}
+                        mainSeries={seriesRef.current}
+                        symbol={symbol}
+                    />
+                )}
 
                 {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
                 <div

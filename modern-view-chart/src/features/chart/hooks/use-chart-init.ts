@@ -92,7 +92,7 @@ export function useChartInit(
                     store.syncCrosshair(payload);
                     window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { ...payload, point: { x: curX, y: curY } } }));
                 }
-            } else if (!param.time && lastSyncTime !== null) {
+            } else if (!param.point && lastSyncTime !== null) {
                 lastSyncTime = null;
                 lastSyncX = null;
                 lastSyncY = null;

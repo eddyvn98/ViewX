@@ -18,7 +18,7 @@ export interface ChartSlice {
 }
 
 // Internal helper for symbol normalization
-const normalizeSymbol = (s: string) => s.toLowerCase().endsWith('m') ? s.replace(/[mM]$/, 'm') : s;
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export const createChartSlice: StateCreator<
     TabSlice & MarketSlice & ChartSlice,

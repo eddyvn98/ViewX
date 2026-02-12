@@ -166,6 +166,26 @@ class MT5Service:
             return result.retcode == mt5.TRADE_RETCODE_DONE
         return False
 
+    def close_by_magic(self, symbol, magic):
+        """Close all positions and cancel all orders for a specific symbol/magic."""
+        success = True
+        
+        # 1. Close Market Positions
+        positions = mt5.positions_get(symbol=symbol, magic=magic)
+        if positions:
+            for p in positions:
+                if not self.close_position(p.ticket):
+                    success = False
+        
+        # 2. Cancel Pending Orders
+        orders = mt5.orders_get(symbol=symbol, magic=magic)
+        if orders:
+            for o in orders:
+                if not self.close_position(o.ticket): # close_position handles orders via TRADE_ACTION_REMOVE
+                    success = False
+                    
+        return success
+
     def modify_position(self, ticket, sl=None, tp=None, price=None):
         positions = mt5.positions_get(ticket=ticket)
         if positions:
@@ -196,7 +216,7 @@ class MT5Service:
             return result.retcode == mt5.TRADE_RETCODE_DONE
         return False
 
-    def place_order(self, symbol, order_type, volume, sl=0.0, tp=0.0, price=0.0, is_market=True):
+    def place_order(self, symbol, order_type, volume, sl=0.0, tp=0.0, price=0.0, is_market=True, magic=None, comment=None):
         tick = mt5.symbol_info_tick(symbol)
         if not tick: 
             print(f"[ERROR] Tick not found for {symbol}")
@@ -207,34 +227,33 @@ class MT5Service:
             "volume": float(volume),
             "sl": float(sl) if sl else 0.0,
             "tp": float(tp) if tp else 0.0,
-            "magic": 234000,
-            "comment": "ViewChart Web",
+            "magic": int(magic) if magic is not None else 234000,
+            "comment": str(comment) if comment is not None else "ViewChart Web",
             "type_time": mt5.ORDER_TIME_GTC,
         }
 
+        # Normalize Order Type
+        order_type_str = str(order_type).lower()
+
         if is_market:
             request["action"] = mt5.TRADE_ACTION_DEAL
-            request["price"] = tick.ask if order_type == "buy" else tick.bid
-            request["type"] = mt5.ORDER_TYPE_BUY if order_type == "buy" else mt5.ORDER_TYPE_SELL
-            request["type_filling"] = self._get_filling_mode(symbol) # Market uses symbol specific mode
+            request["price"] = tick.ask if "buy" in order_type_str else tick.bid
+            request["type"] = mt5.ORDER_TYPE_BUY if "buy" in order_type_str else mt5.ORDER_TYPE_SELL
+            request["type_filling"] = self._get_filling_mode(symbol)
         else:
             request["action"] = mt5.TRADE_ACTION_PENDING
             request["price"] = float(price)
-            request["type_filling"] = mt5.ORDER_FILLING_RETURN # Pending always uses RETURN
+            request["type_filling"] = mt5.ORDER_FILLING_RETURN
             
-            # Determine Limit vs Stop
-            if order_type == "buy":
-                # Buy Limit if Price < Ask, Buy Stop if Price > Ask
-                if request["price"] < tick.ask:
-                    request["type"] = mt5.ORDER_TYPE_BUY_LIMIT 
-                else: 
-                    request["type"] = mt5.ORDER_TYPE_BUY_STOP
-            else: 
-                # Sell Limit if Price > Bid, Sell Stop if Price < Bid
-                if request["price"] > tick.bid:
-                    request["type"] = mt5.ORDER_TYPE_SELL_LIMIT
-                else:
-                    request["type"] = mt5.ORDER_TYPE_SELL_STOP
+            # Use explicit mapping if provided as buy_stop, sell_limit, etc.
+            if order_type_str == "buy_stop": request["type"] = mt5.ORDER_TYPE_BUY_STOP
+            elif order_type_str == "sell_stop": request["type"] = mt5.ORDER_TYPE_SELL_STOP
+            elif order_type_str == "buy_limit": request["type"] = mt5.ORDER_TYPE_BUY_LIMIT
+            elif order_type_str == "sell_limit": request["type"] = mt5.ORDER_TYPE_SELL_LIMIT
+            elif "buy" in order_type_str:
+                request["type"] = mt5.ORDER_TYPE_BUY_LIMIT if request["price"] < tick.ask else mt5.ORDER_TYPE_BUY_STOP
+            else:
+                request["type"] = mt5.ORDER_TYPE_SELL_LIMIT if request["price"] > tick.bid else mt5.ORDER_TYPE_SELL_STOP
 
         print(f"[DEBUG] Sending Order: {request}")
         result = mt5.order_send(request)
@@ -242,7 +261,7 @@ class MT5Service:
              print(f"[ERROR] Order send failed: {result.retcode} - {result.comment}")
              return False
         
-        print(f"[ORDER] Sent {request['action']} {order_type} {volume} {symbol} @ {request['price']}")
+        print(f"[ORDER] Sent {request['action']} {order_type} {volume} {symbol} @ {request['price']} (Ticket: {result.order})")
         return True
 
     def get_symbol_specification(self, symbol):

@@ -3,6 +3,7 @@ import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { calculateHeikinAshi } from '../utils/indicator-math';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 const EMPTY_CANDLES: any[] = [];
 
@@ -39,7 +40,7 @@ export function useChartHistory({
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
 
-    const normSymbol = symbol ? (symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol) : '';
+    const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
     // Subscribe to store length changes only

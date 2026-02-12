@@ -1,15 +1,13 @@
 'use client';
 
 import { useMarketStore } from '@/lib/store';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useMemo, useState, useEffect } from 'react';
 
 const EMPTY_ARRAY: any[] = [];
 
 export function useChartOHLC(symbol: string | undefined, interval: string | undefined, source: string | undefined) {
-    const normSymbol = useMemo(() => {
-        if (!symbol) return '';
-        return symbol.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
-    }, [symbol]);
+    const normSymbol = useMemo(() => normalizeSymbol(symbol), [symbol]);
 
     const key = useMemo(() => {
         if (!normSymbol || !interval || !source) return '';

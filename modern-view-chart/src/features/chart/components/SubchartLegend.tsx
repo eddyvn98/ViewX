@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useSubchartLegendDOMUpdater } from '../hooks/use-subchart-legend-dom-updater';
 import { Candle, useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 interface SubchartLegendProps {
     chartId: string;
@@ -18,7 +19,7 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
     const containerRef = useRef<HTMLDivElement>(null);
 
     // 1. Get Candles (Prop or Store)
-    const normSymbol = symbol?.toLowerCase().endsWith('m') ? symbol.replace(/[mM]$/, 'm') : symbol;
+    const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
     const storeCandles = useMarketStore(state => key ? (state.candleData[key] || EMPTY_ARRAY) : EMPTY_ARRAY);
     const candles = propCandles || storeCandles;

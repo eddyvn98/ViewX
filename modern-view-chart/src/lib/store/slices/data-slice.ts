@@ -10,7 +10,7 @@ export interface DataSlice {
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Candle) => void;
 }
 
-const normalizeSymbol = (s: string) => s.toLowerCase().endsWith('m') ? s.replace(/[mM]$/, 'm') : s;
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 // Normalize time to seconds for consistent comparison (handles both ms and sec formats)
 const toSeconds = (t: any): number => {
