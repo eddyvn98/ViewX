@@ -3,8 +3,9 @@ import { memo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { RootState } from '@/lib/store';
 
-import { Plus, Crosshair, Link } from 'lucide-react';
+import { Plus, Crosshair, Link, History as HistoryIcon } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
+import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { TimeframeToolbar } from './TimeframeToolbar';
 import { TimezoneSelector } from './TimezoneSelector';
 import { LayoutGridSelector } from './LayoutGridSelector';
@@ -108,6 +109,21 @@ export function ChartsToolbar() {
 
                 <div className="flex items-center gap-3 pl-2">
                     <button onClick={() => setCrosshairSync(!isCrosshairSyncEnabled)} className={cn("p-1.5 rounded transition-all", isCrosshairSyncEnabled ? "text-purple-500 bg-purple-500/10" : "text-zinc-500 hover:text-zinc-300")} title="Crosshair Sync"><Crosshair size={15} /></button>
+
+                    {/* Marker Toggle */}
+                    <button
+                        onClick={() => useStrategyStore.getState().toggleShowHistoryMarkers()}
+                        className={cn(
+                            "p-1.5 rounded transition-all active:scale-95",
+                            useStrategyStore(state => state.showHistoryMarkers)
+                                ? "text-blue-500 bg-blue-500/10"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                        title="Toggle Strategy Markers"
+                    >
+                        <HistoryIcon size={15} />
+                    </button>
+
                     <button onClick={handleAddChart} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 hover:text-white transition-all uppercase tracking-wider"><Plus size={14} className="text-blue-500" /> Add Chart</button>
                 </div>
             </div>

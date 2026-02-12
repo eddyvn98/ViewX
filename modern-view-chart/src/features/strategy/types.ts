@@ -1,3 +1,4 @@
+
 export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA";
 
 export interface Indicator {
@@ -42,7 +43,10 @@ export interface SLTPConfig {
 export interface StrategyRisk {
     sl?: number | SLTPConfig;
     tp?: number | SLTPConfig;
+    stopLoss?: number | SLTPConfig; // Alias for sl (used in BacktestRunner)
+    takeProfit?: number | SLTPConfig; // Alias for tp
     trailing: boolean;
+    slSource?: 'HA_Low' | 'HA_High' | 'Candle_Low' | 'Candle_High';
     trailingSource?: 'HA_Low' | 'HA_High';
     lotSize: number | LotConfig;
     maxTrades?: number;
@@ -63,7 +67,8 @@ export interface Strategy {
     timeframe?: string;
     positionMode: PositionMode;
     executionMode: 'virtual' | 'real';
-    entryType: 'market' | 'stop';
+    entryType: 'market' | 'stop' | 'limit';
+    entryPrice?: SLTPConfig;
     magic?: number;
     comment?: string;
     sessions?: ("London" | "NewYork" | "Tokyo" | "Sydney")[];
@@ -94,7 +99,6 @@ export interface StrategySignal {
     aiAnalysis?: AiResponse;
 }
 
-// 0-100
 
 export interface VirtualPosition {
     id: string;
@@ -105,9 +109,11 @@ export interface VirtualPosition {
     sl: number;
     tp: number;
     lotSize: number;
+    quantity?: number; // Backend alias for lotSize
     timestamp: number;
     status: 'open' | 'closed' | 'pending';
     exitPrice?: number;
     exitTimestamp?: number;
+    exitReason?: string; // e.g. "TP", "SL", "Signal", "Manual"
     pnl?: number;
 }

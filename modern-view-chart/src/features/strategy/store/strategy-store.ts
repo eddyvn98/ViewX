@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Strategy, StrategySignal, VirtualPosition } from '../types';
@@ -23,7 +24,9 @@ interface StrategyState {
     clearSignals: () => void;
     clearVirtualPositions: () => void;
     setVirtualBalance: (balance: number) => void;
+    resetVirtualBalance: () => void;
     resetVirtualAccount: () => void;
+    runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => void;
 }
 
 
@@ -67,8 +70,8 @@ export const useStrategyStore = create<StrategyState>()(
                         ]
                     },
                     risk: {
-                        sl: 30, // Fallback if source fails
-                        tp: 60,
+                        sl: { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 },
+                        tp: undefined,
                         trailing: true,
                         slSource: 'HA_Low',
                         trailingSource: 'HA_Low',
@@ -122,8 +125,8 @@ export const useStrategyStore = create<StrategyState>()(
                         ]
                     },
                     risk: {
-                        sl: 30, // Fallback
-                        tp: 60,
+                        sl: { mode: 'candle', candleField: 'high', candleOffset: 1, offset: 0 },
+                        tp: undefined,
                         trailing: true,
                         slSource: 'HA_High',
                         trailingSource: 'HA_High',
@@ -146,7 +149,7 @@ export const useStrategyStore = create<StrategyState>()(
                     id: 'test-trigger-rsi',
                     name: 'Test Fast Trigger (RSI > 20)',
                     side: 'BUY',
-                    symbol: 'XAUUSDm',
+                    symbol: '', // Dynamic Symbol (Uses active chart)
 
                     active: false,
                     positionMode: 'single_position',
@@ -244,11 +247,40 @@ export const useStrategyStore = create<StrategyState>()(
                 virtualBalance: balance,
                 initialVirtualBalance: balance // Update initial whenever they manually set balance
             })),
+            resetVirtualBalance: () => set((state) => ({
+                virtualBalance: state.initialVirtualBalance
+            })),
             resetVirtualAccount: () => set((state) => ({
                 virtualPositions: [],
                 signals: [],
                 virtualBalance: state.initialVirtualBalance
             })),
+            runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => set((state) => {
+                const strategy = state.strategies.find(s => s.id === strategyId);
+                if (!strategy) return {};
+
+                // Dynamically import runner to avoid circular dependency issues in store initialization if any
+                // But for now assuming direct import or we move logic here. 
+                // Actually best to keep logic outside. We will import BacktestRunner at top.
+
+                const { BacktestRunner } = require('../logic/BacktestRunner');
+                const backtestPositions = BacktestRunner.run(strategy, candles, state.initialVirtualBalance, overrideSymbol);
+
+                // Merge strategies: Remove old backtest positions for this strategy
+                const otherPositions = state.virtualPositions.filter(p => !p.id.startsWith('bt-'));
+
+                // Calculate PnL impact from backtest
+                const totalPnL = backtestPositions.reduce((sum: number, p: any) => sum + (p.pnl || 0), 0);
+
+                console.log(`[Store] Backtest finished. Generated ${backtestPositions.length} positions. New Balance: ${state.initialVirtualBalance + totalPnL}`);
+
+                return {
+                    virtualPositions: [...otherPositions, ...backtestPositions],
+                    // Option: Reset balance to initial + backtest result? 
+                    // Or just add to current? Reset seems safer for consistent backtest view
+                    virtualBalance: state.initialVirtualBalance + totalPnL
+                };
+            }),
         }),
 
         {

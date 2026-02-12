@@ -32,16 +32,16 @@ export function TradeHistory({ positions }: Props) {
                 </span>
             </div>
 
-            <div className="bg-[#1e222d] rounded-xl border border-[#363a45] overflow-hidden shadow-2xl">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
+            <div className="bg-[#1e222d] rounded-xl border border-[#363a45] overflow-hidden shadow-2xl flex flex-col">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+                    <table className="w-full text-left border-collapse table-fixed md:table-auto">
+                        <thead className="sticky top-0 z-10">
                             <tr className="bg-[#131722] border-b border-[#363a45]">
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter">Time / Symbol</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter">Type</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter">Lot</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter">Entry / Exit</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter text-right">Profit (USD)</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[35%] md:w-auto">Time / Symbol</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[15%] md:w-auto">Type</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[10%] md:w-auto">Lot</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[20%] md:w-auto">Entry / Exit</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter text-right w-[20%] md:w-auto">Profit (USD)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#363a45]/30">

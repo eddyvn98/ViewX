@@ -241,6 +241,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                         chart={priceChartRef.current}
                         mainSeries={seriesRef.current}
                         symbol={symbol}
+                        interval={interval}
                     />
                 )}
 

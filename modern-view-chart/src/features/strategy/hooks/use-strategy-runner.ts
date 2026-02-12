@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '../store/strategy-store';
@@ -35,6 +36,9 @@ export function useStrategyRunner() {
     const lastBarTimeRef = useRef<Record<string, number>>({});
     const isRunningRef = useRef(false);
 
+    const runBacktest = useStrategyStore(state => state.runBacktest);
+    const backtestRunRef = useRef<Record<string, number>>({});
+
     useEffect(() => {
         // MIGRATION: Auto-patch existing strategies with missing cancelConditions
         strategies.forEach(s => {
@@ -46,11 +50,55 @@ export function useStrategyRunner() {
                 console.log(`[Migration] Patching cancel conditions for ${s.name}`);
                 updateStrategy(s.id, { cancelConditions });
             }
+
+            // FORCE DYNAMIC FOR TEST STRATEGY (Fix Persistence Issue)
+            if (s.id === 'test-trigger-rsi' && s.symbol !== '') {
+                console.log(`[Migration] Forcing Dynamic Symbol for ${s.name}`);
+                updateStrategy(s.id, { symbol: '' });
+            }
+
+            // AUTO-BACKTEST TRIGGER
+            // Run backtest if strategy is active and we have candle data, and haven't run it recently
+            if (s.active) {
+                // Find matching candles
+                // We need to find the correct key from candleData which matches s.symbol and s.timeframe
+                // This is a bit tricky as candleData keys are "source:symbol:interval"
+                // We'll iterate candleData keys to find match
+                const interval = s.timeframe || '1m';
+                let dataKey: string | undefined;
+
+                if (s.symbol) {
+                    const normSymbol = normalizeSymbol(s.symbol);
+                    dataKey = Object.keys(candleData).find(k => k.includes(`:${normSymbol}:${interval}`));
+                } else {
+                    // DYNAMIC MODE: Use the first available data key that matches timeframe (likely the active chart)
+                    // Priority: Try to match active tab symbol if possible, else any
+                    // Since we don't have easy access to active symbol here without iterating tabs, 
+                    // we'll just pick the first valid data source with enough length
+                    dataKey = Object.keys(candleData).find(k => k.endsWith(`:${interval}`) && candleData[k].length > 100);
+                }
+
+                if (dataKey && candleData[dataKey] && candleData[dataKey].length > 100) {
+                    const lastRun = backtestRunRef.current[s.id] || 0;
+                    // Run only once per session or if strategy config changes
+                    if (Date.now() - lastRun > 60000) {
+                        console.log(`[Backtest] Auto-triggering for ${s.name} (${s.id}) using data: ${dataKey}`);
+
+                        // Extract symbol from dataKey if strategy symbol is missing
+                        // dataKey format: source:symbol:interval
+                        const parts = dataKey.split(':');
+                        const actualSymbol = s.symbol || (parts.length >= 2 ? parts[1] : 'BACKTEST');
+
+                        runBacktest(s.id, candleData[dataKey], actualSymbol);
+                        backtestRunRef.current[s.id] = Date.now();
+                    }
+                }
+            }
         });
 
         console.log(`[Store] Total Strategies: ${strategies.length}`);
         strategies.forEach(s => console.log(`  > ${s.name} (${s.id}) | Active: ${s.active} | Sym: ${s.symbol}`));
-    }, [strategies.length, strategies]); // Log on change
+    }, [strategies.length, strategies, candleData, runBacktest]);
 
 
     useEffect(() => {
@@ -92,12 +140,15 @@ export function useStrategyRunner() {
 
                     const activeStrategies = strategies.filter(s => {
                         if (!s.active) return false;
+                        // Dynamic Symbol Support: Match if s.symbol is empty OR matches current symbol
                         const symbolMatch = !s.symbol || normalizeSymbol(s.symbol) === normSymbol;
                         const timeframeMatch = !s.timeframe || s.timeframe === interval;
                         return symbolMatch && timeframeMatch;
                     });
 
                     if (activeStrategies.length === 0) continue;
+
+                    // console.log(`[StrategyRunner] Tick: ${symbol}:${interval} | Active Strategies: ${activeStrategies.length}`);
 
                     // Process strategies SEQUENTIALLY to prevent race conditions
                     for (const strategy of activeStrategies) {
@@ -112,19 +163,32 @@ export function useStrategyRunner() {
                         const isNewBar = lastTime > (lastBarTimeRef.current[processKey] || 0);
                         if (isNewBar) {
                             lastBarTimeRef.current[processKey] = lastTime;
-                            // console.log(`[StrategyRunner] NEW BAR detected for ${strategy.name} on ${symbol}: ${new Date(lastTime).toLocaleTimeString()}`);
+                            console.log(`[Bar] New Bar for ${strategy.name} on ${symbol}: ${new Date(lastTime).toLocaleTimeString()}`);
                         }
 
                         const latestVirtualPositions = useStrategyStore.getState().virtualPositions;
-                        const strategyPositions = latestVirtualPositions.filter(p => p.strategyId === strategy.id && p.symbol === symbol);
+                        const strategyPositions = latestVirtualPositions.filter(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+
+                        if (strategyPositions.length > 0) {
+                            // HEARBEAT LOG: Confirm runner is processing active positions
+                            if (Math.random() < 0.1) { // 10% chance to log heartbeat to avoid flooding
+                                console.log(`[Heartbeat] ${strategy.name} tracking ${strategyPositions.length} positions on ${symbol}`);
+                            }
+                        }
+
+                        if (strategyPositions.length > 0) {
+                            // console.log(`[StrategyRunner] Active Pos found for ${strategy.name}: ${strategyPositions.length}`);
+                        }
 
                         // 1. PROTECTION LOGIC (Fast Track - Runs every ticker/1s)
                         strategyPositions.forEach(pos => {
-                            if (pos.status === 'open') {
+                            if (pos.status === 'open' || pos.status === 'pending') {
                                 const currentPrice = lastCandle.close;
 
                                 // --- TRAILING STOP LOGIC ---
-                                if (strategy.risk.trailing && strategy.risk.trailingSource) {
+                                if (strategy.risk.trailing) {
+                                    const source = strategy.risk.trailingSource || (pos.type === 'BUY' ? 'HA_Low' : 'HA_High');
+
                                     const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, candles.slice(0, -1));
                                     const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, candles.slice(0, -1));
 
@@ -134,31 +198,31 @@ export function useStrategyRunner() {
                                     let newSl = pos.sl;
                                     let shouldUpdate = false;
 
-                                    // Debug Trailing Check
-                                    // if (Math.random() < 0.05) console.log(`[Trailing] Checking ${pos.symbol} ${pos.type}. SL: ${pos.sl}, HALow: ${haLow}, HAHigh: ${haHigh}, Threshold: ${moveThreshold}`);
-
-                                    if (pos.type === 'BUY' && strategy.risk.trailingSource === 'HA_Low') {
+                                    if (pos.type === 'BUY' && source === 'HA_Low') {
                                         if (haLow > pos.sl + moveThreshold) {
                                             newSl = haLow;
                                             shouldUpdate = true;
-                                            console.log(`[Trailing] BUY Upgrade proposed: ${pos.sl} -> ${newSl} (Price: ${currentPrice})`);
+                                            console.log(`[Trailing] BUY SL Move: ${pos.sl.toFixed(2)} -> ${newSl.toFixed(2)} | Cur: ${currentPrice.toFixed(2)} | Status: ${pos.status} | Source: ${source}`);
                                         }
-                                    } else if (pos.type === 'SELL' && strategy.risk.trailingSource === 'HA_High') {
+                                    } else if (pos.type === 'SELL' && source === 'HA_High') {
                                         const proposedSl = haHigh + priceOffset;
                                         if (pos.sl === 0 || proposedSl < pos.sl - moveThreshold) {
                                             newSl = proposedSl;
                                             shouldUpdate = true;
-                                            console.log(`[Trailing] SELL Upgrade proposed: ${pos.sl} -> ${newSl} (Price: ${currentPrice})`);
+                                            console.log(`[Trailing] SELL SL Move: ${pos.sl.toFixed(2)} -> ${newSl.toFixed(2)} | Cur: ${currentPrice.toFixed(2)} | Status: ${pos.status} | Source: ${source}`);
                                         }
                                     }
 
                                     if (shouldUpdate) {
-                                        // SAFEGUARD: Don't move SL to a point where it immediately stops out the position
-                                        // unless the price is clearly against us.
                                         const isSafe = pos.type === 'BUY' ? newSl < currentPrice : newSl > currentPrice;
-                                        if (isSafe) {
+                                        if (isSafe || pos.status === 'pending') {
                                             updateVirtualPosition(pos.id, { sl: newSl });
-                                            console.log(`[Trailing] SL Updated for ${pos.symbol}: ${newSl}`);
+                                            // Handle MT5 Real if connected
+                                            if (strategy.executionMode === 'real' && (strategy as any).mt5_id) {
+                                                // Ticker needs to send MT5 modification but we use store update which might trigger sync elsewhere 
+                                                // Or we send command directly
+                                                sendMessage({ topic: 'mt5_command', command: 'modify_order', ticket: (pos as any).ticket, sl: newSl, tp: pos.tp });
+                                            }
                                         } else {
                                             console.warn(`[Trailing] Safeguard Blocked! Current: ${currentPrice}, Proposed SL: ${newSl}, Type: ${pos.type}`);
                                         }
@@ -166,37 +230,38 @@ export function useStrategyRunner() {
 
                                 }
 
-                                // --- EXIT LOGIC ---
-                                // FIX: Prevent immediate exit on same candle (within 5s)
-                                if (Date.now() - pos.timestamp < 5000) return;
+                                if (pos.status === 'open') {
+                                    // --- EXIT LOGIC ---
+                                    if (Date.now() - pos.timestamp < 5000) return;
 
-                                let exitPrice = null;
-                                let exitReason = '';
-                                if (pos.type === 'BUY') {
-                                    if (pos.sl && currentPrice <= pos.sl) { exitPrice = pos.sl; exitReason = 'SL'; }
-                                    else if (pos.tp && currentPrice >= pos.tp) { exitPrice = pos.tp; exitReason = 'TP'; }
-                                } else {
-                                    if (pos.sl && currentPrice >= pos.sl) { exitPrice = pos.sl; exitReason = 'SL'; }
-                                    else if (pos.tp && currentPrice <= pos.tp) { exitPrice = pos.tp; exitReason = 'TP'; }
-                                }
+                                    let exitPrice = null;
+                                    let exitReason = '';
+                                    if (pos.type === 'BUY') {
+                                        if (pos.sl && currentPrice <= pos.sl) { exitPrice = pos.sl; exitReason = 'SL'; }
+                                        else if (pos.tp && currentPrice >= pos.tp) { exitPrice = pos.tp; exitReason = 'TP'; }
+                                    } else {
+                                        if (pos.sl && currentPrice >= pos.sl) { exitPrice = pos.sl; exitReason = 'SL'; }
+                                        else if (pos.tp && currentPrice <= pos.tp) { exitPrice = pos.tp; exitReason = 'TP'; }
+                                    }
 
-                                if (exitPrice) {
-                                    console.log(`[StrategyRunner] EXIT TRIGGERED: ${pos.symbol} ${pos.type} | Reason: ${exitReason} | Price: ${currentPrice} | Trigger: ${exitPrice}`);
-                                    closeVirtualPosition(strategy.id, symbol, exitPrice);
-                                    toast.warning(`[${exitReason}] ${pos.symbol} Closed @ ${exitPrice}`);
-                                }
-                            } else if (pos.status === 'pending') {
-                                const currentPrice = lastCandle.close;
-                                let shouldFill = false;
-                                if (pos.type === 'BUY') {
-                                    if (currentPrice >= pos.entryPrice) shouldFill = true;
-                                } else {
-                                    if (currentPrice <= pos.entryPrice) shouldFill = true;
-                                }
+                                    if (exitPrice) {
+                                        console.log(`[StrategyRunner] EXIT TRIGGERED: ${pos.symbol} ${pos.type} | Reason: ${exitReason} | Price: ${currentPrice} | Trigger: ${exitPrice}`);
+                                        closeVirtualPosition(strategy.id, symbol, exitPrice);
+                                        toast.warning(`[${exitReason}] ${pos.symbol} Closed @ ${exitPrice}`);
+                                    }
+                                } else if (pos.status === 'pending') {
+                                    const currentPrice = lastCandle.close;
+                                    let shouldFill = false;
+                                    if (pos.type === 'BUY') {
+                                        if (currentPrice >= pos.entryPrice) shouldFill = true;
+                                    } else {
+                                        if (currentPrice <= pos.entryPrice) shouldFill = true;
+                                    }
 
-                                if (shouldFill) {
-                                    updateVirtualPosition(pos.id, { status: 'open', entryPrice: pos.entryPrice, timestamp: Date.now() });
-                                    toast.success(`[FILLED] ${pos.type} ${pos.symbol} @ ${pos.entryPrice}`);
+                                    if (shouldFill) {
+                                        updateVirtualPosition(pos.id, { status: 'open', entryPrice: pos.entryPrice, timestamp: Date.now() });
+                                        toast.success(`[FILLED] ${pos.type} ${pos.symbol} @ ${pos.entryPrice}`);
+                                    }
                                 }
                             }
                         });
@@ -234,7 +299,6 @@ export function useStrategyRunner() {
                                 }
 
                                 if (finalSignal.type !== 'EXIT') {
-                                    // Final Safety Check before entry: Check store again for any new position created while analyzing
                                     const refreshedPositions = useStrategyStore.getState().virtualPositions;
                                     if (refreshedPositions.some(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed')) {
                                         console.log(`[Engine] Blocking duplicate entry for ${strategy.name} (Position already exists)`);
@@ -253,18 +317,16 @@ export function useStrategyRunner() {
                                     const priceOffset = symbol.includes('XAU') ? 0.3 : (symbol.includes('JPY') ? 0.01 : 0.0001);
 
                                     const haCandles = candles.slice(0, -1);
-                                    const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, haCandles);
-                                    const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, haCandles);
+                                    // const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, haCandles);
+                                    // const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, haCandles);
 
                                     const stopPrice = side === 'BUY' ? lastCandle.high + priceOffset : lastCandle.low;
 
-                                    // FIX: Log SL/TP calculation for debugging
                                     console.log(`[StrategyRunner] Calculating SL/TP for ${side} on ${symbol}. Price: ${lastCandle.close}, PipSize: ${pipSize}`);
 
                                     const slPrice = RiskCalculator.calculateLevel(strategy.risk.sl, 'sl', side, candles, lastCandle.close, pipSize);
                                     const tpPrice = RiskCalculator.calculateLevel(strategy.risk.tp, 'tp', side, candles, lastCandle.close, pipSize, lastCandle.close);
 
-                                    // Calculate dynamic lot size
                                     let balance = 10000;
                                     if (strategy.executionMode === 'real') {
                                         const account = Object.values(useMarketStore.getState().accounts)[0];

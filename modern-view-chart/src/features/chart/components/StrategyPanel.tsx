@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import { StrategyHistoryToggle } from '@/features/strategy/components/StrategyHistoryToggle';
 import { VirtualBalanceCard } from '@/features/strategy/components/VirtualBalanceCard';
-import { Strategy, ConditionGroup, StrategyRisk, StrategySignal, PositionMode, VirtualPosition } from '@/features/strategy/types';
+import { Strategy, ConditionGroup, StrategyRisk, StrategySignal, PositionMode, VirtualPosition, SLTPConfig } from '@/features/strategy/types';
 import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
+import { PriceConfigRow } from '@/features/strategy/components/PriceConfigRow';
 
 export function StrategyPanel() {
     const {
@@ -22,13 +23,19 @@ export function StrategyPanel() {
     const symbolInfo = useMarketStore(state => state.symbolInfo);
     const activeTabId = useMarketStore(state => state.activeTabId);
     const tabs = useMarketStore(state => state.tabs);
-    const activeSymbol = activeTabId ? (tabs[activeTabId]?.activeChartId ? tabs[activeTabId].charts[tabs[activeTabId].activeChartId].symbol : 'XAUUSDm') : 'XAUUSDm';
+    const activeTab = activeTabId ? tabs[activeTabId] : null;
+    const activeChartId = activeTab?.activeChartId;
+    const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
+    const activeSymbol = activeChart?.symbol || 'XAUUSDm';
+    const activeInterval = activeChart?.interval || '1m';
 
-    const [view, setView] = useState<'build' | 'list' | 'signals'>('build');
+    const [view, setView] = useState<'build' | 'list' | 'signals'>('signals');
     const [editingId, setEditingId] = useState<string | null>(null);
 
     // Draft strategy state
     const [name, setName] = useState('Professional Scalper');
+    const [strategySymbol, setStrategySymbol] = useState(''); // Empty string means "Active Chart"
+    const [timeframe, setTimeframe] = useState('1m');
     const [entry, setEntry] = useState<ConditionGroup>({
         operator: 'AND',
         conditions: [{ id: '1', left: { type: 'RSI', params: [14] }, comparator: '<', right: 30 }]
@@ -38,8 +45,8 @@ export function StrategyPanel() {
         conditions: []
     });
     const [risk, setRisk] = useState<StrategyRisk>({
-        sl: { mode: 'fixed', value: 200 },
-        tp: { mode: 'fixed', value: 400 },
+        sl: { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 },
+        tp: undefined,
         trailing: true,
         lotSize: { mode: 'fixed', value: 0.1 },
         maxTrades: 1,
@@ -49,12 +56,16 @@ export function StrategyPanel() {
     const [executionMode, setExecutionMode] = useState<'virtual' | 'real'>('virtual');
     const [magic, setMagic] = useState(123456);
     const [comment, setComment] = useState('WebEngine');
+    const [entryType, setEntryType] = useState<'market' | 'stop' | 'limit'>('stop');
+    const [entryPrice, setEntryPrice] = useState<SLTPConfig>({ mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
 
     const handleSave = () => {
         const newStrategy: Strategy = {
             id: editingId || Math.random().toString(36).substring(7),
-            name, side: 'BUY', entry, exit, risk, active: true, symbol: activeSymbol,
-            positionMode, executionMode, entryType: 'market', magic, comment,
+            name, side: 'BUY', entry, exit, risk, active: true,
+            symbol: strategySymbol || activeSymbol,
+            timeframe: timeframe || activeInterval,
+            positionMode, executionMode, entryType, entryPrice, magic, comment,
             sessions: ["London", "NewYork"]
         };
 
@@ -66,13 +77,16 @@ export function StrategyPanel() {
         setEntry({ operator: 'AND', conditions: [{ id: '1', left: { type: 'RSI', params: [14] }, comparator: '<', right: 30 }] });
         setExit({ operator: 'OR', conditions: [] });
         setRisk({
-            sl: { mode: 'fixed', value: 200 },
-            tp: { mode: 'fixed', value: 400 },
+            sl: { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 },
             trailing: true,
             lotSize: { mode: 'fixed', value: 0.1 },
             maxTrades: 1,
             cooldownMinutes: 5
         });
+        setStrategySymbol('');
+        setTimeframe('1m');
+        setEntryType('stop');
+        setEntryPrice({ mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
         setView('list');
     };
 
@@ -83,50 +97,84 @@ export function StrategyPanel() {
             {/* Tabs Header */}
             <div className="flex items-center border-b border-[#2a2e39] bg-[#131722] h-10 px-1">
                 <button
-                    onClick={() => setView('build')}
-                    className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'build' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
-                >
-                    <Plus size={12} /> BUILD
-                </button>
-                <button
-                    onClick={() => setView('list')}
-                    className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'list' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
-                >
-                    <List size={12} /> MY BOT
-                </button>
-                <button
                     onClick={() => setView('signals')}
                     className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'signals' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
                 >
                     <Activity size={12} /> SIGNALS
                 </button>
+                <button
+                    onClick={() => setView('list')}
+                    className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'list' || view === 'build' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
+                >
+                    <Bot size={12} /> MY BOT
+                </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col items-center bg-[#131722]/20">
-                <div className="w-full max-w-[800px] flex flex-col gap-8 pb-10">
+                <div className="w-full max-w-[800px] flex flex-col gap-5 pb-10">
                     {view === 'build' && (
-                        <div className="flex flex-col gap-8 animate-in slide-in-from-right-4 duration-300">
+                        <div className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-300">
                             {/* 1. IDENTITY SECTION - Optimized for narrow panels */}
-                            <div className="flex flex-col gap-4">
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-black text-[#5d606b] uppercase tracking-widest">Bot Identity</span>
-                                    <div className="h-[1px] bg-[#363a45]/30 w-full" />
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-1 flex-1">
+                                        <span className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest">Bot Identity</span>
+                                        <div className="h-[1px] bg-blue-500/20 w-full" />
+                                    </div>
+                                    <button
+                                        onClick={() => setView('list')}
+                                        className="ml-4 p-1.5 text-[#787b86] hover:text-white bg-[#2a2e39] rounded transition-all"
+                                    >
+                                        <X size={14} />
+                                    </button>
                                 </div>
 
-                                <div className="flex flex-col gap-4 pl-1">
+                                <div className="flex flex-col gap-3 pl-1">
                                     <div className="flex flex-col gap-1.5">
-                                        <span className="text-[9px] font-bold text-[#4a4f5d] uppercase">Bot Name</span>
+                                        <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Bot Name</span>
                                         <input
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
-                                            className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-sm font-bold text-white outline-none rounded w-full"
+                                            className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-bold text-white outline-none rounded w-full"
                                             placeholder="Hull HA Gold Scalper"
                                         />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-1.5">
-                                            <span className="text-[9px] font-bold text-[#4a4f5d] uppercase">Execution</span>
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Symbol</span>
+                                            <select
+                                                value={strategySymbol}
+                                                onChange={(e) => setStrategySymbol(e.target.value)}
+                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-medium text-[#d1d4dc] outline-none rounded"
+                                            >
+                                                <option value="">Active Chart ({activeSymbol})</option>
+                                                {Object.keys(symbolInfo).sort().map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Timeframe</span>
+                                            <select
+                                                value={timeframe}
+                                                onChange={(e) => setTimeframe(e.target.value)}
+                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-medium text-[#d1d4dc] outline-none rounded"
+                                            >
+                                                <option value="1m">M1</option>
+                                                <option value="5m">M5</option>
+                                                <option value="15m">M15</option>
+                                                <option value="30m">M30</option>
+                                                <option value="1h">H1</option>
+                                                <option value="4h">H4</option>
+                                                <option value="1d">D1</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Execution</span>
                                             <div className="flex bg-[#131722] rounded p-0.5 border border-[#363a45]/50 h-8">
                                                 <button
                                                     onClick={() => setExecutionMode('virtual')}
@@ -139,14 +187,54 @@ export function StrategyPanel() {
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-1.5">
-                                            <span className="text-[9px] font-bold text-[#4a4f5d] uppercase">Description</span>
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Description</span>
                                             <input
                                                 value={comment}
                                                 onChange={(e) => setComment(e.target.value)}
-                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-[11px] font-medium text-[#d1d4dc] outline-none rounded"
+                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-medium text-[#d1d4dc] outline-none rounded"
                                                 placeholder="WebHA_Buy"
                                             />
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* ENTRY EXECUTION SECTION */}
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest">Entry Execution</span>
+                                        <div className="h-[1px] bg-blue-500/20 w-full" />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5 pl-1 bg-black/5 p-2 rounded border border-[#363a45]/10">
+                                        <div className="flex items-center gap-4 h-7">
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase tracking-tighter w-[84px] shrink-0">Order Type</span>
+                                            <div className="flex bg-[#131722] rounded p-0.5 border border-[#363a45]/50 h-7 w-[160px]">
+                                                <button
+                                                    onClick={() => setEntryType('market')}
+                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'market' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
+                                                >MARKET</button>
+                                                <button
+                                                    onClick={() => setEntryType('stop')}
+                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'stop' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
+                                                >STOP</button>
+                                                <button
+                                                    onClick={() => setEntryType('limit')}
+                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'limit' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
+                                                >LIMIT</button>
+                                            </div>
+                                        </div>
+
+                                        {(entryType === 'stop' || entryType === 'limit') && (
+                                            <div className="animate-in slide-in-from-left-2 duration-200">
+                                                <PriceConfigRow
+                                                    label="Execution At"
+                                                    icon={<Plus size={10} />}
+                                                    config={entryPrice}
+                                                    onChange={setEntryPrice}
+                                                    accentColor="text-blue-500"
+                                                    modes={['fixed', 'candle']}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -193,6 +281,17 @@ export function StrategyPanel() {
                             <div className="flex justify-between items-center px-1">
                                 <span className="text-[10px] font-bold text-[#787b86] uppercase">Running Bot ({strategies.length})</span>
                                 <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setEditingId(null);
+                                            setName('Professional Scalper');
+                                            setView('build');
+                                        }}
+                                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase transition-all shadow-lg shadow-blue-500/20"
+                                    >
+                                        <Plus size={12} /> Add Bot
+                                    </button>
+                                    <div className="w-[1px] h-3 bg-[#363a45] mx-1" />
                                     <StrategyHistoryToggle />
                                     <button onClick={clearVirtualPositions} className="text-[9px] font-bold text-red-400/60 hover:text-red-400 flex items-center gap-1 transition-colors uppercase">
                                         <X size={10} /> Reset Trades
@@ -222,7 +321,21 @@ export function StrategyPanel() {
                                                     <button onClick={() => toggleStrategy(s.id)} className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all ${s.active ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-[#131722] text-[#787b86] border border-[#363a45]'}`}>
                                                         {s.active ? 'Active' : 'Paused'}
                                                     </button>
-                                                    <button onClick={() => { setEditingId(s.id); setName(s.name); setEntry(s.entry); setExit(s.exit || { operator: 'OR', conditions: [] }); setRisk(s.risk); setPositionMode(s.positionMode); setExecutionMode(s.executionMode); setComment(s.comment || ''); setView('build'); }} className="p-1.5 text-[#787b86] hover:text-white hover:bg-[#363a45] rounded transition-all">
+                                                    <button onClick={() => {
+                                                        setEditingId(s.id);
+                                                        setName(s.name);
+                                                        setStrategySymbol(s.symbol || '');
+                                                        setTimeframe(s.timeframe || '1m');
+                                                        setEntry(s.entry);
+                                                        setExit(s.exit || { operator: 'OR', conditions: [] });
+                                                        setRisk(s.risk);
+                                                        setPositionMode(s.positionMode);
+                                                        setExecutionMode(s.executionMode);
+                                                        setComment(s.comment || '');
+                                                        setEntryType(s.entryType || 'stop');
+                                                        setEntryPrice(s.entryPrice || { mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
+                                                        setView('build');
+                                                    }} className="p-1.5 text-[#787b86] hover:text-white hover:bg-[#363a45] rounded transition-all">
                                                         <Settings size={14} />
                                                     </button>
                                                     <button onClick={() => deleteStrategy(s.id)} className="p-1.5 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded transition-all">
