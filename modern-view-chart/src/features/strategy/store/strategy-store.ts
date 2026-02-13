@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Strategy, StrategySignal, VirtualPosition, TradeContext } from '../types';
+import { BacktestRunner } from '../logic/BacktestRunner';
 
 interface StrategyState {
     strategies: Strategy[];
@@ -260,26 +261,29 @@ export const useStrategyStore = create<StrategyState>()(
                 const strategy = state.strategies.find(s => s.id === strategyId);
                 if (!strategy) return {};
 
-                // Dynamically import runner to avoid circular dependency issues in store initialization if any
-                // But for now assuming direct import or we move logic here. 
-                // Actually best to keep logic outside. We will import BacktestRunner at top.
-
-                const { BacktestRunner } = require('../logic/BacktestRunner');
+                console.log(`[Store] Starting backtest for ${strategy.name} with ${candles.length} candles...`);
                 const backtestPositions = BacktestRunner.run(strategy, candles, state.initialVirtualBalance, overrideSymbol);
 
-                // Merge strategies: Remove old backtest positions for this strategy
-                const otherPositions = state.virtualPositions.filter(p => !p.id.startsWith('bt-'));
+                // 1. Keep Live Positions (those that are NOT historical)
+                const livePositions = state.virtualPositions.filter(p => !p.isHistorical);
 
-                // Calculate PnL impact from backtest
+                // 2. Clear old historical positions for THIS strategy and symbol
+                const tradeSymbol = overrideSymbol || strategy.symbol || '';
+                const otherHistorical = state.virtualPositions.filter(p => p.isHistorical && (p.strategyId !== strategyId || p.symbol !== tradeSymbol));
+
+                // 3. Merge: Live + Historical from other strats + New Backtest results
+                const mergedPositions = [...livePositions, ...otherHistorical, ...backtestPositions];
+
+                // Calculate PnL impact (optional: we might want to keep history pnl separate from live balance)
+                // For now, let's keep it as is but ensure we don't double count if we run backtest multiple times
                 const totalPnL = backtestPositions.reduce((sum: number, p: any) => sum + (p.pnl || 0), 0);
 
-                console.log(`[Store] Backtest finished. Generated ${backtestPositions.length} positions. New Balance: ${state.initialVirtualBalance + totalPnL}`);
+                console.log(`[Store] Backtest merged. Live: ${livePositions.length}, Hist: ${backtestPositions.length}.`);
 
                 return {
-                    virtualPositions: [...otherPositions, ...backtestPositions],
-                    // Option: Reset balance to initial + backtest result? 
-                    // Or just add to current? Reset seems safer for consistent backtest view
-                    virtualBalance: state.initialVirtualBalance + totalPnL
+                    virtualPositions: mergedPositions,
+                    // Note: We don't automatically update virtualBalance here to avoid jumps during live sessions.
+                    // Balance updates happen when positions are closed by the Live Runner.
                 };
             }),
         }),

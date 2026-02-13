@@ -1,5 +1,5 @@
 
-export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA";
+export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR";
 
 export interface Indicator {
     type: IndicatorType;
@@ -153,4 +153,5 @@ export interface VirtualPosition {
     exitReason?: string; // e.g. "TP", "SL", "Signal", "Manual"
     pnl?: number;
     metadata?: TradeContext;
+    isHistorical?: boolean; // Tag for backtest results
 }

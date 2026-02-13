@@ -26,7 +26,8 @@ export class SignalIndicator {
             const prev = rsi14[i - 1];
             if (isNaN(prev)) continue;
 
-            const candleTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time)) as any;
+            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
+            const candleTime = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
 
             if (prev > (this.config.params.upperLimit || 60)) {
                 markers.push({

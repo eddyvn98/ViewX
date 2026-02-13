@@ -4,9 +4,8 @@ import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { RuleBuilder } from '@/features/strategy/components/RuleBuilder';
 import { RiskPanel } from '@/features/strategy/components/RiskPanel';
 import {
-    Plus, Trash2, List, Activity, Bot, History, TrendingUp, TrendingDown, X, Settings, Clock, Target, Layers
+    Plus, Trash2, Activity, Bot, History as HistoryIcon, TrendingUp, TrendingDown, X as XIcon, Settings, Clock, Target, Layers
 } from 'lucide-react';
-import { StrategyHistoryToggle } from '@/features/strategy/components/StrategyHistoryToggle';
 import { VirtualBalanceCard } from '@/features/strategy/components/VirtualBalanceCard';
 import { Strategy, ConditionGroup, StrategyRisk, StrategySignal, PositionMode, VirtualPosition, SLTPConfig } from '@/features/strategy/types';
 import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
@@ -58,11 +57,12 @@ export function StrategyPanel() {
     const [comment, setComment] = useState('WebEngine');
     const [entryType, setEntryType] = useState<'market' | 'stop' | 'limit'>('stop');
     const [entryPrice, setEntryPrice] = useState<SLTPConfig>({ mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
+    const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
 
     const handleSave = () => {
         const newStrategy: Strategy = {
             id: editingId || Math.random().toString(36).substring(7),
-            name, side: 'BUY', entry, exit, risk, active: true,
+            name, side, entry, exit, risk, active: true,
             symbol: strategySymbol || activeSymbol,
             timeframe: timeframe || activeInterval,
             positionMode, executionMode, entryType, entryPrice, magic, comment,
@@ -125,19 +125,34 @@ export function StrategyPanel() {
                                         onClick={() => setView('list')}
                                         className="ml-4 p-1.5 text-[#787b86] hover:text-white bg-[#2a2e39] rounded transition-all"
                                     >
-                                        <X size={14} />
+                                        <XIcon size={14} />
                                     </button>
                                 </div>
 
                                 <div className="flex flex-col gap-3 pl-1">
-                                    <div className="flex flex-col gap-1.5">
-                                        <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Bot Name</span>
-                                        <input
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-bold text-white outline-none rounded w-full"
-                                            placeholder="Hull HA Gold Scalper"
-                                        />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-1.5 focus-within:z-10">
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Bot Name</span>
+                                            <input
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-bold text-white outline-none rounded w-full"
+                                                placeholder="Hull HA Gold Scalper"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Side</span>
+                                            <div className="flex bg-[#131722] rounded p-0.5 border border-[#363a45]/50 h-8">
+                                                <button
+                                                    onClick={() => setSide('BUY')}
+                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[9px] font-black transition-all ${side === 'BUY' ? 'bg-blue-600 text-white' : 'text-[#4a4f5d]'}`}
+                                                >BUY</button>
+                                                <button
+                                                    onClick={() => setSide('SELL')}
+                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[9px] font-black transition-all ${side === 'SELL' ? 'bg-red-600 text-white' : 'text-[#4a4f5d]'}`}
+                                                >SELL</button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
@@ -240,7 +255,7 @@ export function StrategyPanel() {
                             </div>
 
                             {/* 2. STRATEGY RULES */}
-                            <RuleBuilder entry={entry} exit={exit} onChangeEntry={setEntry} onChangeExit={setExit} />
+                            <RuleBuilder entry={entry} exit={exit} side={side} onChangeEntry={setEntry} onChangeExit={setExit} />
 
                             {/* 3. RISK CONTROL */}
                             <RiskPanel risk={risk} positionMode={positionMode} onChangeRisk={setRisk} onChangeMode={setPositionMode} />
@@ -291,11 +306,6 @@ export function StrategyPanel() {
                                     >
                                         <Plus size={12} /> Add Bot
                                     </button>
-                                    <div className="w-[1px] h-3 bg-[#363a45] mx-1" />
-                                    <StrategyHistoryToggle />
-                                    <button onClick={clearVirtualPositions} className="text-[9px] font-bold text-red-400/60 hover:text-red-400 flex items-center gap-1 transition-colors uppercase">
-                                        <X size={10} /> Reset Trades
-                                    </button>
                                 </div>
                             </div>
 
@@ -324,6 +334,7 @@ export function StrategyPanel() {
                                                     <button onClick={() => {
                                                         setEditingId(s.id);
                                                         setName(s.name);
+                                                        setSide(s.side);
                                                         setStrategySymbol(s.symbol || '');
                                                         setTimeframe(s.timeframe || '1m');
                                                         setEntry(s.entry);
@@ -339,7 +350,7 @@ export function StrategyPanel() {
                                                         <Settings size={14} />
                                                     </button>
                                                     <button onClick={() => deleteStrategy(s.id)} className="p-1.5 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded transition-all">
-                                                        <X size={14} />
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -376,7 +387,7 @@ export function StrategyPanel() {
                                 <div className="flex flex-col gap-3">
                                     <div className="flex justify-between items-center px-1">
                                         <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
-                                            <History size={12} /> Active ({activePositions.length})
+                                            <HistoryIcon size={12} /> Active ({activePositions.length})
                                         </span>
                                     </div>
                                     <div className="grid grid-cols-1 gap-2">
@@ -392,7 +403,7 @@ export function StrategyPanel() {
                                                             <span className={`text-[9px] font-black px-1 rounded ${pos.type === 'BUY' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>{pos.type}</span>
                                                         </div>
                                                         <div className={`font-mono text-xs font-bold ${pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>{formatPnL(pnl)}</div>
-                                                        <button onClick={() => pos.status === 'open' ? closeVirtualPosition(pos.strategyId, pos.symbol, currentPrice) : cancelVirtualPosition(pos.strategyId, pos.symbol)} className="text-[#4a4f5d] hover:text-red-500 transition-colors"><X size={12} /></button>
+                                                        <button onClick={() => pos.status === 'open' ? closeVirtualPosition(pos.strategyId, pos.symbol, currentPrice) : cancelVirtualPosition(pos.strategyId, pos.symbol)} className="text-[#4a4f5d] hover:text-red-500 transition-colors"><XIcon size={12} /></button>
                                                     </div>
                                                     <div className="grid grid-cols-3 p-2 text-[9px] text-[#787b86] bg-[#1e222d]/20">
                                                         <div>Entry: <span className="text-white font-mono">{pos.entryPrice.toFixed(2)}</span></div>
@@ -410,7 +421,6 @@ export function StrategyPanel() {
                             <div className="flex flex-col gap-3">
                                 <div className="flex justify-between items-center px-1">
                                     <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-widest flex items-center gap-1.5"><Activity size={12} /> Recent Signals</span>
-                                    {signals.length > 0 && <button onClick={clearSignals} className="text-[9px] font-bold text-blue-500/50 hover:text-blue-500 transition-colors uppercase">Clear</button>}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     {signals.length === 0 ? (

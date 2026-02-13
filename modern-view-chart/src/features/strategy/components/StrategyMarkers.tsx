@@ -14,6 +14,8 @@ export const StrategyMarkers = ({ chart, mainSeries, symbol, interval }: Strateg
     const virtualPositions = useStrategyStore(state => state.virtualPositions);
     const strategies = useStrategyStore(state => state.strategies);
 
+    console.log(`[StrategyMarkers] Render - Symbol: ${symbol} | Interval: ${interval} | Positions: ${virtualPositions.length}`);
+
     // Normalize timeframe strings for comparison (e.g., '1m' vs '1')
     const normalizeTF = (tf: string | undefined) => {
         if (!tf) return '';
@@ -56,18 +58,36 @@ export const StrategyMarkers = ({ chart, mainSeries, symbol, interval }: Strateg
         }
 
         const closedPositions = virtualPositions.filter(p => {
-            const isMatch = p.status === 'closed' && (p.symbol === symbol || !p.symbol);
-            if (!isMatch) return false;
+            const isMatch = p.status === 'closed' && (
+                !p.symbol ||
+                p.symbol === symbol ||
+                p.symbol.replace(/[.m]/g, '') === symbol.replace(/[.m]/g, '')
+            );
+
+            if (!isMatch) {
+                // Silent filter for other symbols, but useful for debug
+                return false;
+            }
 
             // Timeframe filtering: Only show if strategy timeframe matches current chart interval
             if (currentInterval) {
                 const strat = strategies.find(s => s.id === p.strategyId);
                 const stratTF = normalizeTF(strat?.timeframe);
                 // If strategy has a timeframe, it must match. If it doesn't, we show it everywhere.
-                if (stratTF && stratTF !== currentInterval) return false;
+                if (stratTF && stratTF !== currentInterval) {
+                    console.log(`[Markers-Debug] TF Mismatch for ${p.id}: strat=${stratTF} chart=${currentInterval}`);
+                    return false;
+                }
             }
             return true;
         });
+
+        console.log(`[Markers] Processing ${closedPositions.length} closed positions for ${symbol}. Total in store: ${virtualPositions.length}`);
+
+        if (closedPositions.length === 0 && virtualPositions.length > 0) {
+            const sample = virtualPositions[0];
+            console.log(`[Markers-Debug] Why 0? Sample Pos: status=${sample.status}, sym=${sample.symbol}, chartSym=${symbol}, stratId=${sample.strategyId}`);
+        }
 
         const markers: SeriesMarker<Time>[] = [];
         closedPositions.forEach(pos => {

@@ -48,12 +48,16 @@ export function calculatePnL({ type, openPrice, currentPrice, volume, symbolInfo
         return diff * volume * 100; // Standard 100 contracts for Gold
     }
 
+    if (pair.includes('JPY')) {
+        return diff * volume * 100; // JPY Pip is 0.01, so 100x multiplier
+    }
+
     if (pair.includes('BTC') || pair.includes('ETH')) {
         return diff * volume; // Crypto often 1:1
     }
 
-    if (pair.includes('USD')) {
-        return diff * volume * 100; // Standard Forex/Commodity fallback
+    if (pair.includes('USD') || pair.includes('EUR') || pair.includes('GBP')) {
+        return diff * volume * 100000; // Standard Forex (1 lot = 100k)
     }
 
     return diff * volume; // Safest basic fallback

@@ -25,7 +25,7 @@ export function EquityChart({ data }: Props) {
                 horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
             },
             width: chartContainerRef.current.clientWidth,
-            height: 400,
+            height: 300,
             timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
@@ -34,9 +34,10 @@ export function EquityChart({ data }: Props) {
             rightPriceScale: {
                 borderColor: 'rgba(197, 203, 206, 0.2)',
                 scaleMargins: {
-                    top: 0.1,
-                    bottom: 0.1,
+                    top: 0.35,
+                    bottom: 0.35,
                 },
+                autoScale: true,
             },
         });
 

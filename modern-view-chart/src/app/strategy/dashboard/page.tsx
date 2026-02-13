@@ -6,11 +6,12 @@ import { PerformanceAnalyzer } from '@/features/strategy/logic/PerformanceAnalyz
 import { DashboardStats } from '@/features/strategy/components/dashboard/DashboardStats';
 import { TradeHistory } from '@/features/strategy/components/dashboard/TradeHistory';
 import { EquityChart } from '@/features/strategy/components/dashboard/EquityChart';
-import { LayoutDashboard, LogOut, RefreshCcw } from 'lucide-react';
+import { LayoutDashboard, LogOut, RefreshCcw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StrategyDashboardPage() {
-    const { virtualPositions, initialVirtualBalance, virtualBalance } = useStrategyStore();
+    const { virtualPositions, initialVirtualBalance, resetVirtualAccount } = useStrategyStore();
+    const [isConfirming, setIsConfirming] = React.useState(false);
 
     const metrics = useMemo(() => {
         return PerformanceAnalyzer.analyze(virtualPositions, initialVirtualBalance);
@@ -18,6 +19,16 @@ export default function StrategyDashboardPage() {
 
     const handleRefresh = () => {
         window.location.reload();
+    };
+
+    const handleMasterReset = () => {
+        if (isConfirming) {
+            resetVirtualAccount();
+            setIsConfirming(false);
+        } else {
+            setIsConfirming(true);
+            setTimeout(() => setIsConfirming(false), 3000);
+        }
     };
 
     // Auto-refresh when localStorage changes (e.g. from Reset All in another tab)
@@ -52,6 +63,16 @@ export default function StrategyDashboardPage() {
 
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={handleMasterReset}
+                            className={`flex items-center gap-2 px-4 h-10 rounded-xl font-bold transition-all border ${isConfirming
+                                ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-500/20'
+                                : 'bg-red-500/5 border-red-500/20 text-red-500 hover:bg-red-500/10'
+                                } text-xs`}
+                        >
+                            <Trash2 size={14} />
+                            {isConfirming ? 'CONFIRM RESET' : 'MASTER RESET'}
+                        </button>
+                        <button
                             onClick={handleRefresh}
                             className="flex items-center gap-2 px-4 h-10 rounded-xl bg-[#1e222d] hover:bg-[#2a2e39] text-[#d1d4dc] text-xs font-bold transition-all border border-[#363a45]"
                         >
@@ -75,14 +96,14 @@ export default function StrategyDashboardPage() {
 
                 {/* MAIN CONTENT GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* CHART SECTION (2/3) */}
+                    {/* RECENT TRADES SECTION (2/3) - Priority */}
                     <section className="lg:col-span-2 flex flex-col gap-4">
-                        <EquityChart data={metrics.equityCurve} />
+                        <TradeHistory positions={virtualPositions} />
                     </section>
 
-                    {/* RECENT TRADES SECTION (1/3) */}
+                    {/* CHART SECTION (1/3) */}
                     <section className="flex flex-col gap-4">
-                        <TradeHistory positions={virtualPositions} />
+                        <EquityChart data={metrics.equityCurve} />
                     </section>
                 </div>
 

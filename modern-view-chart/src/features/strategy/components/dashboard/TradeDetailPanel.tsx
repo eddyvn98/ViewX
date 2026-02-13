@@ -22,6 +22,10 @@ interface Props {
 
 export function TradeDetailPanel({ position }: Props) {
     const context = position.metadata;
+    console.log(`[TradeDetail] Inspecting Trade: ${position.id} | Metadata keys:`, context ? Object.keys(context) : 'NULL');
+    if (context && context.indicators_snapshot) {
+        console.log(`[TradeDetail] Snapshot Indicators count:`, Object.keys(context.indicators_snapshot).length);
+    }
 
     if (!context) {
         return (
@@ -77,8 +81,8 @@ export function TradeDetailPanel({ position }: Props) {
 
                     {context.exit_reason && (
                         <div className={`mt-4 p-2 rounded flex items-center gap-2 border ${context.exit_reason === 'TP' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
-                                context.exit_reason === 'SL' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                                    'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                            context.exit_reason === 'SL' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                                'bg-blue-500/10 border-blue-500/20 text-blue-500'
                             }`}>
                             <Target size={14} />
                             <span className="text-[10px] font-black uppercase">Exit Reason: {context.exit_reason}</span>
@@ -109,14 +113,22 @@ export function TradeDetailPanel({ position }: Props) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#363a45]/30">
-                                {Object.entries(context.indicators_snapshot).map(([key, val]) => (
-                                    <tr key={key}>
-                                        <td className="px-3 py-2 font-bold text-[#d1d4dc]">{key}</td>
-                                        <td className="px-3 py-2 font-mono text-white">
-                                            {typeof val === 'number' ? val.toFixed(4) : String(val)}
+                                {context.indicators_snapshot ? (
+                                    Object.entries(context.indicators_snapshot).map(([key, val]) => (
+                                        <tr key={key}>
+                                            <td className="px-3 py-2 font-bold text-[#d1d4dc]">{key}</td>
+                                            <td className="px-3 py-2 font-mono text-white">
+                                                {typeof val === 'number' ? val.toFixed(4) : String(val)}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={2} className="px-3 py-8 text-center text-[#787b86] italic">
+                                            No indicator snapshot available for this trade.
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>

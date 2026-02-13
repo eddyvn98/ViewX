@@ -82,8 +82,10 @@ export class RSIIndicator {
             if (isNaN(val) && firstValidIdx !== -1 && i >= firstValidIdx - 14) {
                 val = firstValidValue;
             }
+            const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
+            const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             return {
-                time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
+                time: time as any,
                 value: val
             };
         }).filter(d => !isNaN(d.value));
@@ -104,7 +106,8 @@ export class RSIIndicator {
         const lastVal = rsiValues[rsiValues.length - 1];
 
         if (!isNaN(lastVal)) {
-            const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             try {
                 this.series.update({
                     time: candleTime as any,

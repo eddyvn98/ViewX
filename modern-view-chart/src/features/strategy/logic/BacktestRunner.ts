@@ -18,10 +18,12 @@ export class BacktestRunner {
         console.log(`[Backtest] Running ${strategy.name} on ${tradeSymbol} (${candles.length} candles)...`);
         const positions: VirtualPosition[] = [];
         let balance = initialBalance;
+        let lastExitIndex = -1;
+        let lastSignalTime = 0;
 
         // 1. Pre-calculate Indicators
-        // Map indicator configurations to their computed arrays
         const indicators: Record<string, number[]> = {};
+        const atr14 = IndicatorCalculator.getValues({ type: 'ATR', params: [14] }, candles);
 
         // Helper to cache indicator
         const cacheIndicator = (cond: any) => {
@@ -65,12 +67,12 @@ export class BacktestRunner {
             return getTime(a) - getTime(b);
         });
 
-        // Start from index 50 to allow indicators to warm up
+        // Start from index 150 to allow indicators to warm up (especially Wilders RSI)
         if (candles.length > 0) {
             console.log(`[Backtest-Debug] First Candle Time: ${candles[0].time} (Type: ${typeof candles[0].time})`);
         }
 
-        for (let i = 50; i < candles.length; i++) {
+        for (let i = 150; i < candles.length; i++) {
             const candle = candles[i];
 
             // Robust Timestamp Normalization
@@ -78,23 +80,16 @@ export class BacktestRunner {
             if (typeof candle.time === 'number') {
                 rawTime = candle.time;
             } else if (typeof candle.time === 'string') {
-                // Try parsing string date
                 const parsed = Date.parse(candle.time);
-                if (!isNaN(parsed)) rawTime = parsed / 1000; // Assume string is ISO, Date.parse returns MS, convert to Sec for rawTime consistency? 
-                // Wait, if rawTime is sec (< 10B), we mul 1000 later. 
-                // If Date.parse gives MS (> 10B), we keep it.
-                // Let's just use MS directly for clarity.
-                rawTime = parsed;
+                if (!isNaN(parsed)) rawTime = parsed;
             } else if (typeof candle.time === 'object') {
                 rawTime = (candle.time as any).timestamp || 0;
             }
 
             // Normalization: Ensure we have Milliseconds for the 'timestamp' variable
-            // If rawTime is small (Seconds), multiply by 1000.
-            // If rawTime is huge (Milliseconds), keep it.
             const timestamp = rawTime < 10000000000 ? rawTime * 1000 : rawTime;
 
-            if (i === 50) {
+            if (i === 150) {
                 console.log(`[Backtest-Debug] Sample Time Parsing:`, {
                     original: candle.time,
                     type: typeof candle.time,
@@ -106,11 +101,9 @@ export class BacktestRunner {
 
             // --- TRAILING STOP LOGIC ---
             if (strategy.risk.trailing) {
-                // Determine source: use strategy config OR default based on side
                 const source = strategy.risk.trailingSource || (strategy.side === 'BUY' ? 'HA_Low' : 'HA_High');
                 const haField = source === 'HA_Low' ? 'low' : 'high';
 
-                // We calculate HA up to the PREVIOUS candle to follow standard practice (avoiding lookahead bias for trail)
                 const haValues = IndicatorCalculator.getValues({ type: 'HA', params: [], field: haField }, candles.slice(0, i));
                 const currentHaValue = haValues[haValues.length - 1];
 
@@ -138,7 +131,6 @@ export class BacktestRunner {
                         }
 
                         if (shouldUpdate) {
-                            // Safeguard: Don't move SL across current price
                             const isSafe = pos.type === 'BUY' ? newSl < candle.close : newSl > candle.close;
                             if (isSafe) {
                                 pos.sl = newSl;
@@ -149,12 +141,37 @@ export class BacktestRunner {
             }
 
             // A. Manage Open Positions (Exit/SL/TP)
+            // --- TRACK MAE/MFE & DURATION FOR OPEN POSITIONS ---
+            positions.forEach(pos => {
+                if (pos.status !== 'open') return;
+
+                const isGold = tradeSymbol.toUpperCase().includes('XAU');
+                const isJPY = tradeSymbol.toUpperCase().includes('JPY');
+                const pipsMultiplier = isGold ? 10 : (isJPY ? 100 : 10000);
+
+                if (!pos.metadata) {
+                    pos.metadata = { session: 'Asian', indicators_snapshot: {}, mae: 0, mfe: 0, duration_candles: 0 };
+                }
+
+                pos.metadata.duration_candles = (pos.metadata.duration_candles || 0) + 1;
+
+                if (pos.type === 'BUY') {
+                    const favorableDist = candle.high - pos.entryPrice;
+                    const adverseDist = pos.entryPrice - candle.low;
+                    pos.metadata.mfe = Math.max(pos.metadata.mfe || 0, favorableDist * pipsMultiplier);
+                    pos.metadata.mae = Math.max(pos.metadata.mae || 0, adverseDist * pipsMultiplier);
+                } else {
+                    const favorableDist = pos.entryPrice - candle.low;
+                    const adverseDist = candle.high - pos.entryPrice;
+                    pos.metadata.mfe = Math.max(pos.metadata.mfe || 0, favorableDist * pipsMultiplier);
+                    pos.metadata.mae = Math.max(pos.metadata.mae || 0, adverseDist * pipsMultiplier);
+                }
+            });
+
             for (let j = positions.length - 1; j >= 0; j--) {
                 const pos = positions[j];
                 if (pos.status !== 'open') continue;
 
-                // 1. Check SL/TP (Hit detection using High/Low)
-                // We assume SL/TP are hit if price ranges overlap
                 let exitPrice: number | null = null;
                 let exitReason: string | null = null;
                 let pnl = 0;
@@ -177,7 +194,6 @@ export class BacktestRunner {
                     }
                 }
 
-                // 2. Check Exit Rules (if not hit SL/TP)
                 if (!exitPrice && strategy.exit) {
                     const shouldExit = this.evaluateGroup(strategy.exit, i, indicators);
                     if (shouldExit) {
@@ -186,90 +202,144 @@ export class BacktestRunner {
                     }
                 }
 
-                // 3. Process Exit
                 if (exitPrice) {
                     pos.status = 'closed';
                     pos.exitPrice = exitPrice;
                     pos.exitTimestamp = timestamp;
                     pos.exitReason = exitReason || 'Manual';
 
+                    // Calculate PnL with multiplier
+                    const isGold = tradeSymbol.toUpperCase().includes('XAU');
+                    const isJPY = tradeSymbol.toUpperCase().includes('JPY');
+                    const multiplier = isGold ? 100 : (isJPY ? 100 : 100000);
+
                     if (pos.type === 'BUY') {
-                        pnl = (exitPrice - pos.entryPrice) * pos.lotSize;
+                        pnl = (exitPrice - pos.entryPrice) * pos.lotSize * multiplier;
                     } else {
-                        pnl = (pos.entryPrice - exitPrice) * pos.lotSize;
+                        pnl = (pos.entryPrice - exitPrice) * pos.lotSize * multiplier;
                     }
                     pos.pnl = pnl;
                     balance += pnl;
+                    lastExitIndex = i;
+                    lastSignalTime = timestamp;
                 }
             }
 
             // B. Check Entry Conditions
-            // Only enter if no open positions (or scaling allowed - simplified to 1 for now)
             const openPositions = positions.filter(p => p.status === 'open');
             if (openPositions.length === 0) {
-                const isEntry = this.evaluateGroup(strategy.entry, i, indicators);
-
-                if (isEntry) {
-                    const price = candle.close;
-
-                    // Calculate SL/TP logic (Simplified)
-                    // Helper to get numeric value from risk config (handling number | SLTPConfig)
-                    const getRiskValue = (val: number | SLTPConfig | undefined): number => {
-                        if (typeof val === 'number') return val;
-                        if (val && typeof val === 'object' && typeof val.value === 'number') return val.value;
-                        return 0;
-                    };
-
-                    const slVal = getRiskValue(strategy.risk.sl || strategy.risk.stopLoss);
-                    const tpVal = getRiskValue(strategy.risk.tp || strategy.risk.takeProfit);
-
-                    let sl = 0, tp = 0;
-
-                    // Simple fixed point calculation for now (mock)
-                    // Real implementation needs pip value based on symbol
-                    if (strategy.side === 'BUY') {
-                        if (slVal) sl = price - slVal;
-                        if (tpVal) tp = price + tpVal;
-                    } else {
-                        // SELL
-                        if (slVal) sl = price + slVal;
-                        if (tpVal) tp = price - tpVal;
+                let isCooledDown = true;
+                if (lastSignalTime > 0 && strategy.risk.cooldownMinutes) {
+                    const elapsedMs = timestamp - lastSignalTime;
+                    if (elapsedMs < strategy.risk.cooldownMinutes * 60000) {
+                        isCooledDown = false;
                     }
+                }
 
-                    // Fallback side if undefined
-                    const type = strategy.side || 'BUY';
+                const isNewCandle = i > lastExitIndex;
 
-                    // Handle lotSize (number | LotConfig)
-                    let quantity = 0.1;
-                    if (typeof strategy.risk.lotSize === 'number') quantity = strategy.risk.lotSize;
-                    else if (typeof strategy.risk.lotSize === 'object') quantity = strategy.risk.lotSize.value;
+                if (isCooledDown && isNewCandle) {
+                    const isEntry = this.evaluateGroup(strategy.entry, i, indicators);
 
-                    const newPos: VirtualPosition = {
-                        id: `bt-${timestamp}-${i}`,
-                        strategyId: strategy.id,
-                        symbol: tradeSymbol,
-                        type: type as 'BUY' | 'SELL',
-                        entryPrice: price,
-                        lotSize: quantity,
-                        // quantity: quantity, // Removed to match VirtualPosition type
-                        timestamp: timestamp, // Always normalized MS
-                        status: 'open',
-                        pnl: 0,
-                        // entryTimestamp: timestamp, // VirtualPosition uses timestamp for entry time? Yes.
-                        sl,
-                        tp,
-                        exitReason: undefined
-                    };
-                    positions.push(newPos);
+                    if (isEntry) {
+                        const price = candle.close;
+                        const snapshot: Record<string, number> = {};
+                        const fillSnapshot = (group: any) => {
+                            if (!group || !group.conditions) return;
+                            group.conditions.forEach((c: any) => {
+                                if ('operator' in c) {
+                                    fillSnapshot(c);
+                                } else if (c.left && c.left.type) {
+                                    const key = `${c.left.type}-${c.left.params?.join('-') || ''}`;
+                                    const label = `${c.left.type}${JSON.stringify(c.left.params)}${c.left.field ? ':' + c.left.field : ''}`;
+                                    if (indicators[key] && indicators[key][i] !== undefined) {
+                                        snapshot[label] = indicators[key][i];
+                                    }
+
+                                    if (c.right && typeof c.right !== 'number' && c.right.type) {
+                                        const rKey = `${c.right.type}-${c.right.params?.join('-') || ''}`;
+                                        const rLabel = `${c.right.type}${JSON.stringify(c.right.params)}${c.right.field ? ':' + c.right.field : ''}`;
+                                        if (indicators[rKey] && indicators[rKey][i] !== undefined) {
+                                            snapshot[rLabel] = indicators[rKey][i];
+                                        }
+                                    }
+                                }
+                            });
+                        };
+                        fillSnapshot(strategy.entry);
+
+                        const type = strategy.side || 'BUY';
+
+                        // --- DIAGNOSTIC LOG ---
+                        const rsiKey = Object.keys(snapshot).find(k => k.includes('RSI'));
+                        const rsiVal = rsiKey ? Number(snapshot[rsiKey]).toFixed(2) : 'N/A';
+                        if (Math.random() < 0.1 || positions.length < 10) {
+                            console.log(`[Backtest-Entry] Trigger: ${strategy.name} | Type: ${type} | RSI: ${rsiVal} | Price: ${price}`);
+                        }
+
+                        const getRiskValue = (val: number | SLTPConfig | undefined): number => {
+                            if (typeof val === 'number') return val;
+                            if (val && typeof val === 'object' && typeof val.value === 'number') return val.value;
+                            return 0;
+                        };
+
+                        const slVal = getRiskValue(strategy.risk.sl || strategy.risk.stopLoss);
+                        const tpVal = getRiskValue(strategy.risk.tp || strategy.risk.takeProfit);
+
+                        let sl = 0, tp = 0;
+
+                        if (type === 'BUY') {
+                            if (slVal) sl = price - slVal;
+                            if (tpVal) tp = price + tpVal;
+                        } else {
+                            if (slVal) sl = price + slVal;
+                            if (tpVal) tp = price - tpVal;
+                        }
+
+                        let quantity = 0.1;
+                        if (typeof strategy.risk.lotSize === 'number') quantity = strategy.risk.lotSize;
+                        else if (typeof strategy.risk.lotSize === 'object') quantity = strategy.risk.lotSize.value;
+
+                        const hour = new Date(timestamp).getUTCHours();
+                        let session: any = 'Asian';
+                        if (hour >= 8 && hour < 14) session = 'London';
+                        else if (hour >= 14 && hour < 21) session = 'NewYork';
+                        else if (hour >= 21 || hour < 8) session = 'Asian';
+
+                        const newPos: VirtualPosition = {
+                            id: `bt-${timestamp}-${i}`,
+                            strategyId: strategy.id,
+                            symbol: tradeSymbol,
+                            type: type as 'BUY' | 'SELL',
+                            entryPrice: price,
+                            lotSize: quantity,
+                            timestamp: timestamp,
+                            status: 'open',
+                            pnl: 0,
+                            sl,
+                            tp,
+                            exitReason: undefined,
+                            isHistorical: true,
+                            metadata: {
+                                session,
+                                volatility_atr: atr14[i] || 0,
+                                indicators_snapshot: snapshot,
+                                mae: 0,
+                                mfe: 0,
+                                duration_candles: 0
+                            }
+                        };
+                        positions.push(newPos);
+                        lastSignalTime = timestamp;
+                    }
                 }
             }
         }
 
-        console.log(`[Backtest] Finished. Generated ${positions.length} positions.`);
+        console.log(`[Backtest] Finished ${strategy.name}. Generated ${positions.length} positions.`);
         return positions;
     }
 
-    // Helper to evaluate condition groups recursively
     static evaluateGroup(group: any, index: number, indicators: Record<string, number[]>): boolean {
         if (!group || !group.conditions || group.conditions.length === 0) return false;
 

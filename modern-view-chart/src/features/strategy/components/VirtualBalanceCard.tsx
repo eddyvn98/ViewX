@@ -14,13 +14,12 @@ export function VirtualBalanceCard() {
         }
     }, [confirmAction]);
 
-    const handleAction = (type: 'balance' | 'all') => {
-        if (confirmAction === type) {
-            if (type === 'balance') resetVirtualBalance();
-            else resetVirtualAccount();
+    const handleAction = () => {
+        if (confirmAction === 'all') {
+            resetVirtualAccount();
             setConfirmAction(null);
         } else {
-            setConfirmAction(type);
+            setConfirmAction('all');
         }
     };
 
@@ -61,37 +60,25 @@ export function VirtualBalanceCard() {
                 </div>
             </div>
 
-            {/* Double-Row Compact Action Bar */}
-            <div className="flex flex-col gap-1.5 pt-2 border-t border-[#363a45]/20">
+            {/* Compact Action Bar in one row */}
+            <div className="flex gap-1.5 pt-2 border-t border-[#363a45]/20">
                 <button
                     onClick={openDashboard}
-                    className="w-full h-7 flex items-center justify-center gap-1.5 rounded bg-blue-500/5 hover:bg-blue-500/10 text-[#787b86] hover:text-blue-400 text-[9px] font-bold uppercase transition-all border border-[#363a45]/30 active:scale-95 group"
+                    className="flex-1 h-7 flex items-center justify-center gap-1.5 rounded bg-blue-500/5 hover:bg-blue-500/10 text-[#787b86] hover:text-blue-400 text-[9px] font-bold uppercase transition-all border border-[#363a45]/30 active:scale-95 group"
                 >
                     <Maximize2 size={10} />
-                    VIEW DASHBOARD PERFORMANCE
+                    DASHBOARD
                 </button>
-                <div className="flex gap-1.5">
-                    <button
-                        onClick={() => handleAction('balance')}
-                        className={`flex-1 h-7 flex items-center justify-center gap-1.5 rounded text-[8px] font-bold uppercase transition-all active:scale-95 ${confirmAction === 'balance'
-                            ? 'bg-orange-500 text-white'
-                            : 'bg-[#1e222d] text-[#787b86] hover:text-[#d1d4dc] border border-[#363a45]/30'
-                            }`}
-                    >
-                        <History size={10} className={confirmAction === 'balance' ? 'animate-pulse text-white' : 'text-orange-500/50'} />
-                        {confirmAction === 'balance' ? 'CONFIRM $' : 'RESET MONEY'}
-                    </button>
-                    <button
-                        onClick={() => handleAction('all')}
-                        className={`flex-1 h-7 flex items-center justify-center gap-1.5 rounded text-[8px] font-bold uppercase transition-all active:scale-95 ${confirmAction === 'all'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-[#1e222d] text-[#787b86] hover:text-red-500 border border-[#363a45]/30'
-                            }`}
-                    >
-                        <Trash2 size={10} className={confirmAction === 'all' ? 'animate-pulse text-white' : 'text-red-500/50'} />
-                        {confirmAction === 'all' ? 'CONFIRM ALL' : 'RESET LOGS'}
-                    </button>
-                </div>
+                <button
+                    onClick={handleAction}
+                    className={`flex-1 h-7 flex items-center justify-center gap-1.5 rounded text-[8px] font-bold uppercase transition-all active:scale-95 ${confirmAction === 'all'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-red-500/5 text-red-500/60 hover:text-red-500 border border-red-500/10 hover:border-red-500/30'
+                        }`}
+                >
+                    <Trash2 size={10} className={confirmAction === 'all' ? 'animate-pulse text-white' : 'opacity-50'} />
+                    {confirmAction === 'all' ? 'CONFIRM' : 'RESET'}
+                </button>
             </div>
         </div>
     );

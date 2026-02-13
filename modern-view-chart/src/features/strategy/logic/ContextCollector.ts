@@ -70,14 +70,28 @@ export class ContextCollector {
     private static snapshotIndicators(strategy: Strategy, candles: Candle[]): Record<string, any> {
         const snapshot: Record<string, any> = {};
 
-        // Snapshot entry conditions
-        strategy.entry.conditions.forEach(c => {
-            if ('left' in c) {
-                const label = `${c.left.type}${JSON.stringify(c.left.params)}${c.left.field ? ':' + c.left.field : ''}`;
-                snapshot[label] = IndicatorCalculator.getLastValue(c.left, candles);
-            }
-        });
+        const findIndicators = (group: any) => {
+            if (!group || !group.conditions) return;
+            group.conditions.forEach((c: any) => {
+                if ('operator' in c) {
+                    findIndicators(c);
+                } else if (c.left && c.left.type) {
+                    const label = `${c.left.type}${JSON.stringify(c.left.params)}${c.left.field ? ':' + c.left.field : ''}`;
+                    if (!snapshot[label]) {
+                        snapshot[label] = IndicatorCalculator.getLastValue(c.left, candles);
+                    }
 
+                    if (c.right && typeof c.right !== 'number' && c.right.type) {
+                        const rLabel = `${c.right.type}${JSON.stringify(c.right.params)}${c.right.field ? ':' + c.right.field : ''}`;
+                        if (!snapshot[rLabel]) {
+                            snapshot[rLabel] = IndicatorCalculator.getLastValue(c.right, candles);
+                        }
+                    }
+                }
+            });
+        };
+
+        findIndicators(strategy.entry);
         return snapshot;
     }
 

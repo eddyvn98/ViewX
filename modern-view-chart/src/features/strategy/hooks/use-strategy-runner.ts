@@ -15,6 +15,11 @@ import { IndicatorCalculator } from '../logic/IndicatorCalculator';
 import { RiskCalculator } from '../logic/RiskCalculator';
 import { ContextCollector } from '../logic/ContextCollector';
 
+const normalizeTF = (tf: string | undefined) => {
+    if (!tf) return '';
+    return tf.toLowerCase().replace('m', '');
+};
+
 export function useStrategyRunner() {
     const {
         strategies,
@@ -31,6 +36,10 @@ export function useStrategyRunner() {
     const candleData = useMarketStore(state => state.candleData);
     const activeTabId = useMarketStore(state => state.activeTabId);
     const tabs = useMarketStore(state => state.tabs);
+    // The log below seems intended for a component like StrategyMarkers, not useStrategyRunner directly.
+    // As 'symbol' is not defined at this scope, and 'virtualPositions' is already destructured,
+    // this line is commented out to maintain syntactical correctness within useStrategyRunner.
+    // console.log(`[Markers-Render] Symbol: ${symbol} | Total Pos: ${virtualPositions.length}`);
     const positions = useMarketStore(state => (state as any).positions) || [];
 
     const lastProcessedTimeRef = useRef<Record<string, number>>({});
@@ -58,41 +67,54 @@ export function useStrategyRunner() {
                 updateStrategy(s.id, { symbol: '' });
             }
 
-            // AUTO-BACKTEST TRIGGER
+            // AUTO-BACKTEST TRIGGER (WARMUP)
             // Run backtest if strategy is active and we have candle data, and haven't run it recently
             if (s.active) {
-                // Find matching candles
-                // We need to find the correct key from candleData which matches s.symbol and s.timeframe
-                // This is a bit tricky as candleData keys are "source:symbol:interval"
-                // We'll iterate candleData keys to find match
                 const interval = s.timeframe || '1m';
                 let dataKey: string | undefined;
 
+                const availableKeys = Object.keys(candleData);
+
+                const intervalNorm = normalizeTF(interval);
+
                 if (s.symbol) {
-                    const normSymbol = normalizeSymbol(s.symbol);
-                    dataKey = Object.keys(candleData).find(k => k.includes(`:${normSymbol}:${interval}`));
+                    const normSymbol = normalizeSymbol(s.symbol).toLowerCase();
+                    // Robust search: ignore case and match symbol + normalized interval
+                    dataKey = availableKeys.find(k => {
+                        const parts = k.toLowerCase().split(':');
+                        if (parts.length < 3) return false;
+                        const kSymbol = parts[1];
+                        const kInterval = normalizeTF(parts[2]);
+                        return kSymbol === normSymbol && kInterval === intervalNorm;
+                    });
                 } else {
-                    // DYNAMIC MODE: Use the first available data key that matches timeframe (likely the active chart)
-                    // Priority: Try to match active tab symbol if possible, else any
-                    // Since we don't have easy access to active symbol here without iterating tabs, 
-                    // we'll just pick the first valid data source with enough length
-                    dataKey = Object.keys(candleData).find(k => k.endsWith(`:${interval}`) && candleData[k].length > 100);
+                    // DYNAMIC MODE: Priority to active chart or any valid data
+                    dataKey = availableKeys.find(k => normalizeTF(k.split(':').pop()) === intervalNorm && candleData[k].length >= 150);
                 }
 
-                if (dataKey && candleData[dataKey] && candleData[dataKey].length > 100) {
+                if (dataKey && candleData[dataKey] && candleData[dataKey].length >= 150) {
                     const lastRun = backtestRunRef.current[s.id] || 0;
-                    // Run only once per session or if strategy config changes
-                    if (Date.now() - lastRun > 60000) {
-                        console.log(`[Backtest] Auto-triggering for ${s.name} (${s.id}) using data: ${dataKey}`);
-
-                        // Extract symbol from dataKey if strategy symbol is missing
-                        // dataKey format: source:symbol:interval
+                    if (lastRun === 0) {
+                        console.log(`[Warmup] Triggering for ${s.name} on ${dataKey}. Current Pos count: ${virtualPositions.length}`);
                         const parts = dataKey.split(':');
                         const actualSymbol = s.symbol || (parts.length >= 2 ? parts[1] : 'BACKTEST');
 
-                        runBacktest(s.id, candleData[dataKey], actualSymbol);
+                        runBacktest(s.id, [...candleData[dataKey]], actualSymbol);
                         backtestRunRef.current[s.id] = Date.now();
                     }
+                } else if (s.active && availableKeys.length > 0) {
+                    // Only warn if we HAVE data but none matches this strategy
+                    if (!dataKey) {
+                        console.warn(`[Warmup] No dataKey found for ${s.name}. Symbol: ${s.symbol}, TF: ${interval}. Available:`, availableKeys);
+                    } else if (candleData[dataKey].length < 150) {
+                        if (Math.random() < 0.01) console.log(`[Warmup] Waiting for đủ nến cho ${s.name} (${candleData[dataKey].length}/150)`);
+                    }
+                }
+            } else {
+                // Reset run ref when strategy is deactivated to allow fresh warmup next time
+                if (backtestRunRef.current[s.id]) {
+                    console.log(`[Warmup] Resetting ref for ${s.name} (deactivated)`);
+                    delete backtestRunRef.current[s.id];
                 }
             }
         });
@@ -141,7 +163,7 @@ export function useStrategyRunner() {
                     const activeStrategies = strategies.filter(s => {
                         if (!s.active) return false;
                         const symbolMatch = !s.symbol || normalizeSymbol(s.symbol) === normSymbol;
-                        const timeframeMatch = !s.timeframe || s.timeframe === interval;
+                        const timeframeMatch = !s.timeframe || normalizeTF(s.timeframe) === normalizeTF(interval);
                         return symbolMatch && timeframeMatch;
                     });
 
@@ -173,6 +195,14 @@ export function useStrategyRunner() {
                             // 1. PROTECTION & TRADE MANAGEMENT (Runs on every tick)
                             stratPos.forEach(pos => {
                                 if (pos.status === 'open' || pos.status === 'pending') {
+                                    // TRANSITION: If this is an 'open' position from backtest, 
+                                    // tag it as LIVE (not historical anymore) so it doesn't get wiped by next backtest
+                                    if (pos.isHistorical && pos.status === 'open') {
+                                        console.log(`[Transition] Strategy ${strategy.name} taking over historical position ${pos.id}`);
+                                        store.updateVirtualPosition(pos.id, { isHistorical: false, id: `v-taken-${Date.now()}` });
+                                        return; // Process in next tick with new ID
+                                    }
+
                                     const currentPrice = lastCandle.close;
 
                                     // Trailing Stop Logic
@@ -211,13 +241,40 @@ export function useStrategyRunner() {
 
                                     // MAE/MFE & Core Exits
                                     if (pos.status === 'open') {
-                                        const pnlFloat = pos.type === 'BUY' ? (currentPrice - pos.entryPrice) : (pos.entryPrice - currentPrice);
-                                        const meta = pos.metadata || { indicators_snapshot: {}, session: 'Asian' };
-                                        const nextMae = Math.min(meta.mae ?? 0, pnlFloat);
-                                        const nextMfe = Math.max(meta.mfe ?? 0, pnlFloat);
+                                        const isGold = symbol.toUpperCase().includes('XAU');
+                                        const isJPY = symbol.toUpperCase().includes('JPY');
+                                        const pipsMultiplier = isGold ? 10 : (isJPY ? 100 : 10000);
 
-                                        if (nextMae !== meta.mae || nextMfe !== meta.mfe) {
-                                            store.updateVirtualPosition(pos.id, { metadata: { ...meta, mae: nextMae, mfe: nextMfe } });
+                                        const meta = pos.metadata || { indicators_snapshot: {}, session: 'Asian' };
+
+                                        // Track Duration
+                                        const nextDuration = (meta.duration_candles || 0) + (isNewBar ? 1 : 0);
+
+                                        // Track Max Excursion (Adverse and Favorable)
+                                        let currentMae = meta.mae || 0;
+                                        let currentMfe = meta.mfe || 0;
+
+                                        if (pos.type === 'BUY') {
+                                            const adverseDist = (pos.entryPrice - lastCandle.low) * pipsMultiplier;
+                                            const favorableDist = (lastCandle.high - pos.entryPrice) * pipsMultiplier;
+                                            currentMae = Math.max(currentMae, adverseDist);
+                                            currentMfe = Math.max(currentMfe, favorableDist);
+                                        } else {
+                                            const adverseDist = (lastCandle.high - pos.entryPrice) * pipsMultiplier;
+                                            const favorableDist = (pos.entryPrice - lastCandle.low) * pipsMultiplier;
+                                            currentMae = Math.max(currentMae, adverseDist);
+                                            currentMfe = Math.max(currentMfe, favorableDist);
+                                        }
+
+                                        if (currentMae !== meta.mae || currentMfe !== meta.mfe || nextDuration !== meta.duration_candles) {
+                                            store.updateVirtualPosition(pos.id, {
+                                                metadata: {
+                                                    ...meta,
+                                                    mae: currentMae,
+                                                    mfe: currentMfe,
+                                                    duration_candles: nextDuration
+                                                }
+                                            });
                                         }
 
                                         // SL/TP Hard Check

@@ -39,10 +39,14 @@ export class HMAIndicator {
         const hmaValues = calculateHullMA(closePrices, this.config.params.period);
 
         const data = candles
-            .map((c, i) => ({
-                time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
-                value: hmaValues[i]
-            }))
+            .map((c, i) => {
+                const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
+                const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+                return {
+                    time: time as any,
+                    value: hmaValues[i]
+                };
+            })
             .filter(d => !isNaN(d.value));
 
         this.series.setData(data as any);
@@ -62,7 +66,8 @@ export class HMAIndicator {
         const lastVal = hmaValues[hmaValues.length - 1];
 
         if (!isNaN(lastVal)) {
-            const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             try {
                 this.series.update({
                     time: candleTime as any,

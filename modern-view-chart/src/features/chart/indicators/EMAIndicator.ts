@@ -37,10 +37,14 @@ export class EMAIndicator {
         const emaValues = calculateEMA(closePrices, this.config.params.period);
 
         const data = candles
-            .map((c, i) => ({
-                time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
-                value: emaValues[i]
-            }))
+            .map((c, i) => {
+                const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
+                const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+                return {
+                    time: time as any,
+                    value: emaValues[i]
+                };
+            })
             .filter(d => !isNaN(d.value));
 
         this.series.setData(data as any);
@@ -67,7 +71,8 @@ export class EMAIndicator {
         const lastVal = emaValues[emaValues.length - 1];
 
         if (!isNaN(lastVal)) {
-            const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
 
             if (!candleTime) return;
 

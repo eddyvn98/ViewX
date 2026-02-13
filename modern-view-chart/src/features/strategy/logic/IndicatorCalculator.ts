@@ -1,5 +1,5 @@
 import { Candle } from '@/lib/store/types';
-import { calculateEMA, calculateSMA, calculateRSI, calculateMACD, calculateHullMA, calculateHeikinAshi } from '../../chart/utils/indicator-math';
+import { calculateEMA, calculateSMA, calculateRSI, calculateMACD, calculateHullMA, calculateHeikinAshi, calculateATR } from '../../chart/utils/indicator-math';
 import { Indicator } from '../types';
 
 export class IndicatorCalculator {
@@ -33,6 +33,8 @@ export class IndicatorCalculator {
                 if (indicator.field === "histogram") return result.histogram;
                 return result.macd;
             }
+            case "ATR":
+                return calculateATR(candles, indicator.params[0] || 14);
             default:
                 return new Array(candles.length).fill(NaN);
         }

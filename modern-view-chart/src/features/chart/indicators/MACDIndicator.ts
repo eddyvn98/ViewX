@@ -62,7 +62,8 @@ export class MACDIndicator {
         const histogramData = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const time = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time)) as any;
+            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
+            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
 
             if (!isNaN(macd[i])) {
                 macdData.push({ time, value: macd[i] });
@@ -97,7 +98,8 @@ export class MACDIndicator {
         const { macd, signal: sig, histogram } = calculateMACD(prices, fast, slow, signal);
 
         const lastIdxMACD = macd.length - 1;
-        const candleTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+        const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
 
         try {
             if (!isNaN(macd[lastIdxMACD])) {
