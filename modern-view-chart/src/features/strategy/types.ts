@@ -1,3 +1,22 @@
+import { Candle } from '@/lib/store/types';
+
+export interface IndicatorData {
+    time: number;
+    value: number;
+}
+
+export interface HACandle extends Candle {
+    ha_open: number;
+    ha_high: number;
+    ha_low: number;
+    ha_close: number;
+}
+
+export interface MACDResult {
+    macd: number[];
+    signal: number[];
+    histogram: number[];
+}
 
 export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR";
 

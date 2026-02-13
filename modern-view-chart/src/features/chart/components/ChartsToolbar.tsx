@@ -7,20 +7,11 @@ import { Plus, Crosshair, Link, History as HistoryIcon } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { TimeframeToolbar } from './TimeframeToolbar';
-import { TimezoneSelector } from './TimezoneSelector';
 import { LayoutGridSelector } from './LayoutGridSelector';
 import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
 
-const ConnectionStatus = memo(() => {
-    const isConnected = useMarketStore(state => state.isConnected);
-    return (
-        <div className="flex items-center gap-2 px-2 py-1 rounded bg-black/20 border border-zinc-800/50">
-            <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500")} />
-            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">{isConnected ? 'Live' : 'Offline'}</span>
-        </div>
-    );
-});
+
 
 export function ChartsToolbar() {
     const { layoutMode, activeChartId, activeChart } = useMarketStore(useShallow((state: RootState) => {
@@ -34,15 +25,13 @@ export function ChartsToolbar() {
         };
     }));
 
-    const { isTerminalVisible, isCrosshairSyncEnabled } = useMarketStore(useShallow((state: RootState) => ({
-        isTerminalVisible: state.isTerminalVisible,
+    const { isCrosshairSyncEnabled } = useMarketStore(useShallow((state: RootState) => ({
         isCrosshairSyncEnabled: state.isCrosshairSyncEnabled
     })));
 
     const setLayoutMode = useMarketStore((state) => state.setLayoutMode);
     const addChart = useMarketStore((state) => state.addChart);
     const updateChart = useMarketStore((state) => state.updateChart);
-    const setTerminalVisible = useMarketStore((state) => state.setTerminalVisible);
     const setCrosshairSync = useMarketStore((state) => state.setCrosshairSync);
 
     const handleAddChart = () => {
@@ -100,8 +89,6 @@ export function ChartsToolbar() {
                         HA
                     </button>
 
-                    <TimezoneSelector />
-
                     <LayoutGridSelector />
                 </div>
 
@@ -130,18 +117,6 @@ export function ChartsToolbar() {
 
             <div className="flex items-center gap-3">
                 <ChartClock />
-                <ConnectionStatus />
-                <button
-                    onClick={() => setTerminalVisible(!isTerminalVisible)}
-                    className={cn(
-                        "text-[10px] px-3 py-1 rounded font-black uppercase tracking-widest transition-all active:scale-95",
-                        isTerminalVisible
-                            ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                    )}
-                >
-                    Terminal
-                </button>
             </div>
         </div>
     );

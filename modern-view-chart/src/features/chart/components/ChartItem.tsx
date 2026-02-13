@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Maximize2, ExternalLink, X, Link } from 'lucide-react';
+import { Maximize2, ExternalLink, X, Link, Bell } from 'lucide-react';
 import { useMarketStore, ChartInstance } from '@/lib/store';
 import { ChartContainer } from '../ChartContainer';
 
@@ -63,6 +63,33 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                         <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-tighter whitespace-nowrap">
                             {chart.symbol} • {chart.interval}
                         </span>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                // Add alert at current price (approximate or undefined to let hook handle default)
+                                // We need a way to trigger add alert. 
+                                // Since ChartItem doesn't have direct access to chart logic, we might need to dispatch an event or use a store action if available.
+                                // For now, let's dispatch a custom event that ChartInteraction listens to, or use the store if we add an action there.
+                                // Actually, useChartAlerts in ChartContainer handles 'addAlert' event? No.
+                                // Let's use the store to add a default alert if possible, or better: 
+                                // Dispatch a window event 'add-alert-trigger' with chartId?
+                                // Simpler: Just use useMarketStore to add an alert directly.
+                                const store = useMarketStore.getState();
+                                const price = store.tickers[`${chart.source}:${chart.symbol}`]?.price || store.tickers[chart.symbol]?.price || 0;
+                                if (price > 0) {
+                                    store.addAlert({
+                                        symbol: chart.symbol,
+                                        price: price,
+                                        active: true,
+                                        type: 'crossing'
+                                    });
+                                }
+                            }}
+                            className="ml-2 p-1 text-zinc-500 hover:text-amber-500 transition-colors"
+                            title="Add Alert"
+                        >
+                            <Bell size={12} />
+                        </button>
                     </div>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="text-zinc-600 hover:text-blue-500 transition-colors" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={12} /></button>

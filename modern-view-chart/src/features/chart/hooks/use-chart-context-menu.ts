@@ -5,7 +5,7 @@ export function useChartContextMenu(
     priceChartRef: React.MutableRefObject<IChartApi | null>,
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
     seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>,
-    getAlertNearPrice: (price: number, x: number) => { id: string } | undefined,
+    getAlertNearPrice: ((price: number, x: number) => { id: string } | undefined) | undefined,
     getHitItem?: (y: number, x: number) => { type: 'entry' | 'sl' | 'tp' | 'alert' | 'limit'; id?: string; ticket?: number | string; price: number; } | null
 ) {
     const [contextMenu, setContextMenu] = useState<{
@@ -40,7 +40,7 @@ export function useChartContextMenu(
         const price = seriesRef.current?.coordinateToPrice(y);
 
         if (price) {
-            const nearAlert = getAlertNearPrice(y, x);
+            const nearAlert = getAlertNearPrice ? getAlertNearPrice(y, x) : undefined;
             const hitItem = getHitItem ? getHitItem(y, x) : null;
 
             setContextMenu({

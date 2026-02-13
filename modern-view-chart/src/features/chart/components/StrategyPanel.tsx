@@ -1,101 +1,33 @@
 import React, { useState } from 'react';
-import { useMarketStore } from '@/lib/store';
-import { useStrategyStore } from '@/features/strategy/store/strategy-store';
-import { RuleBuilder } from '@/features/strategy/components/RuleBuilder';
-import { RiskPanel } from '@/features/strategy/components/RiskPanel';
-import {
-    Plus, Trash2, Activity, Bot, History as HistoryIcon, TrendingUp, TrendingDown, X as XIcon, Settings, Clock, Target, Layers
-} from 'lucide-react';
-import { VirtualBalanceCard } from '@/features/strategy/components/VirtualBalanceCard';
-import { Strategy, ConditionGroup, StrategyRisk, StrategySignal, PositionMode, VirtualPosition, SLTPConfig } from '@/features/strategy/types';
-import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
-import { PriceConfigRow } from '@/features/strategy/components/PriceConfigRow';
+import { Activity, Bot } from 'lucide-react';
+import { StrategyList } from '@/features/strategy/components/StrategyList';
+import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
+import { SignalsView } from '@/features/strategy/components/SignalsView';
+import { Strategy } from '@/features/strategy/types';
 
 export function StrategyPanel() {
-    const {
-        strategies, addStrategy, toggleStrategy, deleteStrategy, updateStrategy,
-        signals, clearSignals, virtualPositions, clearVirtualPositions,
-        closeVirtualPosition, cancelVirtualPosition,
-    } = useStrategyStore();
-
-    const tickers = useMarketStore(state => state.tickers);
-    const symbolInfo = useMarketStore(state => state.symbolInfo);
-    const activeTabId = useMarketStore(state => state.activeTabId);
-    const tabs = useMarketStore(state => state.tabs);
-    const activeTab = activeTabId ? tabs[activeTabId] : null;
-    const activeChartId = activeTab?.activeChartId;
-    const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
-    const activeSymbol = activeChart?.symbol || 'XAUUSDm';
-    const activeInterval = activeChart?.interval || '1m';
-
     const [view, setView] = useState<'build' | 'list' | 'signals'>('signals');
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
 
-    // Draft strategy state
-    const [name, setName] = useState('Professional Scalper');
-    const [strategySymbol, setStrategySymbol] = useState(''); // Empty string means "Active Chart"
-    const [timeframe, setTimeframe] = useState('1m');
-    const [entry, setEntry] = useState<ConditionGroup>({
-        operator: 'AND',
-        conditions: [{ id: '1', left: { type: 'RSI', params: [14] }, comparator: '<', right: 30 }]
-    });
-    const [exit, setExit] = useState<ConditionGroup>({
-        operator: 'OR',
-        conditions: []
-    });
-    const [risk, setRisk] = useState<StrategyRisk>({
-        sl: { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 },
-        tp: undefined,
-        trailing: true,
-        lotSize: { mode: 'fixed', value: 0.1 },
-        maxTrades: 1,
-        cooldownMinutes: 5
-    });
-    const [positionMode, setPositionMode] = useState<PositionMode>('single_position');
-    const [executionMode, setExecutionMode] = useState<'virtual' | 'real'>('virtual');
-    const [magic, setMagic] = useState(123456);
-    const [comment, setComment] = useState('WebEngine');
-    const [entryType, setEntryType] = useState<'market' | 'stop' | 'limit'>('stop');
-    const [entryPrice, setEntryPrice] = useState<SLTPConfig>({ mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
-    const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
-
-    const handleSave = () => {
-        const newStrategy: Strategy = {
-            id: editingId || Math.random().toString(36).substring(7),
-            name, side, entry, exit, risk, active: true,
-            symbol: strategySymbol || activeSymbol,
-            timeframe: timeframe || activeInterval,
-            positionMode, executionMode, entryType, entryPrice, magic, comment,
-            sessions: ["London", "NewYork"]
-        };
-
-        if (editingId) updateStrategy(editingId, newStrategy);
-        else addStrategy(newStrategy);
-
-        setEditingId(null);
-        setName('Professional Scalper');
-        setEntry({ operator: 'AND', conditions: [{ id: '1', left: { type: 'RSI', params: [14] }, comparator: '<', right: 30 }] });
-        setExit({ operator: 'OR', conditions: [] });
-        setRisk({
-            sl: { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 },
-            trailing: true,
-            lotSize: { mode: 'fixed', value: 0.1 },
-            maxTrades: 1,
-            cooldownMinutes: 5
-        });
-        setStrategySymbol('');
-        setTimeframe('1m');
-        setEntryType('stop');
-        setEntryPrice({ mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
-        setView('list');
+    const handleEdit = (strategy: Strategy) => {
+        setEditingStrategy(strategy);
+        setView('build');
     };
 
-    const activePositions = virtualPositions.filter(p => p.status === 'open' || p.status === 'pending');
+    const handleAdd = () => {
+        setEditingStrategy(null);
+        setView('build');
+    };
+
+    const handleCloseBuilder = () => {
+        setEditingStrategy(null);
+        setView('list');
+    };
 
     return (
         <div className="flex flex-col h-full bg-[#1e222d] text-[#d1d4dc] overflow-hidden font-sans">
             {/* Tabs Header */}
-            <div className="flex items-center border-b border-[#2a2e39] bg-[#131722] h-10 px-1">
+            <div className="flex items-center border-b border-[#2a2e39] bg-[#131722] h-10 px-1 shrink-0">
                 <button
                     onClick={() => setView('signals')}
                     className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'signals' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
@@ -112,336 +44,14 @@ export function StrategyPanel() {
 
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col items-center bg-[#131722]/20">
                 <div className="w-full max-w-[800px] flex flex-col gap-5 pb-10">
-                    {view === 'build' && (
-                        <div className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-300">
-                            {/* 1. IDENTITY SECTION - Optimized for narrow panels */}
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col gap-1 flex-1">
-                                        <span className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest">Bot Identity</span>
-                                        <div className="h-[1px] bg-blue-500/20 w-full" />
-                                    </div>
-                                    <button
-                                        onClick={() => setView('list')}
-                                        className="ml-4 p-1.5 text-[#787b86] hover:text-white bg-[#2a2e39] rounded transition-all"
-                                    >
-                                        <XIcon size={14} />
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col gap-3 pl-1">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="flex flex-col gap-1.5 focus-within:z-10">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Bot Name</span>
-                                            <input
-                                                value={name}
-                                                onChange={(e) => setName(e.target.value)}
-                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-bold text-white outline-none rounded w-full"
-                                                placeholder="Hull HA Gold Scalper"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Side</span>
-                                            <div className="flex bg-[#131722] rounded p-0.5 border border-[#363a45]/50 h-8">
-                                                <button
-                                                    onClick={() => setSide('BUY')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[9px] font-black transition-all ${side === 'BUY' ? 'bg-blue-600 text-white' : 'text-[#4a4f5d]'}`}
-                                                >BUY</button>
-                                                <button
-                                                    onClick={() => setSide('SELL')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[9px] font-black transition-all ${side === 'SELL' ? 'bg-red-600 text-white' : 'text-[#4a4f5d]'}`}
-                                                >SELL</button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Symbol</span>
-                                            <select
-                                                value={strategySymbol}
-                                                onChange={(e) => setStrategySymbol(e.target.value)}
-                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-medium text-[#d1d4dc] outline-none rounded"
-                                            >
-                                                <option value="">Active Chart ({activeSymbol})</option>
-                                                {Object.keys(symbolInfo).sort().map(s => (
-                                                    <option key={s} value={s}>{s}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Timeframe</span>
-                                            <select
-                                                value={timeframe}
-                                                onChange={(e) => setTimeframe(e.target.value)}
-                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-medium text-[#d1d4dc] outline-none rounded"
-                                            >
-                                                <option value="1m">M1</option>
-                                                <option value="5m">M5</option>
-                                                <option value="15m">M15</option>
-                                                <option value="30m">M30</option>
-                                                <option value="1h">H1</option>
-                                                <option value="4h">H4</option>
-                                                <option value="1d">D1</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Execution</span>
-                                            <div className="flex bg-[#131722] rounded p-0.5 border border-[#363a45]/50 h-8">
-                                                <button
-                                                    onClick={() => setExecutionMode('virtual')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${executionMode === 'virtual' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
-                                                >VIRTUAL</button>
-                                                <button
-                                                    onClick={() => setExecutionMode('real')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${executionMode === 'real' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
-                                                >REAL</button>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase">Description</span>
-                                            <input
-                                                value={comment}
-                                                onChange={(e) => setComment(e.target.value)}
-                                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 py-1.5 h-8 text-xs font-medium text-[#d1d4dc] outline-none rounded"
-                                                placeholder="WebHA_Buy"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ENTRY EXECUTION SECTION */}
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest">Entry Execution</span>
-                                        <div className="h-[1px] bg-blue-500/20 w-full" />
-                                    </div>
-                                    <div className="flex flex-col gap-1.5 pl-1 bg-black/5 p-2 rounded border border-[#363a45]/10">
-                                        <div className="flex items-center gap-4 h-7">
-                                            <span className="text-[10px] font-bold text-[#b4b7c1] uppercase tracking-tighter w-[84px] shrink-0">Order Type</span>
-                                            <div className="flex bg-[#131722] rounded p-0.5 border border-[#363a45]/50 h-7 w-[160px]">
-                                                <button
-                                                    onClick={() => setEntryType('market')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'market' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
-                                                >MARKET</button>
-                                                <button
-                                                    onClick={() => setEntryType('stop')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'stop' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
-                                                >STOP</button>
-                                                <button
-                                                    onClick={() => setEntryType('limit')}
-                                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'limit' ? 'bg-[#363a45] text-white' : 'text-[#4a4f5d]'}`}
-                                                >LIMIT</button>
-                                            </div>
-                                        </div>
-
-                                        {(entryType === 'stop' || entryType === 'limit') && (
-                                            <div className="animate-in slide-in-from-left-2 duration-200">
-                                                <PriceConfigRow
-                                                    label="Execution At"
-                                                    icon={<Plus size={10} />}
-                                                    config={entryPrice}
-                                                    onChange={setEntryPrice}
-                                                    accentColor="text-blue-500"
-                                                    modes={['fixed', 'candle']}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 2. STRATEGY RULES */}
-                            <RuleBuilder entry={entry} exit={exit} side={side} onChangeEntry={setEntry} onChangeExit={setExit} />
-
-                            {/* 3. RISK CONTROL */}
-                            <RiskPanel risk={risk} positionMode={positionMode} onChangeRisk={setRisk} onChangeMode={setPositionMode} />
-
-                            {/* 4. SUMMARY & ACTIONS - Fixed Overflow */}
-                            <div className="flex flex-col gap-4 border-t border-[#363a45]/30 pt-6 mt-4">
-                                <div className="flex flex-col gap-5 bg-[#131722]/40 p-4 rounded border border-[#363a45]/30">
-                                    <div className="flex items-center justify-around gap-2">
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[8px] font-black text-[#4a4f5d] uppercase tracking-tighter">Est. Risk</span>
-                                            <span className="text-[11px] font-mono font-black text-white">1.8% / T</span>
-                                        </div>
-                                        <div className="h-4 w-[1px] bg-[#363a45]/30" />
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[8px] font-black text-[#4a4f5d] uppercase tracking-tighter">R/R Ratio</span>
-                                            <span className="text-[11px] font-mono font-black text-white">1:2.2</span>
-                                        </div>
-                                        <div className="h-4 w-[1px] bg-[#363a45]/30" />
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-[8px] font-black text-[#4a4f5d] uppercase tracking-tighter">Safety</span>
-                                            <span className="text-[11px] font-mono font-black text-green-500">8.5</span>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={handleSave}
-                                        className="bg-white hover:bg-blue-500 hover:text-white text-black h-9 w-full rounded font-black text-[11px] uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-black/20"
-                                    >
-                                        ACTIVATE BOT
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {view === 'signals' && <SignalsView />}
 
                     {view === 'list' && (
-                        <div className="flex flex-col gap-4 animate-in slide-in-from-left-4 duration-300">
-                            <div className="flex justify-between items-center px-1">
-                                <span className="text-[10px] font-bold text-[#787b86] uppercase">Running Bot ({strategies.length})</span>
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => {
-                                            setEditingId(null);
-                                            setName('Professional Scalper');
-                                            setView('build');
-                                        }}
-                                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase transition-all shadow-lg shadow-blue-500/20"
-                                    >
-                                        <Plus size={12} /> Add Bot
-                                    </button>
-                                </div>
-                            </div>
-
-                            {strategies.length === 0 ? (
-                                <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center gap-2">
-                                    <Bot size={48} />
-                                    <span className="text-xs">No active bots found.</span>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {strategies.map((s) => (
-                                        <div key={s.id} className="bg-[#1e222d] p-4 rounded-xl border border-[#363a45] flex flex-col gap-3 hover:bg-[#232732] transition-colors group">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{s.name}</span>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tighter">{s.positionMode.replace('_', ' ')}</span>
-                                                        <div className="w-1 h-1 rounded-full bg-[#363a45]" />
-                                                        <span className={`text-[10px] font-bold uppercase ${s.executionMode === 'real' ? 'text-red-500' : 'text-[#787b86]'}`}>{s.executionMode}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button onClick={() => toggleStrategy(s.id)} className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all ${s.active ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-[#131722] text-[#787b86] border border-[#363a45]'}`}>
-                                                        {s.active ? 'Active' : 'Paused'}
-                                                    </button>
-                                                    <button onClick={() => {
-                                                        setEditingId(s.id);
-                                                        setName(s.name);
-                                                        setSide(s.side);
-                                                        setStrategySymbol(s.symbol || '');
-                                                        setTimeframe(s.timeframe || '1m');
-                                                        setEntry(s.entry);
-                                                        setExit(s.exit || { operator: 'OR', conditions: [] });
-                                                        setRisk(s.risk);
-                                                        setPositionMode(s.positionMode);
-                                                        setExecutionMode(s.executionMode);
-                                                        setComment(s.comment || '');
-                                                        setEntryType(s.entryType || 'stop');
-                                                        setEntryPrice(s.entryPrice || { mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
-                                                        setView('build');
-                                                    }} className="p-1.5 text-[#787b86] hover:text-white hover:bg-[#363a45] rounded transition-all">
-                                                        <Settings size={14} />
-                                                    </button>
-                                                    <button onClick={() => deleteStrategy(s.id)} className="p-1.5 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded transition-all">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-2 border-t border-[#363a45] pt-3 text-[10px] text-[#787b86]">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Target size={12} className="text-red-500/50" />
-                                                    SL: {typeof s.risk.sl === 'object' ? s.risk.sl.mode.toUpperCase() : s.risk.sl}
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Target size={12} className="text-green-500/50" />
-                                                    TP: {typeof s.risk.tp === 'object' ? s.risk.tp.mode.toUpperCase() : s.risk.tp}
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Activity size={12} className="text-blue-500/50" />
-                                                    Lot: {typeof s.risk.lotSize === 'object' ? (s.risk.lotSize.mode === 'fixed' ? s.risk.lotSize.value : s.risk.lotSize.mode.toUpperCase()) : s.risk.lotSize}
-                                                </div>
-                                                <div className="flex items-center gap-1.5"><Layers size={12} className="text-purple-500/50" /> Max: {s.risk.maxTrades}</div>
-                                                <div className="flex items-center gap-1.5"><Clock size={12} className="text-blue-500/50" /> Cool: {s.risk.cooldownMinutes}m</div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <StrategyList onEdit={handleEdit} onAdd={handleAdd} />
                     )}
 
-                    {view === 'signals' && (
-                        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-                            {/* VIRTUAL ACCOUNT DASHBOARD */}
-                            <VirtualBalanceCard />
-
-                            {/* ACTIVE POSITIONS SECTION */}
-                            {activePositions.length > 0 && (
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex justify-between items-center px-1">
-                                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
-                                            <HistoryIcon size={12} /> Active ({activePositions.length})
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {activePositions.map((pos) => {
-                                            const ticker = tickers[pos.symbol];
-                                            const currentPrice = ticker?.price || pos.entryPrice;
-                                            const pnl = pos.status === 'open' ? calculatePnL({ type: pos.type.toLowerCase() as any, openPrice: pos.entryPrice, currentPrice, volume: pos.lotSize, symbol: pos.symbol, symbolInfo: symbolInfo[pos.symbol] }) : 0;
-                                            return (
-                                                <div key={pos.id} className="bg-[#131722] rounded-lg border border-[#2a2e39] overflow-hidden">
-                                                    <div className="flex items-center justify-between p-2.5 border-b border-[#2a2e39]/50">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-black text-white">{pos.symbol}</span>
-                                                            <span className={`text-[9px] font-black px-1 rounded ${pos.type === 'BUY' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>{pos.type}</span>
-                                                        </div>
-                                                        <div className={`font-mono text-xs font-bold ${pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>{formatPnL(pnl)}</div>
-                                                        <button onClick={() => pos.status === 'open' ? closeVirtualPosition(pos.strategyId, pos.symbol, currentPrice) : cancelVirtualPosition(pos.strategyId, pos.symbol)} className="text-[#4a4f5d] hover:text-red-500 transition-colors"><XIcon size={12} /></button>
-                                                    </div>
-                                                    <div className="grid grid-cols-3 p-2 text-[9px] text-[#787b86] bg-[#1e222d]/20">
-                                                        <div>Entry: <span className="text-white font-mono">{pos.entryPrice.toFixed(2)}</span></div>
-                                                        <div className="text-center">SL: <span className="text-red-400/80 font-mono">{pos.sl || '---'}</span></div>
-                                                        <div className="text-right">TP: <span className="text-green-400/80 font-mono">{pos.tp || '---'}</span></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* SIGNAL HISTORY */}
-                            <div className="flex flex-col gap-3">
-                                <div className="flex justify-between items-center px-1">
-                                    <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-widest flex items-center gap-1.5"><Activity size={12} /> Recent Signals</span>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    {signals.length === 0 ? (
-                                        <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center gap-2">
-                                            <Activity size={32} />
-                                            <span className="text-[10px] uppercase font-bold tracking-tighter">No signals yet</span>
-                                        </div>
-                                    ) : (
-                                        signals.map((sig, i) => (
-                                            <div key={i} className={`bg-[#131722] p-3 rounded-lg border-l-2 ${sig.type === 'EXIT' ? 'border-orange-500' : 'border-green-500'} flex flex-col gap-1.5`}>
-                                                <div className="flex justify-between items-center text-[9px]">
-                                                    <span className={`font-black uppercase ${sig.type === 'EXIT' ? 'text-orange-400' : 'text-green-400'}`}>{sig.type} SIGNAL</span>
-                                                    <span className="text-[#4a4f5d]">{new Date(sig.timestamp).toLocaleTimeString()}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center"><span className="text-xs font-bold text-white">{sig.symbol} @ {sig.price}</span><span className="text-[10px] text-[#787b86]">Vol: {typeof sig.risk.lotSize === 'object' ? (sig.risk.lotSize.mode === 'fixed' ? sig.risk.lotSize.value : sig.risk.lotSize.mode.toUpperCase()) : sig.risk.lotSize}</span></div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                    {view === 'build' && (
+                        <StrategyBuilder editingStrategy={editingStrategy} onClose={handleCloseBuilder} />
                     )}
                 </div>
             </div>

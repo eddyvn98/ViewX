@@ -50,7 +50,7 @@ export function NotificationManager() {
 
     return (
         <>
-            <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 w-80 pointer-events-none">
+            <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-80 pointer-events-none">
                 {notifications.map((notification) => (
                     <div
                         key={notification.id}

@@ -29,6 +29,16 @@ export function useChartInit(
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
 
+        // 1. Wait for container to have dimensions (Mobile Fix)
+        if (priceContainerRef.current.clientWidth === 0 || priceContainerRef.current.clientHeight === 0) {
+            // console.log("[ChartInit] Waiting for dimensions...");
+            const timer = setTimeout(() => {
+                // Force a re-render to check again
+                setIsReady(prev => !prev);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+
         /* ================= PRICE CHART ================= */
         const priceChart = createChart(priceContainerRef.current, getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight));
 
@@ -144,14 +154,23 @@ export function useChartInit(
 
         setTimeout(handleAutoSync, 50);
 
-        const resizeObserver = new ResizeObserver(() => {
-            if (priceContainerRef.current) priceChart.applyOptions({ width: priceContainerRef.current.clientWidth, height: priceContainerRef.current.clientHeight });
-            if (subchartContainerRef.current) subchartChart.applyOptions({ width: subchartContainerRef.current.clientWidth, height: subchartContainerRef.current.clientHeight });
-            if (timescaleContainerRef.current) timescaleChart.applyOptions({ width: timescaleContainerRef.current.clientWidth, height: timescaleContainerRef.current.clientHeight });
+        const resizeObserver = new ResizeObserver((entries) => {
+            // Mobile: Ensure we resize ALL charts
+            if (priceContainerRef.current && priceContainerRef.current.clientWidth > 0 && priceContainerRef.current.clientHeight > 0) {
+                priceChart.applyOptions({ width: priceContainerRef.current.clientWidth, height: priceContainerRef.current.clientHeight });
+            }
+            if (subchartContainerRef.current && subchartContainerRef.current.clientWidth > 0 && subchartContainerRef.current.clientHeight > 0) {
+                subchartChart.applyOptions({ width: subchartContainerRef.current.clientWidth, height: subchartContainerRef.current.clientHeight });
+            }
+            if (timescaleContainerRef.current && timescaleContainerRef.current.clientWidth > 0 && timescaleContainerRef.current.clientHeight > 0) {
+                timescaleChart.applyOptions({ width: timescaleContainerRef.current.clientWidth, height: timescaleContainerRef.current.clientHeight });
+            }
             handleAutoSync();
         });
 
         if (priceContainerRef.current) resizeObserver.observe(priceContainerRef.current);
+        // Also observe subchart container in case it changes independently
+        if (subchartContainerRef.current) resizeObserver.observe(subchartContainerRef.current);
 
         priceChartRef.current = priceChart;
         subchartChartRef.current = subchartChart;

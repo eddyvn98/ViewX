@@ -206,7 +206,7 @@ export function useChartIndicators(
         isReady,
         candles.length,      // ✅ Track length for updates
         key,                 // ✅ Track context changes
-        indicators.length,   // ✅ Track count, not reference
+        indicators,          // ✅ Track full array (shallow) to detect visibility changes
         symbol,
         interval,
         priceChartRef,

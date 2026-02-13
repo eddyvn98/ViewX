@@ -14,8 +14,8 @@ export interface DraftOrder {
 }
 
 export interface DraggingPosition {
-    ticket: number;
-    type: 'sl' | 'tp' | 'entry';
+    ticket: number | string;
+    type: 'sl' | 'tp' | 'entry' | 'alert';
     price: number;
 }
 

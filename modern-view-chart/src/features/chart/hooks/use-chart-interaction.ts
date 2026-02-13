@@ -81,7 +81,7 @@ export function useChartInteraction(
                 if (ticketAttr && type && tagData) {
                     hit = {
                         type,
-                        ticket: ticketAttr === 'draft' ? 'draft' : Number(ticketAttr),
+                        ticket: (ticketAttr === 'draft' || type === 'alert') ? ticketAttr : Number(ticketAttr),
                         price: tagData.price,
                         id: tagData.id
                     };
@@ -205,7 +205,7 @@ export function useChartInteraction(
 
             const isDraft = dragState.current.ticket === 'draft';
             const dragType = dragState.current.type;
-            const tagId = (isDraft && dragType === 'entry') ? 'draft-group' : `${dragState.current.ticket}-${dragType}`;
+            const tagId = (isDraft && dragType === 'entry') ? 'draft-group' : (dragType === 'alert' ? `alert-${dragState.current.ticket}` : `${dragState.current.ticket}-${dragState.current.type}`);
             const tagElement = container.querySelector(`[data-tag-id="${tagId}"]`) as HTMLElement;
 
             if (tagElement) {
@@ -252,10 +252,14 @@ export function useChartInteraction(
                 else if (dragState.current.type === 'sl') { (updates as any).sl = validatedPrice; (updates as any).slTouched = true; }
                 else if (dragState.current.type === 'tp') { (updates as any).tp = validatedPrice; (updates as any).tpTouched = true; }
                 if (draftOrder) setDraftOrder({ ...draftOrder, ...updates });
-            } else if (dragState.current.type === 'alert') {
-                handleUpdateAlert(dragState.current.id, validatedPrice);
             } else {
-                setDraggingPosition({ ticket: dragState.current.ticket, type: dragState.current.type as any, price: validatedPrice });
+                // For both Orders and Alerts, update local dragging state for smooth visual feedback
+                // We do NOT commit to store/API until drop (pointerUp)
+                setDraggingPosition({
+                    ticket: dragState.current.ticket,
+                    type: dragState.current.type as any,
+                    price: validatedPrice
+                });
             }
         };
 
@@ -284,7 +288,7 @@ export function useChartInteraction(
                 // 📱 Mobile: Tap is ignored for editing (long press handled it)
             } else {
                 if (type === 'alert') {
-                    handleUpdateAlert(id, currentPrice);
+                    handleUpdateAlert(String(ticket), currentPrice);
                 } else if (ticket && ticket !== 'draft') {
                     const mappedType = type === 'entry' ? 'price' : type;
                     const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: currentPrice };
@@ -312,7 +316,7 @@ export function useChartInteraction(
 
             if (dragState.current) {
                 const isDraft = dragState.current.ticket === 'draft';
-                const tagId = (isDraft && dragState.current.type === 'entry') ? 'draft-group' : `${dragState.current.ticket}-${dragState.current.type}`;
+                const tagId = (isDraft && dragState.current.type === 'entry') ? 'draft-group' : (dragState.current.type === 'alert' ? `alert-${dragState.current.ticket}` : `${dragState.current.ticket}-${dragState.current.type}`);
                 const tagElement = container.querySelector(`[data-tag-id="${tagId}"]`) as HTMLElement;
                 if (tagElement) {
                     tagElement.removeAttribute('dragging');

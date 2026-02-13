@@ -54,6 +54,11 @@ class BridgeClient:
             updates = data.get("updates")
             print(f"[ALERT] Updating alert {alert_id}: {updates}")
             self.alert_service.update_alert(alert_id, updates)
+        elif cmd == "trigger":
+            alert = data.get("alert")
+            message = data.get("message")
+            print(f"[ALERT] Triggering alert: {message}")
+            self.alert_service.send_telegram(message)
             
     async def handle_memory_command(self, data):
         if not self.memory_service:

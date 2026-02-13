@@ -28,6 +28,7 @@ import { SubchartIndicatorsTabs } from './components/SubchartIndicatorsTabs';
 import { ChartLegend } from './components/ChartLegend';
 import { ChartContextMenu } from './components/ChartContextMenu';
 import { OrderLineTags } from './components/OrderLineTags';
+import { AlertLineTags } from './components/AlertLineTags';
 import { ChartTradingOverlay } from './components/ChartTradingOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { ChevronUp, ChevronDown } from 'lucide-react';
@@ -115,7 +116,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         handleAddAlertAtPrice,
         handleRemoveAlert,
         handleUpdateAlertPrice,
-        getAlertNearPrice,
+
     } = useChartAlerts(chartId, priceChartRef, seriesRef, symbol);
 
     useChartInteraction(
@@ -160,7 +161,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         priceChartRef,
         priceContainerRef,
         seriesRef,
-        getAlertNearPrice,
+        undefined, // getAlertNearPrice removed
         contextMenuHitTest
     );
 
@@ -230,6 +231,14 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     isReady={isReady}
                     sendMessage={sendMessage}
                     source={source}
+                />
+
+                {/* ALERT LINE TAGS (Draggable Alerts) */}
+                <AlertLineTags
+                    symbol={symbol}
+                    seriesRef={seriesRef}
+                    priceChartRef={priceChartRef}
+                    isReady={isReady}
                 />
 
                 {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}

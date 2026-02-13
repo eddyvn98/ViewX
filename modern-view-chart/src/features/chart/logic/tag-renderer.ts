@@ -41,6 +41,20 @@ export function createTagElement(tag: TagData): TagElements {
                     <div class="confirm-btn flex items-center h-full px-3 text-[11px] font-black text-white cursor-pointer hover:bg-white/10 transition-colors active:bg-white/20 uppercase tracking-tight" data-no-drag="true">Confirm</div>
                 </div>
             </div>`;
+    } else if (tag.type === 'alert') {
+        el.innerHTML = `
+            <div class="absolute right-[100%] top-1/2 w-screen border-b-[2px] border-dashed border-amber-500 pointer-events-none"></div>
+            <div class="tag-body group flex items-center h-7 gap-1 pointer-events-auto cursor-pointer p-0.5 bg-zinc-950/90 backdrop-blur-xl border border-amber-500/30 rounded-md shadow-[0_4px_16px_rgba(245,158,11,0.2)] transition-all duration-200 touch-none touch-action-none">
+                <div class="cancel-btn h-full w-5 flex items-center justify-center rounded-sm hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition-all duration-300" title="Remove Alert" data-no-drag="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+                <div class="tag-label-container px-1.5 h-full flex items-center justify-center rounded bg-amber-500/10 border border-amber-500/20 cursor-grab active:cursor-grabbing" data-draggable="true" data-type="alert" data-ticket="${tag.ticket}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+                </div>
+                <div class="price-box h-full flex items-center px-2 bg-zinc-900 border border-amber-500/20 rounded-sm min-w-[75px] justify-center cursor-row-resize hover:bg-zinc-800 transition-colors">
+                    <span class="price-text text-[11px] font-mono font-bold text-amber-500"></span>
+                </div>
+            </div>`;
     } else {
         const isDraft = tag.ticket === 'draft';
         el.innerHTML = `

@@ -24,8 +24,8 @@ export function useChartShortcuts(chartId: string) {
             const key = e.key.toLowerCase();
 
             if (key === 'r') {
-                updateChart(chartId, { source: 'real' });
-                addNotification('Chart Switched to REAL', 'warning');
+                // updateChart(chartId, { source: 'real' });
+                // addNotification('Chart Switched to REAL', 'warning');
             } else if (key === 'm') {
                 updateChart(chartId, { source: 'MT5' });
                 addNotification('Chart Switched to DEMO (MT5)', 'info');

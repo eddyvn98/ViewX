@@ -39,31 +39,27 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
             ref={containerRef}
             className={`absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none transition-opacity duration-300 ${isDataMissing ? 'opacity-0' : 'opacity-100'}`}
         >
-            <div data-indicators className="flex flex-col gap-1">
+            <div
+                data-indicators
+                className="flex flex-col gap-0.5 p-1 backdrop-blur-lg border rounded-lg bg-zinc-950/50 border-white/5 w-fit"
+            >
                 {indicators.map((ind: any) => (
                     <div
                         key={ind.id}
-                        data-indicator-id={ind.id} // Hook targets this
-                        className="flex flex-wrap items-center gap-2 text-[11px] font-mono font-bold bg-[#131722]/60 px-1 rounded backdrop-blur-[2px]"
+                        data-indicator-id={ind.id}
+                        className="flex flex-col px-1"
                     >
-                        <span className="text-zinc-500 uppercase">
+                        <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter leading-none mb-0.5">
                             {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${ind.params?.period || 14}`}
                         </span>
 
-                        {/* Hook updates textContent inside here */}
-                        <div data-indicator-value className="flex items-center gap-1">
+                        <div data-indicator-value className="flex gap-1.5 font-mono text-[11px] font-bold leading-none text-white">
                             {ind.type === 'MACD' ? (
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-1">
-                                        <span style={{ color: ind.color }}>···</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <span style={{ color: '#FF6D00' }}>···</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <span>···</span>
-                                    </div>
-                                </div>
+                                <>
+                                    <span style={{ color: ind.color }}>···</span>
+                                    <span style={{ color: '#FF6D00' }}>···</span>
+                                    <span>···</span>
+                                </>
                             ) : (
                                 <span style={{ color: ind.color }}>···</span>
                             )}

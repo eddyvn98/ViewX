@@ -14,6 +14,8 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import { IndicatorCalculator } from '../logic/IndicatorCalculator';
 import { RiskCalculator } from '../logic/RiskCalculator';
 import { ContextCollector } from '../logic/ContextCollector';
+import { getPipMultiplier, getPriceOffset } from '../utils/market-utils';
+import { getTradingSession } from '../utils/time-utils';
 
 const normalizeTF = (tf: string | undefined) => {
     if (!tf) return '';
@@ -211,7 +213,7 @@ export function useStrategyRunner() {
                                         const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, candles.slice(0, -1));
                                         const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, candles.slice(0, -1));
 
-                                        const priceOffset = symbol.includes('XAU') ? 0.3 : (symbol.includes('JPY') ? 0.01 : 0.0001);
+                                        const priceOffset = getPriceOffset(symbol);
                                         const moveThreshold = priceOffset * 0.2;
 
                                         let targetSl = pos.sl;
@@ -241,11 +243,9 @@ export function useStrategyRunner() {
 
                                     // MAE/MFE & Core Exits
                                     if (pos.status === 'open') {
-                                        const isGold = symbol.toUpperCase().includes('XAU');
-                                        const isJPY = symbol.toUpperCase().includes('JPY');
-                                        const pipsMultiplier = isGold ? 10 : (isJPY ? 100 : 10000);
+                                        const pipsMultiplier = getPipMultiplier(symbol);
 
-                                        const meta = pos.metadata || { indicators_snapshot: {}, session: 'Asian' };
+                                        const meta = pos.metadata || { indicators_snapshot: {}, session: getTradingSession(pos.timestamp) };
 
                                         // Track Duration
                                         const nextDuration = (meta.duration_candles || 0) + (isNewBar ? 1 : 0);
@@ -352,7 +352,7 @@ export function useStrategyRunner() {
                                     })();
 
                                     const side = final.type as 'BUY' | 'SELL';
-                                    const pip = symbol.includes('XAU') ? 0.1 : (symbol.includes('JPY') ? 0.01 : 0.0001);
+                                    const pip = getPriceOffset(symbol);
                                     const sl = RiskCalculator.calculateLevel(strategy.risk.sl, 'sl', side, candles, lastCandle.close, pip);
                                     const tp = RiskCalculator.calculateLevel(strategy.risk.tp, 'tp', side, candles, lastCandle.close, pip, lastCandle.close);
                                     const bal = strategy.executionMode === 'real' ? (Object.values(useMarketStore.getState().accounts)[0]?.balance || 10000) : store.virtualBalance;

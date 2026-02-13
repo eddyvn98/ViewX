@@ -16,16 +16,37 @@ export class AiManager {
     static processSignal(signal: StrategySignal, metrics: MarketMetrics): StrategySignal | null {
         console.log(`[AI Manager] Processing ${signal.type} signal for ${signal.symbol}`);
 
+        // Extract SL value if fixed number
+        let slValue = 0;
+        if (typeof signal.risk.sl === 'number') {
+            slValue = signal.risk.sl;
+        } else if (signal.risk.sl && typeof signal.risk.sl === 'object' && 'mode' in signal.risk.sl && signal.risk.sl.mode === 'fixed' && signal.risk.sl.value) {
+            slValue = signal.risk.sl.value;
+        }
+
         // High spread filter
-        if (metrics.spread > signal.risk.sl * 0.2) {
+        if (slValue > 0 && metrics.spread > slValue * 0.2) {
             console.warn(`[AI Manager] Signal rejected: Spread too high`);
             return null;
         }
 
         // Dynamic Lot Size based on volatility
-        let adjustedLot = signal.risk.lotSize || 0.01;
-        if (metrics.volatility > 50) {
-            adjustedLot = Math.max(0.01, adjustedLot * 0.5);
+        let adjustedLot = signal.risk.lotSize;
+
+        // Handle numeric lot size
+        if (typeof adjustedLot === 'number') {
+            if (metrics.volatility > 50) {
+                adjustedLot = Math.max(0.01, adjustedLot * 0.5);
+            }
+        }
+        // Handle object lot size (only fixed mode for now)
+        else if (typeof adjustedLot === 'object' && adjustedLot.mode === 'fixed') {
+            if (metrics.volatility > 50) {
+                adjustedLot = {
+                    ...adjustedLot,
+                    value: Math.max(0.01, adjustedLot.value * 0.5)
+                };
+            }
         }
 
         // Confidence Scoring (Heuristic)

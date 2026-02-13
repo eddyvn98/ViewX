@@ -50,7 +50,9 @@ export default function StandaloneChartPage() {
                         },
                         activeChartId: chartId,
                         maximizedChartId: null,
-                        layoutMode: '1x1'
+                        layoutMode: '1x1',
+                        rows: 1,
+                        cols: 1
                     }
                 }
             }));
