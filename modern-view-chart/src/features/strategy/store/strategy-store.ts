@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Strategy, StrategySignal, VirtualPosition } from '../types';
+import { Strategy, StrategySignal, VirtualPosition, TradeContext } from '../types';
 
 interface StrategyState {
     strategies: Strategy[];
@@ -17,7 +17,7 @@ interface StrategyState {
     updateLastSignalTime: (strategyId: string, timestamp: number) => void;
     addVirtualPosition: (pos: VirtualPosition) => void;
     cancelVirtualPosition: (strategyId: string, symbol: string) => void;
-    closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number) => void;
+    closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Partial<TradeContext>) => void;
     updateVirtualPosition: (id: string, updates: Partial<VirtualPosition>) => void;
     showHistoryMarkers: boolean;
     toggleShowHistoryMarkers: () => void;
@@ -210,7 +210,7 @@ export const useStrategyStore = create<StrategyState>()(
             cancelVirtualPosition: (strategyId: string, symbol: string) => set((state) => ({
                 virtualPositions: state.virtualPositions.filter(p => !(p.strategyId === strategyId && p.symbol === symbol && p.status === 'pending'))
             })),
-            closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number) => set((state) => {
+            closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Partial<TradeContext>) => set((state) => {
                 let tradePnL = 0;
                 const newPositions = state.virtualPositions.map(p => {
                     if (p.strategyId === strategyId && p.symbol === symbol && (p.status === 'open' || p.status === 'pending')) {
@@ -225,7 +225,8 @@ export const useStrategyStore = create<StrategyState>()(
                             status: 'closed' as const,
                             exitPrice,
                             exitTimestamp: Date.now(),
-                            pnl: tradePnL
+                            pnl: tradePnL,
+                            metadata: p.metadata && metadataUpdate ? { ...p.metadata, ...metadataUpdate } : (p.metadata || metadataUpdate as any)
                         };
                     }
                     return p;

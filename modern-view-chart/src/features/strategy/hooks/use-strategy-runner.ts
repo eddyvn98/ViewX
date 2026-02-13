@@ -13,6 +13,7 @@ import { Strategy, VirtualPosition } from '../types';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { IndicatorCalculator } from '../logic/IndicatorCalculator';
 import { RiskCalculator } from '../logic/RiskCalculator';
+import { ContextCollector } from '../logic/ContextCollector';
 
 export function useStrategyRunner() {
     const {
@@ -102,45 +103,43 @@ export function useStrategyRunner() {
 
 
     useEffect(() => {
-        // Prevent concurrent executions of the heavy runner loop
+        // console.log(`[Runner] Effect Triggered: Data=${Object.keys(candleData).length} Tabs=${Object.keys(tabs).length} Strats=${strategies.length}`);
+
         if (isRunningRef.current) return;
-        isRunningRef.current = true;
 
-        // 1. Collect unique symbol/interval pairs from all tabs/charts
-        const uniqueKeys = new Set<string>();
-        const uniqueChartConfigs: { symbol: string; interval: string; source: string }[] = [];
-
-        Object.values(tabs).forEach(tab => {
-            Object.values(tab.charts).forEach(chart => {
-                const symbol = chart.symbol;
-                const interval = chart.interval || '1m';
-                const source = chart.source || 'default';
-                const key = `${source}:${normalizeSymbol(symbol)}:${interval}`;
-
-                if (!uniqueKeys.has(key)) {
-                    uniqueKeys.add(key);
-                    uniqueChartConfigs.push({ symbol, interval, source });
-                }
-            });
-        });
-
-        // 2. Run strategies for each unique pair
-        const runEachPair = async () => {
+        const runCycle = async () => {
+            isRunningRef.current = true;
             try {
+                // 1. Collect unique configurations from active tabs
+                const uniqueChartConfigs: { symbol: string; interval: string; source: string }[] = [];
+                const uniqueKeys = new Set<string>();
+
+                Object.values(tabs).forEach(tab => {
+                    Object.values(tab.charts).forEach(chart => {
+                        const s = chart.symbol;
+                        const i = chart.interval || '1m';
+                        const src = chart.source || 'default';
+                        const k = `${src}:${normalizeSymbol(s)}:${i}`;
+                        if (!uniqueKeys.has(k)) {
+                            uniqueKeys.add(k);
+                            uniqueChartConfigs.push({ symbol: s, interval: i, source: src });
+                        }
+                    });
+                });
+
+                if (uniqueChartConfigs.length === 0) return;
+
+                // 2. Loop through each chart configuration
                 for (const config of uniqueChartConfigs) {
                     const { symbol, interval, source } = config;
                     const normSymbol = normalizeSymbol(symbol);
-                    const key = `${source}:${normSymbol}:${interval}`;
-                    const candles = candleData[key];
+                    const pairKey = `${source}:${normSymbol}:${interval}`;
+                    const candles = candleData[pairKey];
 
                     if (!candles || candles.length < 5) continue;
 
-                    const lastCandle = candles[candles.length - 1];
-                    const lastTime = typeof lastCandle.time === 'object' ? (lastCandle.time as any).timestamp : Number(lastCandle.time);
-
                     const activeStrategies = strategies.filter(s => {
                         if (!s.active) return false;
-                        // Dynamic Symbol Support: Match if s.symbol is empty OR matches current symbol
                         const symbolMatch = !s.symbol || normalizeSymbol(s.symbol) === normSymbol;
                         const timeframeMatch = !s.timeframe || s.timeframe === interval;
                         return symbolMatch && timeframeMatch;
@@ -148,241 +147,192 @@ export function useStrategyRunner() {
 
                     if (activeStrategies.length === 0) continue;
 
-                    // console.log(`[StrategyRunner] Tick: ${symbol}:${interval} | Active Strategies: ${activeStrategies.length}`);
+                    const lastCandle = candles[candles.length - 1];
+                    const lastTime = typeof lastCandle.time === 'object' ? (lastCandle.time as any).timestamp : Number(lastCandle.time);
 
-                    // Process strategies SEQUENTIALLY to prevent race conditions
                     for (const strategy of activeStrategies) {
                         const processKey = `${strategy.id}:${symbol}`;
 
-                        const lastProcessed = lastProcessedTimeRef.current[processKey];
-                        // Throttling: only run once every 1s per strategy/symbol
-                        if (Date.now() - (lastProcessed || 0) < 1000) continue;
+                        // Throttling: Max once per 1s per strategy/symbol
+                        if (Date.now() - (lastProcessedTimeRef.current[processKey] || 0) < 1000) continue;
                         lastProcessedTimeRef.current[processKey] = Date.now();
 
-                        // --- BAR CLOSE DETECTION ---
-                        const isNewBar = lastTime > (lastBarTimeRef.current[processKey] || 0);
-                        if (isNewBar) {
-                            lastBarTimeRef.current[processKey] = lastTime;
-                            console.log(`[Bar] New Bar for ${strategy.name} on ${symbol}: ${new Date(lastTime).toLocaleTimeString()}`);
-                        }
+                        try {
+                            const isNewBar = lastTime > (lastBarTimeRef.current[processKey] || 0);
+                            if (isNewBar) lastBarTimeRef.current[processKey] = lastTime;
 
-                        const latestVirtualPositions = useStrategyStore.getState().virtualPositions;
-                        const strategyPositions = latestVirtualPositions.filter(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+                            const store = useStrategyStore.getState();
+                            const currentVirtualPositions = store.virtualPositions;
+                            const stratPos = currentVirtualPositions.filter(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
 
-                        if (strategyPositions.length > 0) {
-                            // HEARBEAT LOG: Confirm runner is processing active positions
-                            if (Math.random() < 0.1) { // 10% chance to log heartbeat to avoid flooding
-                                console.log(`[Heartbeat] ${strategy.name} tracking ${strategyPositions.length} positions on ${symbol}`);
+                            // --- DIAGNOSTIC LOG (Heartbeat) ---
+                            if (Math.random() < 0.02) { // 2% chance to avoid log spam
+                                console.log(`[💓] Runner: ${strategy.name} | ${symbol} | Active:${stratPos.length} | Bar:${isNewBar}`);
                             }
-                        }
 
-                        if (strategyPositions.length > 0) {
-                            // console.log(`[StrategyRunner] Active Pos found for ${strategy.name}: ${strategyPositions.length}`);
-                        }
-
-                        // 1. PROTECTION LOGIC (Fast Track - Runs every ticker/1s)
-                        strategyPositions.forEach(pos => {
-                            if (pos.status === 'open' || pos.status === 'pending') {
-                                const currentPrice = lastCandle.close;
-
-                                // --- TRAILING STOP LOGIC ---
-                                if (strategy.risk.trailing) {
-                                    const source = strategy.risk.trailingSource || (pos.type === 'BUY' ? 'HA_Low' : 'HA_High');
-
-                                    const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, candles.slice(0, -1));
-                                    const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, candles.slice(0, -1));
-
-                                    const priceOffset = symbol.includes('XAU') ? 0.3 : (symbol.includes('JPY') ? 0.01 : 0.0001);
-                                    const moveThreshold = symbol.includes('XAU') ? 0.1 : (priceOffset * 0.1);
-
-                                    let newSl = pos.sl;
-                                    let shouldUpdate = false;
-
-                                    if (pos.type === 'BUY' && source === 'HA_Low') {
-                                        if (haLow > pos.sl + moveThreshold) {
-                                            newSl = haLow;
-                                            shouldUpdate = true;
-                                            console.log(`[Trailing] BUY SL Move: ${pos.sl.toFixed(2)} -> ${newSl.toFixed(2)} | Cur: ${currentPrice.toFixed(2)} | Status: ${pos.status} | Source: ${source}`);
-                                        }
-                                    } else if (pos.type === 'SELL' && source === 'HA_High') {
-                                        const proposedSl = haHigh + priceOffset;
-                                        if (pos.sl === 0 || proposedSl < pos.sl - moveThreshold) {
-                                            newSl = proposedSl;
-                                            shouldUpdate = true;
-                                            console.log(`[Trailing] SELL SL Move: ${pos.sl.toFixed(2)} -> ${newSl.toFixed(2)} | Cur: ${currentPrice.toFixed(2)} | Status: ${pos.status} | Source: ${source}`);
-                                        }
-                                    }
-
-                                    if (shouldUpdate) {
-                                        const isSafe = pos.type === 'BUY' ? newSl < currentPrice : newSl > currentPrice;
-                                        if (isSafe || pos.status === 'pending') {
-                                            updateVirtualPosition(pos.id, { sl: newSl });
-                                            // Handle MT5 Real if connected
-                                            if (strategy.executionMode === 'real' && (strategy as any).mt5_id) {
-                                                // Ticker needs to send MT5 modification but we use store update which might trigger sync elsewhere 
-                                                // Or we send command directly
-                                                sendMessage({ topic: 'mt5_command', command: 'modify_order', ticket: (pos as any).ticket, sl: newSl, tp: pos.tp });
-                                            }
-                                        } else {
-                                            console.warn(`[Trailing] Safeguard Blocked! Current: ${currentPrice}, Proposed SL: ${newSl}, Type: ${pos.type}`);
-                                        }
-                                    }
-
-                                }
-
-                                if (pos.status === 'open') {
-                                    // --- EXIT LOGIC ---
-                                    if (Date.now() - pos.timestamp < 5000) return;
-
-                                    let exitPrice = null;
-                                    let exitReason = '';
-                                    if (pos.type === 'BUY') {
-                                        if (pos.sl && currentPrice <= pos.sl) { exitPrice = pos.sl; exitReason = 'SL'; }
-                                        else if (pos.tp && currentPrice >= pos.tp) { exitPrice = pos.tp; exitReason = 'TP'; }
-                                    } else {
-                                        if (pos.sl && currentPrice >= pos.sl) { exitPrice = pos.sl; exitReason = 'SL'; }
-                                        else if (pos.tp && currentPrice <= pos.tp) { exitPrice = pos.tp; exitReason = 'TP'; }
-                                    }
-
-                                    if (exitPrice) {
-                                        console.log(`[StrategyRunner] EXIT TRIGGERED: ${pos.symbol} ${pos.type} | Reason: ${exitReason} | Price: ${currentPrice} | Trigger: ${exitPrice}`);
-                                        closeVirtualPosition(strategy.id, symbol, exitPrice);
-                                        toast.warning(`[${exitReason}] ${pos.symbol} Closed @ ${exitPrice}`);
-                                    }
-                                } else if (pos.status === 'pending') {
+                            // 1. PROTECTION & TRADE MANAGEMENT (Runs on every tick)
+                            stratPos.forEach(pos => {
+                                if (pos.status === 'open' || pos.status === 'pending') {
                                     const currentPrice = lastCandle.close;
-                                    let shouldFill = false;
-                                    if (pos.type === 'BUY') {
-                                        if (currentPrice >= pos.entryPrice) shouldFill = true;
-                                    } else {
-                                        if (currentPrice <= pos.entryPrice) shouldFill = true;
+
+                                    // Trailing Stop Logic
+                                    if (strategy.risk.trailing) {
+                                        const tSource = strategy.risk.trailingSource || (pos.type === 'BUY' ? 'HA_Low' : 'HA_High');
+                                        const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, candles.slice(0, -1));
+                                        const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, candles.slice(0, -1));
+
+                                        const priceOffset = symbol.includes('XAU') ? 0.3 : (symbol.includes('JPY') ? 0.01 : 0.0001);
+                                        const moveThreshold = priceOffset * 0.2;
+
+                                        let targetSl = pos.sl;
+                                        let updated = false;
+
+                                        if (pos.type === 'BUY' && tSource === 'HA_Low' && haLow > pos.sl + moveThreshold) {
+                                            targetSl = haLow;
+                                            updated = true;
+                                        } else if (pos.type === 'SELL' && tSource === 'HA_High') {
+                                            const sellProposedSl = haHigh + priceOffset;
+                                            if (pos.sl === 0 || sellProposedSl < pos.sl - moveThreshold) {
+                                                targetSl = sellProposedSl;
+                                                updated = true;
+                                            }
+                                        }
+
+                                        if (updated) {
+                                            const isSafe = pos.type === 'BUY' ? targetSl < currentPrice : targetSl > currentPrice;
+                                            if (isSafe || pos.status === 'pending') {
+                                                store.updateVirtualPosition(pos.id, { sl: targetSl });
+                                                if (strategy.executionMode === 'real') {
+                                                    sendMessage({ topic: 'mt5_command', command: 'modify_order', ticket: (pos as any).ticket, sl: targetSl, tp: pos.tp });
+                                                }
+                                            }
+                                        }
                                     }
 
-                                    if (shouldFill) {
-                                        updateVirtualPosition(pos.id, { status: 'open', entryPrice: pos.entryPrice, timestamp: Date.now() });
-                                        toast.success(`[FILLED] ${pos.type} ${pos.symbol} @ ${pos.entryPrice}`);
+                                    // MAE/MFE & Core Exits
+                                    if (pos.status === 'open') {
+                                        const pnlFloat = pos.type === 'BUY' ? (currentPrice - pos.entryPrice) : (pos.entryPrice - currentPrice);
+                                        const meta = pos.metadata || { indicators_snapshot: {}, session: 'Asian' };
+                                        const nextMae = Math.min(meta.mae ?? 0, pnlFloat);
+                                        const nextMfe = Math.max(meta.mfe ?? 0, pnlFloat);
+
+                                        if (nextMae !== meta.mae || nextMfe !== meta.mfe) {
+                                            store.updateVirtualPosition(pos.id, { metadata: { ...meta, mae: nextMae, mfe: nextMfe } });
+                                        }
+
+                                        // SL/TP Hard Check
+                                        if (Date.now() - pos.timestamp >= 5000) {
+                                            let exitP = null; let exitR = '';
+                                            if (pos.type === 'BUY') {
+                                                if (pos.sl && currentPrice <= pos.sl) { exitP = pos.sl; exitR = 'SL'; }
+                                                else if (pos.tp && currentPrice >= pos.tp) { exitP = pos.tp; exitR = 'TP'; }
+                                            } else {
+                                                if (pos.sl && currentPrice >= pos.sl) { exitP = pos.sl; exitR = 'SL'; }
+                                                else if (pos.tp && currentPrice <= pos.tp) { exitP = pos.tp; exitR = 'TP'; }
+                                            }
+                                            if (exitP) {
+                                                store.closeVirtualPosition(strategy.id, symbol, exitP, { exit_reason: exitR as any });
+                                                toast.warning(`[${exitR}] ${pos.symbol} Closed @ ${exitP}`);
+                                            }
+                                        }
+                                    } else {
+                                        // Pending Order Filling
+                                        if ((pos.type === 'BUY' && currentPrice >= pos.entryPrice) || (pos.type === 'SELL' && currentPrice <= pos.entryPrice)) {
+                                            store.updateVirtualPosition(pos.id, { status: 'open', entryPrice: pos.entryPrice, timestamp: Date.now() });
+                                            toast.success(`[FILLED] ${pos.type} ${pos.symbol} @ ${pos.entryPrice}`);
+                                        }
                                     }
                                 }
+                            });
+
+                            // 2. SIGNAL GENERATION & RULE EVALUATION (Runs on BAR CLOSE or if flat)
+                            if (!isNewBar) {
+                                // Background Capture for Post-Exit Analysis
+                                const expiredClosed = currentVirtualPositions.filter(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'closed' && p.exitTimestamp && (Date.now() - p.exitTimestamp > 60000) && (Date.now() - p.exitTimestamp < 300000) && !p.metadata?.post_exit);
+                                expiredClosed.forEach(p => {
+                                    const postExit = ContextCollector.capturePostExitContext(strategy, candles);
+                                    store.updateVirtualPosition(p.id, { metadata: { ...p.metadata, post_exit: postExit } as any });
+                                });
+                                continue;
                             }
-                        });
 
-                        // 2. SIGNAL LOGIC (Slow Track - ONLY runs on BAR CLOSE)
-                        if (!isNewBar) continue;
-
-                        const context: EngineContext = {
-                            activePositions: [...positions, ...latestVirtualPositions],
-                            currentPrice: lastCandle.close,
-                            symbol,
-                            lastSignalTime: strategy.lastSignalTime
-                        };
-
-                        const signal = RuleEngine.run(strategy, candles, context);
-
-                        if (signal) {
-                            const mockMetrics: MarketMetrics = {
-                                spread: 2, volatility: 30, trendStrength: 25, rsi: 50, session: "London"
+                            // Fresh context for Rule Engine
+                            const engineCtx: EngineContext = {
+                                activePositions: [...positions, ...currentVirtualPositions],
+                                currentPrice: lastCandle.close,
+                                symbol,
+                                lastSignalTime: strategy.lastSignalTime
                             };
 
-                            let finalSignal = AiManager.processSignal(signal, mockMetrics);
+                            const signal = RuleEngine.run(strategy, candles, engineCtx);
 
-                            if (finalSignal) {
-                                if (finalSignal.type === 'CANCEL') {
-                                    const pendingForThis = latestVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
-                                    if (pendingForThis) {
-                                        cancelVirtualPosition(strategy.id, symbol);
-                                        if (strategy.executionMode === 'real') {
-                                            sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
-                                        }
-                                        toast.warning(`[CANCELLED] ${strategy.name} pending order on ${symbol}`);
+                            if (signal) {
+                                const mMetrics = { spread: 2, volatility: 30, trendStrength: 25, rsi: 50, session: "London" };
+                                let final = AiManager.processSignal(signal, mMetrics);
+                                if (!final) continue;
+
+                                if (final.type === 'CANCEL') {
+                                    const pnd = currentVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
+                                    if (pnd) {
+                                        store.cancelVirtualPosition(strategy.id, symbol);
+                                        if (strategy.executionMode === 'real') sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
+                                        toast.warning(`[CANCEL] ${strategy.name} order killed.`);
                                     }
                                     continue;
                                 }
 
-                                if (finalSignal.type !== 'EXIT') {
-                                    const refreshedPositions = useStrategyStore.getState().virtualPositions;
-                                    if (refreshedPositions.some(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed')) {
-                                        console.log(`[Engine] Blocking duplicate entry for ${strategy.name} (Position already exists)`);
-                                        continue;
-                                    }
+                                if (final.type !== 'EXIT') {
+                                    if (store.virtualPositions.some(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed')) continue;
 
-                                    const stats = await StatsService.compute(strategy.id);
-                                    const aiAnalysis = await AiAnalyzer.analyzeSignal(strategy.id, finalSignal, mockMetrics, stats);
-                                    finalSignal = { ...finalSignal, aiAnalysis };
+                                    // ⚡ NON-BLOCKING BACKGROUND TASKS (Supabase, AI)
+                                    (async () => {
+                                        try {
+                                            const stats = await StatsService.compute(strategy.id);
+                                            const ai = await AiAnalyzer.analyzeSignal(strategy.id, final!, mMetrics, stats);
+                                            final = { ...final!, aiAnalysis: ai };
+                                            await TradeLogger.logEntry(final, mMetrics);
+                                        } catch (e) { console.error("[Runner] Sync Task Failed:", e); }
+                                    })();
 
-                                    await TradeLogger.logEntry(finalSignal, mockMetrics);
+                                    const side = final.type as 'BUY' | 'SELL';
+                                    const pip = symbol.includes('XAU') ? 0.1 : (symbol.includes('JPY') ? 0.01 : 0.0001);
+                                    const sl = RiskCalculator.calculateLevel(strategy.risk.sl, 'sl', side, candles, lastCandle.close, pip);
+                                    const tp = RiskCalculator.calculateLevel(strategy.risk.tp, 'tp', side, candles, lastCandle.close, pip, lastCandle.close);
+                                    const bal = strategy.executionMode === 'real' ? (Object.values(useMarketStore.getState().accounts)[0]?.balance || 10000) : store.virtualBalance;
+                                    const lot = RiskCalculator.calculateLot(strategy.risk.lotSize, sl, lastCandle.close, bal, symbol);
 
-                                    const entryType = strategy.entryType || 'market';
-                                    const side = finalSignal.type as 'BUY' | 'SELL';
-                                    const pipSize = symbol.includes('XAU') ? 0.1 : (symbol.includes('JPY') ? 0.01 : 0.0001);
-                                    const priceOffset = symbol.includes('XAU') ? 0.3 : (symbol.includes('JPY') ? 0.01 : 0.0001);
+                                    const pId = `v-${Date.now()}`;
+                                    const isMkt = strategy.entryType === 'market';
+                                    const entryP = isMkt ? lastCandle.close : (side === 'BUY' ? lastCandle.high + (pip * 3) : lastCandle.low);
 
-                                    const haCandles = candles.slice(0, -1);
-                                    // const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, haCandles);
-                                    // const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, haCandles);
-
-                                    const stopPrice = side === 'BUY' ? lastCandle.high + priceOffset : lastCandle.low;
-
-                                    console.log(`[StrategyRunner] Calculating SL/TP for ${side} on ${symbol}. Price: ${lastCandle.close}, PipSize: ${pipSize}`);
-
-                                    const slPrice = RiskCalculator.calculateLevel(strategy.risk.sl, 'sl', side, candles, lastCandle.close, pipSize);
-                                    const tpPrice = RiskCalculator.calculateLevel(strategy.risk.tp, 'tp', side, candles, lastCandle.close, pipSize, lastCandle.close);
-
-                                    let balance = 10000;
-                                    if (strategy.executionMode === 'real') {
-                                        const account = Object.values(useMarketStore.getState().accounts)[0];
-                                        balance = account?.balance || 10000;
-                                    } else {
-                                        balance = useStrategyStore.getState().virtualBalance;
-                                    }
-
-                                    const finalLot = RiskCalculator.calculateLot(strategy.risk.lotSize, slPrice, lastCandle.close, balance, symbol);
-
-                                    console.log(`[StrategyRunner] SL: ${slPrice}, TP: ${tpPrice}, Lot: ${finalLot} (Mode: ${strategy.executionMode}, Bal: ${balance})`);
-
-
-                                    if (entryType === 'market') {
-                                        const position: VirtualPosition = {
-                                            id: `v-${Date.now()}`, strategyId: strategy.id, symbol: symbol, type: side, entryPrice: lastCandle.close, sl: slPrice, tp: tpPrice, lotSize: finalLot, timestamp: Date.now(), status: 'open'
-                                        };
-                                        addVirtualPosition(position);
-                                        if (strategy.executionMode === 'real') {
-                                            sendMessage({ topic: 'mt5_command', command: 'order', symbol, is_market: true, type: side.toLowerCase(), volume: finalLot, sl: position.sl, tp: position.tp, magic: strategy.magic || 0, comment: strategy.comment || 'WebEngine' });
-                                        }
-                                    } else {
-                                        const position: VirtualPosition = {
-                                            id: `v-${Date.now()}`, strategyId: strategy.id, symbol: symbol, type: side, entryPrice: stopPrice, sl: slPrice, tp: tpPrice, lotSize: finalLot, timestamp: Date.now(), status: 'pending'
-                                        };
-                                        addVirtualPosition(position);
-                                        if (strategy.executionMode === 'real') {
-                                            sendMessage({ topic: 'mt5_command', command: 'order', symbol, is_market: false, type: side === 'BUY' ? 'buy_stop' : 'sell_stop', price: stopPrice, volume: finalLot, sl: slPrice, tp: tpPrice, magic: strategy.magic || 0, comment: strategy.comment || 'WebEngine' });
-                                        }
-                                    }
-                                    updateLastSignalTime(strategy.id, lastTime);
+                                    store.addVirtualPosition({ id: pId, strategyId: strategy.id, symbol, type: side, entryPrice: entryP, sl, tp, lotSize: lot, timestamp: Date.now(), status: isMkt ? 'open' : 'pending', metadata: final.context });
+                                    if (strategy.executionMode === 'real') sendMessage({ topic: 'mt5_command', command: 'order', symbol, is_market: isMkt, type: isMkt ? side.toLowerCase() : (side === 'BUY' ? 'buy_stop' : 'sell_stop'), price: entryP, volume: lot, sl, tp, magic: strategy.magic || 0, comment: strategy.comment || 'Web' });
+                                    store.updateLastSignalTime(strategy.id, lastTime);
                                 } else {
-                                    await TradeLogger.updateExit(strategy.id, symbol, finalSignal.price);
-                                    const pendingForThis = latestVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
-                                    if (pendingForThis) {
-                                        cancelVirtualPosition(strategy.id, symbol);
-                                    } else {
-                                        closeVirtualPosition(strategy.id, symbol, finalSignal.price);
-                                    }
-                                    if (strategy.executionMode === 'real') {
-                                        sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
-                                    }
-                                }
+                                    // Background Update
+                                    TradeLogger.updateExit(strategy.id, symbol, final.price).catch(e => console.error(e));
 
-                                addSignal(finalSignal);
-                                const title = finalSignal.type === "EXIT" ? "Strategy Exit" : (finalSignal.type === "CANCEL" ? "Strategy Cancel" : "Strategy Entry");
-                                toast.info(`${title}: ${finalSignal.type} ${finalSignal.symbol}`, { description: `Price: ${finalSignal.price}`, duration: 8000 });
+                                    const pnd = currentVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
+                                    if (pnd) store.cancelVirtualPosition(strategy.id, symbol);
+                                    else store.closeVirtualPosition(strategy.id, symbol, final.price, { exit_reason: 'SIGNAL' });
+
+                                    if (strategy.executionMode === 'real') sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
+                                }
+                                store.addSignal(final);
+                                toast.info(`[${final.type}] ${strategy.name} on ${symbol}`);
                             }
+                        } catch (sErr) {
+                            console.error(`[Runner] Strategy ${strategy.name} error:`, sErr);
                         }
                     }
                 }
+            } catch (fatalErr) {
+                console.error("[Runner] FATAL Error in loop:", fatalErr);
             } finally {
                 isRunningRef.current = false;
             }
         };
 
-        runEachPair();
-    }, [candleData, tabs, strategies, virtualPositions, positions]);
+        runCycle();
+    }, [candleData, tabs, strategies]);
 }

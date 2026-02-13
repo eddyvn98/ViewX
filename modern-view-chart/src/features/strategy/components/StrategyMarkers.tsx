@@ -185,5 +185,40 @@ export const StrategyMarkers = ({ chart, mainSeries, symbol, interval }: Strateg
         // Re-run when data, symbol, or timeframe changes
     }, [virtualPositions, symbol, currentInterval, showHistoryMarkers, mainSeries, strategies]);
 
+    // 4. Handle "Focus on Chart" requests from Dashboard
+    useEffect(() => {
+        if (!chart || !symbol) return;
+
+        const handleFocus = (e: any) => {
+            const { symbol: targetSymbol, timestamp, exitTimestamp } = e.detail;
+
+            // Symbol normalization for flexible matching
+            const normTarget = targetSymbol?.replace('USDM', '').replace('USDT', '');
+            const normCurrent = symbol?.replace('USDM', '').replace('USDT', '');
+
+            if (normTarget === normCurrent) {
+                const entryVal = Math.floor(timestamp / 1000);
+                const exitVal = exitTimestamp ? Math.floor(exitTimestamp / 1000) : entryVal + 300;
+
+                // Calculate reasonable padding based on trade duration
+                const duration = exitVal - entryVal;
+                const padding = Math.max(duration * 2, 3600); // At least 1 hour padding or 2x duration
+
+                console.log(`[Markers] Focusing chart on ${symbol} @ ${entryVal}`);
+
+                chart.timeScale().setVisibleRange({
+                    from: (entryVal - padding) as Time,
+                    to: (exitVal + padding) as Time
+                });
+
+                // Trigger a slight highlight or visual feedback if possible
+                // For now, center the view is enough
+            }
+        };
+
+        window.addEventListener('chart_focus_request' as any, handleFocus);
+        return () => window.removeEventListener('chart_focus_request' as any, handleFocus);
+    }, [chart, symbol]);
+
     return null;
 };

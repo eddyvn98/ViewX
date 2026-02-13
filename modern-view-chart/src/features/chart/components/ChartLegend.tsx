@@ -29,12 +29,12 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
     // DOM-based updates - NO REACT RE-RENDERS on hover!
     useLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles, chartType });
 
-    if (!symbol || !interval || !source || !candles.length) return null;
+    const isDataMissing = !symbol || !interval || !source || !candles.length;
 
     return (
         <div
             ref={containerRef}
-            className="absolute left-1.5 top-12 z-[40] pointer-events-none select-none flex flex-col gap-1 items-start"
+            className={`absolute left-1.5 top-12 z-[40] pointer-events-none select-none flex flex-col gap-1 items-start transition-opacity duration-300 ${isDataMissing ? 'opacity-0' : 'opacity-100'}`}
         >
             {/* Main Info Card - Vacuum Packed */}
             <div

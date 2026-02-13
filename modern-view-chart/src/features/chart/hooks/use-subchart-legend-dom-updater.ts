@@ -148,11 +148,12 @@ export function useSubchartLegendDOMUpdater(
             return Math.max(0, Math.min(high, candlesArray.length - 1));
         };
 
+        const normSym = normalizeSymbol(symbol);
+        const tickerKey = `${source}:${normSym}`;
         const lastPosRef = { time: null as number | null, sourceId: null as string | null };
 
         const handleCrosshair = (e: CustomEvent) => {
             const { time, sourceId } = e.detail || {};
-            const tickerKey = `${source}:${symbol}`;
 
             // ⚡ FIX: Set flag SYNCHRONOUSLY before RAF to prevent ticker overwrite
             if (sourceId === chartId && time) {
@@ -175,7 +176,7 @@ export function useSubchartLegendDOMUpdater(
                     updateLegend(
                         freshCandles.length - 1,
                         true,
-                        useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[symbol!]?.price,
+                        useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                         freshCandles,
                         calculateIndicators(freshCandles, indicators)
                     );
@@ -188,7 +189,7 @@ export function useSubchartLegendDOMUpdater(
                 updateLegend(
                     activeIndex,
                     isLastCandle,
-                    isLastCandle ? (useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[symbol!]?.price) : undefined,
+                    isLastCandle ? (useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price) : undefined,
                     freshCandles,
                     calculateIndicators(freshCandles, indicators)
                 );
@@ -196,13 +197,12 @@ export function useSubchartLegendDOMUpdater(
         };
 
         // Initial render
-        const tickerKey = `${source}:${symbol}`;
         const initialFresh = getFreshCandles();
         const initialIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
         updateLegend(
             initialFresh.length - 1,
             true,
-            useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[symbol!]?.price,
+            useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
             initialFresh,
             calculateIndicators(initialFresh, initialIndicators)
         );
@@ -210,7 +210,7 @@ export function useSubchartLegendDOMUpdater(
         window.addEventListener('chart-crosshair', handleCrosshair as EventListener);
 
         const unsubTicker = useMarketStore.subscribe(
-            state => state.tickers[tickerKey]?.price || state.tickers[symbol!]?.price,
+            state => state.tickers[tickerKey]?.price || state.tickers[normSym]?.price,
             (price) => {
                 if (isCrosshairActiveRef.current) return;
                 if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
@@ -238,11 +238,10 @@ export function useSubchartLegendDOMUpdater(
                 indicatorCacheRef.current = calculateIndicators(fresh, newIndicators || []);
                 indicatorRefsRef.current = getIndicatorRefs(container, indicatorCacheRef.current);
 
-                const tickerKey = `${source}:${symbol}`;
                 updateLegend(
                     fresh.length - 1,
                     true,
-                    useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[symbol!]?.price,
+                    useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                     fresh,
                     indicatorCacheRef.current
                 );
@@ -257,4 +256,5 @@ export function useSubchartLegendDOMUpdater(
             if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
         };
     }, [chartId, symbol, interval, source, containerRef]);
+
 }

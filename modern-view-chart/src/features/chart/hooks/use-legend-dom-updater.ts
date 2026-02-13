@@ -104,6 +104,9 @@ export function useLegendDOMUpdater(
         ohlcRefsRef.current = getOHLCRefs(containerRef.current);
         indicatorRefsRef.current = getIndicatorRefs(containerRef.current, indicatorCacheRef.current);
 
+        const normSym = normalizeSymbol(symbol);
+        const tickerKey = `${source}:${normSym}`;
+
         const handleCrosshair = (e: CustomEvent) => {
             const { time, sourceId } = e.detail || {};
 
@@ -126,12 +129,12 @@ export function useLegendDOMUpdater(
                             isCrosshairActiveRef.current = false;
                             resetTimeoutRef.current = null;
                             const freshNow = getFreshCandles(symbol, interval, source, chartType);
-                            const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
+                            const currentIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
                             updateLegendDirect(
                                 freshNow.raw.length - 1, true,
-                                useMarketStore.getState().tickers[symbol]?.price,
+                                useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                                 freshNow.raw, freshNow.display,
-                                calculateIndicators(freshNow.raw, indicators),
+                                calculateIndicators(freshNow.raw, currentIndicators),
                                 ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
                                 chartType, chartId, indicatorRefsRef.current
                             );
@@ -142,14 +145,14 @@ export function useLegendDOMUpdater(
 
                 const activeIndex = findCandleIndex(time, fresh.raw);
                 const isLastCandle = activeIndex === fresh.raw.length - 1;
-                const indicators = calculateIndicators(
+                const currentIndicators = calculateIndicators(
                     fresh.raw,
                     useMarketStore.getState().chartIndicators[chartId] || []
                 );
                 updateLegendDirect(
                     activeIndex, isLastCandle,
-                    isLastCandle ? useMarketStore.getState().tickers[symbol]?.price : undefined,
-                    fresh.raw, fresh.display, indicators,
+                    isLastCandle ? (useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price) : undefined,
+                    fresh.raw, fresh.display, currentIndicators,
                     ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
                     chartType, chartId, indicatorRefsRef.current
                 );
@@ -159,14 +162,14 @@ export function useLegendDOMUpdater(
         // Initial render
         const initialFresh = getFreshCandles(symbol, interval, source, chartType);
         if (initialFresh.raw.length > 0) {
-            const indicators = calculateIndicators(
+            const currentIndicators = calculateIndicators(
                 initialFresh.raw,
                 useMarketStore.getState().chartIndicators[chartId] || []
             );
             updateLegendDirect(
                 initialFresh.raw.length - 1, true,
-                useMarketStore.getState().tickers[symbol]?.price,
-                initialFresh.raw, initialFresh.display, indicators,
+                useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
+                initialFresh.raw, initialFresh.display, currentIndicators,
                 ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
                 chartType, chartId, indicatorRefsRef.current
             );
@@ -176,20 +179,20 @@ export function useLegendDOMUpdater(
 
         // Ticker subscription — only updates when NOT hovering
         const unsubTicker = useMarketStore.subscribe(
-            state => state.tickers[symbol]?.price,
+            state => state.tickers[tickerKey]?.price || state.tickers[normSym]?.price,
             (price) => {
                 if (isCrosshairActiveRef.current) return;
                 if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
                 tickerRafRef.current = requestAnimationFrame(() => {
                     if (isCrosshairActiveRef.current) return; // Double-check inside RAF
                     const fresh = getFreshCandles(symbol, interval, source, chartType);
-                    const indicators = calculateIndicators(
+                    const currentIndicators = calculateIndicators(
                         fresh.raw,
                         useMarketStore.getState().chartIndicators[chartId] || []
                     );
                     updateLegendDirect(
                         fresh.raw.length - 1, true, price,
-                        fresh.raw, fresh.display, indicators,
+                        fresh.raw, fresh.display, currentIndicators,
                         ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
                         chartType, chartId, indicatorRefsRef.current
                     );
@@ -197,9 +200,30 @@ export function useLegendDOMUpdater(
             }
         );
 
+        // ⚡ FIX: Subscribe to indicator config changes to refresh DOM refs
+        const unsubIndicators = useMarketStore.subscribe(
+            state => state.chartIndicators[chartId],
+            (newIndicators) => {
+                const fresh = getFreshCandles(symbol, interval, source, chartType);
+                indicatorCacheRef.current = calculateIndicators(fresh.raw, newIndicators || []);
+                indicatorRefsRef.current = getIndicatorRefs(containerRef.current!, indicatorCacheRef.current);
+
+                if (!isCrosshairActiveRef.current) {
+                    updateLegendDirect(
+                        fresh.raw.length - 1, true,
+                        useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
+                        fresh.raw, fresh.display, indicatorCacheRef.current,
+                        ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
+                        chartType, chartId, indicatorRefsRef.current
+                    );
+                }
+            }
+        );
+
         return () => {
             window.removeEventListener('chart-crosshair', handleCrosshair as EventListener);
             unsubTicker();
+            unsubIndicators();
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
             if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);

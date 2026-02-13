@@ -97,8 +97,44 @@ export interface StrategySignal {
     risk: StrategyRisk;
     confidence?: number;
     aiAnalysis?: AiResponse;
+    context?: TradeContext;
 }
 
+
+export interface TradeContext {
+    // 1. Environment (The "Weather")
+    session: 'London' | 'NewYork' | 'Tokyo' | 'Sydney' | 'Asian' | 'Close';
+    volatility_atr?: number;
+    spread_at_entry?: number;
+
+    // 2. Multi-Timeframe Context (The "Big Picture")
+    mtf?: {
+        h1_trend?: 'UP' | 'DOWN' | 'SIDEWAYS';
+        h1_rsi?: number;
+        h4_trend?: 'UP' | 'DOWN' | 'SIDEWAYS';
+    };
+
+    // 3. Market Dynamics (The "Fuel")
+    volume_analysis?: {
+        value: number;
+        relative_to_avg: number; // e.g., 1.5x average
+        is_climax?: boolean;
+    };
+
+    // 4. Pre-Trade Snapshot (The "Trigger")
+    // Stores actual values of indicators used in rules at the moment of entry
+    indicators_snapshot: Record<string, any>;
+
+    // 5. In-Trade Metrics (The "Journey")
+    mae?: number; // Max Adverse Excursion (Max drawdown in pips/points)
+    mfe?: number; // Max Favorable Excursion (Max profit in pips/points)
+    duration_candles?: number;
+
+    // 6. Post-Trade Analysis
+    post_exit_price_10c?: number; // Price after 10 candles
+    exit_reason?: 'SL' | 'TP' | 'SIGNAL' | 'MANUAL';
+    post_exit?: Record<string, any>;
+}
 
 export interface VirtualPosition {
     id: string;
@@ -116,4 +152,5 @@ export interface VirtualPosition {
     exitTimestamp?: number;
     exitReason?: string; // e.g. "TP", "SL", "Signal", "Manual"
     pnl?: number;
+    metadata?: TradeContext;
 }

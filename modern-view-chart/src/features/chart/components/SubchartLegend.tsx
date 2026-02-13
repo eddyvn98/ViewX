@@ -32,12 +32,12 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
     // 3. ZERO-RENDER UPDATE HOOK
     useSubchartLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles });
 
-    if (!symbol || !interval || !source || !indicators.length) return null;
+    const isDataMissing = !symbol || !interval || !source || !indicators.length;
 
     return (
         <div
             ref={containerRef}
-            className="absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none"
+            className={`absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none transition-opacity duration-300 ${isDataMissing ? 'opacity-0' : 'opacity-100'}`}
         >
             <div data-indicators className="flex flex-col gap-1">
                 {indicators.map((ind: any) => (

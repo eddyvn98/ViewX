@@ -36,6 +36,8 @@ export function useChartHistory({
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
     const lastChartTypeRef = useRef<string>(chartType);
+    // State machine to manage chart lifecycle
+    const chartStateRef = useRef<'idle' | 'loading' | 'ready'>('idle');
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
@@ -58,6 +60,8 @@ export function useChartHistory({
 
         // 1. Reset & Fetch if Context Changed
         if (isContextChange) {
+            console.log(`[Chart] Context change detected: ${key}`);
+            chartStateRef.current = 'loading'; // Mark as loading
             seriesRef.current.setData([]);
             subSyncRef.current?.setData([]);
             timescaleSyncRef.current?.setData([]);
@@ -65,20 +69,20 @@ export function useChartHistory({
             isInitialMount.current = true;
             lastDataLength.current = 0;
 
-            // Reset scale
-            requestAnimationFrame(() => {
-                chartRef.current?.timeScale().scrollToRealTime();
-                chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-            });
+            // ❌ REMOVED: scrollToRealTime() causes race condition with auto-fit
+            // Auto-fit will handle positioning after data loads
         }
 
-        // 2. Fetch Data if Empty
-        if (currentCandles.length === 0 && isConnected && source !== 'BINANCE') {
+
+        // 2. Fetch Data if Insufficient
+        // ✅ FIX: Changed from === 0 to < 50 to handle case where ticker created 1-2 candles
+        // but we still need to fetch full history (300 candles)
+        const MIN_CANDLES_THRESHOLD = 50;
+        if (currentCandles.length < MIN_CANDLES_THRESHOLD && isConnected && source !== 'BINANCE') {
             const now = Date.now();
             if (now - lastFetchRequestTimeRef.current > 2000) {
                 lastFetchRequestTimeRef.current = now;
-                console.log(`📡 [FETCH] Requesting init candles for ${symbol}`);
+                console.log(`📡 [FETCH] Requesting init candles for ${symbol} (current: ${currentCandles.length})`);
                 sendMessage({
                     topic: "mt5_command", command: "get_candles",
                     symbol, interval, count: 300, target: source
@@ -88,7 +92,8 @@ export function useChartHistory({
                     symbol, target: source
                 });
             }
-            return;
+            // Don't return here - allow chart to display whatever candles we have
+            // while waiting for full history to load
         }
 
         // 3. Update Chart Data
@@ -138,19 +143,25 @@ export function useChartHistory({
             subSyncRef.current?.setData(syncData);
             timescaleSyncRef.current?.setData(syncData);
 
-            // Auto Fit on First Load
-            if (isInitialMount.current && formatted.length > 0) {
+            // ✅ IMPROVED: Auto-fit only when loading state and data is ready
+            // This ensures auto-fit runs AFTER data is fully loaded, not before
+            if (chartStateRef.current === 'loading' && formatted.length > 0) {
+                console.log(`[Chart] Auto-fitting with ${formatted.length} candles`);
                 requestAnimationFrame(() => {
                     try {
                         chartRef.current?.timeScale().setVisibleLogicalRange({
                             from: formatted.length - (window.innerWidth < 768 ? 50 : 100),
                             to: formatted.length + 5
                         });
-                        // FIX: Wrap scale options in try-catch to prevent "incorrect pane index" crash
                         chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                         subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+
+                        // Mark as ready after auto-fit completes
+                        chartStateRef.current = 'ready';
+                        console.log(`[Chart] Auto-fit complete, state: ready`);
                     } catch (e) {
                         console.warn('[Chart] Auto-fit failed:', e);
+                        chartStateRef.current = 'ready'; // Still mark as ready to prevent stuck state
                     }
                 });
                 isInitialMount.current = false;

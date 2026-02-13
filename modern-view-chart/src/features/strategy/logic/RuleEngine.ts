@@ -1,8 +1,10 @@
 import { Candle } from '@/lib/store/types';
 import { Strategy, ConditionGroup, StrategySignal, Condition } from '../types';
 import { ConditionEvaluator as Eval } from './ConditionEvaluator';
+import { ContextCollector } from './ContextCollector';
 
 export interface EngineContext {
+    // ... existing interface
     activePositions: any[];
     currentPrice: number;
     symbol: string;
@@ -96,9 +98,10 @@ export class RuleEngine {
         if (!isEntry) {
             if (Math.random() < 0.1) console.log(`[RuleEngine] Entry conditions FAILED for ${strategy.name}`);
         }
+
         if (isEntry) {
             // FIX: Smart fallback for legacy strategies
-            let type = strategy.side;
+            let type: "BUY" | "SELL" = strategy.side;
 
             if (!type) {
                 const nameLower = strategy.name.toLowerCase();
@@ -109,6 +112,8 @@ export class RuleEngine {
                 console.warn(`[RuleEngine] Strategy ${strategy.name} missing side. Inferred: ${type}`);
             }
 
+            // Capture context for AI-Ready Dashboard
+            const contextData = ContextCollector.captureEntryContext(strategy, candles, symbol);
 
             return {
                 type,
@@ -116,7 +121,8 @@ export class RuleEngine {
                 strategyId: strategy.id,
                 timestamp: Date.now(),
                 price: currentPrice,
-                risk: strategy.risk
+                risk: strategy.risk,
+                context: contextData
             };
         }
 

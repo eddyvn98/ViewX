@@ -77,98 +77,138 @@ export function useChartIndicators(
     const chartInterval = chartInstance?.interval || '1m';
     const tickerKey = symbol ? `${chartSource}:${normSymbol}` : '';
 
+    /* ===== EFFECT 1: RESET ON CONTEXT CHANGE ===== */
     useEffect(() => {
-        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !symbol) return;
+        if (!isReady || !symbol) return;
 
-        // ⚡ RESET ON SYMBOL/INTERVAL CHANGE
+        // ✅ CRITICAL: Reset indicators immediately when context changes
         if (key !== lastKeyRef.current) {
+            console.log(`[Indicators] Context change detected: ${key}`);
             lastKeyRef.current = key;
             lastBarTimeRef.current = 0;
             stableCandlesRef.current = [];
 
-            // ⚡ CRITICAL: Destroy all existing indicator instances and clear them
-            Object.values(instancesRef.current).forEach(instance => {
-                try {
-                    instance.destroy?.();
-                } catch (err) {
-                    console.warn('[Indicators] Cleanup failed during symbol change:', err);
+            // ✅ IMPROVED: Force destroy ALL instances
+            const instanceIds = Object.keys(instancesRef.current);
+            if (instanceIds.length > 0) {
+                console.log(`[Indicators] Destroying ${instanceIds.length} instances...`);
+                instanceIds.forEach(id => {
+                    try {
+                        instancesRef.current[id]?.destroy?.();
+                        console.log(`[Indicators] ✓ Destroyed: ${id}`);
+                    } catch (err) {
+                        console.warn(`[Indicators] ✗ Cleanup failed for ${id}:`, err);
+                    }
+                });
+                instancesRef.current = {};
+                console.log(`[Indicators] Reset complete`);
+            }
+        }
+    }, [key, isReady, symbol]); // ✅ Simplified dependencies
+
+    /* ===== EFFECT 2: UPDATE INDICATORS (WITH DEBOUNCE) ===== */
+    const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    useEffect(() => {
+        // Clear previous timeout for debouncing
+        if (updateTimeoutRef.current) {
+            clearTimeout(updateTimeoutRef.current);
+        }
+
+        // ✅ Early returns for safety
+        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !symbol) {
+            return;
+        }
+
+        // ✅ Wait for candles to be available
+        if (candles.length === 0) {
+            console.log('[Indicators] Waiting for candles...');
+            return;
+        }
+
+        // ✅ Debounce rapid updates by 100ms
+        updateTimeoutRef.current = setTimeout(() => {
+            const lastBar = candles[candles.length - 1];
+            if (!lastBar) return; // Safety check
+
+            const lastTime = (typeof lastBar.time === 'object' ? (lastBar.time as any).timestamp : Number(lastBar.time)) || 0;
+            const isNewBar = lastTime !== lastBarTimeRef.current;
+
+            // Update stable candles cache only on new bar or first load
+            if (isNewBar || stableCandlesRef.current.length === 0) {
+                lastBarTimeRef.current = lastTime;
+                stableCandlesRef.current = formatCandles(candles);
+                console.log(`[Indicators] Updated stable candles: ${stableCandlesRef.current.length} candles`);
+            }
+
+            const currentIds = new Set(indicators.map(i => i.id));
+
+            // 1. Cleanup old OR hidden instances
+            Object.keys(instancesRef.current).forEach(id => {
+                const config = indicators.find(i => i.id === id);
+                if (!currentIds.has(id) || (config && !config.visible)) {
+                    instancesRef.current[id].destroy();
+                    delete instancesRef.current[id];
+                    console.log(`[Indicators] Removed: ${id}`);
                 }
             });
-            instancesRef.current = {};
-        }
 
-        const lastBar = candles[candles.length - 1];
-        if (!lastBar) return; // Safety check
+            // 2. Create/Update visible indicators
+            indicators.forEach(config => {
+                if (!config.visible) return;
 
-        const lastTime = (typeof lastBar.time === 'object' ? (lastBar.time as any).timestamp : Number(lastBar.time)) || 0;
-        const isNewBar = lastTime !== lastBarTimeRef.current;
+                let instance = instancesRef.current[config.id];
 
-        // Update stable candles cache only on new bar or first load
-        if (isNewBar || stableCandlesRef.current.length === 0) {
-            lastBarTimeRef.current = lastTime;
-            stableCandlesRef.current = formatCandles(candles);
-        }
+                // Create instance if missing
+                if (!instance) {
+                    const isSubchart = config.pane === 'subchart';
+                    const targetChart = isSubchart ? subchartChartRef.current! : priceChartRef.current!;
 
-        const currentIds = new Set(indicators.map(i => i.id));
-
-        // 1. Cleanup old OR hidden instances
-        Object.keys(instancesRef.current).forEach(id => {
-            const config = indicators.find(i => i.id === id);
-            if (!currentIds.has(id) || (config && !config.visible)) {
-                instancesRef.current[id].destroy();
-                delete instancesRef.current[id];
-            }
-        });
-
-        // 2. Create/Update visible indicators
-        indicators.forEach(config => {
-            if (!config.visible) return;
-
-            let instance = instancesRef.current[config.id];
-
-            // Create instance if missing
-            if (!instance) {
-                const isSubchart = config.pane === 'subchart';
-                const targetChart = isSubchart ? subchartChartRef.current! : priceChartRef.current!;
-
-                switch (config.type) {
-                    case 'EMA': instance = new EMAIndicator(targetChart, config); break;
-                    case 'HMA': instance = new HMAIndicator(targetChart, config); break;
-                    case 'RSI': instance = new RSIIndicator(targetChart, config); break;
-                    case 'MACD': instance = new MACDIndicator(targetChart, config); break;
-                    case 'Signals': instance = new SignalIndicator(seriesRef.current, config); break;
+                    switch (config.type) {
+                        case 'EMA': instance = new EMAIndicator(targetChart, config); break;
+                        case 'HMA': instance = new HMAIndicator(targetChart, config); break;
+                        case 'RSI': instance = new RSIIndicator(targetChart, config); break;
+                        case 'MACD': instance = new MACDIndicator(targetChart, config); break;
+                        case 'Signals': instance = new SignalIndicator(seriesRef.current, config); break;
+                    }
+                    if (instance) {
+                        instancesRef.current[config.id] = instance;
+                        instance._lastConfigJson = JSON.stringify(config);
+                        instance.update(stableCandlesRef.current, config);
+                        console.log(`[Indicators] Created: ${config.type} (${config.id})`);
+                    }
                 }
+
                 if (instance) {
-                    instancesRef.current[config.id] = instance;
-                    instance._lastConfigJson = JSON.stringify(config);
-                    instance.update(stableCandlesRef.current, config);
+                    const configJson = JSON.stringify(config);
+                    const configChanged = instance._lastConfigJson !== configJson;
+
+                    // ⚡ Force update if it's a new bar, config changed, or stableCandles just reset
+                    if (isNewBar || configChanged || stableCandlesRef.current.length === candles.length) {
+                        instance.update(stableCandlesRef.current, config);
+                        instance._lastConfigJson = configJson;
+                    }
                 }
+            });
+
+            // Sync timescale if subchart exists
+            if (indicators.some(i => i.pane === 'subchart' && i.visible)) {
+                requestAnimationFrame(() => syncRange());
             }
+        }, 100); // ✅ 100ms debounce
 
-            if (instance) {
-                const configJson = JSON.stringify(config);
-                const configChanged = instance._lastConfigJson !== configJson;
-
-                // ⚡ Force update if it's a new bar, config changed, or stableCandles just reset
-                if (isNewBar || configChanged || stableCandlesRef.current.length === candles.length) {
-                    instance.update(stableCandlesRef.current, config);
-                    instance._lastConfigJson = configJson;
-                }
+        return () => {
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
             }
-        });
-
-        // Sync timescale if subchart exists
-        if (indicators.some(i => i.pane === 'subchart' && i.visible)) {
-            requestAnimationFrame(() => syncRange());
-        }
+        };
     }, [
         isReady,
-        chartId,
-        indicators,
-        candles.length,
+        candles.length,      // ✅ Track length for updates
+        key,                 // ✅ Track context changes
+        indicators.length,   // ✅ Track count, not reference
         symbol,
         interval,
-        key,
         priceChartRef,
         subchartChartRef,
         seriesRef,
