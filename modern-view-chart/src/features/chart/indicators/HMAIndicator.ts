@@ -10,7 +10,7 @@ export class HMAIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig) {
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
         if (!this.series) {
@@ -35,8 +35,7 @@ export class HMAIndicator {
             });
         }
 
-        const closePrices = candles.map(c => c.close);
-        const hmaValues = calculateHullMA(closePrices, this.config.params.period);
+        const hmaValues = calculatedValues || calculateHullMA(candles.map(c => c.close), this.config.params.period);
 
         const data = candles
             .map((c, i) => {

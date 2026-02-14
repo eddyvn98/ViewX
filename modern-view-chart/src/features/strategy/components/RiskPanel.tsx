@@ -36,36 +36,36 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
 
     return (
         <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest">Risk Management</span>
-                <div className="h-[1px] bg-blue-500/20 w-full" />
+            <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Risk Control</span>
+                <div className="h-[1px] bg-blue-500/10 w-full" />
             </div>
 
-            <div className="flex flex-col gap-1.5 pl-1 bg-black/5 p-2 rounded border border-[#363a45]/10">
+            <div className="flex flex-col gap-1.5 pl-1 bg-black/10 p-1.5 rounded border border-white/5">
                 {/* LOT SIZE - ROW */}
-                <div className="flex items-center gap-4 h-7">
-                    <span className="text-[10px] font-bold text-[#b4b7c1] uppercase tracking-tighter w-[84px] shrink-0">Volume (Lot)</span>
+                <div className="flex items-center gap-3 h-6">
+                    <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter w-16 shrink-0">Volume (Lot)</span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         <select
                             value={lotConfig.mode}
                             onChange={(e) => handleLotModeChange(e.target.value as LotMode)}
-                            className="bg-[#1e222d] text-[10px] font-black px-1.5 h-6 rounded border border-[#4a4f5d] outline-none text-[#d1d4dc] appearance-none cursor-pointer min-w-[64px] text-center hover:border-blue-500/50 transition-colors"
+                            className="bg-[#1e222d] text-[8px] font-black px-1 h-5 rounded border border-zinc-800 outline-none text-zinc-400 appearance-none cursor-pointer min-w-[56px] text-center hover:border-blue-500/40 transition-colors"
                         >
                             <option value="fixed">Fixed</option>
-                            <option value="percentage">Account %</option>
-                            <option value="amount">Fixed $</option>
+                            <option value="percentage">% Acc</option>
+                            <option value="amount">$ Fixed</option>
                         </select>
 
-                        <div className="flex items-center gap-1.5 bg-[#131722]/40 rounded px-1 border border-transparent min-h-[24px]">
+                        <div className="flex items-center gap-1 bg-[#131722]/60 rounded px-1 border border-white/5 min-h-[20px]">
                             <input
                                 type="number"
                                 step={lotConfig.mode === 'fixed' ? "0.01" : "0.1"}
                                 value={lotConfig.value}
                                 onChange={(e) => onChangeRisk({ ...risk, lotSize: { ...lotConfig, value: parseFloat(e.target.value) } })}
-                                className="bg-transparent border-none h-6 px-1 text-xs font-mono font-black text-white outline-none w-14 text-right"
+                                className="bg-transparent border-none h-5 px-1 text-[11px] font-mono font-black text-zinc-100 outline-none w-12 text-right"
                             />
-                            <span className="text-[8px] text-[#4a4f5d] font-bold uppercase">
+                            <span className="text-[7px] text-zinc-600 font-black uppercase">
                                 {lotConfig.mode === 'fixed' ? 'Lot' : (lotConfig.mode === 'percentage' ? '%' : '$')}
                             </span>
                         </div>
@@ -131,42 +131,27 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
 
                 <div className="h-[1px] bg-[#363a45]/10 w-full" />
 
-                {/* TRAILING - COMPACT ROW */}
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between h-7">
-                        <span className="text-[10px] font-bold text-[#b4b7c1] uppercase tracking-tighter flex items-center gap-1.5">
-                            <Zap size={10} className={risk.trailing ? 'text-blue-500/80' : 'text-[#2a2e39]'} /> Trailing Stop
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between h-6">
+                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-1">
+                            <Zap size={9} className={risk.trailing ? 'text-blue-500/80' : 'text-zinc-800'} /> Trailing Protect
                         </span>
                         <button
                             onClick={() => {
                                 const newTrailing = !risk.trailing;
                                 const update: Partial<StrategyRisk> = { trailing: newTrailing };
-
-                                // Auto-enable SL if Trailing is enabled
-                                if (newTrailing && !risk.sl) {
-                                    update.sl = { mode: 'fixed', value: 200 };
-                                }
-
-                                // If enabling, ensure we have a default source if missing
-                                if (newTrailing && !risk.trailingSource) {
-                                    const potentialSource = risk.slSource as any;
-                                    if (potentialSource === 'HA_Low' || potentialSource === 'HA_High') {
-                                        update.trailingSource = potentialSource;
-                                    } else {
-                                        update.trailingSource = 'HA_Low';
-                                    }
-                                }
-
+                                if (newTrailing && !risk.sl) update.sl = { mode: 'fixed', value: 200 };
+                                if (newTrailing && !risk.trailingSource) update.trailingSource = 'HA_Low';
                                 onChangeRisk({ ...risk, ...update });
                             }}
-                            className={`w-8 h-4 rounded-full relative transition-all duration-300 ${risk.trailing ? 'bg-blue-600/60' : 'bg-[#131722]'}`}
+                            className={`w-7 h-3.5 rounded-full relative transition-all duration-300 ${risk.trailing ? 'bg-blue-600/60' : 'bg-[#131722]'}`}
                         >
-                            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300 ${risk.trailing ? 'left-4.5' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all duration-300 ${risk.trailing ? 'left-4' : 'left-0.5'}`} />
                         </button>
                     </div>
                     {risk.trailing && (
-                        <span className="text-[8px] text-blue-500/60 font-medium italic pl-7 -mt-1 mb-1">
-                            Trailing transforms your SL into a dynamic protector.
+                        <span className="text-[7px] text-blue-500/60 font-black italic pl-4 -mt-1 mb-1">
+                            ACTIVE PROTECTION ENABLED
                         </span>
                     )}
                 </div>

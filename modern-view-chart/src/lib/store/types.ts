@@ -5,6 +5,7 @@ export interface Ticker {
     changeValue: number;
     volume: number;
     source?: 'BINANCE' | 'MT5';
+    serverTime?: number; // Server-side timestamp in milliseconds
 }
 
 export interface Candle {
@@ -113,7 +114,7 @@ export type RightSidebarTab = 'market' | 'indicators' | 'strategy' | 'trade';
 
 export interface IndicatorConfig {
     id: string;
-    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SMA' | 'WMA' | 'MACD';
+    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SIGNALS' | 'SMA' | 'WMA' | 'MACD';
     params: Record<string, any>;
     color: string;
     visible: boolean;

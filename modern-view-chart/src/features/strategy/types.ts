@@ -18,7 +18,7 @@ export interface MACDResult {
     histogram: number[];
 }
 
-export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR";
+export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR" | "SIGNALS" | "Signals";
 
 export interface Indicator {
     type: IndicatorType;
@@ -82,6 +82,7 @@ export interface Strategy {
     cancelConditions?: ConditionGroup; // For pending orders
     risk: StrategyRisk;
     active: boolean;
+    aiGuard?: boolean; // AI Monitoring for live signals
     symbol?: string;
     timeframe?: string;
     positionMode: PositionMode;
@@ -96,15 +97,58 @@ export interface Strategy {
 
 export interface SignalStats {
     overallWinrate: number;
+    buyWinrate: number;
+    sellWinrate: number;
+    recentWinrate: number; // Last 10 trades
+    avgMae: number;
+    avgMfe: number;
     winrateByVolatility: Record<string, number>;
     winrateBySession: Record<string, number>;
+    trendWinrate: number;
+    rangeWinrate: number;
+    recentPerformance: {
+        wins: number;
+        losses: number;
+        total: number;
+    };
     sampleSize: number;
+}
+
+export interface LogicMemory {
+    sessionBias: Record<string, number>; // Adjust confidence by session performance
+    maeThresholds: Record<string, number>; // Critical MAE levels learned
+    efficiencyTarget: number;
+}
+
+export interface PerformanceMetrics {
+    totalTrades: number;
+    winningTrades: number;
+    losingTrades: number;
+    winRate: number;
+    totalProfit: number;
+    totalLoss: number;
+    netProfit: number;
+    profitFactor: number;
+    avgWin: number;
+    avgLoss: number;
+    avgMae: number;
+    avgMfe: number;
+    avgConfidence: number;
+    sessionStats: Record<string, { winRate: number; totalTrades: number }>;
+    memory: LogicMemory;
+    maxDrawdown: number;
+    equityCurve: { time: number; value: number }[];
 }
 
 export interface AiResponse {
     confidence: number;
     riskLevel: 'low' | 'medium' | 'high';
     reasoning: string[];
+    suggestedFix?: {
+        field: string;
+        value: any;
+        reason: string;
+    };
 }
 
 export interface StrategySignal {
@@ -172,5 +216,6 @@ export interface VirtualPosition {
     exitReason?: string; // e.g. "TP", "SL", "Signal", "Manual"
     pnl?: number;
     metadata?: TradeContext;
+    confidence?: number; // AI Confidence Score (0-100)
     isHistorical?: boolean; // Tag for backtest results
 }

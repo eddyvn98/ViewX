@@ -18,6 +18,8 @@ export interface UISlice {
     isScrollingPanel: boolean;
     notifications: Notification[];
     focusedTicket: number | null;
+    sidebarTopHeight: number; // Percentage 0-100
+    rightSidebarTabOrder: string[];
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
@@ -30,17 +32,21 @@ export interface UISlice {
     addNotification: (message: string, type?: Notification['type'], alertId?: string) => void;
     removeNotification: (id: string) => void;
     setFocusedTicket: (ticket: number | null) => void;
+    setSidebarTopHeight: (height: number) => void;
+    setRightSidebarTabOrder: (order: string[]) => void;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
     isLeftSidebarOpen: false,
     isRightSidebarOpen: true,
-    activeRightSidebarTab: 'market',
+    activeRightSidebarTab: 'strategy', // Change default to strategy as requested in previous contexts or just more useful
     activeMobileTab: 'chart',
     isInputFocused: false,
     isScrollingPanel: false,
     notifications: [],
     focusedTicket: null,
+    sidebarTopHeight: 40,
+    rightSidebarTabOrder: ['strategy', 'indicators', 'trade'],
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -57,4 +63,6 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
         notifications: state.notifications.filter((n) => n.id !== id)
     })),
     setFocusedTicket: (ticket) => set({ focusedTicket: ticket }),
+    setSidebarTopHeight: (height) => set({ sidebarTopHeight: height }),
+    setRightSidebarTabOrder: (order) => set({ rightSidebarTabOrder: order }),
 });

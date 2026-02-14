@@ -11,7 +11,8 @@ export function useChartScaleReset(
     timescaleChartRef: React.RefObject<IChartApi | null>,
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
     subchartContainerRef: React.RefObject<HTMLDivElement | null>,
-    timescaleContainerRef: React.RefObject<HTMLDivElement | null>
+    timescaleContainerRef: React.RefObject<HTMLDivElement | null>,
+    isAutoScrollEnabledRef?: React.RefObject<boolean>
 ) {
     useEffect(() => {
         const priceContainer = priceContainerRef.current;
@@ -36,6 +37,9 @@ export function useChartScaleReset(
             if (x > width - 100) {
                 e.stopPropagation();
                 chart.priceScale('right').applyOptions({ autoScale: true });
+            } else {
+                // If double click NOT on the price scale, reset the time scale (TradingView behavior)
+                handleTimeScaleDblClick(e);
             }
         };
 
@@ -50,6 +54,9 @@ export function useChartScaleReset(
                 // the extra future points that the footer chart has.
                 chart.timeScale().fitContent();
                 chart.timeScale().scrollToRealTime();
+                if (isAutoScrollEnabledRef) {
+                    isAutoScrollEnabledRef.current = true;
+                }
             }
         };
 

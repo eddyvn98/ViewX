@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi, createSeriesMarkers, ISeriesMarkersPluginApi, Time, SeriesMarker } from 'lightweight-charts';
 import { useStrategyStore } from '../store/strategy-store';
+import { normalizeTF } from '../utils/time-utils';
 
 interface StrategyMarkersProps {
     chart: IChartApi;
@@ -15,12 +16,6 @@ export const StrategyMarkers = ({ chart, mainSeries, symbol, interval }: Strateg
     const strategies = useStrategyStore(state => state.strategies);
 
     console.log(`[StrategyMarkers] Render - Symbol: ${symbol} | Interval: ${interval} | Positions: ${virtualPositions.length}`);
-
-    // Normalize timeframe strings for comparison (e.g., '1m' vs '1')
-    const normalizeTF = (tf: string | undefined) => {
-        if (!tf) return '';
-        return tf.toLowerCase().replace('m', '');
-    };
 
     const currentInterval = normalizeTF(interval);
 

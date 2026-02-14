@@ -38,86 +38,86 @@ export function IndicatorManager() {
                 />
             )}
 
-            <div className="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/20">
-                <h3 className="text-xs font-bold uppercase text-zinc-400">Layer Manager</h3>
+            <div className="p-1.5 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/20 shrink-0">
+                <h3 className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Layer Manager</h3>
                 <button
                     onClick={() => setIsSelectorOpen(true)}
                     className="text-blue-500 hover:text-blue-400 p-1 hover:bg-blue-500/10 rounded-md transition-all active:scale-90"
                     title="Thêm chỉ báo"
                 >
-                    <Plus size={18} />
+                    <Plus size={14} />
                 </button>
             </div>
 
             {/* Scrollable Content Area */}
-            <div className="flex-1 relative min-h-0">
-                <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1">
+            <div className="flex-1 relative min-h-0 bg-transparent">
+                <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-0.5">
                     {indicators.length === 0 && (
-                        <div className="text-center py-8 text-zinc-600 text-xs italic">
+                        <div className="text-center py-6 text-zinc-700 text-[10px] italic">
                             No indicators added
                         </div>
                     )}
 
                     {indicators.map(indicator => (
-                        <div key={indicator.id} className="flex flex-col gap-1">
+                        <div key={indicator.id} className="flex flex-col gap-0.5">
                             <div className={cn(
-                                "flex items-center gap-2 p-2 rounded-md group transition-colors",
-                                editingId === indicator.id ? "bg-zinc-900" : "hover:bg-zinc-900/50"
+                                "flex items-center gap-2 px-2 py-1 rounded-md group transition-colors min-h-[32px]",
+                                editingId === indicator.id ? "bg-zinc-900/80" : "hover:bg-zinc-900/40"
                             )}>
                                 <button
                                     onClick={() => toggleVisibility(chartId, indicator.id)}
-                                    className={cn("transition-colors", indicator.visible ? "text-blue-500" : "text-zinc-700")}
+                                    className={cn("transition-colors flex-shrink-0", indicator.visible ? "text-blue-500" : "text-zinc-700")}
                                 >
-                                    {indicator.visible ? <Eye size={16} /> : <EyeOff size={16} />}
+                                    {indicator.visible ? <Eye size={12} /> : <EyeOff size={12} />}
                                 </button>
 
                                 <div className="flex-1 flex items-center gap-2 overflow-hidden">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: indicator.color }} />
-                                    <span className="text-sm truncate text-zinc-300 font-medium">
-                                        {indicator.type} ({indicator.params.period || indicator.params.upperLimit})
+                                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: indicator.color }} />
+                                    <span className="text-[11px] truncate text-zinc-300 font-bold tracking-tight">
+                                        {indicator.type} ({indicator.params.period || indicator.params.upperLimit || ''})
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                                     <button
                                         onClick={() => setEditingId(editingId === indicator.id ? null : indicator.id)}
                                         className="p-1 text-zinc-500 hover:text-blue-400"
                                     >
-                                        <Settings size={14} />
+                                        <Settings size={11} />
                                     </button>
                                     <button
                                         onClick={() => removeIndicator(chartId, indicator.id)}
                                         className="p-1 text-zinc-500 hover:text-red-400"
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={11} />
                                     </button>
                                 </div>
                             </div>
 
                             {/* Inline Settings */}
                             {editingId === indicator.id && (
-                                <div className="ml-8 p-3 bg-zinc-900 rounded-md flex flex-col gap-3 my-1 border border-zinc-800">
+                                <div className="ml-6 p-2 bg-zinc-900/50 rounded-md flex flex-col gap-2 my-0.5 border border-zinc-800/50">
                                     {Object.keys(indicator.params).map(key => (
                                         <div key={key} className="flex flex-col gap-1">
-                                            <label className="text-[10px] uppercase text-zinc-500 font-bold">{key}</label>
+                                            <label className="text-[8px] uppercase text-zinc-600 font-black tracking-tighter">{key}</label>
                                             <input
                                                 type="number"
                                                 value={indicator.params[key]}
                                                 onChange={(e) => updateIndicator(chartId, indicator.id, {
                                                     params: { ...indicator.params, [key]: Number(e.target.value) }
                                                 })}
-                                                className="bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:border-blue-500 outline-none"
+                                                className="bg-zinc-950/50 border border-zinc-800/50 rounded px-1.5 py-0.5 text-[10px] text-white focus:border-blue-500/50 outline-none h-6 h-5"
                                             />
                                         </div>
                                     ))}
                                     <div className="flex flex-col gap-1">
-                                        <label className="text-[10px] uppercase text-zinc-500 font-bold">Color</label>
+                                        <label className="text-[8px] uppercase text-zinc-600 font-black tracking-tighter">Color</label>
                                         <div className="flex gap-2 items-center">
                                             <input
                                                 type="color"
                                                 value={indicator.color}
                                                 onChange={(e) => updateIndicator(chartId, indicator.id, { color: e.target.value })}
-                                                className="w-full h-6 bg-transparent border-none cursor-pointer"
+                                                className="w-full h-4 bg-transparent border-none cursor-pointer p-0"
                                             />
                                         </div>
                                     </div>
@@ -128,10 +128,10 @@ export function IndicatorManager() {
                 </div>
             </div>
 
-            <div className="p-3 border-t border-zinc-800 bg-zinc-900/30">
-                <div className="flex items-center gap-2 text-zinc-500">
-                    <Layout size={14} />
-                    <span className="text-[10px] font-bold uppercase">Main Chart Area</span>
+            <div className="p-1.5 px-3 border-t border-zinc-800 bg-zinc-900/30 flex-shrink-0">
+                <div className="flex items-center gap-2 text-zinc-600">
+                    <Layout size={11} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Main Chart Area</span>
                 </div>
             </div>
         </div>

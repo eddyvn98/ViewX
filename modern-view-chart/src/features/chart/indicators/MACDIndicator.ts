@@ -12,7 +12,7 @@ export class MACDIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig) {
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: any) {
         this.config = config;
 
         // Initialize Series if not exists
@@ -51,10 +51,8 @@ export class MACDIndicator {
         }
 
         // Calculate Data
-        const closePrices = candles.map(c => c.close);
         const { fast = 12, slow = 26, signal = 9 } = this.config.params;
-
-        const { macd, signal: sig, histogram } = calculateMACD(closePrices, fast, slow, signal);
+        const { macd, signal: sig, histogram } = calculatedValues || calculateMACD(candles.map(c => c.close), fast, slow, signal);
 
         // Format Data
         const macdData = [];

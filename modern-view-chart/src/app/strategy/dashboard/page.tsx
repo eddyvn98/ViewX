@@ -6,12 +6,15 @@ import { PerformanceAnalyzer } from '@/features/strategy/logic/PerformanceAnalyz
 import { DashboardStats } from '@/features/strategy/components/dashboard/DashboardStats';
 import { TradeHistory } from '@/features/strategy/components/dashboard/TradeHistory';
 import { EquityChart } from '@/features/strategy/components/dashboard/EquityChart';
-import { LayoutDashboard, LogOut, RefreshCcw, Trash2 } from 'lucide-react';
+import { StrategyAIPanel } from '@/features/strategy/components/dashboard/StrategyAIPanel';
+import { LayoutDashboard, LogOut, RefreshCcw, Trash2, Shield, Volume2, VolumeX } from 'lucide-react';
+import { soundService } from '@/features/strategy/logic/SoundService';
 import Link from 'next/link';
 
 export default function StrategyDashboardPage() {
     const { virtualPositions, initialVirtualBalance, resetVirtualAccount } = useStrategyStore();
     const [isConfirming, setIsConfirming] = React.useState(false);
+    const [isSoundActive, setIsSoundActive] = React.useState(false);
 
     const metrics = useMemo(() => {
         return PerformanceAnalyzer.analyze(virtualPositions, initialVirtualBalance);
@@ -29,6 +32,12 @@ export default function StrategyDashboardPage() {
             setIsConfirming(true);
             setTimeout(() => setIsConfirming(false), 3000);
         }
+    };
+
+    const handleEnableSound = async () => {
+        await soundService.resume();
+        setIsSoundActive(true);
+        soundService.playAlert();
     };
 
     // Auto-refresh when localStorage changes (e.g. from Reset All in another tab)
@@ -54,14 +63,32 @@ export default function StrategyDashboardPage() {
                         </div>
                         <div className="flex flex-col">
                             <h1 className="text-2xl font-black text-white tracking-tight uppercase">Strategy Performance</h1>
-                            <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-widest">Real-time Analysis</span>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-widest">Real-time Analysis</span>
+                                </div>
+                                {virtualPositions.length > 0 && (
+                                    <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-md">
+                                        <Shield size={10} className="text-blue-400" />
+                                        <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Background Priority Active</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleEnableSound}
+                            className={`flex items-center gap-2 px-4 h-10 rounded-xl font-bold transition-all border ${isSoundActive
+                                ? 'bg-green-500/10 border-green-500/30 text-green-500'
+                                : 'bg-orange-500/10 border-orange-500/30 text-orange-500 animate-pulse'
+                                } text-xs`}
+                        >
+                            {isSoundActive ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                            {isSoundActive ? 'SOUND ON' : 'ACTIVATE SOUND'}
+                        </button>
                         <button
                             onClick={handleMasterReset}
                             className={`flex items-center gap-2 px-4 h-10 rounded-xl font-bold transition-all border ${isConfirming
@@ -90,7 +117,8 @@ export default function StrategyDashboardPage() {
                 </header>
 
                 {/* KPI SECTION */}
-                <section>
+                <section className="flex flex-col gap-6">
+                    <StrategyAIPanel metrics={metrics} />
                     <DashboardStats metrics={metrics} />
                 </section>
 

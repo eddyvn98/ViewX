@@ -14,7 +14,8 @@ export function useChartData(
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
-    isReady: boolean
+    isReady: boolean,
+    isAutoScrollEnabledRef: React.RefObject<boolean>
 ) {
     // Shared reference to the trusted "Current Candle" (from Store/History)
     const lastCandleRef = useRef<any>(null);
@@ -40,7 +41,8 @@ export function useChartData(
     // Manages high-frequency visual price updates (Tick-by-Tick)
     // Only updates the EXISTING candle visually to prevent timezone/offset bugs
     const realTimeCandleRef = useChartTicker({
-        symbol, interval, source, seriesRef, chartType, lastCandleRef
+        symbol, interval, source, seriesRef, chartType, lastCandleRef,
+        isAutoScrollEnabledRef, chartRef
     });
 
     return { realTimeCandleRef };

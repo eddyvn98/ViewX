@@ -11,10 +11,12 @@ interface UseChartTickerProps {
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>;
     chartType: 'candles' | 'heikin_ashi';
     lastCandleRef: React.MutableRefObject<any>;
+    isAutoScrollEnabledRef?: React.RefObject<boolean>;
+    chartRef?: React.RefObject<import('lightweight-charts').IChartApi | null>;
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, lastCandleRef
+    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<any>(null);
@@ -66,7 +68,7 @@ export function useChartTicker({
             });
         };
 
-        const handleTick = (price: number) => {
+        const handleTick = (price: number, serverTimeMs?: number) => {
             if (!price) return;
 
             // 1. Get Base Candle (with store priority)
@@ -99,7 +101,8 @@ export function useChartTicker({
             const nextBarTime = lastCandleTime + intervalSec;
 
             // 3. Client-side New Bar Generation
-            const now = Math.floor(Date.now() / 1000);
+            // ⚡ SYNC FIX: Use server-provided time if available to prevent clock drift
+            const now = serverTimeMs ? Math.floor(serverTimeMs / 1000) : Math.floor(Date.now() / 1000);
 
             if (now >= nextBarTime) {
                 const isHA = chartType === 'heikin_ashi';
@@ -137,6 +140,11 @@ export function useChartTicker({
 
                 // ⚡ Sync phantom candle to store (force = new candle)
                 syncToStore(newCandle, true);
+
+                // Auto-scroll enforcement
+                if (isAutoScrollEnabledRef?.current && chartRef?.current) {
+                    chartRef.current.timeScale().scrollToRealTime();
+                }
                 return;
             }
 
@@ -193,8 +201,11 @@ export function useChartTicker({
         };
 
         const unsub = useMarketStore.subscribe(
-            (state) => state.tickers[tickerKey]?.price || state.tickers[normSymbol]?.price,
-            (price) => requestAnimationFrame(() => handleTick(Number(price)))
+            (state) => state.tickers[tickerKey] || state.tickers[normSymbol],
+            (ticker) => {
+                if (!ticker) return;
+                requestAnimationFrame(() => handleTick(Number(ticker.price), ticker.serverTime));
+            }
         );
 
         return () => unsub();

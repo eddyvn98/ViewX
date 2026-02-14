@@ -11,6 +11,16 @@ export class ContextCollector {
         candles: Candle[],
         symbol: string
     ): TradeContext {
+        if (!candles || candles.length === 0) {
+            console.warn(`[ContextCollector] No candles provided for ${symbol}`);
+            return {
+                session: 'Asian',
+                volatility_atr: 0,
+                spread_at_entry: 0,
+                indicators_snapshot: {},
+                volume_analysis: { value: 0, relative_to_avg: 1 }
+            };
+        }
         const lastCandle = candles[candles.length - 1];
         const date = new Date(lastCandle.time);
         const hour = date.getUTCHours();
@@ -40,10 +50,16 @@ export class ContextCollector {
     }
 
     private static getCurrentSession(hour: number): TradeContext['session'] {
-        if (hour >= 8 && hour < 16) return 'London';
+        // Hour is expected in UTC (0-23)
+        // New York: 13:00 - 21:00 UTC
         if (hour >= 13 && hour < 21) return 'NewYork';
+        // London: 08:00 - 16:00 UTC
+        if (hour >= 8 && hour < 16) return 'London';
+        // Tokyo: 00:00 - 08:00 UTC
         if (hour >= 0 && hour < 8) return 'Tokyo';
-        if (hour >= 22 || hour < 6) return 'Sydney';
+        // Sydney: 21:00 - 05:00 UTC
+        if (hour >= 21 || hour < 5) return 'Sydney';
+
         return 'Asian';
     }
 

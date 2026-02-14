@@ -10,7 +10,7 @@ export class EMAIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig) {
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
         if (!this.series) {
@@ -33,8 +33,7 @@ export class EMAIndicator {
             });
         }
 
-        const closePrices = candles.map(c => c.close);
-        const emaValues = calculateEMA(closePrices, this.config.params.period);
+        const emaValues = calculatedValues || calculateEMA(candles.map(c => c.close), this.config.params.period);
 
         const data = candles
             .map((c, i) => {

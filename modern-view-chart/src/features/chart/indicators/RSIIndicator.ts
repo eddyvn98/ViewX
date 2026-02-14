@@ -12,7 +12,7 @@ export class RSIIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig) {
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
         if (!this.series) {
@@ -70,8 +70,7 @@ export class RSIIndicator {
             });
         }
 
-        const closePrices = candles.map(c => c.close);
-        const rsiValues = calculateRSI(closePrices, this.config.params.period);
+        const rsiValues = calculatedValues || calculateRSI(candles.map(c => c.close), this.config.params.period);
 
         const firstValidIdx = rsiValues.findIndex(v => !isNaN(v));
         const firstValidValue = firstValidIdx !== -1 ? rsiValues[firstValidIdx] : 50;

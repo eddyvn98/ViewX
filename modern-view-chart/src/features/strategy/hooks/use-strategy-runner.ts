@@ -6,7 +6,7 @@ import { RuleEngine, EngineContext } from '../logic/RuleEngine';
 import { AiManager, MarketMetrics } from '../logic/AiManager';
 import { TradeLogger } from '../logic/TradeLogger';
 import { StatsService } from '../logic/StatsService';
-import { AiAnalyzer } from '../logic/AiAnalyzer';
+import { AiAnalyzer, AnalysisType } from '../logic/AiAnalyzer';
 import { toast } from 'sonner';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { Strategy, VirtualPosition } from '../types';
@@ -15,12 +15,9 @@ import { IndicatorCalculator } from '../logic/IndicatorCalculator';
 import { RiskCalculator } from '../logic/RiskCalculator';
 import { ContextCollector } from '../logic/ContextCollector';
 import { getPipMultiplier, getPriceOffset } from '../utils/market-utils';
-import { getTradingSession } from '../utils/time-utils';
-
-const normalizeTF = (tf: string | undefined) => {
-    if (!tf) return '';
-    return tf.toLowerCase().replace('m', '');
-};
+import { getTradingSession, normalizeTF } from '../utils/time-utils';
+import { soundService } from '../logic/SoundService';
+import { backgroundService } from '../logic/BackgroundService';
 
 export function useStrategyRunner() {
     const {
@@ -32,6 +29,7 @@ export function useStrategyRunner() {
         closeVirtualPosition,
         cancelVirtualPosition,
         updateVirtualPosition,
+        updateSignal,
         virtualPositions
     } = useStrategyStore();
     const { sendMessage } = useWebSocket();
@@ -91,10 +89,10 @@ export function useStrategyRunner() {
                     });
                 } else {
                     // DYNAMIC MODE: Priority to active chart or any valid data
-                    dataKey = availableKeys.find(k => normalizeTF(k.split(':').pop()) === intervalNorm && candleData[k].length >= 150);
+                    dataKey = availableKeys.find(k => normalizeTF(k.split(':').pop()) === intervalNorm && candleData[k].length >= 50);
                 }
 
-                if (dataKey && candleData[dataKey] && candleData[dataKey].length >= 150) {
+                if (dataKey && candleData[dataKey] && candleData[dataKey].length >= 50) {
                     const lastRun = backtestRunRef.current[s.id] || 0;
                     if (lastRun === 0) {
                         console.log(`[Warmup] Triggering for ${s.name} on ${dataKey}. Current Pos count: ${virtualPositions.length}`);
@@ -108,8 +106,8 @@ export function useStrategyRunner() {
                     // Only warn if we HAVE data but none matches this strategy
                     if (!dataKey) {
                         console.warn(`[Warmup] No dataKey found for ${s.name}. Symbol: ${s.symbol}, TF: ${interval}. Available:`, availableKeys);
-                    } else if (candleData[dataKey].length < 150) {
-                        if (Math.random() < 0.01) console.log(`[Warmup] Waiting for đủ nến cho ${s.name} (${candleData[dataKey].length}/150)`);
+                    } else if (candleData[dataKey].length < 50) {
+                        if (Math.random() < 0.01) console.log(`[Warmup] Waiting for đủ nến cho ${s.name} (${candleData[dataKey].length}/50)`);
                     }
                 }
             } else {
@@ -126,10 +124,26 @@ export function useStrategyRunner() {
     }, [strategies.length, strategies, candleData, runBacktest]);
 
 
+    // ⚡ BACKGROUND KEEP-ALIVE
     useEffect(() => {
-        // console.log(`[Runner] Effect Triggered: Data=${Object.keys(candleData).length} Tabs=${Object.keys(tabs).length} Strats=${strategies.length}`);
+        const activeCount = strategies.filter(s => s.active).length;
+        if (activeCount > 0) {
+            backgroundService.init();
+            soundService.enableKeepAlive();
+        } else {
+            backgroundService.releaseWakeLock();
+            soundService.disableKeepAlive();
+        }
 
+        return () => {
+            backgroundService.releaseWakeLock();
+            soundService.disableKeepAlive();
+        };
+    }, [strategies]);
+
+    useEffect(() => {
         if (isRunningRef.current) return;
+
 
         const runCycle = async () => {
             isRunningRef.current = true;
@@ -289,6 +303,8 @@ export function useStrategyRunner() {
                                             }
                                             if (exitP) {
                                                 store.closeVirtualPosition(strategy.id, symbol, exitP, { exit_reason: exitR as any });
+                                                if (exitR === 'TP') soundService.playTP();
+                                                else if (exitR === 'SL') soundService.playSL();
                                                 toast.warning(`[${exitR}] ${pos.symbol} Closed @ ${exitP}`);
                                             }
                                         }
@@ -324,9 +340,20 @@ export function useStrategyRunner() {
                             const signal = RuleEngine.run(strategy, candles, engineCtx);
 
                             if (signal) {
-                                const mMetrics = { spread: 2, volatility: 30, trendStrength: 25, rsi: 50, session: "London" };
+                                const realMetrics = ContextCollector.captureEntryContext(strategy, candles, symbol);
+                                const mMetrics = {
+                                    spread: realMetrics.spread_at_entry || 2,
+                                    volatility: realMetrics.volatility_atr || 0,
+                                    trendStrength: realMetrics.mtf?.h1_trend === 'UP' ? 30 : 10,
+                                    rsi: realMetrics.indicators_snapshot['RSI[14]'] || 50,
+                                    session: realMetrics.session
+                                };
+
                                 let final = AiManager.processSignal(signal, mMetrics);
-                                if (!final) continue;
+                                if (!final) {
+                                    console.warn(`[Runner] ${strategy.name} signal rejected by AiManager heuristics.`);
+                                    continue;
+                                }
 
                                 if (final.type === 'CANCEL') {
                                     const pnd = currentVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
@@ -345,10 +372,49 @@ export function useStrategyRunner() {
                                     (async () => {
                                         try {
                                             const stats = await StatsService.compute(strategy.id);
-                                            const ai = await AiAnalyzer.analyzeSignal(strategy.id, final!, mMetrics, stats);
-                                            final = { ...final!, aiAnalysis: ai };
-                                            await TradeLogger.logEntry(final, mMetrics);
-                                        } catch (e) { console.error("[Runner] Sync Task Failed:", e); }
+                                            const metrics = ContextCollector.captureEntryContext(strategy, candles, symbol);
+
+                                            // Map to AiAnalyzer expected format
+                                            const aiMetrics = {
+                                                spread: metrics.spread_at_entry || 0,
+                                                volatility: metrics.volatility_atr || 0,
+                                                trendStrength: metrics.mtf?.h1_trend === 'UP' ? 30 : 10,
+                                                rsi: metrics.indicators_snapshot['RSI[14]'] || 50,
+                                                session: metrics.session
+                                            };
+
+                                            console.log(`[AI Audit] Starting automated audit for ${strategy.name} on ${symbol}...`);
+                                            console.log(`[AI Audit] Metrics:`, aiMetrics);
+                                            toast.info(`AI is auditing ${strategy.name} signal...`, { icon: '🧠' });
+                                            soundService.playAIThinking();
+
+                                            const ai = await AiAnalyzer.analyzeSignal(strategy, final!, aiMetrics, stats, AnalysisType.PRE_TRADE);
+                                            console.log(`[AI Audit] Response received for ${strategy.name}:`, ai);
+                                            console.log(`[AI Audit] Complete: ${ai.confidence}% Confidence | Risk: ${ai.riskLevel}`);
+
+                                            // Update the signal in store once AI responds
+                                            const store = useStrategyStore.getState();
+                                            const latestSignals = store.signals;
+                                            const sigIndex = latestSignals.findIndex(s => s.symbol === symbol && s.timestamp === final!.timestamp);
+                                            if (sigIndex !== -1) {
+                                                const updatedSig = { ...latestSignals[sigIndex], aiAnalysis: ai };
+                                                store.updateSignal(sigIndex, updatedSig);
+                                            }
+
+                                            // Update the position confidence if it's an entry
+                                            if (ai.confidence) {
+                                                const latestPos = store.virtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+                                                if (latestPos) {
+                                                    console.log(`[AI Audit] Updating Active Position ${latestPos.id} with Gemini Confidence: ${ai.confidence}%`);
+                                                    store.updateVirtualPosition(latestPos.id, { confidence: ai.confidence });
+                                                }
+                                            }
+
+                                            await TradeLogger.logEntry({ ...final!, aiAnalysis: ai }, aiMetrics);
+                                        } catch (e) {
+                                            console.error("[Runner] Sync Task Failed:", e);
+                                            toast.error("AI Audit failed for live signal");
+                                        }
                                     })();
 
                                     const side = final.type as 'BUY' | 'SELL';
@@ -362,12 +428,30 @@ export function useStrategyRunner() {
                                     const isMkt = strategy.entryType === 'market';
                                     const entryP = isMkt ? lastCandle.close : (side === 'BUY' ? lastCandle.high + (pip * 3) : lastCandle.low);
 
-                                    store.addVirtualPosition({ id: pId, strategyId: strategy.id, symbol, type: side, entryPrice: entryP, sl, tp, lotSize: lot, timestamp: Date.now(), status: isMkt ? 'open' : 'pending', metadata: final.context });
+                                    store.addVirtualPosition({
+                                        id: pId,
+                                        strategyId: strategy.id,
+                                        symbol,
+                                        type: side,
+                                        entryPrice: entryP,
+                                        sl: Number(sl.toFixed(5)), // Prevent long decimals
+                                        tp: Number(tp.toFixed(5)),
+                                        lotSize: lot,
+                                        timestamp: Date.now(),
+                                        status: isMkt ? 'open' : 'pending',
+                                        metadata: final.context,
+                                        confidence: final.confidence
+                                    });
+
+                                    if (side === 'BUY') soundService.playBuy();
+                                    else soundService.playSell();
+
                                     if (strategy.executionMode === 'real') sendMessage({ topic: 'mt5_command', command: 'order', symbol, is_market: isMkt, type: isMkt ? side.toLowerCase() : (side === 'BUY' ? 'buy_stop' : 'sell_stop'), price: entryP, volume: lot, sl, tp, magic: strategy.magic || 0, comment: strategy.comment || 'Web' });
                                     store.updateLastSignalTime(strategy.id, lastTime);
                                 } else {
                                     // Background Update
-                                    TradeLogger.updateExit(strategy.id, symbol, final.price).catch(e => console.error(e));
+                                    const activePos = currentVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+                                    TradeLogger.updateExit(strategy.id, symbol, final.price, activePos?.metadata).catch(e => console.error(e));
 
                                     const pnd = currentVirtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
                                     if (pnd) store.cancelVirtualPosition(strategy.id, symbol);

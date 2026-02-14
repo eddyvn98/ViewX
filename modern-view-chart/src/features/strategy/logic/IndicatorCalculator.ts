@@ -35,6 +35,11 @@ export class IndicatorCalculator {
             }
             case "ATR":
                 return calculateATR(candles, indicator.params[0] || 14);
+            case "SIGNALS":
+            case "Signals": {
+                // Return RSI14 values for SignalIndicator to use as 'calculatedValues'
+                return calculateRSI(prices, 14);
+            }
             default:
                 return new Array(candles.length).fill(NaN);
         }

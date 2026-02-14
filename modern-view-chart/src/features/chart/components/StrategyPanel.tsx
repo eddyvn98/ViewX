@@ -27,23 +27,23 @@ export function StrategyPanel() {
     return (
         <div className="flex flex-col h-full bg-[#1e222d] text-[#d1d4dc] overflow-hidden font-sans">
             {/* Tabs Header */}
-            <div className="flex items-center border-b border-[#2a2e39] bg-[#131722] h-10 px-1 shrink-0">
+            <div className="flex items-center border-b border-[#2a2e39] bg-[#131722] h-7 px-1 shrink-0">
                 <button
                     onClick={() => setView('signals')}
-                    className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'signals' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
+                    className={`flex items-center gap-1.5 px-2.5 h-full text-[8px] font-black transition-all border-b-2 uppercase tracking-widest ${view === 'signals' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#4a4f5d] border-transparent hover:text-zinc-400'}`}
                 >
-                    <Activity size={12} /> SIGNALS
+                    <Activity size={10} /> SIGNALS
                 </button>
                 <button
                     onClick={() => setView('list')}
-                    className={`flex items-center gap-1.5 px-3 h-full text-[10px] font-bold transition-all border-b-2 ${view === 'list' || view === 'build' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]'}`}
+                    className={`flex items-center gap-1.5 px-2.5 h-full text-[8px] font-black transition-all border-b-2 uppercase tracking-widest ${view === 'list' || view === 'build' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#4a4f5d] border-transparent hover:text-zinc-400'}`}
                 >
-                    <Bot size={12} /> MY BOT
+                    <Bot size={10} /> MY BOT
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col items-center bg-[#131722]/20">
-                <div className="w-full max-w-[800px] flex flex-col gap-5 pb-10">
+            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar flex flex-col items-center bg-[#131722]/20">
+                <div className="w-full max-w-[800px] flex flex-col gap-2 pb-4">
                     {view === 'signals' && <SignalsView />}
 
                     {view === 'list' && (

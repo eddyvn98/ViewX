@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Strategy, StrategySignal, VirtualPosition, TradeContext } from '../types';
 import { BacktestRunner } from '../logic/BacktestRunner';
+import { chartWorkerClient } from '@/workers/worker-client';
 
 interface StrategyState {
     strategies: Strategy[];
@@ -14,7 +15,9 @@ interface StrategyState {
     updateStrategy: (id: string, updates: Partial<Strategy>) => void;
     deleteStrategy: (id: string) => void;
     toggleStrategy: (id: string) => void;
+    toggleAiGuard: (id: string) => void;
     addSignal: (signal: StrategySignal) => void;
+    updateSignal: (index: number, signal: StrategySignal) => void;
     updateLastSignalTime: (strategyId: string, timestamp: number) => void;
     addVirtualPosition: (pos: VirtualPosition) => void;
     cancelVirtualPosition: (strategyId: string, symbol: string) => void;
@@ -27,13 +30,13 @@ interface StrategyState {
     setVirtualBalance: (balance: number) => void;
     resetVirtualBalance: () => void;
     resetVirtualAccount: () => void;
-    runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => void;
+    runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => Promise<void>;
 }
 
 
 export const useStrategyStore = create<StrategyState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             strategies: [
                 {
                     id: 'hull-ha-gold-buy',
@@ -199,9 +202,17 @@ export const useStrategyStore = create<StrategyState>()(
             toggleStrategy: (id) => set((state) => ({
                 strategies: state.strategies.map(s => s.id === id ? { ...s, active: !s.active } : s)
             })),
+            toggleAiGuard: (id) => set((state) => ({
+                strategies: state.strategies.map(s => s.id === id ? { ...s, aiGuard: !s.aiGuard } : s)
+            })),
             addSignal: (signal) => set((state) => ({
                 signals: [signal, ...state.signals.slice(0, 49)]
             })),
+            updateSignal: (index, signal) => set((state) => {
+                const newSignals = [...state.signals];
+                newSignals[index] = signal;
+                return { signals: newSignals };
+            }),
             updateLastSignalTime: (strategyId, timestamp) => set((state) => ({
                 strategies: state.strategies.map(s => s.id === strategyId ? { ...s, lastSignalTime: timestamp } : s)
             })),
@@ -257,35 +268,43 @@ export const useStrategyStore = create<StrategyState>()(
                 signals: [],
                 virtualBalance: state.initialVirtualBalance
             })),
-            runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => set((state) => {
-                const strategy = state.strategies.find(s => s.id === strategyId);
-                if (!strategy) return {};
+            runBacktest: async (strategyId, candles, overrideSymbol) => {
+                const strategy = get().strategies.find(s => s.id === strategyId);
+                if (!strategy) return;
 
-                console.log(`[Store] Starting backtest for ${strategy.name} with ${candles.length} candles...`);
-                const backtestPositions = BacktestRunner.run(strategy, candles, state.initialVirtualBalance, overrideSymbol);
+                console.log(`[Store] Starting Worker Backtest for ${strategy.name} (${candles.length} candles)...`);
 
-                // 1. Keep Live Positions (those that are NOT historical)
-                const livePositions = state.virtualPositions.filter(p => !p.isHistorical);
+                try {
+                    const backtestPositions = await chartWorkerClient.runBacktest(
+                        strategy,
+                        candles,
+                        get().initialVirtualBalance,
+                        overrideSymbol
+                    );
 
-                // 2. Clear old historical positions for THIS strategy and symbol
-                const tradeSymbol = overrideSymbol || strategy.symbol || '';
-                const otherHistorical = state.virtualPositions.filter(p => p.isHistorical && (p.strategyId !== strategyId || p.symbol !== tradeSymbol));
+                    set((state) => {
+                        // 1. Keep Live Positions
+                        const livePositions = state.virtualPositions.filter(p => !p.isHistorical);
 
-                // 3. Merge: Live + Historical from other strats + New Backtest results
-                const mergedPositions = [...livePositions, ...otherHistorical, ...backtestPositions];
+                        // 2. Clear old historical positions for THIS strategy and symbol
+                        const tradeSymbol = overrideSymbol || strategy.symbol || '';
+                        const otherHistorical = state.virtualPositions.filter(p =>
+                            p.isHistorical && (p.strategyId !== strategyId || p.symbol !== tradeSymbol)
+                        );
 
-                // Calculate PnL impact (optional: we might want to keep history pnl separate from live balance)
-                // For now, let's keep it as is but ensure we don't double count if we run backtest multiple times
-                const totalPnL = backtestPositions.reduce((sum: number, p: any) => sum + (p.pnl || 0), 0);
+                        // 3. Merge: Live + Historical from other strats + New Backtest results
+                        const mergedPositions = [...livePositions, ...otherHistorical, ...backtestPositions];
 
-                console.log(`[Store] Backtest merged. Live: ${livePositions.length}, Hist: ${backtestPositions.length}.`);
+                        console.log(`[Store] Backtest Complete. Total Positions: ${mergedPositions.length} (New: ${backtestPositions.length})`);
 
-                return {
-                    virtualPositions: mergedPositions,
-                    // Note: We don't automatically update virtualBalance here to avoid jumps during live sessions.
-                    // Balance updates happen when positions are closed by the Live Runner.
-                };
-            }),
+                        return {
+                            virtualPositions: mergedPositions,
+                        };
+                    });
+                } catch (err) {
+                    console.error('[Store] Backtest Worker Failed:', err);
+                }
+            },
         }),
 
         {

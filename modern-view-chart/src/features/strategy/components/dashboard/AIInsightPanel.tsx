@@ -1,49 +1,103 @@
 import React, { useState } from 'react';
-import { VirtualPosition } from '../../types';
-import { Sparkles, Send, BrainCircuit, Lightbulb, AlertCircle, Loader2 } from 'lucide-react';
+import { VirtualPosition, PerformanceMetrics } from '../../types';
+import { Sparkles, Send, BrainCircuit, Lightbulb, AlertCircle, Loader2, RefreshCcw, Check, ArrowRight, Wrench } from 'lucide-react';
+import { AiAnalyzer, AnalysisType } from '../../logic/AiAnalyzer';
+import { StatsService } from '../../logic/StatsService';
+import { useStrategyStore } from '../../store/strategy-store';
+import { soundService } from '../../logic/SoundService';
+import { toast } from 'sonner';
 
 interface Props {
     position: VirtualPosition;
+    metrics?: PerformanceMetrics;
 }
 
-export function AIInsightPanel({ position }: Props) {
+export function AIInsightPanel({ position, metrics }: Props) {
     const [isLoading, setIsLoading] = useState(false);
     const [insight, setInsight] = useState<string | null>(null);
+    const [suggestion, setSuggestion] = useState<any | null>(null);
+    const updateStrategy = useStrategyStore(state => state.updateStrategy);
+    const strategies = useStrategyStore(state => state.strategies);
+    const context = position.metadata;
 
     const generatePrompt = () => {
-        const context = position.metadata;
         if (!context) return "";
 
-        const prompt = `
-            Analyze this trade for strategy refinement:
-            - Symbol: ${position.symbol}
-            - Type: ${position.type}
-            - Result: ${position.pnl && position.pnl > 0 ? 'PROFIT' : 'LOSS'} ($${position.pnl?.toFixed(2)})
-            - Exit Reason: ${context.exit_reason || 'Unknown'}
-            - Market Session: ${context.session}
-            - Max Adverse Excursion (MAE): ${context.mae?.toFixed(2)} pips
-            - Max Favorable Excursion (MFE): ${context.mfe?.toFixed(2)} pips
+        const currentPnl = position.pnl || 0;
+        const pnlPips = currentPnl * 10; // Simple pipe conversion, ideally should use getPipMultiplier
+        const efficiency = context.mfe && context.mfe > 0 ? (Math.max(0, pnlPips) / context.mfe) * 100 : 0;
+
+        return `
+            [TRADE] ${position.symbol}:${position.type} | PnL:${pnlPips.toFixed(1)} | Exit:${context.exit_reason} | Sess:${context.session} | ATR:${context.volatility_atr?.toFixed(4)}
+            [METRICS] MAE:${context.mae?.toFixed(1)} | MFE:${context.mfe?.toFixed(1)} | Eff:${efficiency.toFixed(0)}%
+            [ENTRY_STATE] ${Object.entries(context.indicators_snapshot || {}).map(([k, v]) => `${k.split('[')[0]}:${typeof v === 'number' ? v.toFixed(2) : v}`).join(', ')}
             
-            Indicator Snapshot at Entry:
-            ${Object.entries(context.indicators_snapshot).map(([k, v]) => `${k}: ${v}`).join('\n')}
-            
-            Question: Why did this trade behave this way given the MAE/MFE and indicators? What should I adjust?
+            Audit logic: 1. MAE heat too high? 2. Efficiency gap? 3. Volatility fit?
         `;
-        return prompt.trim();
     };
 
     const handleAskAI = async () => {
+        if (!context) return;
         setIsLoading(true);
-        // Simulate AI request delay
-        setTimeout(() => {
-            const isProfit = (position.pnl || 0) > 0;
-            const mockResponse = isProfit
-                ? "This trade succeeded due to strong momentum confirmation. Notice the low MAE, indicating price never significantly moved against you. Recommendation: Consider increasing lot size when MAE is consistently < 5 pips on this setup."
-                : "This trade failed despite indicator confirmation. The high MAE suggests you were caught in a reversal. The volume climax at entry indicates an exhaustion point. Recommendation: Add a volume trend filter to avoid buying at the top of a move.";
+        soundService.playAIThinking();
+        try {
+            const stats = await StatsService.compute(position.strategyId);
+            const strategy = { name: "Manual Inspection", id: position.strategyId } as any; // Fallback or fetch full strat
 
-            setInsight(mockResponse);
+            const aiMetrics = {
+                spread: context.spread_at_entry || 0,
+                volatility: context.volatility_atr || 0,
+                trendStrength: context.mtf?.h1_trend === 'UP' ? 30 : 10,
+                rsi: context.indicators_snapshot?.['RSI[14]'] || 50,
+                session: context.session
+            };
+
+            const response = await AiAnalyzer.analyzeSignal(
+                strategy,
+                { ...position, type: position.type },
+                aiMetrics,
+                stats,
+                AnalysisType.POST_TRADE
+            );
+            setInsight(response.reasoning.join('. '));
+            setSuggestion(response.suggestedFix);
+            toast.success("AI Analysis Complete");
+        } catch (error) {
+            console.error('[AIInsight] Analysis failed:', error);
+            toast.error("AI Bridge communication failed");
+        } finally {
             setIsLoading(false);
-        }, 1500);
+        }
+    };
+
+    const handleApplyFix = () => {
+        if (!suggestion || !position.strategyId) return;
+
+        // Logic to translate suggestion field name to actual strategy object path
+        // For simplicity, we'll handle RSI threshold and SL/TP
+        try {
+            const strategy = strategies.find(s => s.id === position.strategyId);
+            if (!strategy) return;
+
+            if (suggestion.field === 'rsi_threshold') {
+                const newEntry = JSON.parse(JSON.stringify(strategy.entry));
+                // Find RSI condition and update value
+                const rsiCond = newEntry.conditions.find((c: any) => c.left?.type === 'RSI');
+                if (rsiCond) {
+                    rsiCond.right = suggestion.value;
+                    updateStrategy(strategy.id, { entry: newEntry });
+                    toast.success(`Updated RSI threshold to ${suggestion.value}`);
+                }
+            } else if (suggestion.field === 'trailing_stop') {
+                updateStrategy(strategy.id, { risk: { ...strategy.risk, trailing: suggestion.value === 'on' } });
+                toast.success(`Trailing Stop ${suggestion.value === 'on' ? 'Enabled' : 'Disabled'}`);
+            } else {
+                toast.info(`Manual update required for: ${suggestion.field}`);
+            }
+            setSuggestion(null); // Clear after apply
+        } catch (err) {
+            toast.error("Failed to apply recommendation automatically.");
+        }
     };
 
     return (
@@ -85,6 +139,32 @@ export function AIInsightPanel({ position }: Props) {
                         <p className="text-[12px] text-[#d1d4dc] leading-relaxed italic">
                             "{insight}"
                         </p>
+
+                        {suggestion && (
+                            <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-2 animate-in zoom-in-95 duration-300">
+                                <div className="flex items-center gap-2 text-blue-400">
+                                    <Wrench size={14} />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">AI Recommendation</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-[11px] text-white font-bold">{suggestion.reason}</p>
+                                        <div className="flex items-center gap-2 mt-1 text-[9px] text-blue-300/70 font-mono">
+                                            <span className="bg-blue-500/20 px-1.5 py-0.5 rounded uppercase">{suggestion.field.replace('_', ' ')}</span>
+                                            <ArrowRight size={10} />
+                                            <span className="bg-blue-500/20 px-1.5 py-0.5 rounded text-white">{String(suggestion.value)}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleApplyFix}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                    >
+                                        <Check size={12} />
+                                        Apply Fix
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="pt-2 flex items-center gap-4">
                             <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#787b86] uppercase">

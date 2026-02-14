@@ -25,6 +25,7 @@ export function useChartInit(
     const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const subSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const timescaleSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const isAutoScrollEnabledRef = useRef(true);
 
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
@@ -135,6 +136,20 @@ export function useChartInit(
         subTS.subscribeVisibleLogicalRangeChange(syncTime);
         footTS.subscribeVisibleLogicalRangeChange(syncTime);
 
+        // Auto-scroll management: Disable if user scrolls left, re-enable if user scrolls back to right edge
+        const handleScrollPosition = (range: any) => {
+            if (!range) return;
+            const dataCount = seriesRef.current?.data().length || 0;
+            if (dataCount === 0) return;
+
+            // If the right edge of visibility is close to or beyond the last data point
+            // We use a small buffer (e.g., 2 bars) to ensure it triggers correctly
+            const isAtRightEdge = range.to >= dataCount - 2;
+            isAutoScrollEnabledRef.current = isAtRightEdge;
+        };
+
+        priceTS.subscribeVisibleLogicalRangeChange(handleScrollPosition);
+
         /* ================= SYNC LAYOUT WIDTH ================= */
         let syncRequestId: number | null = null;
         let lastMaxW = initialMinW;
@@ -210,6 +225,7 @@ export function useChartInit(
         seriesRef,
         subSyncRef,
         timescaleSyncRef,
-        syncRange
+        syncRange,
+        isAutoScrollEnabledRef
     }), [isReady, syncRange]);
 }

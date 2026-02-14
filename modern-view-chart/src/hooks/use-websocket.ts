@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useMarketStore } from '@/lib/store';
+import { soundService } from '@/features/strategy/logic/SoundService';
 
 let SOCKET_URL = 'ws://127.0.0.1:8091';
 
@@ -82,7 +83,8 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                                     change: item.change || 0,
                                     changeValue: item.changeValue || 0,
                                     volume: 0,
-                                    source: item.source || 'MT5'
+                                    source: item.source || 'MT5',
+                                    serverTime: item.time // Already in ms from backend bridge
                                 };
                                 usefulUpdate = true;
                             }
@@ -257,22 +259,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                         useMarketStore.getState().updateAlert(alert.id, { active: false, direction });
                         useMarketStore.getState().addNotification(message, direction === 'bullish' ? 'success' : 'warning', alert.id);
 
-                        // Simple Audio Beep
-                        try {
-                            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                            if (AudioContext) {
-                                const ctx = new AudioContext();
-                                const osc = ctx.createOscillator();
-                                const gain = ctx.createGain();
-                                osc.connect(gain);
-                                gain.connect(ctx.destination);
-                                osc.frequency.setValueAtTime(direction === 'bullish' ? 880 : 660, ctx.currentTime);
-                                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                                osc.start();
-                                osc.stop(ctx.currentTime + 0.5);
-                            }
-                        } catch (e) { }
+                        soundService.playAlert();
                     }
 
                     // 9. Strategy Alert
@@ -284,24 +271,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                             direction === 'bullish' ? 'success' : 'warning'
                         );
 
-                        // Play Sound
-                        try {
-                            const audio = new Audio('/sounds/alert.mp3'); // Or reuse Context
-                            // quick beep reuse
-                            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                            if (AudioContext) {
-                                const ctx = new AudioContext();
-                                const osc = ctx.createOscillator();
-                                const gain = ctx.createGain();
-                                osc.connect(gain);
-                                gain.connect(ctx.destination);
-                                osc.frequency.setValueAtTime(direction === 'bullish' ? 1200 : 400, ctx.currentTime);
-                                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-                                osc.start();
-                                osc.stop(ctx.currentTime + 0.3);
-                            }
-                        } catch (e) { }
+                        soundService.playAlert();
                     }
                 } catch (err) { }
             };

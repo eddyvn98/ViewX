@@ -1,5 +1,5 @@
 import React from 'react';
-import { VirtualPosition, TradeContext } from '../../types';
+import { VirtualPosition, TradeContext, PerformanceMetrics } from '../../types';
 import {
     Clock,
     TrendingUp,
@@ -18,9 +18,16 @@ import { AIInsightPanel } from './AIInsightPanel';
 
 interface Props {
     position: VirtualPosition;
+    metrics?: PerformanceMetrics;
 }
 
-export function TradeDetailPanel({ position }: Props) {
+const getEfficiencyColor = (eff: number) => {
+    if (eff >= 80) return 'text-green-500';
+    if (eff >= 50) return 'text-yellow-500';
+    return 'text-red-500';
+};
+
+export function TradeDetailPanel({ position, metrics }: Props) {
     const context = position.metadata;
     console.log(`[TradeDetail] Inspecting Trade: ${position.id} | Metadata keys:`, context ? Object.keys(context) : 'NULL');
     if (context && context.indicators_snapshot) {
@@ -71,12 +78,40 @@ export function TradeDetailPanel({ position }: Props) {
                             label="MAE"
                             value={`${context.mae?.toFixed(2) || 0} pips`}
                             icon={<TrendingDown size={12} className="text-red-500" />}
+                            tooltip="Maximum Adverse Excursion: The furthest price moved against you."
                         />
                         <MetricCard
                             label="MFE"
                             value={`${context.mfe?.toFixed(2) || 0} pips`}
                             icon={<TrendingUp size={12} className="text-green-500" />}
+                            tooltip="Maximum Favorable Excursion: The furthest price moved in your favor."
                         />
+                    </div>
+
+                    {/* Trade Efficiency */}
+                    <div className="bg-[#1e222d] p-4 rounded-lg border border-[#363a45]">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-[9px] font-bold text-[#787b86] uppercase">Trade Efficiency</span>
+                            <span className={`text-[11px] font-black ${getEfficiencyColor(
+                                (Math.max(0, position.pnl || 0) / (context.mfe || 1)) * 100
+                            )}`}>
+                                {context.mfe && context.mfe > 0
+                                    ? ((Math.max(0, (position.exitPrice! - position.entryPrice) * (position.type === 'BUY' ? 1 : -1) * 10) / context.mfe) * 100).toFixed(1)
+                                    : '0.0'}%
+                            </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-[#363a45] rounded-full overflow-hidden">
+                            <div
+                                className={`h-full transition-all duration-1000 ${(position.pnl || 0) > 0 ? 'bg-green-500' : 'bg-red-500'
+                                    }`}
+                                style={{
+                                    width: `${Math.min(100, (Math.max(0, position.pnl || 0) / (context.mfe || 1)) * 100)}%`
+                                }}
+                            />
+                        </div>
+                        <p className="text-[9px] text-[#4a4f5d] mt-2 italic leading-tight">
+                            Measures how much of the potential move (MFE) was captured as profit.
+                        </p>
                     </div>
 
                     {context.exit_reason && (
@@ -149,20 +184,26 @@ export function TradeDetailPanel({ position }: Props) {
 
             {/* 3. AI Insights Section */}
             <div className="pt-6 border-t border-[#363a45]/50">
-                <AIInsightPanel position={position} />
+                <AIInsightPanel position={position} metrics={metrics} />
             </div>
         </div>
     );
 }
 
-function MetricCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function MetricCard({ label, value, icon, tooltip }: { label: string; value: string; icon: React.ReactNode; tooltip?: string }) {
     return (
-        <div className="bg-[#1e222d] p-3 rounded-lg border border-[#363a45] flex flex-col gap-1">
+        <div className="bg-[#1e222d] p-3 rounded-lg border border-[#363a45] flex flex-col gap-1 group relative">
             <div className="flex items-center gap-1.5 text-[#787b86]">
                 {icon}
                 <span className="text-[9px] font-bold uppercase tracking-tight">{label}</span>
             </div>
             <span className="text-[12px] font-black text-white">{value}</span>
+
+            {tooltip && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-[#2a2e39] text-[9px] text-[#d1d4dc] rounded shadow-xl border border-[#363a45] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                    {tooltip}
+                </div>
+            )}
         </div>
     );
 }

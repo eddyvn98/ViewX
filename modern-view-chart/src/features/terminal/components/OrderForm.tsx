@@ -134,11 +134,11 @@ export const OrderForm = memo(function OrderForm() {
             {/* MOBILE LAYOUT REMOVED - NOW IN BOTTOM NAV */}
 
             {/* DESKTOP LAYOUT (Existing) */}
-            <div className="hidden md:flex flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3 flex-col">
+            <div className="hidden md:flex flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 flex-col">
                 <div className="flex items-center justify-between pb-1 border-b border-zinc-900">
                     <div className="flex items-center gap-2">
-                        <span className="font-black text-white text-base tracking-tighter">{symbol.replace('m', '')}</span>
-                        <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded border border-white/5", isCrypto ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500")}>
+                        <span className="font-black text-white text-[12px] tracking-tighter">{symbol.replace('m', '')}</span>
+                        <span className={cn("text-[8px] font-black px-1 py-0.5 rounded border border-white/5", isCrypto ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500")}>
                             {isCrypto ? 'BINANCE' : 'MT5'}
                         </span>
                     </div>
@@ -161,11 +161,11 @@ export const OrderForm = memo(function OrderForm() {
                     formatPrice={formatPrice}
                 />
 
-                <div className="pt-0 space-y-2">
-                    <button onClick={handleSubmit} className={cn("w-full py-3 rounded-md text-sm font-black shadow-lg active:scale-95 transition-all uppercase tracking-widest", side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white")}>
-                        Xác nhận {side === 'buy' ? 'Mua' : 'Bán'} {volume} Lô
+                <div className="pt-0 space-y-1.5 shrink-0">
+                    <button onClick={handleSubmit} className={cn("w-full py-2 rounded-md text-[11px] font-black shadow-lg active:scale-95 transition-all uppercase tracking-widest", side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white")}>
+                        {side === 'buy' ? 'BUY' : 'SELL'} {volume} LOTS
                     </button>
-                    <button onClick={resetForm} className="w-full py-2 rounded-md text-[10px] font-bold text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all">Hủy</button>
+                    <button onClick={resetForm} className="w-full py-1.5 rounded-md text-[9px] font-bold text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900/50 transition-all uppercase tracking-tight">Thoát</button>
                 </div>
 
                 <OrderDetails

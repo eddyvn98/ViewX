@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { VirtualPosition } from '../../types';
+import { VirtualPosition, PerformanceMetrics } from '../../types';
 import { TrendingUp, TrendingDown, Clock, Hash, Percent, ChevronDown, ChevronUp } from 'lucide-react';
 import { TradeDetailPanel } from './TradeDetailPanel';
 
 interface Props {
     positions: VirtualPosition[];
+    metrics?: PerformanceMetrics;
 }
 
-export function TradeHistory({ positions }: Props) {
+export function TradeHistory({ positions, metrics }: Props) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const closedPositions = [...positions]
@@ -48,7 +49,8 @@ export function TradeHistory({ positions }: Props) {
                                 <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[35%] md:w-auto">Time / Symbol</th>
                                 <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[15%] md:w-auto">Type</th>
                                 <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[10%] md:w-auto">Lot</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[20%] md:w-auto">Entry / Exit</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[10%] md:w-auto">Entry / Exit</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[15%] md:w-auto text-center">AI Conf.</th>
                                 <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter text-right w-[20%] md:w-auto">Profit (USD)</th>
                             </tr>
                         </thead>
@@ -88,6 +90,21 @@ export function TradeHistory({ positions }: Props) {
                                                 <span className="text-[10px] font-mono font-bold text-[#4a4f5d]">{p.exitPrice?.toFixed(2)}</span>
                                             </div>
                                         </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {p.confidence ? (
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${p.confidence >= 80 ? 'bg-green-500/10 text-green-400' :
+                                                        p.confidence >= 50 ? 'bg-yellow-500/10 text-yellow-400' :
+                                                            'bg-red-500/10 text-red-400'
+                                                        }`}>
+                                                        {p.confidence.toFixed(0)}%
+                                                    </span>
+                                                    <span className="text-[7px] font-bold text-[#4a4f5d] uppercase italic">Confidence</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-[#4a4f5d]">-</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className={`flex flex-col items-end`}>
                                                 <span className={`text-[11px] font-mono font-black ${(p.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -102,7 +119,7 @@ export function TradeHistory({ positions }: Props) {
                                     {expandedId === p.id && (
                                         <tr>
                                             <td colSpan={6} className="p-0 border-b border-[#363a45]/50">
-                                                <TradeDetailPanel position={p} />
+                                                <TradeDetailPanel position={p} metrics={metrics} />
                                             </td>
                                         </tr>
                                     )}

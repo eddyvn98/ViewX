@@ -31,7 +31,7 @@ export class TradeLogger {
         return data?.[0];
     }
 
-    static async updateExit(strategyId: string, symbol: string, exitPrice: number) {
+    static async updateExit(strategyId: string, symbol: string, exitPrice: number, metadata?: any) {
         // Find the last open entry for this strategy/symbol
         const { data: entries } = await supabase
             .from('trade_logs')
@@ -44,15 +44,17 @@ export class TradeLogger {
 
         if (entries && entries.length > 0) {
             const entry = entries[0];
-            const type = entry.type === 'BUY' ? 1 : -1;
-            const pnl = (exitPrice - entry.entry_price) * type * (entry.lot_size * 100000); // Rough PnL
+            const side = entry.type === 'BUY' ? 1 : -1;
+            const pnl = (exitPrice - entry.entry_price) * side * (entry.lot_size * 100000); // Rough PnL
 
             await supabase
                 .from('trade_logs')
                 .update({
                     exit_price: exitPrice,
                     pnl,
-                    type: 'EXIT'
+                    mae: metadata?.mae,
+                    mfe: metadata?.mfe,
+                    exit_reason: metadata?.exit_reason || 'SIGNAL'
                 })
                 .eq('id', entry.id);
         }

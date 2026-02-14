@@ -66,7 +66,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     const subchartContainerRef = useRef<HTMLDivElement>(null);
     const timescaleContainerRef = useRef<HTMLDivElement>(null);
 
-    const { isReady, priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, subSyncRef, timescaleSyncRef, syncRange } =
+    const { isReady, priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, subSyncRef, timescaleSyncRef, syncRange, isAutoScrollEnabledRef } =
         useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId);
 
     /* ================= DATA ================= */
@@ -74,7 +74,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
 
     /* ================= DATA ================= */
     const { sendMessage } = useWebSocket();
-    const { realTimeCandleRef } = useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady);
+    const { realTimeCandleRef } = useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, subSyncRef, timescaleSyncRef, isReady, isAutoScrollEnabledRef);
 
     /* ================= OVERLAYS ================= */
     const filteredPositions = React.useMemo(() => {
@@ -137,7 +137,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         timescaleChartRef,
         mainContainerRef, // Updated to use parent container
         subchartContainerRef,
-        timescaleContainerRef
+        timescaleContainerRef,
+        isAutoScrollEnabledRef
     );
 
     /* ================= CONTEXT MENU ================= */

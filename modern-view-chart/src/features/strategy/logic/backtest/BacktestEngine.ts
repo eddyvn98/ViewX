@@ -1,5 +1,5 @@
 import { Candle } from '@/lib/store/types';
-import { Strategy, VirtualPosition, SLTPConfig } from '@/features/strategy/types';
+import { Strategy, VirtualPosition, SLTPConfig, LogicMemory } from '@/features/strategy/types';
 import { BacktestData } from './BacktestData';
 import { BacktestIndicators } from './BacktestIndicators';
 import { PositionManager } from './PositionManager';
@@ -7,7 +7,7 @@ import { SignalEvaluator } from './SignalEvaluator';
 import { getTradingSession } from '@/features/strategy/utils/time-utils';
 
 export class BacktestEngine {
-    static run(strategy: Strategy, rawCandles: Candle[], initialBalance: number = 10000, overrideSymbol?: string): VirtualPosition[] {
+    static run(strategy: Strategy, rawCandles: Candle[], initialBalance: number = 10000, overrideSymbol?: string, memory?: LogicMemory): VirtualPosition[] {
         if (!strategy.active || rawCandles.length < 50) return [];
 
         const tradeSymbol = overrideSymbol || strategy.symbol || 'BACKTEST';
@@ -28,8 +28,12 @@ export class BacktestEngine {
         let lastSignalTime = 0;
 
         // 4. Simulation Loop
-        // Start from index 150 to allow indicators to warm up
-        for (let i = 150; i < candles.length; i++) {
+        // Dynamic warmup: 1/3 of data or at least enough for typical indicators (20-50)
+        // This ensures the strategy can run even on H1/H4 where we might only have 300 candles.
+        const warmupCount = Math.min(150, Math.floor(candles.length / 3));
+        console.log(`[Backtest] ${strategy.name} beginning simulation at index ${warmupCount} (Warmup: ${warmupCount})`);
+
+        for (let i = warmupCount; i < candles.length; i++) {
             const candle = candles[i];
             const timestamp = BacktestData.getTimestamp(candle);
             const openPositions = positionManager.getPositions().filter(p => p.status === 'open');
@@ -138,10 +142,10 @@ export class BacktestEngine {
                                 session,
                                 volatility_atr: atr14[i] || 0,
                                 indicators_snapshot: snapshot,
-                                mae: 0,
                                 mfe: 0,
                                 duration_candles: 0
-                            }
+                            },
+                            confidence: calculateConfidence(type, candle, timestamp, snapshot, atr14[i], memory)
                         };
 
                         positionManager.addPosition(newPos);
@@ -154,4 +158,45 @@ export class BacktestEngine {
         console.log(`[Backtest] Finished ${strategy.name}. Generated ${positionManager.getPositions().length} positions.`);
         return positionManager.getPositions();
     }
+}
+
+function calculateConfidence(
+    type: string,
+    candle: Candle,
+    timestamp: number,
+    snapshot: Record<string, number>,
+    atr: number,
+    memory?: LogicMemory
+): number {
+    let score = 50; // Neutral start
+
+    // 1. Session Factor (Adaptive Learning)
+    const hour = new Date(timestamp).getUTCHours();
+    const session = hour >= 8 && hour <= 16 ? 'London' : (hour >= 0 && hour <= 6 ? 'Tokyo' : 'Other');
+
+    // Base heuristic
+    if (session === 'London') score += 15;
+    else if (session === 'Tokyo') score -= 10;
+
+    // "Memory Bias" Integration (Rút kinh nghiệm từ quá khứ)
+    if (memory?.sessionBias[session]) {
+        score += memory.sessionBias[session];
+    }
+
+    // 2. Volatility Factor
+    if (atr > 0) {
+        const bodySize = Math.abs(Number(candle.close) - Number(candle.open));
+        if (bodySize > atr * 0.5) score += 10; // Decisive move
+        if (bodySize > atr * 2) score -= 15; // Overextended
+    }
+
+    // 3. Confluence (Simplified example)
+    // If multiple indicators are showing extreme/clean breakout
+    const rsi = snapshot['RSI[14]'];
+    if (rsi !== undefined) {
+        if (type === 'BUY' && rsi < 40) score += 10; // Oversold entry
+        if (type === 'SELL' && rsi > 60) score += 10; // Overbought entry
+    }
+
+    return Math.min(98, Math.max(15, score));
 }

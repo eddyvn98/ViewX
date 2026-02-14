@@ -8,7 +8,7 @@ export class SignalIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig) {
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
         if (!this.config.visible) {
@@ -18,8 +18,7 @@ export class SignalIndicator {
             return;
         }
 
-        const closePrices = candles.map(c => c.close);
-        const rsi14 = calculateRSI(closePrices, 14);
+        const rsi14 = calculatedValues || calculateRSI(candles.map(c => c.close), 14);
         const markers: SeriesMarker<any>[] = [];
 
         for (let i = 2; i < candles.length; i++) {

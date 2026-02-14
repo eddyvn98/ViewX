@@ -89,40 +89,45 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
         <div
             onClick={() => onSelect(symbol, source)}
             className={cn(
-                "flex justify-between items-center px-4 py-3 cursor-pointer hover:bg-white/5 transition-all border-b border-white/5 last:border-0 group min-h-[60px]",
+                "grid grid-cols-[1fr_1fr_1fr_24px] items-center px-3 py-1 cursor-pointer hover:bg-white/5 transition-all border-b border-white/5 last:border-0 group min-h-[36px] gap-2",
                 isActive && mode === 'watchlist' && "bg-blue-500/10 border-l-2 border-l-blue-500"
             )}
         >
-            <div className="flex items-center gap-3">
-                <div className="flex flex-col">
-                    <span className={cn(
-                        "text-[14px] font-bold tracking-tight",
-                        isActive && mode === 'watchlist' ? "text-blue-400" : "text-zinc-200"
-                    )}>
-                        {symbol.replace('USDT', '').replace('USDTm', '')}
-                    </span>
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase">{source}</span>
-                </div>
+            {/* Column 1: Symbol & Source */}
+            <div className="min-w-0 flex flex-col overflow-hidden">
+                <span className={cn(
+                    "text-[11px] font-bold tracking-tight truncate",
+                    isActive && mode === 'watchlist' ? "text-blue-400" : "text-zinc-200"
+                )}>
+                    {symbol.replace('USDT', '').replace('USDTm', '')}
+                </span>
+                <span className="text-[8px] font-black text-zinc-500 uppercase leading-none tracking-tight">{source}</span>
             </div>
 
             {mode === 'watchlist' ? (
-                <div className="flex items-center gap-4 text-sm">
-                    <div className="flex flex-col items-end">
-                        <span ref={priceRef} className="text-zinc-300 font-mono text-[14px]">···</span>
-                        <div ref={changeRef} className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-zinc-500">
+                <>
+                    {/* Column 2: Price */}
+                    <div className="text-right overflow-hidden">
+                        <span ref={priceRef} className="text-zinc-300 font-mono text-[11px]">···</span>
+                    </div>
+
+                    {/* Column 3: Change */}
+                    <div className="text-right flex flex-col items-end overflow-hidden">
+                        <div ref={changeRef} className="font-mono text-[10px] font-bold text-zinc-500 truncate w-full">
                             <span>--</span>
                         </div>
                     </div>
 
+                    {/* Column 4: Actions */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onRemove(symbol); }}
-                        className="p-1.5 text-zinc-600 hover:text-red-400 transition-all md:opacity-0 md:group-hover:opacity-100"
+                        className="flex justify-center text-zinc-600 hover:text-red-400 transition-all md:opacity-0 md:group-hover:opacity-100"
                     >
-                        <Trash2 size={16} />
+                        <Trash2 size={10} />
                     </button>
-                </div>
+                </>
             ) : (
-                <div className="flex items-center gap-2">
+                <div className="col-span-3 flex justify-end">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -130,11 +135,11 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
                             else onAdd(symbol);
                         }}
                         className={cn(
-                            "p-2 rounded-md transition-all",
+                            "p-1 rounded-md transition-all",
                             isWatched ? "text-yellow-500 bg-yellow-500/10" : "text-zinc-500 hover:text-white hover:bg-zinc-800"
                         )}
                     >
-                        <Star size={18} fill={isWatched ? "currentColor" : "none"} />
+                        <Star size={12} fill={isWatched ? "currentColor" : "none"} />
                     </button>
                 </div>
             )}
@@ -223,51 +228,45 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     }, [activeChartId, charts, mode, setChartSymbol, watchlist, addToWatchlist, broadcastGroupSymbolChange, broadcastSymbolChange]);
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-[300px] h-full">
-            {/* Header / Search */}
-            <div className="p-3 border-b border-zinc-800 space-y-3 shrink-0">
-                <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+        <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-0 h-full">
+            {/* Ultra Compact Header: Search & Filters on same row */}
+            <div className="p-1.5 border-b border-zinc-800 flex items-center gap-1.5 shrink-0 bg-zinc-900/20">
+                <div className="relative flex-1">
+                    <Search className="absolute left-2 top-1.5 h-3 w-3 text-zinc-600" />
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full bg-zinc-950/50 border border-zinc-800/50 rounded-md pl-7 pr-2 py-1 text-[10px] text-white focus:outline-none focus:border-blue-500/50 placeholder-zinc-700 transition-colors h-6"
+                    />
+                </div>
+
+                <div className="flex bg-zinc-950/80 p-0.5 rounded-md border border-zinc-800/50 h-6">
                     {['ALL', 'BINANCE', 'MT5'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setSourceTab(tab as any)}
                             className={cn(
-                                "flex-1 text-[11px] font-bold py-1.5 rounded-md transition-all",
+                                "px-2 text-[9px] font-bold rounded-sm transition-all flex items-center justify-center",
                                 sourceTab === tab
-                                    ? "bg-zinc-800 text-white shadow-sm"
-                                    : "text-zinc-500 hover:text-zinc-300"
+                                    ? "bg-zinc-800 text-white"
+                                    : "text-zinc-600 hover:text-zinc-400"
                             )}
                         >
-                            {tab === 'BINANCE' ? 'CRYPTO' : tab === 'MT5' ? 'FOREX' : 'ALL'}
+                            {tab === 'BINANCE' ? 'C' : tab === 'MT5' ? 'F' : 'A'}
                         </button>
                     ))}
-                </div>
-
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-600" />
-                    <input
-                        type="text"
-                        placeholder={mode === 'watchlist' ? "Search watchlist..." : "Search symbols..."}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-700 transition-colors"
-                    />
-                </div>
-
-                {/* Mobile Debug Tag */}
-                <div className="md:hidden text-[9px] text-zinc-700 font-mono text-center">
-                    {debugInfo}
                 </div>
             </div>
 
             {/* List Header */}
             {mode === 'watchlist' && (
-                <div className="flex justify-between px-4 py-2 bg-zinc-950/50 text-[10px] text-zinc-600 font-bold uppercase tracking-wider shrink-0">
-                    <span>Symbol</span>
-                    <div className="flex gap-4">
-                        <span className="w-16 text-right">Price</span>
-                        <span className="w-24 text-right">24h Change</span>
-                    </div>
+                <div className="grid grid-cols-[1fr_1fr_1fr_24px] items-center px-3 py-1.5 bg-zinc-950/50 text-[9px] text-zinc-600 font-bold uppercase tracking-wider shrink-0 gap-2">
+                    <span className="truncate">Symbol</span>
+                    <span className="text-right">Price</span>
+                    <span className="text-right">Change</span>
+                    <span></span> {/* Pad for actions */}
                 </div>
             )}
 

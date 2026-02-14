@@ -6,6 +6,7 @@ import { EMAIndicator } from '../indicators/EMAIndicator';
 import { HMAIndicator } from '../indicators/HMAIndicator';
 import { RSIIndicator } from '../indicators/RSIIndicator';
 import { SignalIndicator } from '../indicators/SignalIndicator';
+import { chartWorkerClient } from '@/workers/worker-client';
 import { MACDIndicator } from '../indicators/MACDIndicator';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 
@@ -153,13 +154,13 @@ export function useChartIndicators(
                 }
             });
 
-            // 2. Create/Update visible indicators
-            indicators.forEach(config => {
-                if (!config.visible) return;
+            // 2. Identify visible indicators that need updates
+            const visibleIndicators = indicators.filter(i => i.visible);
+            const needsUpdate = isNewBar || stableCandlesRef.current.length === candles.length;
 
+            const indicatorsToCalculate: any[] = [];
+            visibleIndicators.forEach(config => {
                 let instance = instancesRef.current[config.id];
-
-                // Create instance if missing
                 if (!instance) {
                     const isSubchart = config.pane === 'subchart';
                     const targetChart = isSubchart ? subchartChartRef.current! : priceChartRef.current!;
@@ -169,27 +170,47 @@ export function useChartIndicators(
                         case 'HMA': instance = new HMAIndicator(targetChart, config); break;
                         case 'RSI': instance = new RSIIndicator(targetChart, config); break;
                         case 'MACD': instance = new MACDIndicator(targetChart, config); break;
+                        case 'SIGNALS':
                         case 'Signals': instance = new SignalIndicator(seriesRef.current, config); break;
                     }
                     if (instance) {
                         instancesRef.current[config.id] = instance;
                         instance._lastConfigJson = JSON.stringify(config);
-                        instance.update(stableCandlesRef.current, config);
-                        console.log(`[Indicators] Created: ${config.type} (${config.id})`);
                     }
                 }
 
                 if (instance) {
                     const configJson = JSON.stringify(config);
                     const configChanged = instance._lastConfigJson !== configJson;
-
-                    // ⚡ Force update if it's a new bar, config changed, or stableCandles just reset
-                    if (isNewBar || configChanged || stableCandlesRef.current.length === candles.length) {
-                        instance.update(stableCandlesRef.current, config);
+                    if (needsUpdate || configChanged) {
+                        indicatorsToCalculate.push(config);
                         instance._lastConfigJson = configJson;
                     }
                 }
             });
+
+            // 3. Offload to Worker if needed
+            if (indicatorsToCalculate.length > 0) {
+                console.log(`[Indicators] Batch calculating ${indicatorsToCalculate.length} items in worker...`);
+                chartWorkerClient.calculateBatch(indicatorsToCalculate, stableCandlesRef.current)
+                    .then(results => {
+                        const resultsMap = new Map(results.map((r: any) => [r.id, r.values]));
+                        indicatorsToCalculate.forEach(config => {
+                            const instance = instancesRef.current[config.id];
+                            if (instance) {
+                                instance.update(stableCandlesRef.current, config, resultsMap.get(config.id));
+                            }
+                        });
+                    })
+                    .catch(err => {
+                        console.error('[Indicators] Worker Batch Error:', err);
+                        // Fallback to sync
+                        indicatorsToCalculate.forEach(config => {
+                            const instance = instancesRef.current[config.id];
+                            if (instance) instance.update(stableCandlesRef.current, config);
+                        });
+                    });
+            }
 
             // Sync timescale if subchart exists
             if (indicators.some(i => i.pane === 'subchart' && i.visible)) {
