@@ -20,7 +20,7 @@ const HistoryRow = memo(({ deal, onSymbolClick, onAnalyze }: { deal: HistoryDeal
     const analysisResult = useMarketStore((state) => state.analysisResults[deal.ticket]);
 
     return (
-        <div className="flex hover:bg-blue-500/10 text-[#d1d4dc] border-b border-[#2a2e39] items-center text-[11px] min-h-[36px]">
+        <div className="flex hover:bg-blue-500/10 text-foreground border-b border-border/50 items-center text-[11px] min-h-[36px]">
             <div className="p-2 whitespace-nowrap overflow-hidden text-ellipsis" style={{ width: "15%" }}>
                 {new Date(deal.time * 1000).toLocaleString()}
             </div>
@@ -38,7 +38,7 @@ const HistoryRow = memo(({ deal, onSymbolClick, onAnalyze }: { deal: HistoryDeal
             </div>
             <div className="p-2" style={{ width: "10%" }}>{deal.volume?.toFixed(2)}</div>
             <div className="p-2" style={{ width: "10%" }}>{deal.price?.toFixed(5)}</div>
-            <div className="p-2 text-[#787b86]" style={{ width: "10%" }}>
+            <div className="p-2 text-muted-foreground" style={{ width: "10%" }}>
                 <span className="text-[10px] mr-2">S: {deal.swap?.toFixed(2)}</span>
             </div>
             <div className={`p-2 font-bold ${(deal.profit >= 0 ? 'text-green-500' : 'text-red-500')}`} style={{ width: "10%" }}>
@@ -107,7 +107,7 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze }: HistoryTable
 
     const HeaderCell = ({ field, label, width }: { field: SortField, label: string, width: string }) => (
         <div
-            className="p-2 font-medium cursor-pointer hover:bg-[#2a2e39] transition-colors flex items-center overflow-hidden"
+            className="p-2 font-medium cursor-pointer hover:bg-secondary/40 transition-colors flex items-center overflow-hidden"
             style={{ width }}
             onClick={() => handleSort(field)}
         >
@@ -119,7 +119,7 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze }: HistoryTable
     return (
         <div className="flex flex-col h-full w-full min-w-[1000px] text-left text-[11px]">
             {/* Header cố định */}
-            <div className="flex bg-[#1e222d] text-[#787b86] border-b border-[#2a2e39] shrink-0 font-medium h-9 items-center sticky top-0 z-10">
+            <div className="flex bg-secondary/10 text-muted-foreground border-b border-border transition-colors shrink-0 font-medium h-9 items-center sticky top-0 z-10">
                 <HeaderCell field="time" label="Time" width="15%" />
                 <HeaderCell field="ticket" label="Ticket" width="10%" />
                 <HeaderCell field="magic" label="Magic" width="10%" />
@@ -133,7 +133,7 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze }: HistoryTable
             </div>
 
             {/* Container dữ liệu dùng overflow truyền thống - Chống lỗi thư viện bên thứ 3 */}
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#131722]">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-background">
                 {sortedHistory.length > 0 ? (
                     <div className="flex flex-col">
                         {sortedHistory.map((deal) => (
@@ -146,7 +146,7 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze }: HistoryTable
                         ))}
                     </div>
                 ) : (
-                    <div className="p-8 text-center text-[#787b86] flex flex-col items-center justify-center gap-2">
+                    <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
                         <span>No history deals found</span>
                         <span className="text-[10px] opacity-50">Check Bridge connection or filters</span>
                     </div>

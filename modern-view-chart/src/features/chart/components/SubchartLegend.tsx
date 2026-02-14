@@ -41,7 +41,7 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
         >
             <div
                 data-indicators
-                className="flex flex-col gap-0.5 p-1 backdrop-blur-lg border rounded-lg bg-zinc-950/50 border-white/5 w-fit"
+                className="flex flex-col gap-0.5 p-1 backdrop-blur-lg border rounded-lg bg-background/50 border-border/10 w-fit"
             >
                 {indicators.map((ind: any) => (
                     <div
@@ -49,11 +49,11 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
                         data-indicator-id={ind.id}
                         className="flex flex-col px-1"
                     >
-                        <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter leading-none mb-0.5">
+                        <span className="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-tighter leading-none mb-0.5">
                             {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${ind.params?.period || 14}`}
                         </span>
 
-                        <div data-indicator-value className="flex gap-1.5 font-mono text-[11px] font-bold leading-none text-white">
+                        <div data-indicator-value className="flex gap-1.5 font-mono text-[11px] font-bold leading-none text-foreground">
                             {ind.type === 'MACD' ? (
                                 <>
                                     <span style={{ color: ind.color }}>···</span>

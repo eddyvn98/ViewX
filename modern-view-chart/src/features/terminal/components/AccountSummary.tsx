@@ -57,7 +57,7 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
         if (equityRef.current && equityStr !== lastEquityRef.current) {
             lastEquityRef.current = equityStr;
             equityRef.current.textContent = equityStr;
-            equityRef.current.className = `font-semibold ${realTimeEquity >= (account.balance ?? 0) ? 'text-[#d1d4dc]' : 'text-red-400'}`;
+            equityRef.current.className = `font-semibold ${realTimeEquity >= (account.balance ?? 0) ? 'text-foreground' : 'text-red-400'}`;
         }
     }, [account]);
 
@@ -94,12 +94,12 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
     if (!account) return null;
 
     return (
-        <div className="flex flex-wrap gap-5 mb-3 text-[12px] text-[#787b86]">
-            <div>Balance: <span className="text-[#d1d4dc] font-semibold">{(account.balance ?? 0).toFixed(2)}</span></div>
-            <div>Equity: <span ref={equityRef} className="font-semibold text-[#d1d4dc]">···</span></div>
-            <div>Margin: <span className="text-[#d1d4dc] font-semibold">{(account.margin ?? 0).toFixed(2)}</span></div>
-            <div>Free Margin: <span className="text-[#d1d4dc] font-semibold">{(account.free_margin ?? 0).toFixed(2)}</span></div>
-            <div>Level: <span className="text-[#d1d4dc] font-semibold">{(account.margin_level ?? 0).toFixed(2)}%</span></div>
+        <div className="flex flex-wrap gap-5 mb-3 text-[12px] text-muted-foreground">
+            <div>Balance: <span className="text-foreground font-semibold">{(account.balance ?? 0).toFixed(2)}</span></div>
+            <div>Equity: <span ref={equityRef} className="font-semibold text-foreground">···</span></div>
+            <div>Margin: <span className="text-foreground font-semibold">{(account.margin ?? 0).toFixed(2)}</span></div>
+            <div>Free Margin: <span className="text-foreground font-semibold">{(account.free_margin ?? 0).toFixed(2)}</span></div>
+            <div>Level: <span className="text-foreground font-semibold">{(account.margin_level ?? 0).toFixed(2)}%</span></div>
             <div>Profit: <span ref={profitRef} className="font-semibold text-green-500">···</span></div>
         </div>
     );

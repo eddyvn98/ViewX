@@ -17,22 +17,22 @@ export function EquityChart({ data }: Props) {
         const chart = createChart(chartContainerRef.current, {
             layout: {
                 background: { type: ColorType.Solid, color: 'transparent' },
-                textColor: '#d1d4dc',
+                textColor: 'currentColor',
                 fontFamily: "'JetBrains Mono', monospace",
             },
             grid: {
-                vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-                horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+                vertLines: { color: 'var(--border)' },
+                horzLines: { color: 'var(--border)' },
             },
             width: chartContainerRef.current.clientWidth,
             height: 300,
             timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
-                borderColor: 'rgba(197, 203, 206, 0.2)',
+                borderColor: 'var(--border)',
             },
             rightPriceScale: {
-                borderColor: 'rgba(197, 203, 206, 0.2)',
+                borderColor: 'var(--border)',
                 scaleMargins: {
                     top: 0.35,
                     bottom: 0.35,
@@ -54,7 +54,7 @@ export function EquityChart({ data }: Props) {
         });
 
         const baselineSeries = chart.addSeries(LineSeries, {
-            color: 'rgba(255, 255, 255, 0.1)',
+            color: 'var(--muted-foreground)',
             lineWidth: 1,
             lineStyle: 2, // Dashed
             lastValueVisible: false,
@@ -105,9 +105,9 @@ export function EquityChart({ data }: Props) {
     }, [data]);
 
     return (
-        <div className="bg-[#1e222d] rounded-xl border border-[#363a45] p-4 shadow-2xl">
+        <div className="bg-secondary/40 rounded-xl border border-border p-4 shadow-2xl">
             <div className="flex items-baseline gap-2 mb-4 px-2">
-                <span className="text-[10px] font-black text-[#787b86] uppercase tracking-widest">Equity Curve</span>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Equity Curve</span>
                 <span className="text-[8px] font-bold text-blue-500/50 uppercase">Virtual Growth</span>
             </div>
             <div ref={chartContainerRef} className="w-full" />

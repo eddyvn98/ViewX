@@ -49,12 +49,12 @@ export function MobileAccessButton() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "text-zinc-500 hover:text-white transition active:scale-90 flex items-center gap-2",
-                    isOpen && "text-blue-400"
+                    "w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-95 bg-secondary/40 text-muted-foreground hover:text-foreground border border-border/50",
+                    isOpen && "text-primary border-primary/30 bg-primary/10"
                 )}
                 title="Mobile Access"
             >
-                <Smartphone size={18} />
+                <Smartphone size={14} />
             </button>
 
             {isOpen && (
@@ -63,20 +63,20 @@ export function MobileAccessButton() {
                         className="fixed inset-0 z-40 bg-black/20"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute top-full right-0 mt-2 z-50 w-72 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute top-full right-0 mt-2 z-[100] w-72 bg-popover border border-border rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-white text-sm uppercase tracking-wider">Mobile Access</h3>
+                            <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">Mobile Access</h3>
                             <div className="flex items-center gap-1">
                                 <button
                                     onClick={fetchConfig}
-                                    className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition"
+                                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition"
                                     title="Refresh Link"
                                 >
                                     <RefreshCw size={14} className={cn(loading && "animate-spin")} />
                                 </button>
                                 <button
                                     onClick={() => setIsOpen(false)}
-                                    className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition"
+                                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition"
                                 >
                                     <X size={16} />
                                 </button>
@@ -84,7 +84,7 @@ export function MobileAccessButton() {
                         </div>
 
                         {loading ? (
-                            <div className="h-48 flex items-center justify-center text-zinc-500 text-xs">
+                            <div className="h-48 flex items-center justify-center text-muted-foreground text-xs">
                                 Loading access link...
                             </div>
                         ) : config?.mobile_link ? (
@@ -101,7 +101,7 @@ export function MobileAccessButton() {
                                 <div className="w-full space-y-2">
                                     <button
                                         onClick={handleCopy}
-                                        className="w-full py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs font-bold text-zinc-300 flex items-center justify-center gap-2 transition-all"
+                                        className="w-full py-2 bg-secondary hover:bg-secondary/70 border border-border rounded-lg text-xs font-bold text-foreground flex items-center justify-center gap-2 transition-all"
                                     >
                                         {copied ? <span className="text-green-400">Copied!</span> : <><Copy size={14} /> Copy Link</>}
                                     </button>
@@ -115,7 +115,7 @@ export function MobileAccessButton() {
                                         <ExternalLink size={14} /> Send to Telegram
                                     </a>
                                 </div>
-                                <p className="text-[10px] text-zinc-600 text-center px-4">
+                                <p className="text-[10px] text-muted-foreground text-center px-4">
                                     Scan QR or copy link to access charts on your phone securely.
                                 </p>
                             </div>

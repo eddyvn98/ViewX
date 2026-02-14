@@ -1,10 +1,10 @@
 import { IndicatorCache } from './indicator-calculations';
 
 export const formatPrice = (p: number) => {
+    const absP = Math.abs(p);
     if (p === 0) return '0.00';
-    if (p < 0.0001) return p.toExponential(4);
-    if (p < 1) return p.toFixed(5);
-    if (p < 100) return p.toFixed(3);
+    if (absP < 0.0001) return p.toExponential(4);
+    if (absP < 1) return p.toFixed(5);
     return p.toFixed(2);
 };
 
@@ -63,42 +63,46 @@ export const renderOHLC = (
     const changeValue = close - open;
     const changePercent = open !== 0 ? (changeValue / open * 100) : 0;
     const isPositive = changeValue >= 0;
-    const color = isPositive ? '#22c55e' : '#ef4444';
+    const color = isPositive ? 'text-blue-500' : 'text-rose-500';
 
     if (refs.open) refs.open.textContent = formatPrice(open);
     if (refs.high) refs.high.textContent = formatPrice(high);
     if (refs.low) refs.low.textContent = formatPrice(low);
     if (refs.close) {
         refs.close.textContent = formatPrice(close);
-        refs.close.style.color = color;
+        refs.close.classList.remove('text-blue-500', 'text-rose-500', 'text-green-500', 'text-red-500');
+        refs.close.classList.add(isPositive ? 'text-blue-500' : 'text-rose-500');
     }
     if (refs.change) {
         refs.change.textContent = (isPositive ? '+' : '') + formatPrice(changeValue);
-        refs.change.style.color = color;
+        refs.change.classList.remove('text-blue-500', 'text-rose-500');
+        refs.change.classList.add(isPositive ? 'text-blue-500' : 'text-rose-500');
     }
     if (refs.changePercent) {
-        refs.changePercent.textContent = `(${changePercent.toFixed(2)}%)`;
-        refs.changePercent.style.color = color;
+        refs.changePercent.textContent = `(${isPositive ? '+' : ''}${changePercent.toFixed(2)}%)`;
+        refs.changePercent.classList.remove('text-blue-500', 'text-rose-500');
+        refs.changePercent.classList.add(isPositive ? 'text-blue-500' : 'text-rose-500');
     }
 };
 
 export const renderStatus = (refs: OHLCRefs, isLive: boolean) => {
     if (refs.statusDot) {
         refs.statusDot.className = isLive
-            ? 'w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
-            : 'w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]';
+            ? 'w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse'
+            : 'w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]';
     }
     if (refs.statusText) {
         refs.statusText.textContent = isLive ? 'Live' : 'Historical';
-        refs.statusText.style.color = isLive ? '#22c55e' : '#f97316';
+        refs.statusText.classList.remove('text-emerald-500', 'text-amber-500');
+        refs.statusText.classList.add(isLive ? 'text-emerald-500' : 'text-amber-500');
     }
     if (refs.container) {
         if (isLive) {
-            refs.container.style.backgroundColor = 'rgba(9, 9, 11, 0.8)';
-            refs.container.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            refs.container.classList.remove('bg-amber-500/10', 'border-amber-500/20');
+            refs.container.classList.add('bg-primary/5', 'border-primary/10');
         } else {
-            refs.container.style.backgroundColor = 'rgba(249, 115, 22, 0.1)';
-            refs.container.style.borderColor = 'rgba(249, 115, 22, 0.4)';
+            refs.container.classList.remove('bg-primary/5', 'border-primary/10');
+            refs.container.classList.add('bg-amber-500/10', 'border-amber-500/20');
         }
     }
 };
@@ -135,7 +139,14 @@ export const renderIndicators = (
                 const results = ind.results as number[];
                 const idx = Math.min(activeIndex, results.length - 1);
                 const val = results[idx];
-                cached.value.textContent = isNaN(val) ? '···' : val.toFixed(2);
+                if (cached.value) {
+                    const span = cached.value.querySelector('span');
+                    if (span) {
+                        span.textContent = isNaN(val) ? '-' : val.toFixed(2);
+                    } else {
+                        cached.value.textContent = isNaN(val) ? '···' : val.toFixed(2);
+                    }
+                }
             }
         });
 };

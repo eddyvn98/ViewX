@@ -72,23 +72,23 @@ export function AIChatView() {
     const systemLogs = messages.filter(m => m.source === 'system');
 
     return (
-        <div className="flex flex-col h-full bg-[#131722]/40 rounded-lg border border-white/5 overflow-hidden">
+        <div className="flex flex-col h-full bg-secondary/20 rounded-lg border border-border overflow-hidden">
             {/* Inner Header */}
-            <div className="flex items-center justify-between px-3 py-2 bg-[#1e222d]/60 border-b border-white/5">
+            <div className="flex items-center justify-between px-3 py-2 bg-secondary/60 border-b border-border">
                 <div className="flex items-center gap-2">
                     <BrainCircuit size={16} className="text-blue-500 animate-pulse" />
-                    <span className="text-[11px] font-black uppercase tracking-wider text-zinc-100">AI Assistant</span>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-foreground">AI Assistant</span>
                 </div>
-                <div className="flex bg-black/40 p-0.5 rounded-md border border-white/5">
+                <div className="flex bg-secondary/80 p-0.5 rounded-md border border-border">
                     <button
                         onClick={() => setMode('chat')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold transition-all ${mode === 'chat' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold transition-all ${mode === 'chat' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         <MessageSquare size={12} /> CHAT
                     </button>
                     <button
                         onClick={() => setMode('logs')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold transition-all ${mode === 'logs' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold transition-all ${mode === 'logs' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         <Terminal size={12} /> LOGS
                     </button>
@@ -113,10 +113,10 @@ export function AIChatView() {
                             ) : (
                                 chatMessages.map((msg) => (
                                     <div key={msg.id} className="flex flex-col gap-3">
-                                        <div className="self-end max-w-[85%] bg-blue-600/20 border border-blue-500/20 rounded-2xl rounded-tr-none p-3 text-[13px] text-blue-100/90 leading-relaxed shadow-sm">
+                                        <div className="self-end max-w-[85%] bg-blue-600/10 border border-blue-500/20 rounded-2xl rounded-tr-none p-3 text-[13px] text-foreground leading-relaxed shadow-sm">
                                             {msg.prompt}
                                         </div>
-                                        <div className="self-start max-w-[90%] bg-[#1e222d] border border-white/5 rounded-2xl rounded-tl-none p-4 text-[13px] text-zinc-100 leading-relaxed shadow-lg flex flex-col gap-2">
+                                        <div className="self-start max-w-[90%] bg-secondary/40 border border-border rounded-2xl rounded-tl-none p-4 text-[13px] text-foreground leading-relaxed shadow-lg flex flex-col gap-2">
                                             <div className="flex items-center gap-2 mb-1 opacity-50">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                                                 <span className="text-[10px] font-black uppercase tracking-tight">Gemini AI</span>
@@ -136,18 +136,18 @@ export function AIChatView() {
                                 </div>
                             ) : (
                                 systemLogs.map((msg) => (
-                                    <div key={msg.id} className="bg-[#1e222d]/40 rounded border border-white/5 p-3 flex flex-col gap-2 group hover:bg-[#1e222d]/60 transition-colors">
+                                    <div key={msg.id} className="bg-secondary/20 rounded border border-border p-3 flex flex-col gap-2 group hover:bg-secondary/30 transition-colors">
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2 text-cyan-500/80">
                                                 <ShieldCheck size={12} />
                                                 <span className="text-[9px] font-black uppercase tracking-tighter">System Audit Log</span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-zinc-600 text-[9px] font-mono">
+                                            <div className="flex items-center gap-1.5 text-muted-foreground text-[9px] font-mono">
                                                 <Clock size={10} />
                                                 {new Date(msg.timestamp).toLocaleTimeString()}
                                             </div>
                                         </div>
-                                        <div className="text-[11px] text-zinc-400 font-medium pl-2 border-l border-zinc-700 italic">
+                                        <div className="text-[11px] text-muted-foreground font-medium pl-2 border-l border-border italic">
                                             "{msg.prompt.substring(0, 100)}..."
                                         </div>
                                         <div className="text-[11px] text-blue-400/80 bg-blue-500/5 p-2 rounded border border-blue-500/10 font-mono leading-tight">
@@ -163,7 +163,7 @@ export function AIChatView() {
 
             {/* Input - Only for Chat Mode */}
             {mode === 'chat' && (
-                <div className="p-3 bg-[#1e222d]/80 border-t border-white/5">
+                <div className="p-3 bg-secondary/80 border-t border-border">
                     <div className="relative flex items-center gap-2">
                         <input
                             type="text"
@@ -171,7 +171,7 @@ export function AIChatView() {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                             placeholder="Ask anything..."
-                            className="flex-1 bg-black/40 border border-white/5 rounded-full py-2.5 px-5 text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 transition-all pr-12"
+                            className="flex-1 bg-secondary border border-border rounded-full py-2.5 px-5 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500/50 transition-all pr-12"
                         />
                         <button
                             onClick={handleSend}

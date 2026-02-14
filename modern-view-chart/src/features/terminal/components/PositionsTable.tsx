@@ -61,14 +61,14 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
     };
 
     const HeaderCell = ({ field, label, className = "" }: { field: SortField, label: string, className?: string }) => (
-        <th className={`p-2 font-medium border-b border-[#2a2e39] cursor-pointer hover:bg-[#2a2e39] transition-colors ${className}`} onClick={() => handleSort(field)}>
+        <th className={`p-2 font-medium border-b border-border cursor-pointer hover:bg-secondary/40 transition-colors ${className}`} onClick={() => handleSort(field)}>
             <div className="flex items-center">{label}<SortIcon field={field} /></div>
         </th>
     );
 
     return (
         <table className="w-full text-[11px] text-left border-collapse min-w-[1000px]">
-            <thead className="sticky top-0 bg-[#1e222d] text-[#787b86] z-10">
+            <thead className="sticky top-0 bg-secondary/10 text-muted-foreground z-10 transition-colors">
                 <tr>
                     <HeaderCell field="time" label="Time" />
                     <HeaderCell field="symbol" label="Symbol" />
@@ -81,7 +81,7 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
                     <HeaderCell field="sl" label="SL" />
                     <HeaderCell field="tp" label="TP" />
                     <HeaderCell field="profit" label="Profit" />
-                    <th className="p-2 font-medium border-b border-[#2a2e39]">Actions</th>
+                    <th className="p-2 font-medium border-b border-border">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -97,7 +97,7 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
                         handleKeyDown={handleKeyDown}
                     />
                 )) : (
-                    <tr><td colSpan={12} className="p-4 text-center text-[#787b86]">No open positions</td></tr>
+                    <tr><td colSpan={12} className="p-4 text-center text-muted-foreground">No open positions</td></tr>
                 )}
             </tbody>
         </table>
@@ -189,7 +189,7 @@ const PositionRow = memo(({ pos, onClosePosition, onSymbolClick, editingCell, se
     };
 
     return (
-        <tr className="hover:bg-blue-500/10 text-[#d1d4dc] border-b border-[#2a2e39]"
+        <tr className="hover:bg-blue-500/10 text-foreground border-b border-border/50"
             onMouseEnter={() => setHoveredTicket(pos.ticket)}
             onMouseLeave={() => setHoveredTicket(null)}>
             <td className="p-2 whitespace-nowrap">{new Date(pos.time * 1000).toLocaleString()}</td>
@@ -202,7 +202,7 @@ const PositionRow = memo(({ pos, onClosePosition, onSymbolClick, editingCell, se
             <td ref={priceRef} className="p-2">{pos.current_price.toFixed(5)}</td>
             <td className="p-2">
                 {editingCell?.ticket === pos.ticket && editingCell.field === 'sl' ? (
-                    <input autoFocus type="number" step="0.00001" className="w-20 bg-[#2a2e39] text-white px-1 rounded border border-blue-500 outline-none"
+                    <input autoFocus type="number" step="0.00001" className="w-20 bg-secondary text-foreground px-1 rounded border border-blue-500 outline-none"
                         value={editingCell.value} onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })} onBlur={commitEdit} onKeyDown={handleKeyDown} />
                 ) : (
                     <span className="cursor-pointer text-blue-500 hover:underline hover:text-blue-400" onClick={() => startEditing(pos.ticket, 'sl', pos.sl)}>
@@ -212,7 +212,7 @@ const PositionRow = memo(({ pos, onClosePosition, onSymbolClick, editingCell, se
             </td>
             <td className="p-2">
                 {editingCell?.ticket === pos.ticket && editingCell.field === 'tp' ? (
-                    <input autoFocus type="number" step="0.00001" className="w-20 bg-[#2a2e39] text-white px-1 rounded border border-blue-500 outline-none"
+                    <input autoFocus type="number" step="0.00001" className="w-20 bg-secondary text-foreground px-1 rounded border border-blue-500 outline-none"
                         value={editingCell.value} onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })} onBlur={commitEdit} onKeyDown={handleKeyDown} />
                 ) : (
                     <span className="cursor-pointer text-blue-500 hover:underline hover:text-blue-400" onClick={() => startEditing(pos.ticket, 'tp', pos.tp)}>

@@ -39,26 +39,29 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
     };
 
     return (
-        <div className="flex bg-[#1e222d]/80 backdrop-blur-md border border-zinc-700/40 rounded-t-md overflow-hidden border-b-0">
-            {subchartIndicators.map((ind, idx) => (
-                <button
-                    key={ind.id}
-                    onClick={() => handleTabClick(ind.id)}
-                    className={cn(
-                        "px-3 md:px-5 py-1 text-[11px] md:text-[10px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
-                        ind.visible
-                            ? "bg-blue-600/20 text-blue-400"
-                            : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5",
-                        idx !== 0 && "border-l border-zinc-800/40"
-                    )}
-                >
-                    {/* Active Indicator Top Border */}
-                    {ind.visible && (
-                        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
-                    )}
-                    {ind.type}
-                </button>
-            ))}
+        <div className="flex bg-secondary/80 backdrop-blur-md border border-border rounded-t-md overflow-hidden border-b-0">
+            {subchartIndicators.map((ind, idx) => {
+                const isVisible = ind.visible;
+                return (
+                    <button
+                        key={ind.id}
+                        onClick={() => handleTabClick(ind.id)}
+                        className={cn(
+                            "px-3 md:px-5 py-1 text-[11px] md:text-[10px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
+                            isVisible
+                                ? "bg-primary/20 text-primary font-bold"
+                                : "text-muted-foreground hover:text-foreground hover:bg-white/5",
+                            idx !== 0 && "border-l border-border"
+                        )}
+                    >
+                        {/* Active Indicator Top Border */}
+                        {isVisible && (
+                            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-primary shadow-[0_0_8px_var(--glow-primary)]" />
+                        )}
+                        {ind.type}
+                    </button>
+                );
+            })}
         </div>
     );
 }

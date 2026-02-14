@@ -63,7 +63,7 @@ export const MobileAccountSummary = memo(function MobileAccountSummary({ account
             equityRef.current.textContent = equityStr;
             equityRef.current.className = cn(
                 "text-xs font-mono font-bold",
-                realTimeEquity >= (account.balance ?? 0) ? "text-white" : "text-red-400"
+                realTimeEquity >= (account.balance ?? 0) ? "text-foreground" : "text-red-400"
             );
         }
     }, [account]);
@@ -100,29 +100,30 @@ export const MobileAccountSummary = memo(function MobileAccountSummary({ account
     if (!account) return null;
 
     return (
-        <div className="bg-zinc-900/60 backdrop-blur-md rounded-lg p-1 px-2 border border-zinc-800/50 flex items-center justify-between shadow-inner h-9">
+        <div className="bg-secondary/60 backdrop-blur-md rounded-lg p-1 px-2 border border-border/50 flex items-center justify-between shadow-inner h-9">
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-zinc-500 uppercase font-black">Eq:</span>
-                    <span ref={equityRef} className="text-xs font-mono font-bold text-white">···</span>
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Eq:</span>
+                    <span ref={equityRef} className="text-xs font-mono font-bold text-foreground">···</span>
                 </div>
-                <div className="w-px h-3 bg-zinc-800/50" />
+                <div className="w-px h-3 bg-border/50" />
                 <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-zinc-500 uppercase font-black">Pr:</span>
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Pr:</span>
                     <span ref={profitRef} className="text-xs font-mono font-bold font-black text-green-500">···</span>
                 </div>
             </div>
 
             <div className="flex items-center gap-2 text-right">
                 <div className="flex items-baseline gap-1">
-                    <span className="text-[7px] text-zinc-600 uppercase font-medium">B</span>
-                    <span className="text-[9px] font-mono text-zinc-500 leading-none">{(account.balance ?? 0).toFixed(0)}</span>
+                    <span className="text-[7px] text-muted-foreground/80 uppercase font-medium">B</span>
+                    <span className="text-[9px] font-mono text-muted-foreground leading-none">{(account.balance ?? 0).toFixed(0)}</span>
                 </div>
                 <div className="flex items-baseline gap-1">
-                    <span className="text-[7px] text-zinc-600 uppercase font-medium">L</span>
-                    <span className="text-[9px] font-mono text-zinc-500 leading-none">{(account.margin_level ?? 0).toFixed(0)}%</span>
+                    <span className="text-[7px] text-muted-foreground/80 uppercase font-medium">L</span>
+                    <span className="text-[9px] font-mono text-muted-foreground leading-none">{(account.margin_level ?? 0).toFixed(0)}%</span>
                 </div>
             </div>
         </div>
     );
-});
+}
+);

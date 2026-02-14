@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -6,58 +7,81 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --background: hsl(210 20% 98%);
+    --foreground: hsl(224 71.4% 4.1%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(224 71.4% 4.1%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(224 71.4% 4.1%);
+    --primary: hsl(221.2 83.2% 53.3%);
+    --primary-foreground: hsl(210 40% 98%);
+    --secondary: hsl(220 14.3% 95%);
+    --secondary-foreground: hsl(220.9 39.3% 11%);
+    --muted: hsl(220 14.3% 96%);
+    --muted-foreground: hsl(220 8.9% 45%);
+    --accent: hsl(220 14.3% 95%);
+    --accent-foreground: hsl(220.9 39.3% 11%);
+    --destructive: hsl(0 84.2% 60.2%);
+    --destructive-foreground: hsl(210 40% 98%);
+    --border: hsl(220 13% 97%);
+    --input: hsl(220 13% 97%);
+    --ring: hsl(221.2 83.2% 53.3%);
+    --radius: 0.75rem;
+    --chart-1: hsl(12 76% 61%);
+    --chart-2: hsl(173 58% 39%);
+    --chart-3: hsl(197 37% 24%);
+    --chart-4: hsl(43 74% 66%);
+    --chart-5: hsl(27 87% 67%);
+
+    /* Premium Accents */
+    --glow-primary: hsla(221.2, 83.2%, 53.3%, 0.3);
+    --glow-success: hsla(142.1, 70.6%, 45.3%, 0.3);
+    --glow-error: hsla(0, 84.2%, 60.2%, 0.3);
+
+    /* TradingView Specific */
+    --tv-bg: hsl(210 20% 98%);
+    --tv-grid: hsl(220 13% 97%);
+    --tv-text: hsl(240 5% 55%);
+    --tv-border: hsl(220 13% 97%);
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: hsl(225 30% 3%);
+    --foreground: hsl(210 40% 98%);
+    --card: hsl(225 30% 5%);
+    --card-foreground: hsl(210 40% 98%);
+    --popover: hsl(225 30% 5%);
+    --popover-foreground: hsl(210 40% 98%);
+    --primary: hsl(217.2 91.2% 59.8%);
+    --primary-foreground: hsl(222.2 47.4% 11.2%);
+    --secondary: hsl(225 30% 7%);
+    --secondary-foreground: hsl(210 40% 98%);
+    --muted: hsl(225 30% 6%);
+    --muted-foreground: hsl(215 20.2% 60%);
+    --accent: hsl(217.2 32.6% 15%);
+    --accent-foreground: hsl(210 40% 98%);
+    --destructive: hsl(0 84.2% 60.2%);
+    --destructive-foreground: hsl(210 40% 98%);
+    --border: hsl(225 20% 8%);
+    --input: hsl(225 20% 8%);
+    --ring: hsl(224.3 76.3% 48%);
+    --chart-1: hsl(220 70% 50%);
+    --chart-2: hsl(160 60% 45%);
+    --chart-3: hsl(30 80% 55%);
+    --chart-4: hsl(280 65% 60%);
+    --chart-5: hsl(340 75% 55%);
+
+    /* Premium Accents */
+    --glow-primary: hsla(217.2, 91.2%, 59.8%, 0.2);
+    --glow-success: hsla(142.1, 70.6%, 45.3%, 0.2);
+    --glow-error: hsla(0, 84.2%, 60.2%, 0.2);
+    --glow-warning: hsla(38, 92%, 50%, 0.2);
+
+    /* TradingView Specific */
+    --tv-bg: hsl(225 30% 3%);
+    --tv-grid: hsl(225 30% 5%);
+    --tv-text: hsl(240 5% 70%);
+    --tv-border: hsl(225 20% 8%);
   }
 }
 
@@ -87,18 +111,29 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
+
+  --color-tv-bg: var(--tv-bg);
+  --color-tv-grid: var(--tv-grid);
+  --color-tv-text: var(--tv-text);
+  --color-tv-border: var(--tv-border);
+
+  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+  --shadow-ethereal: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px var(--glow-primary);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  /* 
+     Removed universal border-border rule as it was too aggressive.
+     Borders are now explicitly defined only where needed.
+  */
 
   html,
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
+    font-family: 'Outfit', sans-serif;
     height: 100%;
     margin: 0;
     padding: 0;
@@ -109,18 +144,99 @@
 
   /* Improved Form Element Visibility */
   select {
-    @apply bg-[#131722] text-zinc-200 border-[#363a45];
+    @apply bg-background text-foreground border-border;
   }
 
   option {
-    @apply bg-[#1e222d] text-zinc-100;
-    background-color: #1e222d !important;
-    color: #f4f4f5 !important;
+    @apply bg-popover text-popover-foreground;
   }
 
   input::placeholder {
-    @apply text-zinc-600;
+    @apply text-muted-foreground;
   }
+
+  /* --- Global Theme Colors --- */
+
+  /* --- Five Elements (Ngũ Hành) Themes --- */
+
+  /* Thủy (Water) - Blue */
+  .theme-blue {
+    --primary: hsl(221.2 83.2% 53.3%);
+    --ring: hsl(221.2 83.2% 53.3%);
+    --glow-primary: hsla(221.2, 83.2%, 53.3%, 0.3);
+    /* Grid Color */
+    --pattern-color: rgba(59, 130, 246, 0.08);
+  }
+
+  .dark .theme-blue {
+    --primary: hsl(217.2 91.2% 59.8%);
+    --ring: hsl(217.2 91.2% 59.8%);
+    --glow-primary: hsla(217.2, 91.2%, 59.8%, 0.2);
+    --pattern-color: rgba(59, 130, 246, 0.1);
+  }
+
+  /* Mộc (Wood) - Green */
+  .theme-green {
+    --primary: hsl(142.1 76% 36.3%);
+    --ring: hsl(142.1 76% 36.3%);
+    --glow-primary: hsla(142.1, 76%, 36.3%, 0.3);
+    --pattern-color: rgba(34, 197, 94, 0.08);
+  }
+
+  .dark .theme-green {
+    --primary: hsl(142.1 70.6% 45.3%);
+    --ring: hsl(142.1 70.6% 45.3%);
+    --glow-primary: hsla(142.1, 70.6%, 45.3%, 0.2);
+    --pattern-color: rgba(34, 197, 94, 0.1);
+  }
+
+  /* Thổ (Earth) - Amber */
+  .theme-amber {
+    --primary: hsl(38 92% 50%);
+    --ring: hsl(38 92% 50%);
+    --glow-primary: hsla(38, 92%, 50%, 0.3);
+    --primary-foreground: hsl(48 96% 89%);
+    --pattern-color: rgba(245, 158, 11, 0.1);
+  }
+
+  .dark .theme-amber {
+    --primary: hsl(45 93% 47%);
+    --ring: hsl(45 93% 47%);
+    --glow-primary: hsla(45, 93%, 47%, 0.2);
+    --pattern-color: rgba(245, 158, 11, 0.12);
+  }
+
+  /* Hỏa (Fire) - Red */
+  .theme-red {
+    --primary: hsl(0 84.2% 60.2%);
+    --ring: hsl(0 84.2% 60.2%);
+    --glow-primary: hsla(0, 84.2%, 60.2%, 0.3);
+    --pattern-color: rgba(239, 68, 68, 0.08);
+  }
+
+  .dark .theme-red {
+    --primary: hsl(0 72% 51%);
+    --ring: hsl(0 72% 51%);
+    --glow-primary: hsla(0, 72%, 51%, 0.2);
+    --pattern-color: rgba(239, 68, 68, 0.1);
+  }
+
+  /* Kim (Metal) - Slate */
+  .theme-slate {
+    --primary: hsl(215 16% 47%);
+    --ring: hsl(215 16% 47%);
+    --glow-primary: hsla(215, 16%, 47%, 0.3);
+    --pattern-color: rgba(148, 163, 184, 0.08);
+  }
+
+  .dark .theme-slate {
+    --primary: hsl(215 25% 65%);
+    --ring: hsl(215 25% 65%);
+    --glow-primary: hsla(215, 25%, 65%, 0.2);
+    --primary-foreground: hsl(222.2 47.4% 11.2%);
+    --pattern-color: rgba(148, 163, 184, 0.1);
+  }
+
 }
 
 /* Custom Scrollbar */
@@ -130,8 +246,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2e39;
-  border-radius: 10px;
+  @apply bg-border rounded-full;
 }
 
 /* 🚀 Utilities */
@@ -143,6 +258,13 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .bg-theme-pattern {
+    background-color: var(--background);
+    background-image: var(--bg-pattern);
+    background-size: var(--bg-size, 20px 20px);
+    background-attachment: fixed;
   }
 
   .app-root {
@@ -171,6 +293,26 @@
     height: 100dvh;
     width: 100%;
     overflow: hidden;
+  }
+
+  .glass-card {
+    @apply bg-background/40 backdrop-blur-md border border-white/5 shadow-premium transition-all duration-300;
+  }
+
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-xl border-l border-white/5 shadow-2xl;
+  }
+
+  .text-glow-primary {
+    text-shadow: 0 0 10px var(--glow-primary);
+  }
+
+  .glow-primary-border {
+    @apply border-primary/30 shadow-[0_0_15px_var(--glow-primary)];
+  }
+
+  .premium-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-tr from-primary via-blue-400 to-indigo-400;
   }
 }
 

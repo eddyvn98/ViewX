@@ -36,18 +36,18 @@ export function TabContainer() {
                     onClick={() => setActiveTab(tab.id)}
                     onDoubleClick={() => handleRename(tab.id, tab.name)}
                     className={cn(
-                        "group relative flex items-center gap-2 px-4 h-full transition-all cursor-pointer min-w-[100px] max-w-[160px]",
+                        "group relative flex items-center gap-2 px-2 h-full transition-all cursor-pointer min-w-[70px] max-w-[120px]",
                         activeTabId === tab.id
-                            ? "text-blue-400"
-                            : "text-zinc-500 hover:text-zinc-300"
+                            ? "text-primary bg-primary/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/10"
                     )}
                 >
-                    <Layout size={12} className={activeTabId === tab.id ? "text-blue-500" : "text-zinc-600"} />
+                    <Layout size={12} className={activeTabId === tab.id ? "text-primary glow-primary" : "text-muted-foreground/40"} />
 
                     {editingId === tab.id ? (
                         <input
                             autoFocus
-                            className="bg-zinc-800 text-white text-[11px] px-1 rounded outline-none w-full"
+                            className="bg-secondary/40 text-foreground text-[9px] px-1 py-0.5 rounded border border-primary/30 outline-none w-full shadow-inner"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onBlur={() => submitRename(tab.id)}
@@ -55,7 +55,7 @@ export function TabContainer() {
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className="text-[11px] font-bold truncate select-none tracking-tight">
+                        <span className="text-[9px] font-black uppercase tracking-wider truncate select-none leading-none">
                             {tab.name}
                         </span>
                     )}
@@ -66,25 +66,25 @@ export function TabContainer() {
                                 e.stopPropagation();
                                 removeTab(tab.id);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-zinc-800 rounded transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all"
                         >
-                            <X size={10} className="text-zinc-500 hover:text-red-400" />
+                            <X size={10} />
                         </button>
                     )}
 
-                    {/* Active Indicator Line */}
+                    {/* Active Indicator Line - Extra Slim */}
                     {activeTabId === tab.id && (
-                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-500" />
+                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full shadow-glow" />
                     )}
                 </div>
             ))}
 
             <button
                 onClick={() => addTab()}
-                className="p-1 px-2 rounded-lg hover:bg-zinc-800 text-zinc-600 hover:text-white transition-all ml-1"
+                className="p-2 rounded-xl text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-all ml-2 active:scale-90"
                 title="Add Workspace"
             >
-                <Plus size={14} />
+                <Plus size={16} />
             </button>
         </div>
     );

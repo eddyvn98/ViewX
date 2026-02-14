@@ -20,7 +20,7 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
     return (
         <div className="flex flex-col gap-2 animate-in slide-in-from-left-4 duration-300 w-full">
             <div className="flex justify-between items-center px-1">
-                <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Running Bot ({strategies.length})</span>
+                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Running Bot ({strategies.length})</span>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onAdd}
@@ -39,54 +39,54 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
             ) : (
                 <div className="grid grid-cols-1 gap-2">
                     {strategies.map((s) => (
-                        <div key={s.id} className="bg-[#1e222d]/60 p-2.5 rounded-lg border border-[#363a45]/50 flex flex-col gap-2 hover:bg-[#232732]/80 transition-colors group">
+                        <div key={s.id} className="bg-secondary/40 p-2.5 rounded-lg border border-border flex flex-col gap-2 hover:bg-secondary/60 transition-colors group">
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col flex-1">
-                                    <span className="text-[11px] font-bold text-zinc-100 group-hover:text-blue-400 transition-colors tracking-tight">{s.name}</span>
+                                    <span className="text-[11px] font-bold text-foreground group-hover:text-blue-500 transition-colors tracking-tight">{s.name}</span>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         {/* Quick Symbol Edit */}
                                         <select
                                             value={s.symbol || ''}
                                             onChange={(e) => handleUpdate(s.id, { symbol: e.target.value })}
-                                            className="bg-transparent text-[9px] font-bold text-blue-400 hover:text-blue-300 uppercase outline-none border-b border-transparent focus:border-blue-500/30 cursor-pointer tracking-wider transition-colors appearance-none"
+                                            className="bg-transparent text-[9px] font-bold text-blue-500 hover:text-blue-400 uppercase outline-none border-b border-transparent focus:border-blue-500/30 cursor-pointer tracking-wider transition-colors appearance-none"
                                         >
-                                            <option value="" className="bg-[#131722] text-zinc-400">Symbol</option>
+                                            <option value="" className="bg-popover text-muted-foreground">Symbol</option>
                                             {Object.keys(symbolInfo).sort().map(sym => (
-                                                <option key={sym} value={sym} className="bg-[#131722] text-zinc-200 uppercase">{sym}</option>
+                                                <option key={sym} value={sym} className="bg-popover text-foreground uppercase">{sym}</option>
                                             ))}
                                         </select>
 
-                                        <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                                        <div className="w-1 h-1 rounded-full bg-border" />
 
                                         {/* Quick Timeframe Edit */}
                                         <select
                                             value={s.timeframe || '1m'}
                                             onChange={(e) => handleUpdate(s.id, { timeframe: e.target.value })}
-                                            className="bg-transparent text-[9px] font-bold text-zinc-400 hover:text-zinc-100 uppercase outline-none border-b border-transparent focus:border-zinc-500/30 cursor-pointer tracking-wider transition-colors appearance-none"
+                                            className="bg-transparent text-[9px] font-bold text-muted-foreground hover:text-foreground uppercase outline-none border-b border-transparent focus:border-border/30 cursor-pointer tracking-wider transition-colors appearance-none"
                                         >
-                                            <option value="1m" className="bg-[#131722] text-zinc-200">M1</option>
-                                            <option value="5m" className="bg-[#131722] text-zinc-200">M5</option>
-                                            <option value="15m" className="bg-[#131722] text-zinc-200">M15</option>
-                                            <option value="30m" className="bg-[#131722] text-zinc-200">M30</option>
-                                            <option value="1h" className="bg-[#131722] text-zinc-200">H1</option>
-                                            <option value="4h" className="bg-[#131722] text-zinc-200">H4</option>
-                                            <option value="1d" className="bg-[#131722] text-zinc-200">D1</option>
+                                            <option value="1m" className="bg-popover text-foreground">M1</option>
+                                            <option value="5m" className="bg-popover text-foreground">M5</option>
+                                            <option value="15m" className="bg-popover text-foreground">M15</option>
+                                            <option value="30m" className="bg-popover text-foreground">M30</option>
+                                            <option value="1h" className="bg-popover text-foreground">H1</option>
+                                            <option value="4h" className="bg-popover text-foreground">H4</option>
+                                            <option value="1d" className="bg-popover text-foreground">D1</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                    <button onClick={() => toggleStrategy(s.id)} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition-all ${s.active ? 'bg-green-600 text-white shadow-lg shadow-green-900/40' : 'bg-[#131722] text-zinc-600 border border-zinc-800'}`}>
+                                    <button onClick={() => toggleStrategy(s.id)} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition-all ${s.active ? 'bg-green-600 text-white shadow-lg shadow-green-900/40' : 'bg-secondary text-muted-foreground border border-border'}`}>
                                         {s.active ? 'Active' : 'Paused'}
                                     </button>
                                     <button
                                         onClick={() => toggleAiGuard(s.id)}
-                                        className={`p-1 rounded transition-all flex items-center gap-1 ${s.aiGuard ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'text-zinc-600 hover:text-blue-400 hover:bg-blue-500/5'}`}
+                                        className={`p-1 rounded transition-all flex items-center gap-1 ${s.aiGuard ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'text-muted-foreground hover:text-blue-500 hover:bg-blue-500/5'}`}
                                         title={s.aiGuard ? "AI Guard Active" : "Enable AI Guard"}
                                     >
                                         <BrainCircuit size={11} className={s.aiGuard ? 'animate-pulse' : ''} />
                                         <span className="text-[8px] font-black uppercase">{s.aiGuard ? 'On' : 'Off'}</span>
                                     </button>
-                                    <button onClick={() => onEdit(s)} className="p-1 text-zinc-600 hover:text-white hover:bg-zinc-800 rounded transition-all">
+                                    <button onClick={() => onEdit(s)} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-all">
                                         <Settings size={11} />
                                     </button>
                                     <button onClick={() => deleteStrategy(s.id)} className="p-1 text-red-500/40 hover:text-red-500 hover:bg-red-500/5 rounded transition-all">
@@ -94,7 +94,7 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                     </button>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5 border-t border-zinc-800/50 pt-2 text-[8px] text-zinc-600 font-bold uppercase tracking-tight">
+                            <div className="grid grid-cols-3 gap-1.5 border-t border-border/50 pt-2 text-[8px] text-muted-foreground font-bold uppercase tracking-tight">
                                 <div className="flex items-center gap-1">
                                     <Target size={10} className="text-red-500/40" />
                                     SL: {typeof s.risk.sl === 'object' ? s.risk.sl.mode.toUpperCase() : (s.risk.sl || 'Fixed')}
@@ -120,7 +120,7 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                                 handleUpdate(s.id, { risk: { ...s.risk, lotSize: newLot } });
                                             }
                                         }}
-                                        className="bg-[#131722]/50 border border-zinc-800/50 rounded px-1 py-0 w-[40px] text-zinc-200 font-mono font-bold outline-none focus:border-blue-500/30 h-4"
+                                        className="bg-secondary/50 border border-border rounded px-1 py-0 w-[40px] text-foreground font-mono font-bold outline-none focus:border-blue-500/30 h-4"
                                     />
                                 </div>
                                 <div className="flex items-center gap-1"><Layers size={10} className="text-purple-500/40" /> Max: {s.risk.maxTrades}</div>

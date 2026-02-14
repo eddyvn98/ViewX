@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Maximize2, ExternalLink, X, Link, Bell } from 'lucide-react';
 import { useMarketStore, ChartInstance } from '@/lib/store';
 import { ChartContainer } from '../ChartContainer';
+import { cn } from '@/lib/utils';
 
 
 interface ChartItemProps {
@@ -41,39 +42,51 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
             ref={containerRef}
             onClick={() => setActiveChart(chart.id)}
             onDoubleClick={() => toggleMaximizeChart(isMaximized ? null : chart.id)}
-            className={`group relative rounded-xl border overflow-hidden flex flex-col bg-zinc-900 transition-all ${isActive ? 'border-blue-500/50 ring-1 ring-blue-500/20 shadow-xl' : 'border-zinc-800 hover:border-zinc-700'}`}
+            className={cn(
+                "group relative rounded-xl border flex flex-col bg-background transition-all duration-300 overflow-hidden",
+                isActive
+                    ? "border-primary/40 ring-2 ring-primary/5 shadow-2xl shadow-primary/10 scale-[1.002] z-10"
+                    : "border-border/30 hover:border-border/50"
+            )}
         >
-            <div className={`bg-zinc-950/50 border-b border-zinc-800 flex flex-col shrink-0 ${isNarrow ? 'pb-0' : 'pb-1.5'}`}>
+            <div className={cn(
+                "bg-secondary/20 backdrop-blur-md border-b border-border/10 flex flex-col shrink-0 transition-colors",
+                isActive && "bg-secondary/30",
+                isNarrow ? "pb-0" : "pb-0"
+            )}>
                 {/* Row 1: Main Info & Actions */}
-                <div className="px-3 py-1.5 flex justify-between items-center">
-                    <div className="flex items-center gap-2 overflow-hidden">
+                <div className="px-2 py-0.5 flex justify-between items-center min-h-[26px]">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const groups: any = { 'none': 'A', 'A': 'B', 'B': 'C', 'C': 'D', 'D': 'none' };
                                 updateChart(chart.id, { group: groups[chart.group || 'none'] });
                             }}
-                            className={`flex items-center justify-center w-4 h-4 rounded transition-colors shrink-0 ${!chart.group || chart.group === 'none' ? 'text-zinc-700 hover:text-zinc-500' :
-                                chart.group === 'A' ? 'text-green-500 bg-green-500/10' : chart.group === 'B' ? 'text-blue-500 bg-blue-500/10' :
-                                    chart.group === 'C' ? 'text-orange-500 bg-orange-500/10' : 'text-purple-500 bg-purple-500/10'}`}
+                            className={cn(
+                                "flex items-center justify-center w-5 h-5 rounded-lg transition-all shrink-0 active:scale-90",
+                                !chart.group || chart.group === 'none'
+                                    ? "text-muted-foreground/30 hover:text-foreground hover:bg-secondary"
+                                    : chart.group === 'A' ? "text-emerald-500 bg-emerald-500/10" :
+                                        chart.group === 'B' ? "text-primary bg-primary/10" :
+                                            chart.group === 'C' ? "text-orange-500 bg-orange-500/10" : "text-purple-500 bg-purple-500/10"
+                            )}
                             title={`Symbol Link: ${chart.group || 'None'}`}
                         >
-                            <Link size={10} />
+                            <Link size={10} strokeWidth={2.5} />
                         </button>
-                        <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-tighter whitespace-nowrap">
-                            {chart.symbol} • {chart.interval}
-                        </span>
+                        <div className="flex flex-row items-baseline gap-1.5">
+                            <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-wider transition-colors",
+                                isActive ? "text-foreground" : "text-foreground/70"
+                            )}>
+                                {chart.symbol}
+                            </span>
+                            <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tight">{chart.interval} • {chart.source}</span>
+                        </div>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                // Add alert at current price (approximate or undefined to let hook handle default)
-                                // We need a way to trigger add alert. 
-                                // Since ChartItem doesn't have direct access to chart logic, we might need to dispatch an event or use a store action if available.
-                                // For now, let's dispatch a custom event that ChartInteraction listens to, or use the store if we add an action there.
-                                // Actually, useChartAlerts in ChartContainer handles 'addAlert' event? No.
-                                // Let's use the store to add a default alert if possible, or better: 
-                                // Dispatch a window event 'add-alert-trigger' with chartId?
-                                // Simpler: Just use useMarketStore to add an alert directly.
                                 const store = useMarketStore.getState();
                                 const price = store.tickers[`${chart.source}:${chart.symbol}`]?.price || store.tickers[chart.symbol]?.price || 0;
                                 if (price > 0) {
@@ -85,18 +98,18 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                                     });
                                 }
                             }}
-                            className="ml-2 p-1 text-zinc-500 hover:text-amber-500 transition-colors"
-                            title="Add Alert"
+                            className="ml-0.5 p-1 text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-500/5 rounded-lg transition-all group/bell"
+                            title="Quick Alert"
                         >
-                            <Bell size={12} />
+                            <Bell size={11} className="group-hover/bell:animate-bounce" />
                         </button>
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="text-zinc-600 hover:text-blue-500 transition-colors" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={12} /></button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                        <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={11} /></button>
                         <a href={`/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`} target="_blank" rel="noopener noreferrer" onClick={(e) => {
                             e.preventDefault(); window.open(`/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`, `chart_${chart.id}`, 'width=1000,height=600');
-                        }} className="text-zinc-600 hover:text-purple-500 transition-colors" title="Pop out"><ExternalLink size={12} /></a>
-                        {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} className="text-zinc-600 hover:text-red-500 transition-colors"><X size={12} /></button>}
+                        }} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title="Pop out"><ExternalLink size={11} /></a>
+                        {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all" title="Close"><X size={11} /></button>}
                     </div>
                 </div>
             </div>

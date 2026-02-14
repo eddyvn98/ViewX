@@ -278,7 +278,7 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
     }, []);
 
     return (
-        <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[1000] overflow-hidden touch-none">
+        <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[5] overflow-hidden touch-none">
             {editingState && seriesRef.current && (
                 <EditOverlay
                     state={editingState}
@@ -323,7 +323,7 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
 
     return (
         <div
-            className="edit-overlay absolute z-[2000] flex flex-col items-center gap-2 pointer-events-auto touch-action-none"
+            className="edit-overlay absolute z-[25] flex flex-col items-center gap-2 pointer-events-auto touch-action-none"
             onContextMenu={e => e.preventDefault()}
             style={{
                 transform: `translateY(${coord - 13}px)`,
@@ -341,14 +341,14 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
             }}
         >
             <div
-                className="h-7 min-w-[85px] bg-zinc-950 border-2 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] overflow-hidden rounded-md"
+                className="h-8 min-w-[90px] bg-background/60 backdrop-blur-xl border border-primary/20 shadow-glow overflow-hidden rounded-lg"
             >
                 <input
                     autoFocus
                     type="number"
                     step="0.00001"
                     defaultValue={state.value}
-                    className="w-full h-full bg-transparent text-white text-[13px] font-mono font-bold text-center outline-none px-2"
+                    className="w-full h-full bg-transparent text-foreground text-[13px] font-bold text-center outline-none px-2"
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') onFinish(parseFloat((e.target as HTMLInputElement).value), true, state.id);
                         if (e.key === 'Escape') {
@@ -362,6 +362,7 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
                         setTimeout(() => {
                             if (isDeletingRef.current || isInteractingRef.current) return;
                             const val = parseFloat((e.target as HTMLInputElement).value);
+                            // Ensure 0 is passed if the input is empty or invalid
                             onFinish(isNaN(val) ? 0 : val, !isNaN(val), state.id);
                         }, 200);
                     }}
@@ -371,12 +372,13 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
             <button
                 type="button"
                 data-no-drag="true"
-                className="delete-btn flex items-center gap-1.5 px-3 py-1.5 bg-red-600/90 backdrop-blur-md border border-red-500/50 rounded-lg shadow-lg active:scale-95 transition-all"
+                title="Xoá lệnh"
+                className="delete-btn flex items-center justify-center w-8 h-8 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white backdrop-blur-md border border-red-500/20 rounded-lg shadow-lg active:scale-95 transition-all"
                 onPointerDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     isDeletingRef.current = true;
-
+                    // ... (rest of logic) ...
                     const { ticket, type } = state;
                     const store = useMarketStore.getState();
                     if (ticket === 'draft') {
@@ -396,10 +398,9 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
                     onFinish(0, false, state.id);
                 }}
             >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                 </svg>
-                <span className="text-[11px] font-black text-white uppercase tracking-wider">Xoá lệnh</span>
             </button>
         </div>
     );

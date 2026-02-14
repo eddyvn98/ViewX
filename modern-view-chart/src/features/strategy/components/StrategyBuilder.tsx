@@ -84,12 +84,12 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-0.5 flex-1">
-                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Bot Identity</span>
-                        <div className="h-[1px] bg-blue-500/10 w-full" />
+                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Bot Identity</span>
+                        <div className="h-[1px] bg-blue-500/20 w-full" />
                     </div>
                     <button
                         onClick={onClose}
-                        className="ml-3 p-1 text-zinc-600 hover:text-white bg-zinc-800/50 rounded transition-all"
+                        className="ml-3 p-1 text-muted-foreground hover:text-foreground bg-secondary/50 rounded transition-all"
                     >
                         <XIcon size={12} />
                     </button>
@@ -98,24 +98,24 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                 <div className="flex flex-col gap-2 pl-1">
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1 focus-within:z-10">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tight">Bot Name</span>
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Bot Name</span>
                             <input
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="bg-[#131722]/40 border border-[#363a45]/30 focus:border-blue-500/40 px-2 h-7 text-[11px] font-bold text-zinc-100 outline-none rounded w-full"
+                                className="bg-secondary/40 border border-border focus:border-blue-500/40 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded w-full"
                                 placeholder="Strategy Name"
                             />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tight">Side</span>
-                            <div className="flex bg-[#131722]/60 rounded p-0.5 border border-[#363a45]/30 h-7">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Side</span>
+                            <div className="flex bg-secondary/60 rounded p-0.5 border border-border h-7">
                                 <button
                                     onClick={() => setSide('BUY')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${side === 'BUY' ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-600'}`}
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${side === 'BUY' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground'}`}
                                 >BUY</button>
                                 <button
                                     onClick={() => setSide('SELL')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${side === 'SELL' ? 'bg-red-600 text-white shadow-sm' : 'text-zinc-600'}`}
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${side === 'SELL' ? 'bg-red-600 text-white shadow-sm' : 'text-muted-foreground'}`}
                                 >SELL</button>
                             </div>
                         </div>
@@ -123,56 +123,56 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
 
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tight">Symbol</span>
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Symbol</span>
                             <select
                                 value={strategySymbol}
                                 onChange={(e) => setStrategySymbol(e.target.value)}
-                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-zinc-100 outline-none rounded appearance-none hover:bg-[#1e222d] transition-all cursor-pointer"
+                                className="bg-secondary/60 border border-border focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded appearance-none hover:bg-secondary/80 transition-all cursor-pointer"
                             >
-                                <option value="" className="bg-[#1e222d] text-zinc-400">Active ({activeSymbol})</option>
+                                <option value="" className="bg-popover text-muted-foreground">Active ({activeSymbol})</option>
                                 {Object.keys(symbolInfo).sort().map(s => (
-                                    <option key={s} value={s} className="bg-[#1e222d] text-zinc-100">{s}</option>
+                                    <option key={s} value={s} className="bg-popover text-foreground">{s}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tight">Timeframe</span>
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Timeframe</span>
                             <select
                                 value={timeframe}
                                 onChange={(e) => setTimeframe(e.target.value)}
-                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-zinc-100 outline-none rounded appearance-none hover:bg-[#1e222d] transition-all cursor-pointer"
+                                className="bg-secondary/60 border border-border focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded appearance-none hover:bg-secondary/80 transition-all cursor-pointer"
                             >
-                                <option value="1m" className="bg-[#1e222d] text-zinc-100">M1</option>
-                                <option value="5m" className="bg-[#1e222d] text-zinc-100">M5</option>
-                                <option value="15m" className="bg-[#1e222d] text-zinc-100">M15</option>
-                                <option value="30m" className="bg-[#1e222d] text-zinc-100">M30</option>
-                                <option value="1h" className="bg-[#1e222d] text-zinc-100">H1</option>
-                                <option value="4h" className="bg-[#1e222d] text-zinc-100">H4</option>
-                                <option value="1d" className="bg-[#1e222d] text-zinc-100">D1</option>
+                                <option value="1m" className="bg-popover text-foreground">M1</option>
+                                <option value="5m" className="bg-popover text-foreground">M5</option>
+                                <option value="15m" className="bg-popover text-foreground">M15</option>
+                                <option value="30m" className="bg-popover text-foreground">M30</option>
+                                <option value="1h" className="bg-popover text-foreground">H1</option>
+                                <option value="4h" className="bg-popover text-foreground">H4</option>
+                                <option value="1d" className="bg-popover text-foreground">D1</option>
                             </select>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tight">Execution</span>
-                            <div className="flex bg-[#131722]/60 rounded p-0.5 border border-[#363a45]/30 h-7">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Execution</span>
+                            <div className="flex bg-secondary/60 rounded p-0.5 border border-border h-7">
                                 <button
                                     onClick={() => setExecutionMode('virtual')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${executionMode === 'virtual' ? 'bg-[#363a45] text-white shadow-sm' : 'text-zinc-600'}`}
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${executionMode === 'virtual' ? 'bg-secondary-foreground/10 text-foreground shadow-sm' : 'text-muted-foreground'}`}
                                 >VIRTUAL</button>
                                 <button
                                     onClick={() => setExecutionMode('real')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${executionMode === 'real' ? 'bg-[#363a45] text-white shadow-sm' : 'text-zinc-600'}`}
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${executionMode === 'real' ? 'bg-secondary-foreground/10 text-foreground shadow-sm' : 'text-muted-foreground'}`}
                                 >REAL</button>
                             </div>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tight">Comment</span>
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Comment</span>
                             <input
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
-                                className="bg-[#131722]/40 border border-[#363a45]/30 focus:border-blue-500/40 px-2 h-7 text-[11px] font-medium text-zinc-400 outline-none rounded"
+                                className="bg-secondary/40 border border-border focus:border-blue-500/40 px-2 h-7 text-[11px] font-medium text-muted-foreground outline-none rounded"
                                 placeholder="..."
                             />
                         </div>
@@ -182,25 +182,25 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                 {/* ENTRY EXECUTION SECTION */}
                 <div className="flex flex-col gap-2 mt-1">
                     <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Entry Mode</span>
+                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Entry Mode</span>
                         <div className="h-[1px] bg-blue-500/10 w-full" />
                     </div>
                     <div className="flex flex-col gap-1.5 pl-1 py-1 px-1.5 rounded bg-black/10 border border-white/5">
-                        <div className="flex items-center gap-3 h-6">
-                            <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter w-16 shrink-0">Order Type</span>
-                            <div className="flex bg-[#131722]/80 rounded p-0.5 border border-white/5 h-6 w-[140px]">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">Order Type</span>
+                            <div className="flex bg-secondary/80 rounded p-0.5 border border-border h-6 w-[140px]">
                                 <button
                                     onClick={() => setEntryType('market')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'market' ? 'bg-zinc-700 text-white' : 'text-zinc-600'}`}
-                                >MKT</button>
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'market' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                                >MARKET</button>
                                 <button
                                     onClick={() => setEntryType('stop')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'stop' ? 'bg-zinc-700 text-white' : 'text-zinc-600'}`}
-                                >STP</button>
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'stop' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                                >STOP</button>
                                 <button
                                     onClick={() => setEntryType('limit')}
-                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'limit' ? 'bg-zinc-700 text-white' : 'text-zinc-600'}`}
-                                >LMT</button>
+                                    className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${entryType === 'limit' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                                >LIMIT</button>
                             </div>
                         </div>
 
@@ -227,28 +227,28 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             <RiskPanel risk={risk} positionMode={positionMode} onChangeRisk={setRisk} onChangeMode={setPositionMode} />
 
             {/* 4. SUMMARY & ACTIONS */}
-            <div className="flex flex-col gap-2 border-t border-white/5 pt-3 mt-1">
-                <div className="flex flex-col gap-3 bg-[#131722]/50 p-3 rounded-lg border border-white/5">
+            <div className="flex flex-col gap-2 border-t border-border/50 pt-3 mt-1">
+                <div className="flex flex-col gap-3 bg-secondary/30 p-3 rounded-lg border border-border">
                     <div className="flex items-center justify-around gap-2 px-1">
                         <div className="flex flex-col items-center">
-                            <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">Est. Risk</span>
-                            <span className="text-[10px] font-mono font-black text-zinc-100">1.8% / T</span>
+                            <span className="text-[7px] font-black text-muted-foreground uppercase tracking-widest">Est. Risk</span>
+                            <span className="text-[10px] font-mono font-black text-foreground">1.8% / T</span>
                         </div>
-                        <div className="h-4 w-[1px] bg-white/5" />
+                        <div className="h-4 w-[1px] bg-border/50" />
                         <div className="flex flex-col items-center">
-                            <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">R/R Ratio</span>
-                            <span className="text-[10px] font-mono font-black text-zinc-100">1:2.2</span>
+                            <span className="text-[7px] font-black text-muted-foreground uppercase tracking-widest">R/R Ratio</span>
+                            <span className="text-[10px] font-mono font-black text-foreground">1:2.2</span>
                         </div>
-                        <div className="h-4 w-[1px] bg-white/5" />
+                        <div className="h-4 w-[1px] bg-border/50" />
                         <div className="flex flex-col items-center">
-                            <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">Safety</span>
+                            <span className="text-[7px] font-black text-muted-foreground uppercase tracking-widest">Safety</span>
                             <span className="text-[10px] font-mono font-black text-green-500">8.5</span>
                         </div>
                     </div>
 
                     <button
                         onClick={handleSave}
-                        className="bg-white hover:bg-blue-600 hover:text-white text-black h-8 w-full rounded font-black text-[11px] uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-black/20"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 w-full rounded font-black text-[11px] uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-primary/20"
                     >
                         {editingStrategy ? 'UPDATE BOT' : 'ACTIVATE BOT'}
                     </button>

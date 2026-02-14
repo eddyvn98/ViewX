@@ -1,67 +1,76 @@
 import React, { memo } from 'react';
-import { Bell, Search, Settings, PanelRightClose } from 'lucide-react';
+import { Bell, BarChart2, Settings, PanelRightClose } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { TabContainer } from './TabContainer';
 import { cn } from '@/lib/utils';
 import { MobileAccessButton } from '@/features/chart/components/MobileAccessButton';
+import { ThemeToggle } from './ThemeToggle';
+import { ThemeColorSwitcher } from './ThemeColorSwitcher';
 
 export const Header = memo(function Header() {
     const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
     const toggleRightSidebar = useMarketStore((state) => state.toggleRightSidebar);
+    const isLeftSidebarOpen = useMarketStore((state) => state.isLeftSidebarOpen);
+    const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
 
     return (
-        <header className="hidden md:flex h-14 border-b border-zinc-800 bg-zinc-950 px-4 items-center justify-between shrink-0 sticky top-0 z-30">
-            <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <span className="font-black text-white italic">V</span>
-                    </div>
-                    <span className="text-xl font-black tracking-tighter text-white">
-                        VIEW<span className="text-blue-500">X</span>
-                    </span>
-                </div>
-
-                <div className="hidden lg:block h-full">
+        <header className="hidden md:flex h-8 border-b border-white/5 bg-background/40 backdrop-blur-2xl pl-20 pr-4 items-center justify-between shrink-0 sticky top-0 z-[100] transition-all">
+            <div className="flex items-center h-full gap-4">
+                <div className="hidden lg:block h-full border-r border-white/5 pr-4">
                     <TabContainer />
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg group focus-within:border-blue-500 transition-all">
-                    <Search size={16} className="text-zinc-500 group-focus-within:text-blue-400" />
-                    <input
-                        type="text"
-                        placeholder="Search symbols..."
-                        className="bg-transparent border-none outline-none text-sm text-zinc-300 w-48 placeholder-zinc-700"
-                    />
-                </div>
+            <div className="flex items-center gap-3">
+                {/* Market List Toggle - Replaced Search */}
+                <button
+                    onClick={toggleLeftSidebar}
+                    className={cn(
+                        "w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90 border",
+                        isLeftSidebarOpen
+                            ? "text-primary bg-primary/10 border-primary/20 shadow-[0_0_12px_rgba(59,130,246,0.2)]"
+                            : "text-muted-foreground dark:text-white/40 hover:text-foreground dark:hover:text-white hover:bg-secondary/80 dark:hover:bg-white/10 border-border dark:border-white/5 bg-secondary/40"
+                    )}
+                    title="Toggle Market List"
+                >
+                    <BarChart2 size={14} className={cn(isLeftSidebarOpen && "text-primary")} />
+                </button>
 
-                <div className="flex items-center gap-1 border-r border-zinc-800 pr-4">
+                <div className="flex items-center gap-2 border-r border-border dark:border-white/5 pr-3 h-7">
                     <MobileAccessButton />
-                    <button className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded-lg transition-all relative">
-                        <Bell size={18} />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full border-2 border-zinc-950" />
+                    <ThemeToggle />
+                    <ThemeColorSwitcher />
+                    <button className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary dark:bg-white/[0.05] text-muted-foreground dark:text-white/40 hover:text-foreground dark:hover:text-white hover:bg-secondary/80 dark:hover:bg-white/10 transition-all relative group active:scale-90 border border-border dark:border-white/5">
+                        <Bell size={14} />
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full border border-background shadow-[0_0_8px_var(--glow-primary)]" />
                     </button>
-                    <button className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded-lg transition-all">
-                        <Settings size={18} />
+                    <button className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary dark:bg-white/[0.05] text-muted-foreground dark:text-white/40 hover:text-foreground dark:hover:text-white hover:bg-secondary/80 dark:hover:bg-white/10 transition-all active:scale-90 border border-border dark:border-white/5">
+                        <Settings size={14} />
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3 pl-1">
-                    <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-xs font-bold text-zinc-200">Alex Trading</span>
-                        <span className="text-[10px] text-green-500 font-black uppercase">Pro Account</span>
+                <div className="flex items-center gap-2 pl-2 group cursor-pointer h-7">
+                    <div className="hidden sm:flex flex-col items-end justify-center">
+                        <span className="text-[9px] font-bold text-foreground dark:text-white group-hover:text-primary transition-colors tracking-tight leading-none">Alex</span>
+                        <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full mt-0.5">
+                            <span className="w-1 h-1 bg-emerald-500 rounded-full" />
+                            <span className="text-[7px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">PRO</span>
+                        </div>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 border-2 border-zinc-800 shadow-md" />
+                    <div className="w-7 h-7 rounded-full bg-secondary dark:bg-white/[0.05] border border-border dark:border-white/10 p-[1px] shadow-sm group-hover:border-primary/40 transition-all duration-500">
+                        <div className="w-full h-full rounded-full bg-background/40" />
+                    </div>
 
                     <button
                         onClick={toggleRightSidebar}
                         className={cn(
-                            "p-2 ml-1 rounded-lg transition-all",
-                            isRightSidebarOpen ? "text-blue-500 bg-blue-500/10" : "text-zinc-500 hover:text-white hover:bg-zinc-900"
+                            "w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 border",
+                            isRightSidebarOpen
+                                ? "text-primary bg-primary/10 border-primary/20"
+                                : "text-muted-foreground dark:text-white/30 hover:text-foreground dark:hover:text-white hover:bg-secondary dark:hover:bg-white/5 border-border dark:border-transparent mt-0"
                         )}
                     >
-                        <PanelRightClose size={18} />
+                        <PanelRightClose size={14} />
                     </button>
                 </div>
             </div>

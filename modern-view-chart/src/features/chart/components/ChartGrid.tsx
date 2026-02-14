@@ -14,7 +14,7 @@ export const ChartGrid = memo(function ChartGrid() {
 
     return (
         <div
-            className="flex-1 min-h-0 grid gap-2"
+            className="flex-1 min-h-0 grid gap-1 p-1 bg-secondary/5"
             style={{
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
                 gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`

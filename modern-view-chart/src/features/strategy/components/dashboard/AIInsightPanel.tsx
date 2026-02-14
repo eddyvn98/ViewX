@@ -103,7 +103,7 @@ export function AIInsightPanel({ position, metrics }: Props) {
     return (
         <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <h4 className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                     <BrainCircuit size={14} className="text-pink-500" />
                     AI Strategic Insight
                 </h4>
@@ -119,16 +119,16 @@ export function AIInsightPanel({ position, metrics }: Props) {
             </div>
 
             {isLoading && (
-                <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center gap-3 animate-pulse">
+                <div className="bg-secondary/40 border border-border/50 rounded-xl p-6 flex flex-col items-center justify-center gap-3 animate-pulse">
                     <Loader2 size={24} className="text-pink-500 animate-spin" />
-                    <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-tighter">AI is reading the tape...</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">AI is reading the tape...</span>
                 </div>
             )}
 
             {insight && (
                 <div className="relative group overflow-hidden">
                     {/* Glassmorphism Background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 backdrop-blur-md border border-white/10 rounded-xl" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 backdrop-blur-md border border-border rounded-xl" />
 
                     <div className="relative p-5 space-y-3">
                         <div className="flex items-center gap-2 text-pink-400">
@@ -136,7 +136,7 @@ export function AIInsightPanel({ position, metrics }: Props) {
                             <span className="text-[11px] font-black uppercase tracking-widest">Key Takeaway</span>
                         </div>
 
-                        <p className="text-[12px] text-[#d1d4dc] leading-relaxed italic">
+                        <p className="text-[12px] text-foreground/80 leading-relaxed italic">
                             "{insight}"
                         </p>
 
@@ -148,11 +148,11 @@ export function AIInsightPanel({ position, metrics }: Props) {
                                 </div>
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="flex-1">
-                                        <p className="text-[11px] text-white font-bold">{suggestion.reason}</p>
-                                        <div className="flex items-center gap-2 mt-1 text-[9px] text-blue-300/70 font-mono">
+                                        <p className="text-[11px] text-foreground font-bold">{suggestion.reason}</p>
+                                        <div className="flex items-center gap-2 mt-1 text-[9px] text-blue-400 font-mono">
                                             <span className="bg-blue-500/20 px-1.5 py-0.5 rounded uppercase">{suggestion.field.replace('_', ' ')}</span>
                                             <ArrowRight size={10} />
-                                            <span className="bg-blue-500/20 px-1.5 py-0.5 rounded text-white">{String(suggestion.value)}</span>
+                                            <span className="bg-blue-500/20 px-1.5 py-0.5 rounded text-foreground font-black">{String(suggestion.value)}</span>
                                         </div>
                                     </div>
                                     <button
@@ -167,7 +167,7 @@ export function AIInsightPanel({ position, metrics }: Props) {
                         )}
 
                         <div className="pt-2 flex items-center gap-4">
-                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#787b86] uppercase">
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
                                 <AlertCircle size={12} className="text-blue-400" />
                                 Actionable Feedback
                             </div>
@@ -180,8 +180,8 @@ export function AIInsightPanel({ position, metrics }: Props) {
             )}
 
             {!insight && !isLoading && (
-                <div className="p-4 bg-[#1e222d]/50 border border-dashed border-[#363a45] rounded-xl flex flex-col items-center gap-2">
-                    <p className="text-[10px] text-[#787b86] text-center max-w-[200px]">
+                <div className="p-4 bg-secondary/20 border border-dashed border-border rounded-xl flex flex-col items-center gap-2">
+                    <p className="text-[10px] text-muted-foreground text-center max-w-[200px]">
                         Click the button above to generate a deep-dive analysis of this trade's characteristics.
                     </p>
                 </div>

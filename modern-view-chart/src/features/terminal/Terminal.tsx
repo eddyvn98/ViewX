@@ -128,40 +128,54 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
     }, [setIsScrollingPanel]);
 
     if (!isMounted) {
-        return <div className="h-full bg-[#131722]" />;
+        return <div className="h-full bg-background" />;
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#131722] relative">
+        <div className="flex flex-col h-full bg-background/30 backdrop-blur-xl relative shadow-[0_-20px_50px_-20px_rgba(0,0,0,0.2)] border-t border-border/20">
             {/* Resizer Handle - Hidden if forced expanded */}
             {!forceExpanded && (
                 <div
-                    className="absolute top-[-4px] left-0 right-0 h-[8px] cursor-ns-resize hover:bg-blue-500/50 z-50 transition-colors"
+                    className="absolute top-[-6px] left-0 right-0 h-[12px] cursor-ns-resize hover:bg-primary/20 z-50 transition-all group"
                     onMouseDown={handleDragStart}
-                />
+                >
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-[3px] bg-border/20 rounded-full group-hover:bg-primary/40 transition-all" />
+                </div>
             )}
 
             {/* Header - Hidden if forced expanded */}
             {!forceExpanded && (
                 <div
-                    className={`flex items-center justify-between px-3 h-[40px] bg-[#1e222d] border-t border-b shrink-0 cursor-pointer hover:bg-[#2a2e39] transition-colors group ${!effectiveCollapsed ? 'border-t-blue-500 border-b-[#2a2e39]' : 'border-t-[#2a2e39] border-b-transparent'}`}
+                    className={cn(
+                        "flex items-center justify-between px-4 h-[44px] bg-secondary/10 border-b shrink-0 cursor-pointer hover:bg-secondary/30 transition-all group",
+                        !effectiveCollapsed ? "border-b-border/10" : "border-b-transparent"
+                    )}
                     onClick={toggleCollapse}
                 >
-                    <div className="flex items-center gap-2">
-                        <span className={`text-[12px] font-bold tracking-wider uppercase transition-colors ${!effectiveCollapsed ? 'text-blue-400' : 'text-[#d1d4dc]'}`}>
+                    <div className="flex items-center gap-3">
+                        <span className={cn(
+                            "text-[11px] font-black uppercase tracking-[0.2em] transition-colors",
+                            !effectiveCollapsed ? "text-primary glow-primary" : "text-muted-foreground/60"
+                        )}>
                             Trading Terminal
                         </span>
                         <div
-                            className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${isBridgeOnline ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500'}`}
+                            className={cn(
+                                "w-2 h-2 rounded-full shadow-lg transition-all",
+                                isBridgeOnline ? "bg-emerald-500 shadow-emerald-500/40 animate-pulse" : "bg-rose-500 shadow-rose-500/40"
+                            )}
                             title={isBridgeOnline ? "Bridge Connected" : "Bridge Disconnected"}
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-zinc-600 font-mono hidden group-hover:block transition-all opacity-0 group-hover:opacity-100">
-                            {effectiveCollapsed ? 'Click to Open' : 'Click to Collapse'}
+                    <div className="flex items-center gap-4">
+                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest hidden group-hover:block transition-all opacity-0 group-hover:opacity-100 italic">
+                            {effectiveCollapsed ? 'Maximize' : 'Minimize'}
                         </span>
                         <button
-                            className={`p-1 rounded transition-all ${!effectiveCollapsed ? 'text-blue-500 bg-blue-500/10' : 'text-[#787b86] hover:text-[#d1d4dc]'}`}
+                            className={cn(
+                                "p-1.5 rounded-lg transition-all",
+                                !effectiveCollapsed ? "text-primary bg-primary/10 shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                            )}
                         >
                             {effectiveCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
@@ -174,25 +188,28 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                     {/* Fixed Top Section: Tabs & Account */}
                     <div className={cn("shrink-0 pb-0", forceExpanded ? "p-1.5" : "p-3")}>
                         {/* Tabs */}
-                        <div className={cn("flex items-center gap-4 border-b border-[#2a2e39] pb-0", forceExpanded ? "mb-1.5" : "mb-3")}>
-                            <button
-                                onClick={() => setTerminalTab('positions')}
-                                className={cn("pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2", terminalTab === 'positions' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]')}
-                            >
-                                {forceExpanded ? `Pos (${positions.length})` : `Positions (${positions.length})`}
-                            </button>
-                            <button
-                                onClick={() => setTerminalTab('orders')}
-                                className={cn("pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2", terminalTab === 'orders' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]')}
-                            >
-                                {forceExpanded ? `Ord (${orders.length})` : `Orders (${orders.length})`}
-                            </button>
-                            <button
-                                onClick={() => setTerminalTab('history')}
-                                className={cn("pb-2 text-[12px] font-bold uppercase tracking-wider transition-colors border-b-2", terminalTab === 'history' ? 'text-blue-500 border-blue-500' : 'text-[#787b86] border-transparent hover:text-[#d1d4dc]')}
-                            >
-                                Hist
-                            </button>
+                        <div className={cn("flex items-center gap-6 border-b border-border/10 pb-0", forceExpanded ? "mb-1.5" : "mb-4")}>
+                            {['positions', 'orders', 'history'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setTerminalTab(tab as any)}
+                                    className={cn(
+                                        "pb-2.5 text-[11px] font-black uppercase tracking-widest transition-all relative group",
+                                        terminalTab === tab
+                                            ? "text-primary"
+                                            : "text-muted-foreground/60 hover:text-foreground"
+                                    )}
+                                >
+                                    <span className="relative z-10">
+                                        {tab === 'positions' ? (forceExpanded ? `Pos (${positions.length})` : `Positions (${positions.length})`) :
+                                            tab === 'orders' ? (forceExpanded ? `Ord (${orders.length})` : `Orders (${orders.length})`) :
+                                                'History'}
+                                    </span>
+                                    {terminalTab === tab && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full shadow-glow animate-in fade-in slide-in-from-bottom-1" />
+                                    )}
+                                </button>
+                            ))}
                         </div>
 
                         {/* Account Summary - Different for Mobile */}

@@ -16,7 +16,8 @@ export function useChartInit(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
     subchartContainerRef: React.RefObject<HTMLDivElement | null>,
     timescaleContainerRef: React.RefObject<HTMLDivElement | null>,
-    chartId: string
+    chartId: string,
+    theme: string = 'dark'
 ) {
     const [isReady, setIsReady] = useState(false);
     const priceChartRef = useRef<IChartApi | null>(null);
@@ -26,6 +27,22 @@ export function useChartInit(
     const subSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const timescaleSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const isAutoScrollEnabledRef = useRef(true);
+    const themeColor = useMarketStore(state => state.themeColor);
+
+    // Dynamic Theme Update
+    useEffect(() => {
+        if (!isReady) return;
+
+        if (priceChartRef.current && priceContainerRef.current) {
+            priceChartRef.current.applyOptions(getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor));
+        }
+        if (subchartChartRef.current && subchartContainerRef.current) {
+            subchartChartRef.current.applyOptions(getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, themeColor));
+        }
+        if (timescaleChartRef.current && timescaleContainerRef.current) {
+            timescaleChartRef.current.applyOptions(getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, themeColor));
+        }
+    }, [theme, themeColor, isReady]);
 
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
@@ -41,18 +58,27 @@ export function useChartInit(
         }
 
         /* ================= PRICE CHART ================= */
-        const priceChart = createChart(priceContainerRef.current, getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight));
+        const priceChart = createChart(priceContainerRef.current, getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor));
 
         /* ================= RSI SUBCHART ================= */
-        const subchartChart = createChart(subchartContainerRef.current, getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight));
+        const subchartChart = createChart(subchartContainerRef.current, getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, themeColor));
 
         /* ================= TIMESCALE FOOTER ================= */
-        const timescaleChart = createChart(timescaleContainerRef.current, getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight));
+        const timescaleChart = createChart(timescaleContainerRef.current, getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, themeColor));
 
         const candleSeries = priceChart.addSeries(CandlestickSeries, {
-            upColor: '#22c55e', downColor: '#ef4444', borderVisible: false,
-            wickUpColor: '#22c55e', wickDownColor: '#ef4444',
+            upColor: '#22c55e',
+            downColor: '#ef4444',
+            borderVisible: false,
+            wickUpColor: '#22c55e',
+            wickDownColor: '#ef4444',
+            priceLineVisible: true,
+            priceLineWidth: 1,
+            priceLineStyle: 2, // Dashed
         });
+
+        // Add dummy series to force grid consistency with LineSeries behavior
+        priceChart.addSeries(LineSeries as any, { visible: false });
 
         const subSyncSeries = subchartChart.addSeries(LineSeries as any, { visible: false });
         const footSyncSeries = timescaleChart.addSeries(LineSeries as any, { visible: false });

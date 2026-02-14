@@ -1,8 +1,11 @@
+'use client';
+
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { MarketList } from '@/features/market/MarketList';
 import { IndicatorManager } from '@/features/chart/components/IndicatorManager';
 import { OrderForm } from '@/features/terminal/components/OrderForm';
+import { motion, LayoutGroup } from 'framer-motion';
 import { StrategyPanel } from '@/features/chart/components/StrategyPanel';
 import { LineChart, Layout, ShoppingCart, Brain, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -88,16 +91,16 @@ export const RightSidebar = memo(function RightSidebar() {
     };
 
     // Filter to exclude 'market' from the bottom tabs as it's fixed on top
-    const bottomTabs = tabOrder.filter(id => id !== 'market');
+    const bottomTabs = tabOrder.filter((id: string) => id !== 'market');
 
     return (
-        <aside ref={sidebarRef} className="w-80 border-l border-zinc-800 bg-[#0c0d10] flex flex-col h-full overflow-hidden shrink-0 relative">
+        <aside ref={sidebarRef} className="w-80 border-l border-white/5 bg-background/60 backdrop-blur-3xl flex flex-col h-full overflow-hidden shrink-0 relative transition-all shadow-2xl z-10 glass-panel">
             {/* 1. TOP SECTION: WATCHLIST (Fixed) */}
             <div
                 className="flex flex-col min-h-0 overflow-hidden"
                 style={{ height: `${topHeight}%` }}
             >
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 bg-transparent">
                     <MarketList mode="watchlist" />
                 </div>
             </div>
@@ -106,11 +109,11 @@ export const RightSidebar = memo(function RightSidebar() {
             <div
                 onMouseDown={startResizing}
                 className={cn(
-                    "h-1 flex items-center justify-center cursor-row-resize bg-zinc-800/30 hover:bg-blue-600/40 transition-colors group z-50",
-                    isResizing && "bg-blue-600"
+                    "h-1.5 flex items-center justify-center cursor-row-resize bg-white/5 hover:bg-primary/20 transition-all group z-50 border-y border-white/[0.02]",
+                    isResizing && "bg-primary/40 shadow-[0_0_15px_var(--glow-primary)]"
                 )}
             >
-                <div className="w-8 h-[1px] rounded-full bg-zinc-700 group-hover:bg-blue-400 transition-colors" />
+                <div className="w-12 h-[2px] rounded-full bg-white/10 group-hover:bg-primary/50 transition-all shadow-glow" />
             </div>
 
             {/* 3. BOTTOM SECTION: TABS */}
@@ -119,35 +122,48 @@ export const RightSidebar = memo(function RightSidebar() {
                 style={{ height: `${100 - topHeight}%` }}
             >
                 {/* Tab Header & Draggable Area */}
-                <div className="flex border-b border-zinc-800 bg-[#131722]/80">
-                    {bottomTabs.map(tabId => {
-                        const tab = tabConfigs[tabId];
-                        return (
-                            <button
-                                key={tabId}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, tabId)}
-                                onDragOver={(e) => handleDragOver(e, tabId)}
-                                onDragEnd={handleDragEnd}
-                                onClick={() => setActiveTab(tabId as any)}
-                                className={cn(
-                                    "flex-1 flex items-center justify-center py-1.5 gap-2 transition-all border-b border-transparent cursor-pointer active:cursor-grabbing",
-                                    activeTab === tabId
-                                        ? "text-blue-500 border-b-blue-500 bg-blue-500/5 font-black uppercase"
-                                        : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                <tab.icon size={12} />
-                                <span className="text-[8px] uppercase tracking-tighter">{tab.label}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                <LayoutGroup id="sidebar-tabs">
+                    <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-1 gap-1 mx-2 mt-2 mb-0 rounded-xl border border-border dark:border-white/5 shadow-sm relative z-0">
+                        {bottomTabs.map(tabId => {
+                            const tab = tabConfigs[tabId];
+                            const isActive = activeTab === tabId;
+                            return (
+                                <button
+                                    key={tabId}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, tabId)}
+                                    onDragOver={(e) => handleDragOver(e, tabId)}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => setActiveTab(tabId as any)}
+                                    className={cn(
+                                        "flex-1 flex items-center justify-center py-2 gap-2 rounded-lg transition-colors duration-300 relative cursor-pointer active:cursor-grabbing group overflow-hidden border border-transparent outline-none",
+                                        isActive
+                                            ? "text-primary font-bold"
+                                            : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="active-sidebar-tab"
+                                            className="absolute inset-0 bg-primary/20 dark:bg-primary/20 shadow-sm rounded-lg border border-primary/20"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                        />
+                                    )}
+                                    {/* Icon & Label with higher z-index to sit on top of motion bg */}
+                                    <div className="relative z-10 flex items-center gap-2">
+                                        <tab.icon size={15} className={cn("transition-all duration-500", isActive ? "scale-105" : "group-hover:scale-105")} />
+                                        <span className="text-[11px] font-bold leading-none tracking-tight">{tab.label}</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </LayoutGroup>
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-hidden relative min-h-0 flex flex-col">
                     {bottomTabs.map(tabId => (
-                        <div key={tabId} className={cn("flex-1 min-h-0", activeTab === tabId ? "flex flex-col h-full" : "hidden")}>
+                        <div key={tabId} className={cn("flex-1 min-h-0 animate-in fade-in zoom-in-95 duration-500", activeTab === tabId ? "flex flex-col h-full" : "hidden")}>
                             {tabConfigs[tabId].component}
                         </div>
                     ))}

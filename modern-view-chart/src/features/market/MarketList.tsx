@@ -52,11 +52,11 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
 
             changeRef.current.innerHTML = `
                 <span>${changeValueStr}</span>
-                <span class="opacity-60 text-[9px]">${changePercentStr}</span>
+                <span class="opacity-60 text-[10px]">${changePercentStr}</span>
             `;
             changeRef.current.className = cn(
-                "flex items-center gap-1.5 font-mono text-[11px] font-bold",
-                change >= 0 ? "text-green-500" : "text-red-500"
+                "flex items-center gap-1.5 text-[12px] font-bold justify-end",
+                change >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
             );
         }
     }, [symbol, mode]);
@@ -64,9 +64,6 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
     useEffect(() => {
         if (mode !== 'watchlist') return;
 
-        // Tối ưu hóa: Thay vì chạy liên tục, ta đăng ký vào một sự kiện trung tâm
-        // hoặc chỉ cập nhật khi tab này thực sự hiển thị.
-        // Tăng interval lên 500ms (2fps) cho danh sách phụ để cứu CPU.
         const interval = 500;
         let lastUpdate = 0;
 
@@ -89,45 +86,55 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
         <div
             onClick={() => onSelect(symbol, source)}
             className={cn(
-                "grid grid-cols-[1fr_1fr_1fr_24px] items-center px-3 py-1 cursor-pointer hover:bg-white/5 transition-all border-b border-white/5 last:border-0 group min-h-[36px] gap-2",
-                isActive && mode === 'watchlist' && "bg-blue-500/10 border-l-2 border-l-blue-500"
+                "grid grid-cols-[3fr_3fr_4.5fr] items-center px-3 py-2.5 mx-3 cursor-pointer hover:bg-white/[0.03] transition-all border-b border-border dark:border-white/[0.02] last:border-0 group min-h-[48px] gap-2 relative overflow-hidden",
+                isActive && mode === 'watchlist' && "bg-secondary/50 dark:bg-white/[0.05] rounded-xl border-b-transparent shadow-sm my-1.5"
             )}
         >
+            {isActive && mode === 'watchlist' && (
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl z-20" />
+            )}
+            {isActive && mode === 'watchlist' && (
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/[0.05] to-transparent pointer-events-none" />
+            )}
+
             {/* Column 1: Symbol & Source */}
-            <div className="min-w-0 flex flex-col overflow-hidden">
+            {/* Column 1: Symbol & Source */}
+            <div className="min-w-0 flex flex-col relative z-10">
                 <span className={cn(
-                    "text-[11px] font-bold tracking-tight truncate",
-                    isActive && mode === 'watchlist' ? "text-blue-400" : "text-zinc-200"
+                    "text-[13px] font-bold tracking-tight transition-all duration-300 whitespace-nowrap",
+                    isActive && mode === 'watchlist' ? "text-foreground dark:text-white" : "text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-white"
                 )}>
                     {symbol.replace('USDT', '').replace('USDTm', '')}
                 </span>
-                <span className="text-[8px] font-black text-zinc-500 uppercase leading-none tracking-tight">{source}</span>
+                <span className="text-[9px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
             </div>
 
             {mode === 'watchlist' ? (
                 <>
                     {/* Column 2: Price */}
-                    <div className="text-right overflow-hidden">
-                        <span ref={priceRef} className="text-zinc-300 font-mono text-[11px]">···</span>
+                    <div className="text-right overflow-hidden relative z-10 pr-2">
+                        <span ref={priceRef} className="text-foreground dark:text-white/90 text-[13px] font-bold group-hover:text-foreground dark:group-hover:text-white transition-colors tracking-tight">···</span>
                     </div>
 
                     {/* Column 3: Change */}
-                    <div className="text-right flex flex-col items-end overflow-hidden">
-                        <div ref={changeRef} className="font-mono text-[10px] font-bold text-zinc-500 truncate w-full">
+                    <div className="text-right flex flex-col items-end overflow-hidden relative z-10">
+                        <div ref={changeRef} className="text-[12px] font-bold text-muted-foreground/50 dark:text-muted-foreground/40 mt-0.5 truncate w-full flex justify-end">
                             <span>--</span>
                         </div>
                     </div>
 
-                    {/* Column 4: Actions */}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onRemove(symbol); }}
-                        className="flex justify-center text-zinc-600 hover:text-red-400 transition-all md:opacity-0 md:group-hover:opacity-100"
-                    >
-                        <Trash2 size={10} />
-                    </button>
+                    {/* Column 4: Actions (Absolute overlay) */}
+                    <div className="absolute right-0 inset-y-0 flex items-center pr-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onRemove(symbol); }}
+                            className="h-8 w-8 flex items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all pointer-events-auto shadow-lg backdrop-blur-md border border-rose-500/20"
+                        >
+                            <Trash2 size={13} />
+                        </button>
+                    </div>
                 </>
             ) : (
-                <div className="col-span-3 flex justify-end">
+                <div className="flex justify-end relative z-10">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -135,11 +142,13 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
                             else onAdd(symbol);
                         }}
                         className={cn(
-                            "p-1 rounded-md transition-all",
-                            isWatched ? "text-yellow-500 bg-yellow-500/10" : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                            "p-1.5 rounded-xl transition-all border",
+                            isWatched
+                                ? "text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary border-transparent hover:border-border"
                         )}
                     >
-                        <Star size={12} fill={isWatched ? "currentColor" : "none"} />
+                        <Star size={13} fill={isWatched ? "currentColor" : "none"} />
                     </button>
                 </div>
             )}
@@ -208,8 +217,6 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
             .sort((a, b) => a.symbol.localeCompare(b.symbol));
     }, [allSymbols, search, sourceTab, watchlist, mode]);
 
-    const debugInfo = `S:${allSymbols.length} W:${watchlist.length} L:${symbolList.length}`;
-
     const handleSymbolSelect = useCallback((symbol: string, source: 'BINANCE' | 'MT5') => {
         if (activeChartId) {
             const chart = charts[activeChartId];
@@ -229,32 +236,32 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-0 h-full">
-            {/* Ultra Compact Header: Search & Filters on same row */}
-            <div className="p-1.5 border-b border-zinc-800 flex items-center gap-1.5 shrink-0 bg-zinc-900/20">
-                <div className="relative flex-1">
-                    <Search className="absolute left-2 top-1.5 h-3 w-3 text-zinc-600" />
+            {/* Premium Header: Search & Filters */}
+            <div className="px-3 py-2 border-b border-border dark:border-white/[0.03] flex items-center justify-between shrink-0 bg-secondary/50 dark:bg-white/[0.02]">
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30 dark:text-white/10 group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
-                        placeholder="Search..."
+                        placeholder="Quick search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-zinc-950/50 border border-zinc-800/50 rounded-md pl-7 pr-2 py-1 text-[10px] text-white focus:outline-none focus:border-blue-500/50 placeholder-zinc-700 transition-colors h-6"
+                        className="w-full bg-secondary/50 dark:bg-white/[0.03] border border-border dark:border-white/5 rounded-lg pl-8 pr-3 py-1 text-[11px] text-foreground font-medium transition-all h-7 focus:bg-background outline-none"
                     />
                 </div>
 
-                <div className="flex bg-zinc-950/80 p-0.5 rounded-md border border-zinc-800/50 h-6">
+                <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-0.5 rounded-xl border border-border dark:border-white/5 h-7 ml-2 shadow-sm">
                     {['ALL', 'BINANCE', 'MT5'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setSourceTab(tab as any)}
                             className={cn(
-                                "px-2 text-[9px] font-bold rounded-sm transition-all flex items-center justify-center",
+                                "px-2.5 text-[9px] font-bold rounded-lg transition-all flex items-center justify-center tracking-wide",
                                 sourceTab === tab
-                                    ? "bg-zinc-800 text-white"
-                                    : "text-zinc-600 hover:text-zinc-400"
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "text-muted-foreground/60 hover:text-foreground"
                             )}
                         >
-                            {tab === 'BINANCE' ? 'C' : tab === 'MT5' ? 'F' : 'A'}
+                            {tab === 'BINANCE' ? 'CRYPTO' : tab === 'MT5' ? 'FOREX' : 'ALL'}
                         </button>
                     ))}
                 </div>
@@ -262,18 +269,17 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
 
             {/* List Header */}
             {mode === 'watchlist' && (
-                <div className="grid grid-cols-[1fr_1fr_1fr_24px] items-center px-3 py-1.5 bg-zinc-950/50 text-[9px] text-zinc-600 font-bold uppercase tracking-wider shrink-0 gap-2">
-                    <span className="truncate">Symbol</span>
-                    <span className="text-right">Price</span>
-                    <span className="text-right">Change</span>
-                    <span></span> {/* Pad for actions */}
+                <div className="grid grid-cols-[3fr_3fr_4.5fr] items-center mx-3 px-3 py-2 bg-transparent text-[10px] text-muted-foreground font-bold uppercase tracking-wider shrink-0 gap-2 border-b border-border/5 mt-1">
+                    <span className="truncate opacity-50">Symbol</span>
+                    <span className="text-right opacity-50">Live price</span>
+                    <span className="text-right opacity-50">Change</span>
                 </div>
             )}
 
             {/* Scrollable List Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-950/20">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-background/5">
                 {symbolList.length === 0 ? (
-                    <div className="p-10 text-center text-zinc-600 text-xs italic">
+                    <div className="p-10 text-center text-muted-foreground text-xs italic">
                         {mode === 'watchlist' ? 'Your watchlist is empty' : 'No tickers found'}
                     </div>
                 ) : (

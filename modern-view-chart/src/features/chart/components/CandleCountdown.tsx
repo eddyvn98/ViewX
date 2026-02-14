@@ -33,6 +33,9 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
         const normSymbol = normalizeSymbol(symbol);
         const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
+        // Disable native last value label to avoid overlap
+        series.applyOptions({ lastValueVisible: false });
+
         const updateDOM = () => {
             if (!containerRef.current) return;
             const state = useMarketStore.getState();
@@ -54,7 +57,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
 
                 // Color based on trend
                 const isUp = currentPrice >= (lastCandle.open || currentPrice);
-                containerRef.current.className = `absolute right-0 z-40 flex flex-col items-center pointer-events-none select-none transition-colors duration-200 ${isUp ? 'bg-emerald-600' : 'bg-red-600'} rounded-l shadow-xl border-y border-l border-white/20 px-1 py-0.5 min-w-[70px]`;
+                containerRef.current.className = `absolute right-0 z-50 flex flex-col items-start pl-2 justify-center pointer-events-none select-none transition-colors duration-200 ${isUp ? 'bg-emerald-600' : 'bg-rose-600'} rounded-l-md shadow-sm border-y border-l border-white/20 w-[80px] h-[36px]`;
             } else {
                 containerRef.current.style.display = 'none';
             }
@@ -107,17 +110,19 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
         return () => {
             clearInterval(intervalId);
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateDOM);
+            // Restore native label on unmount
+            series.applyOptions({ lastValueVisible: true });
         };
     }, [chart, series, activeChartId, interval, realTimeRef]);
 
     return (
         <div
             ref={containerRef}
-            className="absolute right-0 z-40 flex flex-col items-center pointer-events-none select-none hidden"
+            className="absolute right-0 z-50 flex flex-col items-center pointer-events-none select-none hidden"
             style={{ transform: 'translateY(-50%)' }}
         >
-            <div ref={priceRef} className="text-white text-[11px] font-black leading-tight">--</div>
-            <div ref={countdownRef} className="text-white/70 text-[10px] font-bold leading-tight">--:--</div>
+            <div ref={priceRef} className="text-white text-[11px] font-bold leading-none">--</div>
+            <div ref={countdownRef} className="text-white/90 text-[9px] font-medium leading-none mt-0.5">--:--</div>
         </div>
     );
 }

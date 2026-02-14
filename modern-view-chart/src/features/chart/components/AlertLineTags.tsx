@@ -182,7 +182,7 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
     }, []);
 
     return (
-        <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[1000] overflow-hidden touch-none">
+        <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[5] overflow-hidden touch-none">
             {editingState && seriesRef.current && (
                 <EditOverlay
                     state={editingState}
@@ -216,7 +216,7 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
 
     return (
         <div
-            className="edit-overlay absolute z-[2000] flex flex-col items-center gap-1.5 pointer-events-auto touch-action-none"
+            className="edit-overlay absolute z-[15] flex flex-col items-center gap-1.5 pointer-events-auto touch-action-none"
             onContextMenu={e => e.preventDefault()}
             style={{
                 transform: `translateY(${coord - 13}px)`, // Centered vertically on input
@@ -233,7 +233,7 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
                 isInteractingRef.current = false;
             }}
         >
-            <div className="h-7 min-w-[70px] w-[80px] bg-zinc-950 border border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] overflow-hidden rounded text-center shrink-0">
+            <div className="h-8 min-w-[80px] w-[90px] bg-background/60 backdrop-blur-xl border border-amber-500/20 shadow-ethereal overflow-hidden rounded-lg text-center shrink-0">
                 <input
                     autoFocus
                     type="number"

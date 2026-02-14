@@ -47,22 +47,22 @@ export function PositionModifier() {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-            <div className="w-[420px] bg-[#1e222d] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="w-[420px] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-zinc-800/50 flex flex-col gap-3">
+                <div className="px-5 py-4 border-b border-border/50 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
-                            <span className="text-zinc-400">💰</span>
+                            <span className="text-muted-foreground">💰</span>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white tracking-tight">{editingPosition.symbol}</span>
-                                    <span className="text-[11px] text-zinc-500 font-bold">{editingPosition.volume} lô</span>
+                                    <span className="font-bold text-foreground tracking-tight">{editingPosition.symbol}</span>
+                                    <span className="text-[11px] text-muted-foreground font-bold">{editingPosition.volume} lô</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-[12px]">
                                     <span className={cn("font-bold", isLong ? "text-blue-500" : "text-red-500")}>
                                         {isLong ? 'Mua' : 'Bán'}
                                     </span>
-                                    <span className="text-zinc-500">ở mức giá {formatPrice(editingPosition.open_price)}</span>
+                                    <span className="text-muted-foreground">ở mức giá {formatPrice(editingPosition.open_price)}</span>
                                 </div>
                             </div>
                         </div>
@@ -70,20 +70,20 @@ export function PositionModifier() {
                             <span className={cn("text-sm font-black", pnl >= 0 ? "text-green-500" : "text-red-500")}>
                                 {formatPnl(pnl)}
                             </span>
-                            <button onClick={() => setEditingPosition(null)} className="text-zinc-500 hover:text-white transition-colors">
+                            <button onClick={() => setEditingPosition(null)} className="text-muted-foreground hover:text-foreground transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-[11px] text-zinc-500 font-bold">
+                    <div className="flex justify-between items-center text-[11px] text-muted-foreground font-bold">
                         <span>Giá hiện tại</span>
-                        <span className="text-white">{formatPrice(currentPrice)}</span>
+                        <span className="text-foreground">{formatPrice(currentPrice)}</span>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="px-4 py-2 border-b border-zinc-800/50 flex gap-1">
+                <div className="px-4 py-2 border-b border-border/50 flex gap-1">
                     {[
                         { id: 'modify', label: 'Sửa đổi' },
                         { id: 'partial', label: 'Đóng một phần' },
@@ -94,7 +94,7 @@ export function PositionModifier() {
                             onClick={() => setActiveTab(tab.id as any)}
                             className={cn(
                                 "flex-1 py-2 text-[13px] font-bold rounded-lg transition-all",
-                                activeTab === tab.id ? "bg-zinc-800/50 text-white border border-zinc-700/50 shadow-sm" : "text-zinc-500 hover:text-zinc-300"
+                                activeTab === tab.id ? "bg-secondary text-foreground border border-border/50 shadow-sm" : "text-muted-foreground hover:text-foreground/80"
                             )}
                         >
                             {tab.label}
@@ -108,9 +108,9 @@ export function PositionModifier() {
                         <div className="space-y-4">
                             {/* TP Input */}
                             <div className="space-y-2">
-                                <label className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider flex items-center justify-between">
+                                <label className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider flex items-center justify-between">
                                     <span>Chốt lời</span>
-                                    <Info size={12} className="text-zinc-700" />
+                                    <Info size={12} className="text-muted-foreground/30" />
                                 </label>
                                 <div className="flex gap-1.5">
                                     <div className="flex-1 relative">
@@ -119,21 +119,21 @@ export function PositionModifier() {
                                             value={tp}
                                             onChange={e => setTp(e.target.value)}
                                             placeholder="Chưa thiết lập"
-                                            className="w-full bg-black/40 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-medium placeholder:text-zinc-800"
+                                            className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500 transition-all font-medium placeholder:text-muted-foreground/30"
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] text-zinc-600 font-bold cursor-pointer hover:text-zinc-400">
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] text-muted-foreground font-bold cursor-pointer hover:text-foreground">
                                             Giá <ChevronDown size={14} />
                                         </div>
                                     </div>
                                     <div className="flex gap-1">
-                                        <button onClick={() => handleAdjust(tp, setTp, -1)} className="p-2.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-zinc-400 border border-zinc-800/50 transition-colors"><Minus size={16} /></button>
-                                        <button onClick={() => handleAdjust(tp, setTp, 1)} className="p-2.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-zinc-400 border border-zinc-800/50 transition-colors"><Plus size={16} /></button>
+                                        <button onClick={() => handleAdjust(tp, setTp, -1)} className="p-2.5 bg-secondary hover:bg-secondary/70 rounded-xl text-muted-foreground border border-border/50 transition-colors"><Minus size={16} /></button>
+                                        <button onClick={() => handleAdjust(tp, setTp, 1)} className="p-2.5 bg-secondary hover:bg-secondary/70 rounded-xl text-muted-foreground border border-border/50 transition-colors"><Plus size={16} /></button>
                                     </div>
                                 </div>
                                 {tpMetrics && (
                                     <div className="flex gap-3 text-[10px] font-bold text-blue-400 ml-1">
                                         <span>{tpMetrics.pnl}</span>
-                                        <span className="text-zinc-600">|</span>
+                                        <span className="text-muted-foreground/40">|</span>
                                         <span>{tpMetrics.points} điểm cơ bản</span>
                                     </div>
                                 )}
@@ -141,9 +141,9 @@ export function PositionModifier() {
 
                             {/* SL Input */}
                             <div className="space-y-2">
-                                <label className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider flex items-center justify-between">
+                                <label className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider flex items-center justify-between">
                                     <span>Cắt lỗ</span>
-                                    <Info size={12} className="text-zinc-700" />
+                                    <Info size={12} className="text-muted-foreground/30" />
                                 </label>
                                 <div className="flex gap-1.5">
                                     <div className="flex-1 relative">
@@ -152,21 +152,21 @@ export function PositionModifier() {
                                             value={sl}
                                             onChange={e => setSl(e.target.value)}
                                             placeholder="Chưa thiết lập"
-                                            className="w-full bg-black/40 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-medium placeholder:text-zinc-800"
+                                            className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500 transition-all font-medium placeholder:text-muted-foreground/30"
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] text-zinc-600 font-bold cursor-pointer hover:text-zinc-400">
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] text-muted-foreground font-bold cursor-pointer hover:text-foreground">
                                             Giá <ChevronDown size={14} />
                                         </div>
                                     </div>
                                     <div className="flex gap-1">
-                                        <button onClick={() => handleAdjust(sl, setSl, -1)} className="p-2.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-zinc-400 border border-zinc-800/50 transition-colors"><Minus size={16} /></button>
-                                        <button onClick={() => handleAdjust(sl, setSl, 1)} className="p-2.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-zinc-400 border border-zinc-800/50 transition-colors"><Plus size={16} /></button>
+                                        <button onClick={() => handleAdjust(sl, setSl, -1)} className="p-2.5 bg-secondary hover:bg-secondary/70 rounded-xl text-muted-foreground border border-border/50 transition-colors"><Minus size={16} /></button>
+                                        <button onClick={() => handleAdjust(sl, setSl, 1)} className="p-2.5 bg-secondary hover:bg-secondary/70 rounded-xl text-muted-foreground border border-border/50 transition-colors"><Plus size={16} /></button>
                                     </div>
                                 </div>
                                 {slMetrics && (
                                     <div className="flex gap-3 text-[10px] font-bold text-red-400 ml-1">
                                         <span>{slMetrics.pnl}</span>
-                                        <span className="text-zinc-600">|</span>
+                                        <span className="text-muted-foreground/40">|</span>
                                         <span>{slMetrics.points} điểm cơ bản</span>
                                     </div>
                                 )}
@@ -177,32 +177,32 @@ export function PositionModifier() {
                     {activeTab === 'partial' && (
                         <div className="space-y-4 pt-2">
                             <div className="space-y-2">
-                                <label className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider">Khối lượng để đóng</label>
+                                <label className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Khối lượng để đóng</label>
                                 <div className="flex gap-1.5">
                                     <div className="flex-1 relative">
                                         <input
                                             type="text"
                                             value={partialVolume}
                                             onChange={e => setPartialVolume(e.target.value)}
-                                            className="w-full bg-black/40 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all font-bold"
+                                            className="w-full bg-secondary/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500 transition-all font-bold"
                                         />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] text-zinc-700 font-bold uppercase">Lô</span>
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground/60 font-bold uppercase">Lô</span>
                                     </div>
                                     <div className="flex gap-1">
                                         <button onClick={() => {
                                             const v = Math.max(0.01, (parseFloat(partialVolume) || 0) - 0.01);
                                             setPartialVolume(v.toFixed(2));
-                                        }} className="p-2.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-zinc-400 border border-zinc-800/50 transition-colors"><Minus size={16} /></button>
+                                        }} className="p-2.5 bg-secondary hover:bg-secondary/70 rounded-xl text-muted-foreground border border-border/50 transition-colors"><Minus size={16} /></button>
                                         <button onClick={() => {
                                             const v = Math.min(editingPosition.volume, (parseFloat(partialVolume) || 0) + 0.01);
                                             setPartialVolume(v.toFixed(2));
-                                        }} className="p-2.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-xl text-zinc-400 border border-zinc-800/50 transition-colors"><Plus size={16} /></button>
+                                        }} className="p-2.5 bg-secondary hover:bg-secondary/70 rounded-xl text-muted-foreground border border-border/50 transition-colors"><Plus size={16} /></button>
                                     </div>
                                 </div>
-                                <span className="text-[10px] text-zinc-600 font-bold ml-1">Min: 0.01 - Max: {editingPosition.volume}</span>
+                                <span className="text-[10px] text-muted-foreground/50 font-bold ml-1">Min: 0.01 - Max: {editingPosition.volume}</span>
                             </div>
                             <div className="text-center pt-2">
-                                <div className="text-[12px] text-zinc-500 font-bold">Lợi nhuận ước tính:</div>
+                                <div className="text-[12px] text-muted-foreground font-bold">Lợi nhuận ước tính:</div>
                                 <div className={cn("text-lg font-black", pnl >= 0 ? "text-green-500" : "text-red-500")}>
                                     {formatPnl(pnl * (parseFloat(partialVolume) || 0) / editingPosition.volume)}
                                 </div>
@@ -214,8 +214,8 @@ export function PositionModifier() {
                         <div className="flex flex-col items-center justify-center py-6 text-center space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <span className="text-2xl">🔄</span>
                             <div className="space-y-1">
-                                <h4 className="text-sm font-black text-white">Không có lệnh đảo ngược</h4>
-                                <p className="text-[11px] text-zinc-500 leading-relaxed max-w-[280px]">
+                                <h4 className="text-sm font-black text-foreground">Không có lệnh đảo ngược</h4>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[280px]">
                                     Tính năng "Đóng lệnh theo" cho phép nhà giao dịch đóng hai lệnh bảo toàn rủi ro bằng cách hủy lẫn nhau.
                                 </p>
                             </div>
@@ -229,13 +229,13 @@ export function PositionModifier() {
                         onClick={() => setEditingPosition(null)}
                         className={cn(
                             "w-full py-4 rounded-2xl text-[13px] font-black uppercase tracking-widest shadow-xl transition-all active:scale-[0.98]",
-                            activeTab === 'modify' ? "bg-yellow-400 hover:bg-yellow-300 text-black" : "bg-zinc-100 hover:bg-white text-black"
+                            activeTab === 'modify' ? "bg-yellow-400 hover:bg-yellow-300 text-black" : "bg-primary hover:bg-primary/90 text-primary-foreground"
                         )}>
                         {activeTab === 'modify' ? 'Sửa đổi lệnh giao dịch' : activeTab === 'partial' ? 'Đóng lệnh giao dịch' : 'Quay lại'}
                     </button>
                     <button
                         onClick={() => setEditingPosition(null)}
-                        className="w-full mt-2 py-3 text-[11px] font-bold text-zinc-500 hover:text-white transition-colors"
+                        className="w-full mt-2 py-3 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Hủy
                     </button>

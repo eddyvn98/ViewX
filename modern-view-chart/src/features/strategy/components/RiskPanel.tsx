@@ -37,55 +37,55 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Risk Control</span>
+                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Risk Control</span>
                 <div className="h-[1px] bg-blue-500/10 w-full" />
             </div>
 
-            <div className="flex flex-col gap-1.5 pl-1 bg-black/10 p-1.5 rounded border border-white/5">
+            <div className="flex flex-col gap-1.5 pl-1 bg-secondary/10 p-1.5 rounded border border-border">
                 {/* LOT SIZE - ROW */}
                 <div className="flex items-center gap-3 h-6">
-                    <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter w-16 shrink-0">Volume (Lot)</span>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">Volume (Lot)</span>
 
                     <div className="flex items-center gap-1.5">
                         <select
                             value={lotConfig.mode}
                             onChange={(e) => handleLotModeChange(e.target.value as LotMode)}
-                            className="bg-[#1e222d] text-[8px] font-black px-1 h-5 rounded border border-zinc-800 outline-none text-zinc-400 appearance-none cursor-pointer min-w-[56px] text-center hover:border-blue-500/40 transition-colors"
+                            className="bg-secondary text-[8px] font-black px-1 h-5 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer min-w-[56px] text-center hover:border-blue-500/40 transition-colors"
                         >
-                            <option value="fixed">Fixed</option>
-                            <option value="percentage">% Acc</option>
-                            <option value="amount">$ Fixed</option>
+                            <option value="fixed" className="bg-popover text-foreground">Fixed</option>
+                            <option value="percentage" className="bg-popover text-foreground">% Acc</option>
+                            <option value="amount" className="bg-popover text-foreground">$ Fixed</option>
                         </select>
 
-                        <div className="flex items-center gap-1 bg-[#131722]/60 rounded px-1 border border-white/5 min-h-[20px]">
+                        <div className="flex items-center gap-1 bg-secondary/60 rounded px-1 border border-border min-h-[20px]">
                             <input
                                 type="number"
                                 step={lotConfig.mode === 'fixed' ? "0.01" : "0.1"}
                                 value={lotConfig.value}
                                 onChange={(e) => onChangeRisk({ ...risk, lotSize: { ...lotConfig, value: parseFloat(e.target.value) } })}
-                                className="bg-transparent border-none h-5 px-1 text-[11px] font-mono font-black text-zinc-100 outline-none w-12 text-right"
+                                className="bg-transparent border-none h-5 px-1 text-[11px] font-mono font-black text-foreground outline-none w-12 text-right"
                             />
-                            <span className="text-[7px] text-zinc-600 font-black uppercase">
+                            <span className="text-[7px] text-muted-foreground font-black uppercase">
                                 {lotConfig.mode === 'fixed' ? 'Lot' : (lotConfig.mode === 'percentage' ? '%' : '$')}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="h-[1px] bg-[#363a45]/10 w-full" />
+                <div className="h-[1px] bg-border/10 w-full" />
 
                 {/* SL & TP Advanced Rows */}
                 <div className="flex flex-col gap-1">
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between h-4">
-                            <span className="text-[8px] font-black text-[#b4b7c1] uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
                                 <Shield size={8} /> Use Stop Loss
                             </span>
                             <button
                                 onClick={() => onChangeRisk({ ...risk, sl: risk.sl ? undefined : { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 } })}
-                                className={`w-6 h-3 rounded-full relative transition-all duration-300 ${risk.sl ? 'bg-red-500/40' : 'bg-[#131722]'}`}
+                                className={`w-6 h-3 rounded-full relative transition-all duration-300 ${risk.sl ? 'bg-red-500/40' : 'bg-secondary'}`}
                             >
-                                <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all duration-300 ${risk.sl ? 'left-3.5' : 'left-0.5'}`} />
+                                <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-foreground transition-all duration-300 ${risk.sl ? 'left-3.5' : 'left-0.5'}`} />
                             </button>
                         </div>
                         {risk.sl && (
@@ -101,18 +101,18 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                         )}
                     </div>
 
-                    <div className="h-[1px] bg-[#363a45]/5 w-full" />
+                    <div className="h-[1px] bg-border/10 w-full" />
 
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between h-4">
-                            <span className="text-[8px] font-black text-[#b4b7c1] uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
                                 <Target size={8} /> Use Take Profit
                             </span>
                             <button
                                 onClick={() => onChangeRisk({ ...risk, tp: risk.tp ? undefined : { mode: 'fixed', value: 400 } })}
-                                className={`w-6 h-3 rounded-full relative transition-all duration-300 ${risk.tp ? 'bg-green-500/40' : 'bg-[#131722]'}`}
+                                className={`w-6 h-3 rounded-full relative transition-all duration-300 ${risk.tp ? 'bg-green-500/40' : 'bg-secondary'}`}
                             >
-                                <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all duration-300 ${risk.tp ? 'left-3.5' : 'left-0.5'}`} />
+                                <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-foreground transition-all duration-300 ${risk.tp ? 'left-3.5' : 'left-0.5'}`} />
                             </button>
                         </div>
                         {risk.tp && (
@@ -129,12 +129,12 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                     </div>
                 </div>
 
-                <div className="h-[1px] bg-[#363a45]/10 w-full" />
+                <div className="h-[1px] bg-border/10 w-full" />
 
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center justify-between h-6">
-                        <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-1">
-                            <Zap size={9} className={risk.trailing ? 'text-blue-500/80' : 'text-zinc-800'} /> Trailing Protect
+                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                            <Zap size={9} className={risk.trailing ? 'text-blue-500/80' : 'text-muted-foreground/40'} /> Trailing Protect
                         </span>
                         <button
                             onClick={() => {
@@ -144,9 +144,9 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                                 if (newTrailing && !risk.trailingSource) update.trailingSource = 'HA_Low';
                                 onChangeRisk({ ...risk, ...update });
                             }}
-                            className={`w-7 h-3.5 rounded-full relative transition-all duration-300 ${risk.trailing ? 'bg-blue-600/60' : 'bg-[#131722]'}`}
+                            className={`w-7 h-3.5 rounded-full relative transition-all duration-300 ${risk.trailing ? 'bg-blue-600/60' : 'bg-secondary'}`}
                         >
-                            <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all duration-300 ${risk.trailing ? 'left-4' : 'left-0.5'}`} />
+                            <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-foreground transition-all duration-300 ${risk.trailing ? 'left-4' : 'left-0.5'}`} />
                         </button>
                     </div>
                     {risk.trailing && (
@@ -168,24 +168,24 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                     {showAdvanced && (
                         <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[8px] text-[#b4b7c1] font-black uppercase tracking-widest">Position</span>
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Position</span>
                                 <select
                                     value={positionMode}
                                     onChange={(e) => onChangeMode(e.target.value as PositionMode)}
-                                    className="bg-[#1e222d] text-[10px] h-7 px-2 rounded border border-[#4a4f5d] text-[#d1d4dc] outline-none font-bold appearance-none cursor-pointer hover:border-blue-500/50 transition-colors"
+                                    className="bg-secondary text-[10px] h-7 px-2 rounded border border-border text-foreground outline-none font-bold appearance-none cursor-pointer hover:border-blue-500/50 transition-colors"
                                 >
-                                    <option value="single_position">Single</option>
-                                    <option value="hedge">Hedge</option>
-                                    <option value="scale_in">Scale In</option>
+                                    <option value="single_position" className="bg-popover">Single</option>
+                                    <option value="hedge" className="bg-popover">Hedge</option>
+                                    <option value="scale_in" className="bg-popover">Scale In</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[8px] text-[#b4b7c1] font-black uppercase tracking-widest">Max Trades</span>
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Max Trades</span>
                                 <input
                                     type="number"
                                     value={risk.maxTrades || 1}
                                     onChange={(e) => onChangeRisk({ ...risk, maxTrades: parseInt(e.target.value) })}
-                                    className="bg-[#131722]/80 text-[10px] h-7 px-2 rounded border border-[#363a45]/50 text-white outline-none font-mono font-bold text-right"
+                                    className="bg-secondary/80 text-[10px] h-7 px-2 rounded border border-border text-foreground outline-none font-mono font-bold text-right"
                                 />
                             </div>
                         </div>

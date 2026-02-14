@@ -18,7 +18,8 @@ export interface UISlice {
     isScrollingPanel: boolean;
     notifications: Notification[];
     focusedTicket: number | null;
-    sidebarTopHeight: number; // Percentage 0-100
+    themeColor: 'blue' | 'green' | 'amber' | 'red' | 'slate';
+    sidebarTopHeight: number;
     rightSidebarTabOrder: string[];
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
@@ -34,12 +35,13 @@ export interface UISlice {
     setFocusedTicket: (ticket: number | null) => void;
     setSidebarTopHeight: (height: number) => void;
     setRightSidebarTabOrder: (order: string[]) => void;
+    setThemeColor: (color: 'blue' | 'green' | 'amber' | 'red' | 'slate') => void;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
     isLeftSidebarOpen: false,
     isRightSidebarOpen: true,
-    activeRightSidebarTab: 'strategy', // Change default to strategy as requested in previous contexts or just more useful
+    activeRightSidebarTab: 'strategy',
     activeMobileTab: 'chart',
     isInputFocused: false,
     isScrollingPanel: false,
@@ -47,6 +49,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     focusedTicket: null,
     sidebarTopHeight: 40,
     rightSidebarTabOrder: ['strategy', 'indicators', 'trade'],
+    themeColor: 'blue',
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -65,4 +68,15 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setFocusedTicket: (ticket) => set({ focusedTicket: ticket }),
     setSidebarTopHeight: (height) => set({ sidebarTopHeight: height }),
     setRightSidebarTabOrder: (order) => set({ rightSidebarTabOrder: order }),
+    setThemeColor: (color) => {
+        set({ themeColor: color });
+        // Handle persistent storage and DOM update
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('theme-color', color);
+            // Remove old theme classes
+            document.documentElement.classList.remove('theme-blue', 'theme-green', 'theme-amber', 'theme-red', 'theme-slate');
+            // Add new theme class
+            document.documentElement.classList.add(`theme-${color}`);
+        }
+    },
 });

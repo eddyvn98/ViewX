@@ -45,14 +45,14 @@ export function ChartsToolbar() {
     };
 
     return (
-        <div className="flex items-center justify-between px-2 py-0.5 shrink-0 bg-transparent border-b border-zinc-800/50">
+        <div className="flex items-center justify-between px-2 py-0 shrink-0 bg-primary/5 backdrop-blur-sm border-b border-primary/10 transition-colors duration-300">
             <div className="flex items-center gap-2 h-full">
                 {/* Timeframe Selector */}
                 <div className="flex items-center gap-0.5 pr-2 h-full">
                     <TimeframeToolbar />
                 </div>
 
-                <div className="h-4 w-[1px] bg-zinc-800" />
+                <div className="h-4 w-[1px] bg-border" />
 
                 <div className="flex items-center gap-0.5 px-2">
                     <button
@@ -62,14 +62,14 @@ export function ChartsToolbar() {
                             updateChart(activeChart.id, { group: groups[activeChart.group || 'none'] });
                         }}
                         className={cn(
-                            "p-1.5 rounded transition-colors active:scale-95",
+                            "p-1 rounded transition-colors active:scale-95",
                             !activeChart?.group || activeChart.group === 'none'
-                                ? "text-zinc-500 hover:text-zinc-300"
-                                : "text-blue-500 bg-blue-500/10"
+                                ? "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                                : "text-primary bg-primary/10"
                         )}
                         title={`Symbol Link: ${activeChart?.group || 'None'}`}
                     >
-                        <Link size={15} />
+                        <Link size={14} />
                     </button>
 
                     <button
@@ -79,10 +79,10 @@ export function ChartsToolbar() {
                             useMarketStore.getState().setChartType(activeChart.id, nextType);
                         }}
                         className={cn(
-                            "px-2 py-1 rounded text-[10px] font-black uppercase transition-all active:scale-95 border",
+                            "px-1.5 py-0.5 rounded text-[10px] font-black uppercase transition-all active:scale-95 border",
                             activeChart?.chartType === 'heikin_ashi'
-                                ? "text-orange-500 border-orange-500/30 bg-orange-500/10"
-                                : "text-zinc-500 border-zinc-800 hover:text-zinc-300"
+                                ? "text-primary border-primary/30 bg-primary/10"
+                                : "text-muted-foreground border-border hover:text-foreground hover:bg-secondary/40"
                         )}
                         title="Toggle Heikin Ashi"
                     >
@@ -92,26 +92,26 @@ export function ChartsToolbar() {
                     <LayoutGridSelector />
                 </div>
 
-                <div className="h-4 w-[1px] bg-zinc-800" />
+                <div className="h-4 w-[1px] bg-border" />
 
-                <div className="flex items-center gap-3 pl-2">
-                    <button onClick={() => setCrosshairSync(!isCrosshairSyncEnabled)} className={cn("p-1.5 rounded transition-all", isCrosshairSyncEnabled ? "text-purple-500 bg-purple-500/10" : "text-zinc-500 hover:text-zinc-300")} title="Crosshair Sync"><Crosshair size={15} /></button>
+                <div className="flex items-center gap-2 pl-2">
+                    <button onClick={() => setCrosshairSync(!isCrosshairSyncEnabled)} className={cn("p-1 rounded transition-all", isCrosshairSyncEnabled ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/40")} title="Crosshair Sync"><Crosshair size={14} /></button>
 
                     {/* Marker Toggle */}
                     <button
                         onClick={() => useStrategyStore.getState().toggleShowHistoryMarkers()}
                         className={cn(
-                            "p-1.5 rounded transition-all active:scale-95",
+                            "p-1 rounded transition-all active:scale-95",
                             useStrategyStore(state => state.showHistoryMarkers)
-                                ? "text-blue-500 bg-blue-500/10"
-                                : "text-zinc-500 hover:text-zinc-300"
+                                ? "text-primary bg-primary/10"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                         )}
                         title="Toggle Strategy Markers"
                     >
-                        <HistoryIcon size={15} />
+                        <HistoryIcon size={14} />
                     </button>
 
-                    <button onClick={handleAddChart} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 hover:text-white transition-all uppercase tracking-wider"><Plus size={14} className="text-blue-500" /> Add Chart</button>
+                    <button onClick={handleAddChart} className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground hover:text-foreground transition-all uppercase tracking-wider"><Plus size={13} className="text-primary" /> Add Chart</button>
                 </div>
             </div>
 

@@ -47,7 +47,7 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
                     <select
                         value={group.operator}
                         onChange={(e) => onChange({ ...group, operator: e.target.value as any })}
-                        className="bg-[#131722]/60 text-[8px] font-black px-1 py-0 rounded border border-[#363a45]/20 outline-none text-[#94a3b8] appearance-none cursor-pointer hover:border-blue-500/30"
+                        className="bg-secondary/60 text-[8px] font-black px-1 py-0 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer hover:border-blue-500/30"
                     >
                         <option value="AND">AND</option>
                         <option value="OR">OR</option>
@@ -63,7 +63,7 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
 
             <div className="flex flex-col gap-1 min-h-[10px] justify-center">
                 {group.conditions.length === 0 ? (
-                    <div className="py-2 flex justify-center border border-dashed border-[#363a45]/20 rounded text-[9px] text-[#2a2e39] font-black uppercase tracking-tighter">
+                    <div className="py-2 flex justify-center border border-dashed border-border rounded text-[9px] text-muted-foreground font-black uppercase tracking-tighter">
                         No {title} rules defined
                     </div>
                 ) : (
@@ -72,7 +72,7 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
                             <select
                                 value={c.left.type}
                                 onChange={(e) => updateCondition(c.id, { left: { ...c.left, type: e.target.value as IndicatorType } })}
-                                className="bg-[#131722]/80 text-[11px] h-6 px-1 rounded border border-[#363a45]/40 outline-none w-[64px] font-bold text-zinc-100 appearance-none cursor-pointer"
+                                className="bg-secondary/80 text-[11px] h-6 px-1 rounded border border-border outline-none w-[64px] font-bold text-foreground appearance-none cursor-pointer"
                             >
                                 <option value="RSI">RSI</option>
                                 <option value="EMA">EMA</option>
@@ -86,7 +86,7 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
                                 type="number"
                                 value={c.left.params[0]}
                                 onChange={(e) => updateCondition(c.id, { left: { ...c.left, params: [parseInt(e.target.value)] } })}
-                                className="w-[32px] h-6 bg-[#131722]/80 text-center text-[10px] rounded border border-[#363a45]/40 outline-none font-mono text-blue-400 font-bold"
+                                className="w-[32px] h-6 bg-secondary/80 text-center text-[10px] rounded border border-border outline-none font-mono text-blue-500 font-bold"
                             />
 
                             <select
@@ -105,12 +105,12 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
                                 type="number"
                                 value={c.right}
                                 onChange={(e) => updateCondition(c.id, { right: parseFloat(e.target.value) })}
-                                className="w-[64px] h-6 bg-[#131722]/80 text-center text-[11px] rounded border border-[#363a45]/40 outline-none font-mono font-bold text-zinc-100 px-1 focus:border-blue-500/40"
+                                className="w-[64px] h-6 bg-secondary/80 text-center text-[11px] rounded border border-border outline-none font-mono font-bold text-foreground px-1 focus:border-blue-500/40"
                             />
 
                             <button
                                 onClick={() => removeCondition(c.id)}
-                                className="w-6 h-6 flex items-center justify-center text-zinc-800 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                             >
                                 <Trash2 size={11} />
                             </button>
@@ -134,18 +134,18 @@ export function RuleBuilder({ entry, exit, side, onChangeEntry, onChangeExit }: 
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Signal Rules</span>
+                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Signal Rules</span>
                 <div className="h-[1px] bg-blue-500/10 w-full" />
             </div>
 
-            <div className="flex flex-col gap-1.5 pl-1 bg-black/10 p-1.5 rounded border border-white/5">
+            <div className="flex flex-col gap-1.5 pl-1 bg-secondary/10 p-1.5 rounded border border-border">
                 <RuleSection
                     title={`TRIGGER (${side})`}
                     group={entry}
                     onChange={onChangeEntry}
                     accentColor={side === 'BUY' ? "text-blue-500" : "text-red-500"}
                 />
-                <div className="h-[1px] bg-[#363a45]/10 w-full" />
+                <div className="h-[1px] bg-border/20 w-full" />
                 <RuleSection
                     title={`EXIT (${side})`}
                     group={exit || { operator: 'OR', conditions: [] }}

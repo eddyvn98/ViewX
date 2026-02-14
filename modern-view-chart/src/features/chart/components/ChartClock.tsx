@@ -91,18 +91,18 @@ export function ChartClock() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "flex items-center gap-2.5 px-3 py-1 bg-zinc-900/40 rounded-md border transition-all select-none group",
-                    isOpen ? "border-blue-500/50 bg-blue-500/10 shadow-[0_0_12px_rgba(59,130,246,0.15)]" : "border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-800/40"
+                    "flex items-center gap-2 px-2 py-0.5 bg-secondary/20 rounded-md border transition-all select-none group",
+                    isOpen ? "border-primary/50 bg-primary/10 shadow-[0_0_12px_rgba(59,130,246,0.15)]" : "border-border/80 hover:border-border hover:bg-secondary/40"
                 )}
             >
-                <Clock size={12} className={cn("transition-colors", isOpen ? "text-blue-400" : "text-zinc-500 group-hover:text-zinc-400")} />
+                <Clock size={11} className={cn("transition-colors", isOpen ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                 <span
                     ref={timeRef}
-                    className="text-[11px] font-bold text-zinc-200 font-mono tracking-wider"
+                    className="text-[10px] font-bold text-foreground font-mono tracking-tight"
                 >
                     --:--:--
                 </span>
-                <span className="text-[9px] font-black text-blue-500 uppercase tracking-tight bg-blue-500/10 px-1.5 py-0.5 rounded leading-none">
+                <span className="text-[8px] font-bold text-primary uppercase tracking-tight bg-primary/10 px-1 py-0 rounded leading-none">
                     {utcOffset}
                 </span>
             </button>
@@ -113,15 +113,15 @@ export function ChartClock() {
                         className="fixed inset-0 z-40"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute top-full right-0 mt-2 w-72 bg-[#1c202b] border border-zinc-800 rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                        <div className="p-2.5 border-b border-zinc-800 bg-black/20">
+                    <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-background border border-border rounded-lg shadow-xl z-[101] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                        <div className="p-2.5 border-b border-border bg-black/5 dark:bg-black/20">
                             <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                 <input
                                     autoFocus
                                     type="text"
                                     placeholder="Search timezone..."
-                                    className="w-full bg-black/40 border-none rounded-md py-2 pl-8 pr-3 text-[12px] text-zinc-200 focus:ring-1 focus:ring-blue-500/40 outline-none placeholder:text-zinc-600"
+                                    className="w-full bg-secondary/50 border-none rounded-md py-2 pl-8 pr-3 text-[12px] text-foreground focus:ring-1 focus:ring-primary/40 outline-none placeholder:text-muted-foreground/50"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
@@ -136,8 +136,8 @@ export function ChartClock() {
                                     className={cn(
                                         "w-full flex items-center justify-between px-3 py-2.5 rounded-md text-[12px] transition-all group/item",
                                         timezone === tz.id
-                                            ? "bg-blue-500/15 text-blue-400"
-                                            : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                            ? "bg-primary/15 text-primary"
+                                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                                     )}
                                 >
                                     <div className="flex flex-col items-start transition-transform group-hover/item:translate-x-0.5">

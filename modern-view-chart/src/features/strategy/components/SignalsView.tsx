@@ -8,6 +8,7 @@ import { AiAnalyzer, AnalysisType } from '../logic/AiAnalyzer';
 import { StatsService } from '../logic/StatsService';
 import { ContextCollector } from '../logic/ContextCollector';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 
 export function SignalsView() {
@@ -73,43 +74,73 @@ export function SignalsView() {
     const activePositions = virtualPositions.filter(p => p.status === 'open' || p.status === 'pending');
 
     return (
-        <div className="flex flex-col gap-4 animate-in fade-in duration-300 w-full pb-4">
+        <div className="flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-500 w-full pb-6 px-3">
             {/* VIRTUAL ACCOUNT DASHBOARD */}
             <VirtualBalanceCard />
 
             {/* ACTIVE POSITIONS SECTION */}
             {activePositions.length > 0 && (
-                <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[12px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <HistoryIcon size={14} /> Active ({activePositions.length})
+                <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-bold text-primary uppercase tracking-wider flex items-center gap-2 drop-shadow-sm">
+                            <Activity size={14} className="text-primary" /> Active trade ({activePositions.length})
                         </span>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-primary/10 to-transparent ml-4 opacity-50" />
                     </div>
-                    <div className="grid grid-cols-1 gap-1.5">
+                    <div className="grid grid-cols-1 gap-2">
                         {activePositions.map((pos) => {
                             const ticker = tickers[pos.symbol];
                             const currentPrice = ticker?.price || pos.entryPrice;
                             const pnl = pos.status === 'open' ? calculatePnL({ type: pos.type.toLowerCase() as any, openPrice: pos.entryPrice, currentPrice, volume: pos.lotSize, symbol: pos.symbol, symbolInfo: symbolInfo[pos.symbol] }) : 0;
+                            const isBuy = pos.type === 'BUY';
+
                             return (
-                                <div key={pos.id} className="bg-[#131722]/60 rounded-md border border-[#2a2e39]/50 overflow-hidden">
-                                    <div className="flex items-center justify-between p-2 py-2.5 border-b border-[#2a2e39]/30">
+                                <div key={pos.id} className="relative group overflow-hidden rounded-xl border border-border dark:border-white/5 bg-secondary/50 dark:bg-white/[0.03] transition-all hover:bg-secondary/70 dark:hover:bg-white/[0.05] shadow-sm">
+                                    <div className={cn("absolute inset-y-0 left-0 w-1 rounded-l-xl z-20", isBuy ? "bg-blue-500 shadow-[2px_0_8px_rgba(59,130,246,0.2)]" : "bg-rose-500 shadow-[2px_0_8px_rgba(244,63,94,0.2)]")} />
+
+                                    <div className="flex items-center justify-between px-3 py-2">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[14px] font-bold text-zinc-100">{pos.symbol}</span>
-                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase ${pos.type === 'BUY' ? 'bg-blue-500/10 text-blue-400' : 'bg-red-500/10 text-red-400'}`}>{pos.type}</span>
-                                            {pos.confidence && (
-                                                <div className="flex items-center gap-1 bg-blue-500/5 px-1.5 py-0.5 rounded border border-blue-500/10">
-                                                    <BrainCircuit size={11} className="text-blue-400/80" />
-                                                    <span className="text-[11px] font-black text-blue-400/80">{pos.confidence.toFixed(0)}%</span>
-                                                </div>
-                                            )}
+                                            <div className="flex flex-col">
+                                                <span className="text-[13px] font-bold text-foreground dark:text-white tracking-tight leading-none">{pos.symbol}</span>
+                                                <span className="text-[9px] font-medium text-muted-foreground uppercase opacity-60 mt-0.5">MT5 Broker</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 ml-1">
+                                                <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-lg uppercase border", isBuy ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-rose-500/10 text-rose-500 border-rose-500/20")}>{pos.type}</span>
+                                                {pos.confidence && (
+                                                    <div className="flex items-center gap-1 bg-primary/5 px-1.5 py-0.5 rounded-lg border border-primary/10">
+                                                        <BrainCircuit size={10} className="text-primary/70" />
+                                                        <span className="text-[9px] font-bold text-primary/80">{pos.confidence.toFixed(0)}%</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className={`font-mono text-[13px] font-bold ${pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>{formatPnL(pnl)}</div>
-                                        <button onClick={() => pos.status === 'open' ? closeVirtualPosition(pos.strategyId, pos.symbol, currentPrice) : cancelVirtualPosition(pos.strategyId, pos.symbol)} className="text-[#94a3b8] hover:text-red-500 transition-colors p-1"><XIcon size={14} /></button>
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("font-mono text-[14px] font-bold drop-shadow-sm", pnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                                                {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                                                <span className="text-[9px] ml-1 opacity-60">USD</span>
+                                            </div>
+                                            <button
+                                                onClick={() => pos.status === 'open' ? closeVirtualPosition(pos.strategyId, pos.symbol, currentPrice) : cancelVirtualPosition(pos.strategyId, pos.symbol)}
+                                                className="p-1 rounded-lg hover:bg-white/5 text-muted-foreground/40 hover:text-foreground transition-colors"
+                                            >
+                                                <XIcon size={14} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-[#94a3b8] bg-[#1e222d]/20">
-                                        <div>Entry: <span className="text-zinc-200 font-mono">{pos.entryPrice.toFixed(2)}</span></div>
-                                        <div className="text-center">SL: <span className="text-red-400 font-mono">{pos.sl || '---'}</span></div>
-                                        <div className="text-right">TP: <span className="text-green-400 font-mono">{pos.tp || '---'}</span></div>
+
+                                    <div className="grid grid-cols-3 px-3 py-1.5 text-[10px] text-muted-foreground bg-secondary/30 dark:bg-black/20 border-t border-border/30 dark:border-white/5">
+                                        <div className="flex items-baseline gap-1.5">
+                                            <span className="text-[8px] uppercase font-bold opacity-40">Ent</span>
+                                            <span className="text-foreground dark:text-white font-mono font-bold text-[11px]">{pos.entryPrice.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-baseline justify-center gap-1.5 border-x border-border/20 dark:border-white/5">
+                                            <span className="text-[8px] uppercase font-bold opacity-40">SL</span>
+                                            <span className="text-rose-500 dark:text-rose-400 font-mono font-bold text-[11px]">{pos.sl || '---'}</span>
+                                        </div>
+                                        <div className="flex items-baseline justify-end gap-1.5">
+                                            <span className="text-[8px] uppercase font-bold opacity-40">TP</span>
+                                            <span className="text-emerald-500 dark:text-emerald-400 font-mono font-bold text-[11px]">{pos.tp || '---'}</span>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -119,47 +150,78 @@ export function SignalsView() {
             )}
 
             {/* SIGNAL HISTORY */}
-            <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between items-center px-1">
-                    <span className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-1.5"><Activity size={12} /> RECENT SIGNALS</span>
-                    <div className="h-[1px] bg-white/10 flex-1 ml-4" />
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider flex items-center gap-2 drop-shadow-sm">
+                        <HistoryIcon size={14} className="text-muted-foreground/40" /> Recent signals
+                    </span>
+                    <div className="h-[px] flex-1 bg-gradient-to-r from-muted-foreground/10 to-transparent ml-4 opacity-50" />
                 </div>
-                <div className="flex flex-col gap-1.5">
+
+                <div className="flex flex-col gap-2.5">
                     {signals.length === 0 ? (
-                        <div className="py-8 flex flex-col items-center justify-center opacity-20 text-center gap-2">
-                            <Activity size={24} />
-                            <span className="text-[11px] uppercase font-black tracking-widest">No Active signals</span>
+                        <div className="py-12 flex flex-col items-center justify-center opacity-10 text-center gap-3">
+                            <Activity size={32} />
+                            <span className="text-[11px] uppercase font-bold tracking-[0.2em] text-muted-foreground">Monitoring Market Signals</span>
                         </div>
                     ) : (
-                        signals.map((sig, i) => (
-                            <div key={i} className={`bg-[#131722]/30 p-2 py-2 rounded border border-white/5 border-l-2 ${sig.type === 'EXIT' ? 'border-orange-500/40' : (sig.type === 'SELL' ? 'border-red-500/40' : 'border-green-500/40')} flex flex-col gap-1 group hover:bg-[#131722]/50 transition-colors`}>
-                                <div className="flex justify-between items-center text-[10px]">
-                                    <span className={`font-black uppercase tracking-tight ${sig.type === 'EXIT' ? 'text-orange-500/60' : (sig.type === 'SELL' ? 'text-red-500/60' : 'text-green-500/60')}`}>{sig.type} SIGNAL</span>
-                                    <div className="flex items-center gap-2">
-                                        {sig.aiAnalysis?.confidence ? (
-                                            <div className="flex items-center gap-1 bg-blue-500/5 px-1.5 py-0.5 rounded border border-blue-500/10">
-                                                <BrainCircuit size={11} className="text-blue-400/80" />
-                                                <span className="text-[11px] font-black text-blue-400/80">{sig.aiAnalysis.confidence.toFixed(0)}%</span>
+                        signals.map((sig, i) => {
+                            const isExit = sig.type === 'EXIT';
+                            const isSell = sig.type === 'SELL';
+                            const isBuy = sig.type === 'BUY';
+
+                            return (
+                                <div key={i} className="p-3.5 rounded-xl border border-border dark:border-white/5 bg-secondary/50 dark:bg-white/[0.03] transition-all hover:bg-secondary/70 dark:hover:bg-white/[0.05] group relative overflow-hidden shadow-sm">
+                                    <div className={cn(
+                                        "absolute inset-y-0 left-0 w-1 opacity-40 group-hover:opacity-100 transition-opacity",
+                                        isExit ? "bg-orange-500" : (isSell ? "bg-rose-500" : "bg-emerald-500")
+                                    )} />
+
+                                    <div className="flex justify-between items-center text-[10px] mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-lg text-[9px]",
+                                                isExit ? "text-orange-500 bg-orange-400/10" : (isSell ? "text-rose-500 bg-rose-400/10" : "text-emerald-500 bg-emerald-400/10")
+                                            )}>{sig.type} SIGNAL</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {sig.aiAnalysis?.confidence ? (
+                                                <div className="flex items-center gap-1.5 bg-secondary px-2 py-0.5 rounded-lg border border-border/50">
+                                                    <BrainCircuit size={10} className="text-muted-foreground/60" />
+                                                    <span className="text-[10px] font-bold text-muted-foreground/80">{sig.aiAnalysis.confidence.toFixed(0)}% AI Audit</span>
+                                                </div>
+                                            ) : !isExit ? (
+                                                <button
+                                                    onClick={() => handleManualAnalyze(i, sig)}
+                                                    disabled={analyzingIndex === i}
+                                                    className="flex items-center gap-2 text-[10px] font-bold text-primary hover:text-white transition-all bg-primary/10 hover:bg-primary px-3 py-1 rounded-lg border border-primary/20 disabled:opacity-50"
+                                                >
+                                                    {analyzingIndex === i ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
+                                                    {analyzingIndex === i ? 'Processing...' : 'AI Audit'}
+                                                </button>
+                                            ) : null}
+                                            <span className="text-muted-foreground/50 font-bold group-hover:text-muted-foreground transition-all">{new Date(sig.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-end">
+                                        <div className="flex flex-col">
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-[16px] font-bold text-foreground dark:text-white leading-none tracking-tight">{sig.symbol}</span>
+                                                <span className="text-muted-foreground/50 text-[11px] font-bold">@</span>
+                                                <span className="text-[14px] font-bold text-foreground/80 dark:text-foreground font-mono leading-none">{sig.price}</span>
                                             </div>
-                                        ) : sig.type !== 'EXIT' ? (
-                                            <button
-                                                onClick={() => handleManualAnalyze(i, sig)}
-                                                disabled={analyzingIndex === i}
-                                                className="flex items-center gap-1 text-[9px] font-black text-blue-500/60 hover:text-blue-400 uppercase tracking-tighter bg-blue-500/5 px-1.5 py-0.5 rounded border border-dashed border-blue-500/30 disabled:opacity-50 transition-all"
-                                            >
-                                                {analyzingIndex === i ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
-                                                {analyzingIndex === i ? 'thinking...' : 'audit'}
-                                            </button>
-                                        ) : null}
-                                        <span className="text-zinc-500 font-bold group-hover:text-zinc-300 transition-colors">{new Date(sig.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-wider group-hover:text-muted-foreground/60 transition-colors">Volume profile</span>
+                                            <span className="text-[11px] font-bold text-foreground dark:text-white/80 uppercase">
+                                                {typeof sig.risk.lotSize === 'object' ? (sig.risk.lotSize.mode === 'fixed' ? sig.risk.lotSize.value : sig.risk.lotSize.mode.toUpperCase()) : sig.risk.lotSize} lots
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex justify-between items-center pr-1 h-6">
-                                    <span className="text-[14px] font-bold text-zinc-300">{sig.symbol} @ <span className="font-mono text-zinc-100">{sig.price}</span></span>
-                                    <span className="text-[11px] font-black text-zinc-500 uppercase group-hover:text-zinc-400 transition-colors">V: {typeof sig.risk.lotSize === 'object' ? (sig.risk.lotSize.mode === 'fixed' ? sig.risk.lotSize.value : sig.risk.lotSize.mode.toUpperCase()) : sig.risk.lotSize}</span>
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>

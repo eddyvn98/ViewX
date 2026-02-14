@@ -1,10 +1,15 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Activity, Bot, MessageSquare } from 'lucide-react';
 import { StrategyList } from '@/features/strategy/components/StrategyList';
 import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
+import { cn } from '@/lib/utils';
 import { SignalsView } from '@/features/strategy/components/SignalsView';
 import { AIChatView } from '@/features/strategy/components/AIChatView';
 import { Strategy } from '@/features/strategy/types';
+
+import { motion, LayoutGroup } from 'framer-motion';
 
 export function StrategyPanel() {
     const [view, setView] = useState<'build' | 'list' | 'signals' | 'ai_chat'>('signals');
@@ -25,31 +30,47 @@ export function StrategyPanel() {
         setView('list');
     };
 
-    return (
-        <div className="flex flex-col h-full bg-[#1e222d] text-[#d1d4dc] overflow-hidden font-sans">
-            {/* Tabs Header */}
-            <div className="flex items-center border-b border-[#2a2e39] bg-[#131722] h-7 px-1 shrink-0">
-                <button
-                    onClick={() => setView('signals')}
-                    className={`flex items-center gap-1.5 px-2.5 h-full text-[8px] font-black transition-all border-b-2 uppercase tracking-widest ${view === 'signals' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#4a4f5d] border-transparent hover:text-zinc-400'}`}
-                >
-                    <Activity size={10} /> SIGNALS
-                </button>
-                <button
-                    onClick={() => setView('list')}
-                    className={`flex items-center gap-1.5 px-2.5 h-full text-[8px] font-black transition-all border-b-2 uppercase tracking-widest ${view === 'list' || view === 'build' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#4a4f5d] border-transparent hover:text-zinc-400'}`}
-                >
-                    <Bot size={10} /> MY BOT
-                </button>
-                <button
-                    onClick={() => setView('ai_chat')}
-                    className={`flex items-center gap-1.5 px-2.5 h-full text-[8px] font-black transition-all border-b-2 uppercase tracking-widest ${view === 'ai_chat' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#4a4f5d] border-transparent hover:text-zinc-400'}`}
-                >
-                    <MessageSquare size={10} /> AI CHAT
-                </button>
-            </div>
+    const tabs = [
+        { id: 'signals', label: 'Signals', icon: Activity },
+        { id: 'list', label: 'My bot', icon: Bot, matches: ['list', 'build'] },
+        { id: 'ai_chat', label: 'Ai chat', icon: MessageSquare }
+    ];
 
-            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar flex flex-col items-center bg-[#131722]/20">
+    return (
+        <div className="flex flex-col h-full bg-background text-foreground overflow-hidden font-sans">
+            {/* Tabs Header (Child Navigation - Differentiated Hierarchy) */}
+            <LayoutGroup id="strategy-panel-tabs">
+                <div className="flex bg-secondary/30 dark:bg-white/[0.02] p-0.5 gap-1 mx-4 mt-0.5 mb-2 rounded-lg shrink-0 relative z-0">
+                    {tabs.map((tab) => {
+                        const isActive = tab.matches ? tab.matches.includes(view) : view === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setView(tab.id as any)}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-1.5 py-1 rounded-md transition-colors duration-300 text-[9.5px] font-bold uppercase border border-transparent relative outline-none",
+                                    isActive
+                                        ? "text-primary"
+                                        : "text-muted-foreground/40 hover:text-foreground/60"
+                                )}
+                            >
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="active-strategy-tab"
+                                        className="absolute inset-0 bg-primary/10 rounded-md shadow-sm border border-primary/5"
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                    />
+                                )}
+                                <div className="relative z-10 flex items-center gap-1.5">
+                                    <tab.icon size={10} /> {tab.label}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </LayoutGroup>
+
+            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar flex flex-col items-center bg-transparent">
                 <div className="w-full max-w-[800px] flex flex-col gap-2 pb-4 h-full">
                     {view === 'signals' && <SignalsView />}
 

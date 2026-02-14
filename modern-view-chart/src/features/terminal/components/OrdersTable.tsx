@@ -53,7 +53,7 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
 
     const HeaderCell = ({ field, label, className = "" }: { field: SortField, label: string, className?: string }) => (
         <th
-            className={`p-2 font-medium border-b border-[#2a2e39] cursor-pointer hover:bg-[#2a2e39] transition-colors ${className}`}
+            className={`p-2 font-medium border-b border-border cursor-pointer hover:bg-secondary/40 transition-colors ${className}`}
             onClick={() => handleSort(field)}
         >
             <div className="flex items-center">
@@ -65,7 +65,7 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
 
     return (
         <table className="w-full text-[11px] text-left border-collapse min-w-[1000px]">
-            <thead className="sticky top-0 bg-[#1e222d] text-[#787b86] z-10">
+            <thead className="sticky top-0 bg-secondary/10 text-muted-foreground z-10 transition-colors">
                 <tr>
                     <HeaderCell field="time" label="Time" />
                     <HeaderCell field="symbol" label="Symbol" />
@@ -77,13 +77,13 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
                     <HeaderCell field="current_price" label="Current" />
                     <HeaderCell field="sl" label="SL" />
                     <HeaderCell field="tp" label="TP" />
-                    <th className="p-2 font-medium border-b border-[#2a2e39]">Actions</th>
+                    <th className="p-2 font-medium border-b border-border">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {sortedOrders && sortedOrders.length > 0 ? (
                     sortedOrders.map((ord) => (
-                        <tr key={ord.ticket} className="hover:bg-blue-500/10 text-[#d1d4dc] border-b border-[#2a2e39]">
+                        <tr key={ord.ticket} className="hover:bg-blue-500/10 text-foreground border-b border-border/50">
                             <td className="p-2 whitespace-nowrap">{new Date(ord.time * 1000).toLocaleString()}</td>
                             <td
                                 className="p-2 cursor-pointer hover:text-blue-400 font-medium"
@@ -113,7 +113,7 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
                     ))
                 ) : (
                     <tr>
-                        <td colSpan={11} className="p-4 text-center text-[#787b86]">No moving orders</td>
+                        <td colSpan={11} className="p-4 text-center text-muted-foreground">No moving orders</td>
                     </tr>
                 )}
             </tbody>

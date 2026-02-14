@@ -17,6 +17,7 @@ import { useChartContextMenu } from './hooks/use-chart-context-menu';
 import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
 import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
 import { useChartShortcuts } from './hooks/use-chart-shortcuts';
+import { useTheme } from 'next-themes';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { getNearElement } from './logic/chart-hit-test';
 import { normalizeSymbol } from '@/lib/utils/symbol';
@@ -37,6 +38,7 @@ import { StrategyMarkers } from '../strategy/components/StrategyMarkers';
 const EMPTY_CANDLES: any[] = [];
 
 export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }: { chartId: string, isNarrow?: boolean }) {
+    const { theme = 'dark' } = useTheme();
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
 
@@ -67,7 +69,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     const timescaleContainerRef = useRef<HTMLDivElement>(null);
 
     const { isReady, priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, subSyncRef, timescaleSyncRef, syncRange, isAutoScrollEnabledRef } =
-        useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId);
+        useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme);
 
     /* ================= DATA ================= */
     const chartType = chartInstance?.chartType || 'candles';
@@ -187,7 +189,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
 
     return (
         <div
-            className="w-full h-full relative flex flex-col bg-[#131722]"
+            className="w-full h-full relative flex flex-col bg-theme-pattern"
             onContextMenu={handleContextMenu}
         >
             <ChartOverlay
@@ -270,10 +272,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     <button
                         onClick={() => setIsSubchartVisible(!isSubchartVisible)}
                         className={cn(
-                            "px-3 md:px-4 py-1 rounded-tr-md border border-zinc-700/40 border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md",
+                            "px-3 md:px-4 py-1 rounded-tr-md border border-border border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md",
                             isSubchartVisible
-                                ? "bg-[#1e222d]/80 text-[#787b86] hover:text-blue-400"
-                                : "bg-blue-600/30 text-blue-400"
+                                ? "bg-secondary/80 text-muted-foreground hover:text-primary"
+                                : "bg-primary/20 text-primary font-bold"
                         )}
                         style={{ marginLeft: '-1px' }}
                     >
@@ -292,13 +294,13 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* RSI SUBCHART (Overlay) - Floating at bottom */}
                 <div
                     className={cn(
-                        "absolute bottom-0 left-0 right-0 z-10 border-t border-blue-500/30 transition-all duration-300 transform overflow-hidden",
+                        "absolute bottom-0 left-0 right-0 z-10 border-t border-primary/20 transition-all duration-300 transform overflow-hidden",
                         isSubchartVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-                        isMinimized && isSubchartVisible ? "h-[80px] bg-[#131722]" : "h-[25%] min-h-[100px] bg-[#131722]/50 backdrop-blur-md"
+                        isMinimized && isSubchartVisible ? "h-[80px] bg-background" : "h-[25%] min-h-[100px] bg-background/50 backdrop-blur-md"
                     )}
                 >
                     {/* Visual Border Highlight */}
-                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_8px_var(--glow-primary)]" />
                     {/* RSI/MACD LEGEND */}
                     <div className="absolute left-3 top-[5%] z-10 pointer-events-none select-none">
                         <SubchartLegend
@@ -313,10 +315,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 </div>
             </div>
 
-            <div className="h-[1px] bg-zinc-800" />
+            <div className="h-[1px] bg-border" />
 
             {/* TIMESCALE FOOTER */}
-            <div className="h-[38px] relative overflow-hidden shrink-0 bg-[#131722]">
+            <div className="h-[38px] relative overflow-hidden shrink-0 bg-background/95 backdrop-blur-sm border-t border-border">
                 <div ref={timescaleContainerRef} className="w-full h-full" />
             </div>
 

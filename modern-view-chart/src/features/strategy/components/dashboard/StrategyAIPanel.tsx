@@ -52,7 +52,7 @@ export function StrategyAIPanel({ metrics }: Props) {
     };
 
     return (
-        <div className="bg-[#1e222d]/40 rounded-2xl border border-blue-500/20 overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="bg-secondary/20 rounded-2xl border border-blue-500/20 overflow-hidden shadow-2xl backdrop-blur-sm">
             <div className="p-6 space-y-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3">
@@ -60,7 +60,7 @@ export function StrategyAIPanel({ metrics }: Props) {
                             <BrainCircuit size={20} className="text-blue-400" />
                         </div>
                         <div className="flex flex-col">
-                            <h3 className="text-sm font-black text-white uppercase tracking-widest">AI Strategy Coach</h3>
+                            <h3 className="text-sm font-black text-foreground uppercase tracking-widest">AI Strategy Coach</h3>
                             <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">Bot → MT5 Signal Guidance</span>
                         </div>
                     </div>
@@ -89,32 +89,32 @@ export function StrategyAIPanel({ metrics }: Props) {
                 {analysis && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-[#131722]/60 p-4 rounded-xl border border-[#363a45]/50 flex items-start gap-4">
+                            <div className="bg-secondary/40 p-4 rounded-xl border border-border/50 flex items-start gap-4">
                                 <div className="p-2 bg-green-500/10 rounded-lg">
                                     <Target size={16} className="text-green-400" />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-black text-[#787b86] uppercase">System Strength</span>
-                                    <p className="text-[11px] text-[#d1d4dc] leading-relaxed italic">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase">System Strength</span>
+                                    <p className="text-[11px] text-foreground/80 leading-relaxed italic">
                                         "{analysis}"
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="bg-[#131722]/60 p-4 rounded-xl border border-[#363a45]/50 flex items-start gap-4">
+                            <div className="bg-secondary/40 p-4 rounded-xl border border-border/50 flex items-start gap-4">
                                 <div className="p-2 bg-purple-500/10 rounded-lg">
                                     <Zap size={16} className="text-purple-400" />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-black text-[#787b86] uppercase">Actionable Refinement</span>
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase">Actionable Refinement</span>
                                     <div className="space-y-2 mt-1">
                                         <div className="flex items-center gap-2">
                                             <div className="w-1 h-1 rounded-full bg-blue-400" />
-                                            <span className="text-[10px] font-bold text-white/90">Filter MT5 trades by AI Confidence &gt; 80%</span>
+                                            <span className="text-[10px] font-bold text-foreground/90">Filter MT5 trades by AI Confidence &gt; 80%</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="w-1 h-1 rounded-full bg-blue-400" />
-                                            <span className="text-[10px] font-bold text-white/90">Audit ${bestSession?.[0] || 'Current'} Logic for MAE spikes</span>
+                                            <span className="text-[10px] font-bold text-foreground/90">Audit ${bestSession?.[0] || 'Current'} Logic for MAE spikes</span>
                                         </div>
                                     </div>
                                 </div>
@@ -124,7 +124,7 @@ export function StrategyAIPanel({ metrics }: Props) {
                         <div className="flex justify-center">
                             <button
                                 onClick={() => setAnalysis(null)}
-                                className="text-[10px] font-black text-[#4a4f5d] hover:text-blue-400 uppercase tracking-widest transition-colors flex items-center gap-2"
+                                className="text-[10px] font-black text-muted-foreground hover:text-blue-500 uppercase tracking-widest transition-colors flex items-center gap-2"
                             >
                                 <RefreshCcw size={12} />
                                 Recalculate with New Data
@@ -148,8 +148,8 @@ export function StrategyAIPanel({ metrics }: Props) {
 
 function MacroChip({ label, value, color }: { label: string; value: string; color: string }) {
     return (
-        <div className="bg-[#131722]/40 px-4 py-2 rounded-xl border border-[#363a45]/30 flex flex-col">
-            <span className="text-[8px] font-black text-[#4a4f5d] uppercase tracking-tighter">{label}</span>
+        <div className="bg-secondary/40 px-4 py-2 rounded-xl border border-border/30 flex flex-col">
+            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">{label}</span>
             <span className={`text-[11px] font-mono font-black ${color}`}>{value}</span>
         </div>
     );

@@ -120,57 +120,54 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
     if (!symbol) return null;
 
     return (
-        <div className="absolute top-2 left-2 z-50 flex items-center gap-1.5">
+        <div className="absolute top-1 left-2 z-[100] flex items-center gap-1.5">
             {(!draftOrder || draftOrder.symbol !== symbol) ? (
-                <div className="flex items-center p-0.5 bg-zinc-950/90 backdrop-blur-xl rounded-lg border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
+                <div className="flex w-[114px] bg-secondary/80 dark:bg-white/[0.03] backdrop-blur-xl border border-border dark:border-white/5 p-0.5 rounded-xl shadow-sm relative overflow-hidden group">
                     <button
                         onClick={() => handleStartDraft('buy')}
-                        className="group flex items-center justify-center px-3 h-7 bg-emerald-500/10 hover:bg-emerald-500 rounded-md transition-all duration-200"
+                        className="flex-1 flex items-center justify-center h-6.5 transition-all duration-300 rounded-lg hover:bg-blue-500/10 active:scale-95 group/btn"
                     >
-                        <span className="text-[11px] font-black text-emerald-400 group-hover:text-white uppercase tracking-wider">BUY</span>
+                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none">BUY</span>
                     </button>
 
-                    <div className="h-3 w-[1px] bg-white/10 mx-1" />
+                    <div className="w-[1px] h-2.5 bg-border/20 self-center mx-0.5" />
 
                     <button
                         onClick={() => handleStartDraft('sell')}
-                        className="group flex items-center justify-center px-3 h-7 bg-red-500/10 hover:bg-red-500 rounded-md transition-all duration-200"
+                        className="flex-1 flex items-center justify-center h-6.5 transition-all duration-300 rounded-lg hover:bg-rose-500/10 active:scale-95 group/btn"
                     >
-                        <span className="text-[11px] font-black text-red-400 group-hover:text-white uppercase tracking-wider">SELL</span>
+                        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest leading-none">SELL</span>
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center gap-1 p-1 bg-zinc-950/90 backdrop-blur-xl border border-white/10 rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+                <div className="flex items-center gap-1 p-0.5 w-[114px] bg-secondary/90 dark:bg-white/10 backdrop-blur-3xl border border-border dark:border-white/10 rounded-xl shadow-sm animate-in zoom-in-95 duration-200">
                     <button
-                        onClick={toggleMarket}
-                        className={cn(
-                            "px-2.5 h-7 rounded-md text-[11px] font-black uppercase transition-all duration-200 border",
-                            draftOrder?.isMarket
-                                ? "bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-900/40"
-                                : "bg-zinc-800 text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
-                        )}
+                        onClick={handleCancel}
+                        className="w-6.5 h-6.5 flex-none flex items-center justify-center rounded-lg bg-white/5 text-muted-foreground/40 hover:text-foreground hover:bg-white/10 transition-all active:scale-90"
                     >
-                        {draftOrder?.isMarket ? "Market" : "Limit"}
+                        <X size={11} />
                     </button>
+
+                    <div className="flex-1 flex flex-col items-center justify-center min-w-0">
+                        <span className={cn(
+                            "text-[7px] font-bold uppercase tracking-tight leading-none mb-0.5",
+                            draftOrder.type === 'buy' ? "text-blue-500/60" : "text-rose-500/60"
+                        )}>
+                            {draftOrder.type}
+                        </span>
+                        <span className="text-[8px] font-bold text-foreground tracking-tight leading-none uppercase">{draftOrder.volume}L</span>
+                    </div>
 
                     <button
                         onClick={handleConfirm}
                         className={cn(
-                            "flex items-center gap-1.5 px-3.5 h-7 rounded-md text-[11px] font-black transition-all duration-200 shadow-md uppercase tracking-tight",
-                            draftOrder?.type === 'buy'
-                                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40 border-t border-emerald-400/30"
-                                : "bg-red-600 hover:bg-red-500 text-white shadow-red-900/40 border-t border-red-400/30"
+                            "h-6.5 px-3 flex-none rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 border",
+                            draftOrder.type === 'buy'
+                                ? "bg-blue-500 text-white border-blue-400/20 hover:bg-blue-600"
+                                : "bg-rose-500 text-white border-rose-400/20 hover:bg-rose-600"
                         )}
                     >
-                        <Check size={12} strokeWidth={3} />
-                        CONFIRM {draftOrder?.type}
-                    </button>
-
-                    <button
-                        onClick={handleCancel}
-                        className="w-7 h-7 flex items-center justify-center bg-zinc-800 hover:bg-zinc-600 text-zinc-400 hover:text-white rounded-md border border-white/5 transition-all duration-200"
-                    >
-                        <X size={14} strokeWidth={2.5} />
+                        Confirm
                     </button>
                 </div>
             )}

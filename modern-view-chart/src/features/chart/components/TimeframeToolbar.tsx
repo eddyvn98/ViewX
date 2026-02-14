@@ -40,10 +40,10 @@ export function TimeframeToolbar() {
                         key={tf.id}
                         onClick={() => activeChartId && setChartTimeframe(activeChartId, tf.id)}
                         className={cn(
-                            "px-2 py-1 rounded text-[11px] font-bold transition-all",
+                            "px-1.5 py-0.5 rounded text-[10px] font-bold transition-all",
                             currentInterval === tf.id
-                                ? "text-yellow-500 bg-yellow-500/10"
-                                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                                ? "text-primary bg-primary/10"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                         )}
                     >
                         {tf.label}
@@ -56,11 +56,11 @@ export function TimeframeToolbar() {
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className={cn(
-                        "p-1 rounded hover:bg-zinc-800 transition-all",
-                        isOpen ? "bg-zinc-800 text-yellow-500" : "text-zinc-500"
+                        "p-0.5 rounded hover:bg-secondary/40 transition-all",
+                        isOpen ? "bg-secondary text-primary" : "text-muted-foreground"
                     )}
                 >
-                    <ChevronDown size={14} className={cn("transition-transform", isOpen && "rotate-180")} />
+                    <ChevronDown size={13} className={cn("transition-transform", isOpen && "rotate-180")} />
                 </button>
 
                 {isOpen && (

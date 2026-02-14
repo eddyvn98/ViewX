@@ -55,11 +55,11 @@ export function TradeDetailPanel({ position, metrics }: Props) {
     };
 
     return (
-        <div className="bg-[#131722] p-6 border-t border-[#363a45] space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="bg-secondary p-6 border-t border-border space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* 1. Snapshot Grid */}
                 <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <h4 className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                         <Activity size={14} className="text-blue-500" />
                         Market Dynamics
                     </h4>
@@ -89,9 +89,9 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                     </div>
 
                     {/* Trade Efficiency */}
-                    <div className="bg-[#1e222d] p-4 rounded-lg border border-[#363a45]">
+                    <div className="bg-secondary/60 p-4 rounded-lg border border-border">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-[9px] font-bold text-[#787b86] uppercase">Trade Efficiency</span>
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Trade Efficiency</span>
                             <span className={`text-[11px] font-black ${getEfficiencyColor(
                                 (Math.max(0, position.pnl || 0) / (context.mfe || 1)) * 100
                             )}`}>
@@ -100,7 +100,7 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                                     : '0.0'}%
                             </span>
                         </div>
-                        <div className="h-1.5 w-full bg-[#363a45] rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-border rounded-full overflow-hidden">
                             <div
                                 className={`h-full transition-all duration-1000 ${(position.pnl || 0) > 0 ? 'bg-green-500' : 'bg-red-500'
                                     }`}
@@ -109,7 +109,7 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                                 }}
                             />
                         </div>
-                        <p className="text-[9px] text-[#4a4f5d] mt-2 italic leading-tight">
+                        <p className="text-[9px] text-muted-foreground mt-2 italic leading-tight">
                             Measures how much of the potential move (MFE) was captured as profit.
                         </p>
                     </div>
@@ -126,7 +126,7 @@ export function TradeDetailPanel({ position, metrics }: Props) {
 
                     <button
                         onClick={handleFocusOnChart}
-                        className="w-full mt-4 flex items-center justify-center gap-2 bg-[#2a2e39] hover:bg-[#363a45] text-white py-2 rounded-lg text-[10px] font-bold uppercase transition-colors"
+                        className="w-full mt-4 flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-foreground py-2 rounded-lg text-[10px] font-bold uppercase transition-colors border border-border"
                     >
                         <Search size={14} className="text-blue-400" />
                         Inspect on Chart
@@ -135,31 +135,31 @@ export function TradeDetailPanel({ position, metrics }: Props) {
 
                 {/* 2. Indicator Reality Check */}
                 <div className="space-y-4 md:col-span-2">
-                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <h4 className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                         <BarChart3 size={14} className="text-purple-500" />
                         Entry Reality Check (Snapshot)
                     </h4>
-                    <div className="bg-[#1e222d] rounded-lg border border-[#363a45] overflow-hidden">
+                    <div className="bg-secondary/60 rounded-lg border border-border overflow-hidden">
                         <table className="w-full text-left text-[11px]">
                             <thead>
-                                <tr className="bg-[#131722]/50 text-[#787b86] uppercase">
+                                <tr className="bg-secondary/80 text-muted-foreground uppercase">
                                     <th className="px-3 py-2 font-black">Indicator</th>
                                     <th className="px-3 py-2 font-black">Condition Value</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#363a45]/30">
+                            <tbody className="divide-y divide-border/30">
                                 {context.indicators_snapshot ? (
                                     Object.entries(context.indicators_snapshot).map(([key, val]) => (
                                         <tr key={key}>
-                                            <td className="px-3 py-2 font-bold text-[#d1d4dc]">{key}</td>
-                                            <td className="px-3 py-2 font-mono text-white">
+                                            <td className="px-3 py-2 font-bold text-muted-foreground">{key}</td>
+                                            <td className="px-3 py-2 font-mono text-foreground">
                                                 {typeof val === 'number' ? val.toFixed(4) : String(val)}
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={2} className="px-3 py-8 text-center text-[#787b86] italic">
+                                        <td colSpan={2} className="px-3 py-8 text-center text-muted-foreground italic">
                                             No indicator snapshot available for this trade.
                                         </td>
                                     </tr>
@@ -174,7 +174,7 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                                 <Info size={14} className="text-blue-400" />
                                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Post-Trade Analysis</span>
                             </div>
-                            <p className="text-[11px] text-[#787b86]">
+                            <p className="text-[11px] text-muted-foreground">
                                 Trade closure efficiency analyzed. Post-exit price behavior captured for performance review.
                             </p>
                         </div>
@@ -183,7 +183,7 @@ export function TradeDetailPanel({ position, metrics }: Props) {
             </div>
 
             {/* 3. AI Insights Section */}
-            <div className="pt-6 border-t border-[#363a45]/50">
+            <div className="pt-6 border-t border-border/50">
                 <AIInsightPanel position={position} metrics={metrics} />
             </div>
         </div>
@@ -192,15 +192,15 @@ export function TradeDetailPanel({ position, metrics }: Props) {
 
 function MetricCard({ label, value, icon, tooltip }: { label: string; value: string; icon: React.ReactNode; tooltip?: string }) {
     return (
-        <div className="bg-[#1e222d] p-3 rounded-lg border border-[#363a45] flex flex-col gap-1 group relative">
-            <div className="flex items-center gap-1.5 text-[#787b86]">
+        <div className="bg-secondary/60 p-3 rounded-lg border border-border flex flex-col gap-1 group relative">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
                 {icon}
                 <span className="text-[9px] font-bold uppercase tracking-tight">{label}</span>
             </div>
-            <span className="text-[12px] font-black text-white">{value}</span>
+            <span className="text-[12px] font-black text-foreground">{value}</span>
 
             {tooltip && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-[#2a2e39] text-[9px] text-[#d1d4dc] rounded shadow-xl border border-[#363a45] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-popover text-[9px] text-foreground rounded shadow-xl border border-border opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                     {tooltip}
                 </div>
             )}

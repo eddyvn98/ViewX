@@ -52,21 +52,21 @@ export default function StrategyDashboardPage() {
     }, []);
 
     return (
-        <div className="h-screen overflow-y-auto bg-[#0b0e14] text-[#d1d4dc] p-4 md:p-8 font-sans selection:bg-blue-500/30">
+        <div className="h-screen overflow-y-auto bg-background text-foreground p-4 md:p-8 font-sans selection:bg-blue-500/30">
             <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-10">
 
                 {/* HEADER */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#363a45] pb-6">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20 shadow-lg shadow-blue-500/5">
                             <LayoutDashboard className="text-blue-500" size={24} />
                         </div>
                         <div className="flex flex-col">
-                            <h1 className="text-2xl font-black text-white tracking-tight uppercase">Strategy Performance</h1>
+                            <h1 className="text-2xl font-black text-foreground tracking-tight uppercase">Strategy Performance</h1>
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="flex items-center gap-2">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-[#787b86] uppercase tracking-widest">Real-time Analysis</span>
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time Analysis</span>
                                 </div>
                                 {virtualPositions.length > 0 && (
                                     <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-md">
@@ -101,7 +101,7 @@ export default function StrategyDashboardPage() {
                         </button>
                         <button
                             onClick={handleRefresh}
-                            className="flex items-center gap-2 px-4 h-10 rounded-xl bg-[#1e222d] hover:bg-[#2a2e39] text-[#d1d4dc] text-xs font-bold transition-all border border-[#363a45]"
+                            className="flex items-center gap-2 px-4 h-10 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold transition-all border border-border"
                         >
                             <RefreshCcw size={14} />
                             REFRESH
@@ -135,9 +135,9 @@ export default function StrategyDashboardPage() {
                     </section>
                 </div>
 
-                <footer className="mt-8 border-t border-[#363a45]/30 pt-4 flex flex-col md:flex-row justify-between items-center gap-4 opacity-50">
-                    <span className="text-[10px] font-bold text-[#4a4f5d] uppercase">ViewX High-Performance Rule Engine v2.0</span>
-                    <span className="text-[9px] font-mono text-[#4a4f5d]">Total Volume: {(virtualPositions.reduce((sum, p) => sum + (p.lotSize || 0), 0)).toFixed(2)} Lot</span>
+                <footer className="mt-8 border-t border-border/30 pt-4 flex flex-col md:flex-row justify-between items-center gap-4 opacity-50">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">ViewX High-Performance Rule Engine v2.0</span>
+                    <span className="text-[9px] font-mono text-muted-foreground">Total Volume: {(virtualPositions.reduce((sum, p) => sum + (p.lotSize || 0), 0)).toFixed(2)} Lot</span>
                 </footer>
             </div>
         </div>

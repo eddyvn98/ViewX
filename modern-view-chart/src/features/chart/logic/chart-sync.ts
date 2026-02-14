@@ -86,7 +86,7 @@ export const autoSyncLayout = (
 
         const priceW = priceChart.priceScale('right').width();
         const subW = subchartChart.priceScale('right').width();
-        const maxW = Math.max(priceW, subW, initialMinW);
+        const maxW = Math.ceil(Math.max(priceW, subW, initialMinW));
 
         if (Math.abs(maxW - lastMaxW) > 1) {
             setLastMaxW(maxW);

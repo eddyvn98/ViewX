@@ -17,12 +17,12 @@ export function TradeHistory({ positions, metrics }: Props) {
 
     if (closedPositions.length === 0) {
         return (
-            <div className="bg-[#1e222d] rounded-xl border border-[#363a45] p-12 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 rounded-full bg-[#131722] flex items-center justify-center mb-4 border border-[#363a45]">
-                    <Clock size={24} className="text-[#4a4f5d]" />
+            <div className="bg-secondary/40 rounded-xl border border-border p-12 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-full bg-secondary/60 flex items-center justify-center mb-4 border border-border">
+                    <Clock size={24} className="text-muted-foreground" />
                 </div>
-                <h3 className="text-white font-bold mb-1 uppercase tracking-wider">No Trade History</h3>
-                <p className="text-[#787b86] text-xs max-w-xs">Virtual positions will appear here once they are closed by your strategies.</p>
+                <h3 className="text-foreground font-bold mb-1 uppercase tracking-wider">No Trade History</h3>
+                <p className="text-muted-foreground text-xs max-w-xs">Virtual positions will appear here once they are closed by your strategies.</p>
             </div>
         );
     }
@@ -34,27 +34,27 @@ export function TradeHistory({ positions, metrics }: Props) {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <span className="text-xs font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                     <Hash size={14} className="text-blue-500" />
                     Closed Sessions ({closedPositions.length})
                 </span>
             </div>
 
-            <div className="bg-[#1e222d] rounded-xl border border-[#363a45] overflow-hidden shadow-2xl flex flex-col">
+            <div className="bg-secondary/40 rounded-xl border border-border overflow-hidden shadow-2xl flex flex-col">
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
                     <table className="w-full text-left border-collapse table-fixed md:table-auto">
                         <thead className="sticky top-0 z-10">
-                            <tr className="bg-[#131722] border-b border-[#363a45]">
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[35%] md:w-auto text-center w-8"></th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[35%] md:w-auto">Time / Symbol</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[15%] md:w-auto">Type</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[10%] md:w-auto">Lot</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[10%] md:w-auto">Entry / Exit</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter w-[15%] md:w-auto text-center">AI Conf.</th>
-                                <th className="px-4 py-3 text-[9px] font-black text-[#787b86] uppercase tracking-tighter text-right w-[20%] md:w-auto">Profit (USD)</th>
+                            <tr className="bg-secondary/80 border-b border-border">
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter w-[35%] md:w-auto text-center w-8"></th>
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter w-[35%] md:w-auto">Time / Symbol</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter w-[15%] md:w-auto">Type</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter w-[10%] md:w-auto">Lot</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter w-[10%] md:w-auto">Entry / Exit</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter w-[15%] md:w-auto text-center">AI Conf.</th>
+                                <th className="px-4 py-3 text-[9px] font-black text-muted-foreground uppercase tracking-tighter text-right w-[20%] md:w-auto">Profit (USD)</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#363a45]/30">
+                        <tbody className="divide-y divide-border/30">
                             {closedPositions.map((p) => (
                                 <React.Fragment key={p.id}>
                                     <tr
@@ -65,13 +65,13 @@ export function TradeHistory({ positions, metrics }: Props) {
                                             {expandedId === p.id ? (
                                                 <ChevronUp size={14} className="text-blue-500" />
                                             ) : (
-                                                <ChevronDown size={14} className="text-[#4a4f5d] group-hover:text-blue-400" />
+                                                <ChevronDown size={14} className="text-muted-foreground group-hover:text-blue-500" />
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <span className="text-[11px] font-black text-white group-hover:text-blue-400 transition-colors uppercase">{p.symbol}</span>
-                                                <span className="text-[9px] font-bold text-[#4a4f5d]">
+                                                <span className="text-[11px] font-black text-foreground group-hover:text-blue-500 transition-colors uppercase">{p.symbol}</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground">
                                                     {new Date(p.exitTimestamp || 0).toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -82,12 +82,12 @@ export function TradeHistory({ positions, metrics }: Props) {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-[11px] font-mono font-bold text-[#d1d4dc]">{p.lotSize.toFixed(2)}</span>
+                                            <span className="text-[11px] font-mono font-bold text-foreground/80">{p.lotSize.toFixed(2)}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <span className="text-[11px] font-mono font-bold text-[#d1d4dc]">{p.entryPrice.toFixed(2)}</span>
-                                                <span className="text-[10px] font-mono font-bold text-[#4a4f5d]">{p.exitPrice?.toFixed(2)}</span>
+                                                <span className="text-[11px] font-mono font-bold text-foreground/80">{p.entryPrice.toFixed(2)}</span>
+                                                <span className="text-[10px] font-mono font-bold text-muted-foreground">{p.exitPrice?.toFixed(2)}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
@@ -99,10 +99,10 @@ export function TradeHistory({ positions, metrics }: Props) {
                                                         }`}>
                                                         {p.confidence.toFixed(0)}%
                                                     </span>
-                                                    <span className="text-[7px] font-bold text-[#4a4f5d] uppercase italic">Confidence</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase italic">Confidence</span>
                                                 </div>
                                             ) : (
-                                                <span className="text-[10px] text-[#4a4f5d]">-</span>
+                                                <span className="text-[10px] text-muted-foreground">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-right">
@@ -118,7 +118,7 @@ export function TradeHistory({ positions, metrics }: Props) {
                                     </tr>
                                     {expandedId === p.id && (
                                         <tr>
-                                            <td colSpan={6} className="p-0 border-b border-[#363a45]/50">
+                                            <td colSpan={6} className="p-0 border-b border-border/50">
                                                 <TradeDetailPanel position={p} metrics={metrics} />
                                             </td>
                                         </tr>

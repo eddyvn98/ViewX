@@ -101,7 +101,7 @@ export default function Home() {
   }, [setIsScrollingPanel]);
 
   return (
-    <div className="app-root bg-zinc-950 text-white font-sans select-none relative">
+    <div className="app-root bg-background text-foreground font-sans select-none relative transition-colors duration-300">
       <NotificationManager />
       <div className="hidden md:block">
         <Header />
@@ -114,22 +114,22 @@ export default function Home() {
       <div className="flex flex-1 pt-0 overflow-hidden min-h-0">
         {/* LEFT BAR: Icons */}
         <div className="hidden md:flex h-full">
-          <Sidebar onToggleMarket={toggleLeftSidebar} />
+          <Sidebar />
         </div>
 
         {/* BODY AREA */}
-        <div className="flex-1 flex overflow-hidden ml-0 md:ml-16 relative min-h-0">
+        <div className="flex-1 flex overflow-hidden ml-0 relative min-h-0">
           {/* OPTIONAL LEFT PANEL: Market List */}
           <div
             className={cn(
-              "border-r border-zinc-800 bg-zinc-950 flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0 hidden md:flex",
+              "border-r border-border bg-background flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0 hidden md:flex",
               isLeftSidebarOpen ? "w-72 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           >
             <div className="w-72 h-full flex flex-col">
-              <div className="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/40 shrink-0">
-                <span className="text-[11px] font-black uppercase text-zinc-500 tracking-widest">Market Selection</span>
-                <button onClick={toggleLeftSidebar} className="text-zinc-600 hover:text-white p-1 transition-colors">
+              <div className="p-3 border-b border-border flex justify-between items-center bg-secondary/20 shrink-0">
+                <span className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Market Selection</span>
+                <button onClick={toggleLeftSidebar} className="text-muted-foreground hover:text-foreground p-1 transition-colors">
                   <X size={14} />
                 </button>
               </div>
@@ -141,14 +141,14 @@ export default function Home() {
 
           {/* MAIN CENTER: Charts & Terminal */}
           <main className={cn(
-            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-black/20 pb-0 md:pb-0"
+            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-secondary/10 pb-0 md:pb-0"
           )}>
             {/* Show Chart ONLY if active tab is 'chart' on Mobile, OR always on Desktop */}
             <div className={cn(
-              "flex-1 flex flex-col min-h-0 bg-zinc-900/40 rounded-none md:rounded-lg border-0 md:border border-zinc-800/50 overflow-hidden shadow-2xl",
+              "flex-1 flex flex-col min-h-0 bg-card rounded-none md:rounded-lg border-0 md:border border-border/50 overflow-hidden shadow-2xl",
               (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions' || activeMobileTab === 'strategy') ? 'flex' : 'hidden md:flex'
             )}>
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0 md:p-1 gap-1">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0">
                 <div className="hidden md:block">
                   <ChartsToolbarMemo />
                 </div>
@@ -160,7 +160,7 @@ export default function Home() {
               {/* Desktop Terminal - CONDITIONAL RENDER to prevent re-renders when hidden */}
               {isTerminalVisible && (
                 <div
-                  className="transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-zinc-800 hidden md:flex border-t opacity-100"
+                  className="transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-border hidden md:flex border-t opacity-100"
                   style={{ height: isTerminalCollapsed ? 40 : terminalHeight }}
                 >
                   <Terminal />
@@ -173,9 +173,9 @@ export default function Home() {
 
             {/* Mobile Watchlist Tab */}
             {activeMobileTab === 'watchlist' && (
-              <div className="flex-1 flex flex-col bg-zinc-950 md:hidden h-full min-h-0">
-                <div className="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-900/50">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">
+              <div className="flex-1 flex flex-col bg-background md:hidden h-full min-h-0">
+                <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/20">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">
                     {isMobileWatchlistAddMode ? 'Add Symbols' : 'My Watchlist'}
                   </h2>
                   <button
@@ -183,8 +183,8 @@ export default function Home() {
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all",
                       isMobileWatchlistAddMode
-                        ? "bg-zinc-800 text-zinc-400 hover:text-white"
-                        : "bg-blue-600 text-white shadow-lg shadow-blue-500/20 active:scale-95"
+                        ? "bg-secondary text-muted-foreground hover:text-foreground"
+                        : "bg-primary text-primary-foreground shadow-lg shadow-primary/20 active:scale-95"
                     )}
                   >
                     {isMobileWatchlistAddMode ? (
@@ -200,7 +200,7 @@ export default function Home() {
                     )}
                   </button>
                 </div>
-                <div className="flex-1 min-h-0 bg-zinc-950 flex flex-col">
+                <div className="flex-1 min-h-0 bg-background flex flex-col">
                   <MarketList mode={isMobileWatchlistAddMode ? 'discovery' : 'watchlist'} />
                 </div>
               </div>
@@ -209,12 +209,12 @@ export default function Home() {
             {/* Mobile Terminal Panel - CONDITIONAL RENDER to prevent re-renders when hidden */}
             {activeMobileTab === 'positions' && (
               <div className={cn(
-                "absolute left-0 right-0 bg-[#0b0e14] border-t border-zinc-800 flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.6)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
+                "absolute left-0 right-0 bg-background border-t border-border flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.2)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
                 "bottom-[calc(48px+env(safe-area-inset-bottom))]",
                 isInputFocused ? "h-[80%]" : "h-[29%]"
               )}>
                 <div
-                  className="h-6 flex items-center justify-center cursor-row-resize active:bg-zinc-900 touch-none shrink-0"
+                  className="h-6 flex items-center justify-center cursor-row-resize active:bg-secondary/20 touch-none shrink-0"
                   onClick={handleClosePanel}
                   onTouchStart={(e) => {
                     const touch = e.touches[0];
@@ -230,7 +230,7 @@ export default function Home() {
                     delete (window as any)._panelTouchStartY;
                   }}
                 >
-                  <div className="w-12 h-1 bg-zinc-800 rounded-full" />
+                  <div className="w-12 h-1 bg-border rounded-full" />
                 </div>
                 <div
                   onScroll={handleScroll}
@@ -243,12 +243,12 @@ export default function Home() {
 
             {/* Mobile Strategy Panel - NEW */}
             {activeMobileTab === 'strategy' && (
-              <div className="md:hidden flex-1 flex flex-col min-h-0 bg-[#1e222d] overflow-hidden">
-                <div className="flex items-center justify-between p-3 border-b border-[#2a2e39] bg-[#131722]">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-[#d1d4dc]">Strategy Manager</h2>
+              <div className="md:hidden flex-1 flex flex-col min-h-0 bg-background overflow-hidden">
+                <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Strategy Manager</h2>
                   <button
                     onClick={handleClosePanel}
-                    className="p-1.5 text-[#787b86] hover:text-white bg-[#2a2e39] rounded-md transition-all"
+                    className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-all"
                   >
                     <X size={16} />
                   </button>
@@ -260,7 +260,7 @@ export default function Home() {
             )}
 
             {activeMobileTab === 'menu' && (
-              <div className="flex-1 bg-zinc-950 md:hidden overflow-y-auto min-h-0">
+              <div className="flex-1 bg-background md:hidden overflow-y-auto min-h-0">
                 <MobileMenu />
               </div>
             )}

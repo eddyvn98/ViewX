@@ -47,7 +47,7 @@ export function PriceConfigRow({
                     <select
                         value={config.mode}
                         onChange={(e) => handleModeChange(e.target.value as SLTPMode)}
-                        className="bg-[#1e222d] text-[10px] font-black px-1.5 h-6 rounded border border-[#4a4f5d] outline-none text-[#d1d4dc] appearance-none cursor-pointer min-w-[64px] text-center hover:border-blue-500/50 transition-colors"
+                        className="bg-secondary text-[10px] font-black px-1.5 h-6 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer min-w-[64px] text-center hover:border-blue-500/50 transition-colors"
                     >
                         {modes.includes('fixed') && <option value="fixed">Points</option>}
                         {modes.includes('percentage') && <option value="percentage">Percent</option>}
@@ -57,16 +57,16 @@ export function PriceConfigRow({
                         {modes.includes('winrate') && <option value="winrate">R:R Ratio</option>}
                     </select>
 
-                    <div className="flex items-center gap-1.5 bg-[#131722]/40 rounded px-1 border border-transparent min-h-[24px]">
+                    <div className="flex items-center gap-1.5 bg-secondary/40 rounded px-1 border border-border min-h-[24px]">
                         {(config.mode === 'fixed' || config.mode === 'percentage' || config.mode === 'amount') && (
                             <div className="flex items-center gap-1">
                                 <input
                                     type="number"
                                     value={config.value || 0}
                                     onChange={(e) => onChange({ ...config, value: parseFloat(e.target.value) })}
-                                    className="bg-transparent border-none h-6 px-1 text-xs font-mono font-black text-white outline-none w-14 text-right"
+                                    className="bg-transparent border-none h-6 px-1 text-xs font-mono font-black text-foreground outline-none w-14 text-right"
                                 />
-                                <span className="text-[8px] text-[#4a4f5d] font-bold uppercase">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase">
                                     {config.mode === 'fixed' ? 'Pts' : (config.mode === 'percentage' ? '%' : '$')}
                                 </span>
                             </div>
@@ -85,22 +85,22 @@ export function PriceConfigRow({
                                     <option value="open">Open</option>
                                 </select>
                                 <div className="flex items-center gap-0.5">
-                                    <span className="text-[8px] text-[#4a4f5d] font-bold">#</span>
+                                    <span className="text-[8px] text-muted-foreground font-bold">#</span>
                                     <input
                                         type="number"
                                         value={config.candleOffset}
                                         onChange={(e) => onChange({ ...config, candleOffset: parseInt(e.target.value) })}
-                                        className="bg-transparent text-[10px] w-6 text-center font-mono font-black text-white outline-none border-b border-[#363a45]"
+                                        className="bg-transparent text-[10px] w-6 text-center font-mono font-black text-foreground outline-none border-b border-border"
                                     />
                                 </div>
-                                <ChevronRight size={8} className="text-[#4a4f5d]" />
+                                <ChevronRight size={8} className="text-muted-foreground" />
                                 <div className="flex items-center gap-0.5">
-                                    <span className="text-[8px] text-[#4a4f5d] font-bold">+</span>
+                                    <span className="text-[8px] text-muted-foreground font-bold">+</span>
                                     <input
                                         type="number"
                                         value={config.offset}
                                         onChange={(e) => onChange({ ...config, offset: parseFloat(e.target.value) })}
-                                        className="bg-transparent text-[10px] w-12 text-right font-mono text-white outline-none"
+                                        className="bg-transparent text-[10px] w-12 text-right font-mono text-foreground outline-none"
                                         placeholder="Pts"
                                     />
                                 </div>
@@ -122,15 +122,15 @@ export function PriceConfigRow({
                                     type="number"
                                     value={config.indicator?.params[0]}
                                     onChange={(e) => onChange({ ...config, indicator: { ...config.indicator!, params: [parseInt(e.target.value)] } })}
-                                    className="bg-transparent text-[10px] w-8 text-center font-mono font-black text-white outline-none border-b border-[#363a45]"
+                                    className="bg-transparent text-[10px] w-8 text-center font-mono font-black text-foreground outline-none border-b border-border"
                                 />
                                 <div className="flex items-center gap-0.5">
-                                    <span className="text-[8px] text-[#4a4f5d] font-bold">+</span>
+                                    <span className="text-[8px] text-muted-foreground font-bold">+</span>
                                     <input
                                         type="number"
                                         value={config.offset}
                                         onChange={(e) => onChange({ ...config, offset: parseFloat(e.target.value) })}
-                                        className="bg-transparent text-[10px] w-12 text-right font-mono text-white outline-none"
+                                        className="bg-transparent text-[10px] w-12 text-right font-mono text-foreground outline-none"
                                         placeholder="Pts"
                                     />
                                 </div>
@@ -144,7 +144,7 @@ export function PriceConfigRow({
                                     step="0.1"
                                     value={config.value || 0}
                                     onChange={(e) => onChange({ ...config, value: parseFloat(e.target.value) })}
-                                    className="bg-transparent border-none h-6 px-1 text-xs font-mono font-black text-white outline-none w-10 text-right"
+                                    className="bg-transparent border-none h-6 px-1 text-xs font-mono font-black text-foreground outline-none w-10 text-right"
                                 />
                             </div>
                         )}
