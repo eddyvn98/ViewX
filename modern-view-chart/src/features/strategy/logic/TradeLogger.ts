@@ -13,7 +13,7 @@ export class TradeLogger {
                 symbol: signal.symbol,
                 type: signal.type || 'BUY', // Fallback to BUY
                 entry_price: signal.price,
-                lot_size: signal.risk.lotSize,
+                lot_size: typeof signal.risk.lotSize === 'object' ? signal.risk.lotSize.value : signal.risk.lotSize,
                 volatility: metrics.volatility > 60 ? 'high' : metrics.volatility > 30 ? 'medium' : 'low',
                 session: metrics.session || 'Unknown',
                 indicators: metrics,

@@ -48,11 +48,11 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                         <select
                                             value={s.symbol || ''}
                                             onChange={(e) => handleUpdate(s.id, { symbol: e.target.value })}
-                                            className="bg-transparent text-[8px] font-black text-blue-500/80 uppercase outline-none border-b border-transparent focus:border-blue-500/30 cursor-pointer tracking-wider"
+                                            className="bg-transparent text-[9px] font-bold text-blue-400 hover:text-blue-300 uppercase outline-none border-b border-transparent focus:border-blue-500/30 cursor-pointer tracking-wider transition-colors appearance-none"
                                         >
-                                            <option value="" className="bg-[#1e222d]">Symbol</option>
+                                            <option value="" className="bg-[#131722] text-zinc-400">Symbol</option>
                                             {Object.keys(symbolInfo).sort().map(sym => (
-                                                <option key={sym} value={sym} className="bg-[#1e222d] uppercase">{sym}</option>
+                                                <option key={sym} value={sym} className="bg-[#131722] text-zinc-200 uppercase">{sym}</option>
                                             ))}
                                         </select>
 
@@ -62,15 +62,15 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                         <select
                                             value={s.timeframe || '1m'}
                                             onChange={(e) => handleUpdate(s.id, { timeframe: e.target.value })}
-                                            className="bg-transparent text-[8px] font-black text-zinc-600 uppercase outline-none border-b border-transparent focus:border-[#787b86]/30 cursor-pointer tracking-wider"
+                                            className="bg-transparent text-[9px] font-bold text-zinc-400 hover:text-zinc-100 uppercase outline-none border-b border-transparent focus:border-zinc-500/30 cursor-pointer tracking-wider transition-colors appearance-none"
                                         >
-                                            <option value="1m" className="bg-[#1e222d]">M1</option>
-                                            <option value="5m" className="bg-[#1e222d]">M5</option>
-                                            <option value="15m" className="bg-[#1e222d]">M15</option>
-                                            <option value="30m" className="bg-[#1e222d]">M30</option>
-                                            <option value="1h" className="bg-[#1e222d]">H1</option>
-                                            <option value="4h" className="bg-[#1e222d]">H4</option>
-                                            <option value="1d" className="bg-[#1e222d]">D1</option>
+                                            <option value="1m" className="bg-[#131722] text-zinc-200">M1</option>
+                                            <option value="5m" className="bg-[#131722] text-zinc-200">M5</option>
+                                            <option value="15m" className="bg-[#131722] text-zinc-200">M15</option>
+                                            <option value="30m" className="bg-[#131722] text-zinc-200">M30</option>
+                                            <option value="1h" className="bg-[#131722] text-zinc-200">H1</option>
+                                            <option value="4h" className="bg-[#131722] text-zinc-200">H4</option>
+                                            <option value="1d" className="bg-[#131722] text-zinc-200">D1</option>
                                         </select>
                                     </div>
                                 </div>

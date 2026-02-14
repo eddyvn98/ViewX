@@ -127,11 +127,11 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                             <select
                                 value={strategySymbol}
                                 onChange={(e) => setStrategySymbol(e.target.value)}
-                                className="bg-[#131722]/40 border border-[#363a45]/30 focus:border-blue-500/40 px-2 h-7 text-[11px] font-bold text-zinc-300 outline-none rounded appearance-none"
+                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-zinc-100 outline-none rounded appearance-none hover:bg-[#1e222d] transition-all cursor-pointer"
                             >
-                                <option value="">Active ({activeSymbol})</option>
+                                <option value="" className="bg-[#1e222d] text-zinc-400">Active ({activeSymbol})</option>
                                 {Object.keys(symbolInfo).sort().map(s => (
-                                    <option key={s} value={s} className="bg-[#1e222d]">{s}</option>
+                                    <option key={s} value={s} className="bg-[#1e222d] text-zinc-100">{s}</option>
                                 ))}
                             </select>
                         </div>
@@ -140,15 +140,15 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                             <select
                                 value={timeframe}
                                 onChange={(e) => setTimeframe(e.target.value)}
-                                className="bg-[#131722]/40 border border-[#363a45]/30 focus:border-blue-500/40 px-2 h-7 text-[11px] font-bold text-zinc-400 outline-none rounded appearance-none"
+                                className="bg-[#131722]/60 border border-[#363a45]/50 focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-zinc-100 outline-none rounded appearance-none hover:bg-[#1e222d] transition-all cursor-pointer"
                             >
-                                <option value="1m" className="bg-[#1e222d]">M1</option>
-                                <option value="5m" className="bg-[#1e222d]">M5</option>
-                                <option value="15m" className="bg-[#1e222d]">M15</option>
-                                <option value="30m" className="bg-[#1e222d]">M30</option>
-                                <option value="1h" className="bg-[#1e222d]">H1</option>
-                                <option value="4h" className="bg-[#1e222d]">H4</option>
-                                <option value="1d" className="bg-[#1e222d]">D1</option>
+                                <option value="1m" className="bg-[#1e222d] text-zinc-100">M1</option>
+                                <option value="5m" className="bg-[#1e222d] text-zinc-100">M5</option>
+                                <option value="15m" className="bg-[#1e222d] text-zinc-100">M15</option>
+                                <option value="30m" className="bg-[#1e222d] text-zinc-100">M30</option>
+                                <option value="1h" className="bg-[#1e222d] text-zinc-100">H1</option>
+                                <option value="4h" className="bg-[#1e222d] text-zinc-100">H4</option>
+                                <option value="1d" className="bg-[#1e222d] text-zinc-100">D1</option>
                             </select>
                         </div>
                     </div>

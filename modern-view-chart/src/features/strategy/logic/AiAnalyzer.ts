@@ -148,10 +148,10 @@ export class AiAnalyzer {
 
     private static async callBridgeAi(prompt: string): Promise<AiResponse> {
         try {
-            const res = await fetch('http://localhost:8091/api/ai/bridge/task', {
+            const res = await fetch('/api/ai/bridge/task', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, timeout: 60000 })
+                body: JSON.stringify({ prompt, timeout: 120000 })
             });
 
             if (!res.ok) throw new Error(`Bridge error: ${res.statusText}`);

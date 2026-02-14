@@ -1,9 +1,6 @@
-import dotenv from "dotenv";
+import "./envloader.js";
 import fs from "fs";
 import path from "path";
-
-const envPath = fs.existsSync(".env") ? ".env" : "backend/.env";
-dotenv.config({ path: envPath });
 
 import http from "http";
 import useDatabase from "./services/database.js";

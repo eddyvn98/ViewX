@@ -106,6 +106,21 @@
     -webkit-tap-highlight-color: transparent;
     width: 100%;
   }
+
+  /* Improved Form Element Visibility */
+  select {
+    @apply bg-[#131722] text-zinc-200 border-[#363a45];
+  }
+
+  option {
+    @apply bg-[#1e222d] text-zinc-100;
+    background-color: #1e222d !important;
+    color: #f4f4f5 !important;
+  }
+
+  input::placeholder {
+    @apply text-zinc-600;
+  }
 }
 
 /* Custom Scrollbar */

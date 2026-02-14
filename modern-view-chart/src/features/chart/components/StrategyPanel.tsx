@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Activity, Bot } from 'lucide-react';
+import { Activity, Bot, MessageSquare } from 'lucide-react';
 import { StrategyList } from '@/features/strategy/components/StrategyList';
 import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
 import { SignalsView } from '@/features/strategy/components/SignalsView';
+import { AIChatView } from '@/features/strategy/components/AIChatView';
 import { Strategy } from '@/features/strategy/types';
 
 export function StrategyPanel() {
-    const [view, setView] = useState<'build' | 'list' | 'signals'>('signals');
+    const [view, setView] = useState<'build' | 'list' | 'signals' | 'ai_chat'>('signals');
     const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
 
     const handleEdit = (strategy: Strategy) => {
@@ -40,11 +41,19 @@ export function StrategyPanel() {
                 >
                     <Bot size={10} /> MY BOT
                 </button>
+                <button
+                    onClick={() => setView('ai_chat')}
+                    className={`flex items-center gap-1.5 px-2.5 h-full text-[8px] font-black transition-all border-b-2 uppercase tracking-widest ${view === 'ai_chat' ? 'text-blue-500 border-blue-500 bg-[#1e222d]' : 'text-[#4a4f5d] border-transparent hover:text-zinc-400'}`}
+                >
+                    <MessageSquare size={10} /> AI CHAT
+                </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 custom-scrollbar flex flex-col items-center bg-[#131722]/20">
-                <div className="w-full max-w-[800px] flex flex-col gap-2 pb-4">
+                <div className="w-full max-w-[800px] flex flex-col gap-2 pb-4 h-full">
                     {view === 'signals' && <SignalsView />}
+
+                    {view === 'ai_chat' && <AIChatView />}
 
                     {view === 'list' && (
                         <StrategyList onEdit={handleEdit} onAdd={handleAdd} />
