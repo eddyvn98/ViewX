@@ -18,7 +18,7 @@ interface MobileBottomNavProps {
 type NavMode = 'symbol' | 'drawing' | 'actions' | 'timeframe';
 
 const MODES: NavMode[] = ['actions', 'symbol', 'drawing'];
-const ITEM_HEIGHT = 48;
+const ITEM_HEIGHT = 62;
 
 const NAV_ITEMS = [
     { id: 'watchlist', label: 'Watchlist', icon: List },

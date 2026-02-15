@@ -51,11 +51,19 @@ export const MobileDrawingToolbar = React.memo(function MobileDrawingToolbar({ o
             let minDistance = Infinity;
 
             // 1. Handle Infinite Jumping (Invisible to user)
-            const singleSetWidth = container.scrollWidth / 3;
-            if (container.scrollLeft < singleSetWidth * 0.5) {
-                container.scrollLeft += singleSetWidth;
-            } else if (container.scrollLeft > singleSetWidth * 1.5) {
-                container.scrollLeft -= singleSetWidth;
+            // Measure actual distance between two identical items across sets
+            const firstSetItem = items[0] as HTMLElement;
+            const secondSetItem = items[DRAWING_TOOLS.length] as HTMLElement;
+
+            if (firstSetItem && secondSetItem) {
+                const singleSetWidth = secondSetItem.offsetLeft - firstSetItem.offsetLeft;
+
+                // Jump thresholds: Near the very beginning or very end of the 3-set range
+                if (container.scrollLeft < 10) {
+                    container.scrollLeft += singleSetWidth;
+                } else if (container.scrollLeft > container.scrollWidth - container.clientWidth - 10) {
+                    container.scrollLeft -= singleSetWidth;
+                }
             }
 
             // 2. Update Scales and Find Center Tool
