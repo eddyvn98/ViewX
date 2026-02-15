@@ -1,14 +1,17 @@
 import { useEffect, useRef } from 'react';
-import { IChartApi } from 'lightweight-charts';
+import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { Candle, useMarketStore, IndicatorConfig } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { EMAIndicator } from '../indicators/EMAIndicator';
 import { HMAIndicator } from '../indicators/HMAIndicator';
 import { RSIIndicator } from '../indicators/RSIIndicator';
 import { SignalIndicator } from '../indicators/SignalIndicator';
+import { MarketStructureIndicator } from '../indicators/MarketStructureIndicator';
+import { BreakoutRaysIndicator } from '../indicators/BreakoutRaysIndicator';
 import { chartWorkerClient } from '@/workers/worker-client';
 import { MACDIndicator } from '../indicators/MACDIndicator';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { TrendLineIndicator } from '../indicators/TrendLineIndicator';
 
 const EMPTY_INDICATORS: any[] = [];
 
@@ -23,7 +26,8 @@ export function useChartIndicators(
     chartId: string,
     priceChartRef: React.RefObject<IChartApi | null>,
     subchartChartRef: React.RefObject<IChartApi | null>,
-    seriesRef: React.RefObject<any>,
+    seriesRef: React.RefObject<ISeriesApi<any> | null>,
+    markerSeriesRef: React.RefObject<ISeriesApi<any> | null>,
     candles: Candle[],
     symbol: string | undefined,
     interval: string | undefined,
@@ -54,7 +58,9 @@ export function useChartIndicators(
             { type: 'HMA', params: { period: 25 }, color: '#00bcd4', visible: true, lineWidth: 2, pane: 'main' },
             { type: 'RSI', params: { period: 14 }, color: '#f06292', visible: true, lineWidth: 2, pane: 'subchart' },
             { type: 'MACD', params: { fast: 12, slow: 26, signal: 9 }, color: '#2962FF', visible: false, lineWidth: 1, pane: 'subchart' },
-            { type: 'Signals', params: { upperLimit: 60, lowerLimit: 40 }, color: '#22c55e', visible: true, lineWidth: 1, pane: 'main' },
+            { type: 'MARKET_STRUCTURE', params: { depth: 7 }, color: '#ffffff', visible: false, lineWidth: 1, pane: 'main' },
+            { type: 'BREAKOUT_RAYS', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
+            { type: 'TREND_LINES', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
         ]);
 
         defaultsAppliedRef.current = true;
@@ -105,7 +111,7 @@ export function useChartIndicators(
                 console.log(`[Indicators] Reset complete`);
             }
         }
-    }, [key, isReady, symbol]); // ✅ Simplified dependencies
+    }, [key, isReady, chartId, symbol]); // ✅ Aggressive reset on readiness or context change
 
     /* ===== EFFECT 2: UPDATE INDICATORS (WITH DEBOUNCE) ===== */
     const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -117,7 +123,7 @@ export function useChartIndicators(
         }
 
         // ✅ Early returns for safety
-        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !symbol) {
+        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !markerSeriesRef.current || !symbol) {
             return;
         }
 
@@ -170,8 +176,12 @@ export function useChartIndicators(
                         case 'HMA': instance = new HMAIndicator(targetChart, config); break;
                         case 'RSI': instance = new RSIIndicator(targetChart, config); break;
                         case 'MACD': instance = new MACDIndicator(targetChart, config); break;
-                        case 'SIGNALS':
-                        case 'Signals': instance = new SignalIndicator(seriesRef.current, config); break;
+                        case 'BREAKOUT_RAYS':
+                        case 'BreakoutRays': instance = new BreakoutRaysIndicator(markerSeriesRef.current as any, config); break;
+                        case 'TREND_LINES':
+                        case 'TrendLines': instance = new TrendLineIndicator(markerSeriesRef.current as any, config); break;
+                        case 'MARKET_STRUCTURE':
+                        case 'MarketStructure': instance = new MarketStructureIndicator(markerSeriesRef.current as any, config); break;
                     }
                     if (instance) {
                         instancesRef.current[config.id] = instance;
@@ -233,6 +243,7 @@ export function useChartIndicators(
         priceChartRef,
         subchartChartRef,
         seriesRef,
+        markerSeriesRef,
         syncRange,
     ]);
 

@@ -18,8 +18,10 @@ import { cn } from "@/lib/utils";
 
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import { useStrategyRunner } from "@/features/strategy/hooks/use-strategy-runner";
 import { StrategyPanel } from "@/features/chart/components/StrategyPanel";
+import { IndicatorManager } from "@/features/chart/components/IndicatorManager";
 import React from "react";
 
 export default function Home() {
@@ -107,6 +109,9 @@ export default function Home() {
         <Header />
       </div>
 
+      {/* Mobile Top Bar */}
+      <MobileTopBar />
+
       {/* 
           Mobile Height: 100dvh - 64px (Bottom Nav)
           Desktop Height: 100vh - 48px (Header) 
@@ -146,7 +151,7 @@ export default function Home() {
             {/* Show Chart ONLY if active tab is 'chart' on Mobile, OR always on Desktop */}
             <div className={cn(
               "flex-1 flex flex-col min-h-0 bg-card rounded-none md:rounded-lg border-0 md:border border-border/50 overflow-hidden shadow-2xl",
-              (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions' || activeMobileTab === 'strategy') ? 'flex' : 'hidden md:flex'
+              (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions' || activeMobileTab === 'strategy' || activeMobileTab === 'indicators') ? 'flex' : 'hidden md:flex'
             )}>
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0">
                 <div className="hidden md:block">
@@ -262,6 +267,24 @@ export default function Home() {
             {activeMobileTab === 'menu' && (
               <div className="flex-1 bg-background md:hidden overflow-y-auto min-h-0">
                 <MobileMenu />
+              </div>
+            )}
+
+            {/* Mobile Indicators Panel */}
+            {activeMobileTab === 'indicators' && (
+              <div className="md:hidden absolute inset-0 z-[60] bg-background flex flex-col">
+                <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Active Indicators</h2>
+                  <button
+                    onClick={() => setActiveMobileTab('chart')}
+                    className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-all"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <IndicatorManager />
+                </div>
               </div>
             )}
           </main>

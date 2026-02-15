@@ -9,7 +9,7 @@ interface MobileSymbolCarouselProps {
     isDimmed?: boolean;
 }
 
-export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSymbolCarouselProps) {
+export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSymbolCarouselProps) {
     const watchlist = useMarketStore(state => state.watchlist);
     const activeTabId = useMarketStore(state => state.activeTabId);
     const activeTab = useMarketStore(state => state.tabs[activeTabId]);
@@ -54,7 +54,7 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
                 const normalizedDistance = Math.min(distance / 120, 1);
                 const scale = 1.25 - (normalizedDistance * 0.25);
 
-                item.style.opacity = '1';
+                item.style.opacity = `${1 - normalizedDistance * 0.5}`; // Fade out sides
                 item.style.transform = `scale(${scale})`;
                 item.style.filter = 'none';
 
@@ -69,9 +69,10 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
             }
         };
 
-        container.addEventListener('scroll', updateVisuals);
+        const onScroll = () => requestAnimationFrame(updateVisuals);
+        container.addEventListener('scroll', onScroll);
         updateVisuals();
-        return () => container.removeEventListener('scroll', updateVisuals);
+        return () => container.removeEventListener('scroll', onScroll);
     }, [centerSymbol, watchlist]);
 
     // Emit symbol change when settling
@@ -132,7 +133,7 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
                         <div
                             key={`${symbol}-${idx}`}
                             data-symbol={symbol}
-                            className="flex-shrink-0 w-max px-3 flex items-center justify-center transition-all duration-300 select-none active:scale-95"
+                            className="flex-shrink-0 w-auto px-2 flex items-center justify-center select-none"
                             style={{ scrollSnapAlign: 'center' }}
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -150,45 +151,39 @@ export function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSy
                             }}
                         >
                             <div className={cn(
-                                "flex flex-row items-center gap-1.5 transition-all duration-300",
-                                isActive ? "text-white" : "text-zinc-500"
+                                "flex flex-row items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 border",
+                                isActive
+                                    ? "bg-primary/20 border-primary/20 text-foreground shadow-[0_0_15px_var(--glow-primary)]"
+                                    : "bg-transparent border-transparent text-muted-foreground"
                             )}>
                                 <div className={cn(
-                                    "p-1 rounded-lg transition-all flex items-center justify-center shrink-0",
-                                    isActive ? "bg-blue-600/20 shadow-lg shadow-blue-500/10" : "bg-transparent"
+                                    "w-5 h-5 rounded-full overflow-hidden flex items-center justify-center shrink-0 bg-background/50",
+                                    isActive && "scale-110"
                                 )}>
-                                    <div className={cn(
-                                        "w-3.5 h-3.5 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-300",
-                                        isActive && "scale-110"
-                                    )}>
-                                        <img
-                                            src={logoUrl}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                                const parent = (e.target as HTMLImageElement).parentElement;
-                                                if (parent) parent.innerHTML = `<span class="text-[7px] font-black text-zinc-500">${symbol[0]}</span>`;
-                                            }}
-                                        />
-                                    </div>
+                                    <img
+                                        src={logoUrl}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                            const parent = (e.target as HTMLImageElement).parentElement;
+                                            if (parent) parent.innerHTML = `<span class="text-[8px] font-black">${symbol[0]}</span>`;
+                                        }}
+                                    />
                                 </div>
-                                {isActive && (
-                                    <span className={cn(
-                                        "text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-left-2 duration-300"
-                                    )}>
-                                        {symbol}
-                                    </span>
-                                )}
+                                <span className={cn(
+                                    "text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+                                )}>
+                                    {symbol}
+                                </span>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-zinc-950/20 to-transparent pointer-events-none z-10" />
-            <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-zinc-950/20 to-transparent pointer-events-none z-10" />
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-1 w-4 h-0.5 bg-blue-500/50 rounded-full pointer-events-none z-20" />
+            <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background to-transparent pointer-events-none z-10" />
+            <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
         </div>
     );
-}
+});

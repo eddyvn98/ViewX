@@ -52,11 +52,27 @@ const AVAILABLE_INDICATORS = [
         pane: 'subchart' as const
     },
     {
-        type: 'Signals' as const,
-        name: 'Buy/Sell Signals',
-        description: 'Tín hiệu mua bán dựa trên nến Heikin Ashi và bộ lọc ngưỡng.',
-        defaultParams: { upperLimit: 60, lowerLimit: 40 },
-        defaultColor: '#22C55E',
+        type: 'TrendLines' as const,
+        name: 'Trend Lines',
+        description: 'Vẽ đường xu hướng dựa trên cấu trúc thị trường (Highs/Lows).',
+        defaultParams: {},
+        defaultColor: '#ffffff',
+        pane: 'main' as const
+    },
+    {
+        type: 'MarketStructure' as const,
+        name: 'Market Structure Labels',
+        description: 'Hiển thị các cấu trúc thị trường (HH, LL, HL, LH) trực tiếp trên biểu đồ.',
+        defaultParams: { depth: 7 },
+        defaultColor: '#ffffff',
+        pane: 'main' as const
+    },
+    {
+        type: 'BreakoutRays' as const,
+        name: 'Breakout Horizontal Rays',
+        description: 'Vẽ các đường ngang tại mức đỉnh/đáy gần nhất để theo dõi đột phá.',
+        defaultParams: {},
+        defaultColor: '#ffffff',
         pane: 'main' as const
     }
 ];

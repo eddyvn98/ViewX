@@ -23,7 +23,8 @@ export function useChartInit(
     const priceChartRef = useRef<IChartApi | null>(null);
     const subchartChartRef = useRef<IChartApi | null>(null);
     const timescaleChartRef = useRef<IChartApi | null>(null);
-    const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+    const seriesRef = useRef<ISeriesApi<any> | null>(null);
+    const markerSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const subSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const timescaleSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const isAutoScrollEnabledRef = useRef(true);
@@ -77,11 +78,17 @@ export function useChartInit(
             priceLineStyle: 2, // Dashed
         });
 
-        // Add dummy series to force grid consistency with LineSeries behavior
-        priceChart.addSeries(LineSeries as any, { visible: false });
-
         const subSyncSeries = subchartChart.addSeries(LineSeries as any, { visible: false });
         const footSyncSeries = timescaleChart.addSeries(LineSeries as any, { visible: false });
+        const markerSeries = priceChart.addSeries(CandlestickSeries, {
+            visible: true,
+            wickVisible: false,
+            borderVisible: false,
+            upColor: 'transparent',
+            downColor: 'transparent',
+            priceLineVisible: false,
+            lastValueVisible: false,
+        });
 
         /* ================= DOM-BASED CROSSHAIR SYNC ================= */
         const priceLineEl = createSyncLine(priceContainerRef.current);
@@ -90,7 +97,7 @@ export function useChartInit(
 
         const charts = { priceChart, subchartChart, timescaleChart };
         const elements = { priceLineEl, subLineEl, footLineEl };
-        const series = { candleSeries, subSyncSeries, footSyncSeries };
+        const series = { candleSeries, subSyncSeries, footSyncSeries, markerSeries };
 
         // Cache last sync values
         let lastSyncTime: number | null = null;
@@ -217,6 +224,7 @@ export function useChartInit(
         subchartChartRef.current = subchartChart;
         timescaleChartRef.current = timescaleChart;
         seriesRef.current = candleSeries;
+        markerSeriesRef.current = markerSeries as any;
         subSyncRef.current = subSyncSeries as any;
         timescaleSyncRef.current = footSyncSeries as any;
 
@@ -249,6 +257,7 @@ export function useChartInit(
         subchartChartRef,
         timescaleChartRef,
         seriesRef,
+        markerSeriesRef,
         subSyncRef,
         timescaleSyncRef,
         syncRange,

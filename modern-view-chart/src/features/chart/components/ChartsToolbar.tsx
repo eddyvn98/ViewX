@@ -75,18 +75,19 @@ export function ChartsToolbar() {
                     <button
                         onClick={() => {
                             if (!activeChart) return;
-                            const nextType = activeChart.chartType === 'heikin_ashi' ? 'candles' : 'heikin_ashi';
+                            const types: any = { 'candles': 'heikin_ashi', 'heikin_ashi': 'smart_candles', 'smart_candles': 'candles' };
+                            const nextType = types[activeChart.chartType] || 'candles';
                             useMarketStore.getState().setChartType(activeChart.id, nextType);
                         }}
                         className={cn(
                             "px-1.5 py-0.5 rounded text-[10px] font-black uppercase transition-all active:scale-95 border",
-                            activeChart?.chartType === 'heikin_ashi'
+                            activeChart?.chartType !== 'candles'
                                 ? "text-primary border-primary/30 bg-primary/10"
                                 : "text-muted-foreground border-border hover:text-foreground hover:bg-secondary/40"
                         )}
-                        title="Toggle Heikin Ashi"
+                        title="Rotate Chart Type (Candles / HA / Smart)"
                     >
-                        HA
+                        {activeChart?.chartType === 'heikin_ashi' ? 'HA' : activeChart?.chartType === 'smart_candles' ? 'SC' : 'C'}
                     </button>
 
                     <LayoutGridSelector />

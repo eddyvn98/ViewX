@@ -8,10 +8,11 @@ export function useChartData(
     symbol: string | undefined,
     interval: string | undefined,
     source: string | undefined,
-    chartType: 'candles' | 'heikin_ashi',
+    chartType: 'candles' | 'heikin_ashi' | 'smart_candles',
     chartRef: React.RefObject<IChartApi | null>,
     subchartRef: React.RefObject<IChartApi | null>,
-    seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
+    seriesRef: React.RefObject<ISeriesApi<any> | null>,
+    markerSeriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
     isReady: boolean,
@@ -24,7 +25,7 @@ export function useChartData(
     // Manages initial load, chart resets, and full candle updates from Store
     const { candles } = useChartHistory({
         symbol, interval, source, chartType,
-        chartRef, subchartRef, seriesRef,
+        chartRef, subchartRef, seriesRef, markerSeriesRef,
         subSyncRef, timescaleSyncRef,
         isReady,
         onHistoryLoaded: (last) => { lastCandleRef.current = last; }
@@ -42,7 +43,7 @@ export function useChartData(
     // Only updates the EXISTING candle visually to prevent timezone/offset bugs
     const realTimeCandleRef = useChartTicker({
         symbol, interval, source, seriesRef, chartType, lastCandleRef,
-        isAutoScrollEnabledRef, chartRef
+        isAutoScrollEnabledRef, chartRef,
     });
 
     return { realTimeCandleRef };

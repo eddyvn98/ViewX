@@ -1,6 +1,6 @@
 import { ColorType, CrosshairMode, DeepPartial, ChartOptions } from 'lightweight-charts';
 
-export const initialMinW = 100; // Increased and standardized for better alignment
+export const initialMinW = 80; // Increased and standardized for better alignment
 
 export const getThemeColors = (theme: string, themeColor?: string) => {
     const isDark = theme === 'dark';

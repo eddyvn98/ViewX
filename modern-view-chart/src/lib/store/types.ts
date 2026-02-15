@@ -78,7 +78,7 @@ export interface ChartInstance {
     source: 'BINANCE' | 'MT5';
     group?: 'A' | 'B' | 'C' | 'D' | 'none'; // Symbol Linking Group
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
-    chartType: 'candles' | 'heikin_ashi';
+    chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
 }
 
 export interface ChartTab {
@@ -114,7 +114,7 @@ export type RightSidebarTab = 'market' | 'indicators' | 'strategy' | 'trade';
 
 export interface IndicatorConfig {
     id: string;
-    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SIGNALS' | 'SMA' | 'WMA' | 'MACD';
+    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SIGNALS' | 'SMA' | 'WMA' | 'MACD' | 'MARKET_STRUCTURE' | 'MarketStructure' | 'BREAKOUT_RAYS' | 'BreakoutRays' | 'TREND_LINES' | 'TrendLines';
     params: Record<string, any>;
     color: string;
     visible: boolean;

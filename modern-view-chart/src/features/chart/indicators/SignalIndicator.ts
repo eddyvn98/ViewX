@@ -1,8 +1,11 @@
-import { ISeriesApi, SeriesMarker } from 'lightweight-charts';
+import { ISeriesApi, SeriesMarker, createSeriesMarkers, ISeriesMarkersPluginApi } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateRSI } from '../utils/indicator-math';
+import { toSec } from '../utils/time-utils';
 
 export class SignalIndicator {
+    private markersPlugin: ISeriesMarkersPluginApi<any> | null = null;
+
     constructor(
         private series: ISeriesApi<"Candlestick">,
         private config: IndicatorConfig
@@ -11,22 +14,32 @@ export class SignalIndicator {
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
+        // Auto-initialize plugin if needed
+        if (!this.markersPlugin && this.series) {
+            try {
+                this.markersPlugin = createSeriesMarkers(this.series);
+            } catch (err) {
+                console.error('[Signals] Failed to create markers plugin:', err);
+            }
+        }
+
         if (!this.config.visible) {
-            if (typeof (this.series as any).setMarkers === 'function') {
-                (this.series as any).setMarkers([]);
+            if (this.markersPlugin) {
+                this.markersPlugin.setMarkers([]);
             }
             return;
         }
+
+        if (candles.length < 2) return;
 
         const rsi14 = calculatedValues || calculateRSI(candles.map(c => c.close), 14);
         const markers: SeriesMarker<any>[] = [];
 
         for (let i = 2; i < candles.length; i++) {
             const prev = rsi14[i - 1];
-            if (isNaN(prev)) continue;
+            if (prev === undefined || isNaN(prev)) continue;
 
-            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
-            const candleTime = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
+            const candleTime = toSec(candles[i].time) as any;
 
             if (prev > (this.config.params.upperLimit || 60)) {
                 markers.push({
@@ -47,11 +60,9 @@ export class SignalIndicator {
             }
         }
 
-        const markersMethod = (this.series as any).setMarkers || (this.series as any).createSeriesMarkers || (this.series as any).addMarkers;
-
-        if (typeof markersMethod === 'function') {
+        if (this.markersPlugin) {
             try {
-                markersMethod.call(this.series, markers);
+                this.markersPlugin.setMarkers(markers);
             } catch (err) {
                 console.error('[Signals] Setting markers failed:', err);
             }
@@ -59,12 +70,13 @@ export class SignalIndicator {
     }
 
     destroy() {
-        if (this.series && typeof (this.series as any).setMarkers === 'function') {
+        if (this.markersPlugin) {
             try {
-                (this.series as any).setMarkers([]);
+                this.markersPlugin.detach();
             } catch (err) {
-                console.warn('[Signals] Failed to clear markers:', err);
+                console.warn('[Signals] Failed to detach markers plugin:', err);
             }
+            this.markersPlugin = null;
         }
     }
 }

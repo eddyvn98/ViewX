@@ -35,8 +35,8 @@ export function MobileTimeframeSlide({ onSelect }: MobileTimeframeSlideProps) {
 
     return (
         <div className="flex items-center w-full h-10 px-4 overflow-x-auto no-scrollbar gap-1 animate-in slide-in-from-right duration-300">
-            <div className="flex-shrink-0 pr-2 border-r border-white/10 mr-1">
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">Timeframe</span>
+            <div className="flex-shrink-0 pr-2 border-r border-border/50 mr-1">
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Timeframe</span>
             </div>
             {timeframes.map((tf) => (
                 <button
@@ -45,8 +45,8 @@ export function MobileTimeframeSlide({ onSelect }: MobileTimeframeSlideProps) {
                     className={cn(
                         "flex-shrink-0 min-w-[40px] h-8 rounded-lg flex items-center justify-center text-[12px] font-bold transition-all active:scale-95",
                         currentInterval === tf.id
-                            ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.4)]"
-                            : "text-zinc-400 hover:text-white active:bg-white/10"
+                            ? "bg-primary text-primary-foreground shadow-[0_0_12px_var(--glow-primary)]"
+                            : "text-muted-foreground hover:text-foreground active:bg-secondary/50"
                     )}
                 >
                     {tf.label}

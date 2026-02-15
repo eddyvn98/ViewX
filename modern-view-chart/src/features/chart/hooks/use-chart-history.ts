@@ -1,176 +1,132 @@
 import { useEffect, useRef } from 'react';
-import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, SeriesMarker, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
-import { calculateHeikinAshi } from '../utils/indicator-math';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { toSec } from '@/features/chart/utils/time-utils';
+import { formatCandleData } from '@/features/chart/utils/format-candle-data';
+import { useSeriesSwitcher } from './use-series-switcher';
+import { calculateDynamicSwingPoints } from '@/features/chart/logic/candle-patterns';
 
 const EMPTY_CANDLES: any[] = [];
-
-// Helper normalize time
-export const toSec = (t: any): number => {
-    const n = typeof t === 'object' ? (t as any).timestamp : Number(t);
-    return n > 10000000000 ? Math.floor(n / 1000) : n;
-};
+const MIN_CANDLES_THRESHOLD = 50;
 
 interface UseChartHistoryProps {
     symbol: string | undefined;
     interval: string | undefined;
     source: string | undefined;
-    chartType: 'candles' | 'heikin_ashi';
+    chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     chartRef: React.RefObject<IChartApi | null>;
     subchartRef: React.RefObject<IChartApi | null>;
-    seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>;
+    seriesRef: React.MutableRefObject<ISeriesApi<any> | null>;
+    markerSeriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>;
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     isReady: boolean;
     onHistoryLoaded: (lastCandle: any) => void;
 }
 
-export function useChartHistory({
-    symbol, interval, source, chartType,
-    chartRef, subchartRef, seriesRef, subSyncRef, timescaleSyncRef,
-    isReady, onHistoryLoaded
-}: UseChartHistoryProps) {
+export function useChartHistory(props: UseChartHistoryProps) {
+    const { symbol, interval, source, chartType, chartRef, subchartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
     const lastChartTypeRef = useRef<string>(chartType);
-    // State machine to manage chart lifecycle
     const chartStateRef = useRef<'idle' | 'loading' | 'ready'>('idle');
+    const lastFetchRequestTimeRef = useRef(0);
+    const latestHHRef = useRef<number | undefined>(undefined);
+    const latestLLRef = useRef<number | undefined>(undefined);
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
-
     const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
 
-    // Subscribe to store length changes only
     const candlesCount = useMarketStore(state => (key ? (state.candleData[key]?.length || 0) : 0));
     const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || EMPTY_CANDLES) : EMPTY_CANDLES);
-
-    // Initial Fetch Guard
-    const lastFetchRequestTimeRef = useRef(0);
+    const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
 
     useEffect(() => {
-        if (!isReady || !seriesRef.current || !symbol || !interval || !source) return;
+        if (!isReady || !symbol || !interval || !seriesRef.current) return;
 
         const currentCandles = getCandles();
         const isContextChange = key !== lastKeyRef.current;
 
-        // 1. Reset & Fetch if Context Changed
         if (isContextChange) {
-            console.log(`[Chart] Context change detected: ${key}`);
-            chartStateRef.current = 'loading'; // Mark as loading
+            chartStateRef.current = 'loading';
             seriesRef.current.setData([]);
+            markerSeriesRef.current?.setData([]);
             subSyncRef.current?.setData([]);
             timescaleSyncRef.current?.setData([]);
             lastKeyRef.current = key;
             isInitialMount.current = true;
             lastDataLength.current = 0;
-
-            // ❌ REMOVED: scrollToRealTime() causes race condition with auto-fit
-            // Auto-fit will handle positioning after data loads
         }
 
-
-        // 2. Fetch Data if Insufficient
-        // ✅ FIX: Changed from === 0 to < 50 to handle case where ticker created 1-2 candles
-        // but we still need to fetch full history (300 candles)
-        const MIN_CANDLES_THRESHOLD = 50;
-        if (currentCandles.length < MIN_CANDLES_THRESHOLD && isConnected && source !== 'BINANCE') {
+        if (currentCandles.length < MIN_CANDLES_THRESHOLD && isConnected) {
             const now = Date.now();
             if (now - lastFetchRequestTimeRef.current > 2000) {
                 lastFetchRequestTimeRef.current = now;
-                console.log(`📡 [FETCH] Requesting init candles for ${symbol} (current: ${currentCandles.length})`);
-                sendMessage({
-                    topic: "mt5_command", command: "get_candles",
-                    symbol, interval, count: 300, target: source
-                });
-                sendMessage({
-                    topic: "mt5_command", command: "get_symbol_info",
-                    symbol, target: source
-                });
+                sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval: interval, count: 300 });
+                sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
             }
-            // Don't return here - allow chart to display whatever candles we have
-            // while waiting for full history to load
         }
 
-        // 3. Update Chart Data
         const isTypeChange = chartType !== lastChartTypeRef.current;
         if (isContextChange || currentCandles.length !== lastDataLength.current || isTypeChange) {
+            handleSwitch(isContextChange, lastChartTypeRef.current);
             lastChartTypeRef.current = chartType;
-            let displayCandles = currentCandles;
 
-            if (chartType === 'heikin_ashi') {
-                const haData = calculateHeikinAshi(currentCandles);
-                displayCandles = haData.map(c => ({
-                    ...c,
-                    open: c.ha_open, high: c.ha_high, low: c.ha_low, close: c.ha_close,
-                    rawOpen: c.open, rawHigh: c.high, rawLow: c.low, rawClose: c.close
-                }));
+            const formatted = formatCandleData(currentCandles, chartType);
+
+            // Fix: Re-check seriesRef.current after potential switch
+            if (seriesRef.current) {
+                seriesRef.current.setData(formatted);
+                markerSeriesRef.current?.setData(formatted); // Sync timeline for markers
             }
 
-            const formatted = displayCandles.map(c => ({
-                time: toSec(c.time) as Time,
-                open: Number(c.open), high: Number(c.high),
-                low: Number(c.low), close: Number(c.close),
-            }))
-                .sort((a, b) => (Number(a.time) - Number(b.time))) // FIX: Ensure strict ascending order
-                .filter((item, index, array) => !index || item.time !== array[index - 1].time); // FIX: Remove duplicates
-
-            // SET DATA
-            seriesRef.current.setData(formatted);
-
-            // Notify parent about the latest candle immediately
             if (formatted.length > 0) {
-                onHistoryLoaded(displayCandles[displayCandles.length - 1]);
+                onHistoryLoaded(currentCandles[currentCandles.length - 1]);
+                updateSyncData(formatted, subSyncRef, timescaleSyncRef);
+                if (chartStateRef.current === 'loading') handleAutoFit();
             }
-
-            // Sync Objects (Subchart, Crosshair)
-            const lastT = formatted.length > 0 ? Number(formatted[formatted.length - 1].time) : 0;
-            let timeStep = 60;
-            if (formatted.length > 1) {
-                timeStep = lastT - Number(formatted[formatted.length - 2].time);
-            }
-
-            const futurePoints: any[] = [];
-            for (let i = 1; i <= 50; i++) {
-                futurePoints.push({ time: (lastT + timeStep * i) as Time, value: 0 });
-            }
-            const syncData = formatted.map(c => ({ time: c.time, value: 0 })).concat(futurePoints);
-
-            subSyncRef.current?.setData(syncData);
-            timescaleSyncRef.current?.setData(syncData);
-
-            // ✅ IMPROVED: Auto-fit only when loading state and data is ready
-            // This ensures auto-fit runs AFTER data is fully loaded, not before
-            if (chartStateRef.current === 'loading' && formatted.length > 0) {
-                console.log(`[Chart] Auto-fitting with ${formatted.length} candles`);
-                requestAnimationFrame(() => {
-                    try {
-                        chartRef.current?.timeScale().setVisibleLogicalRange({
-                            from: formatted.length - (window.innerWidth < 768 ? 50 : 100),
-                            to: formatted.length + 5
-                        });
-                        chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                        subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-
-                        // Mark as ready after auto-fit completes
-                        chartStateRef.current = 'ready';
-                        console.log(`[Chart] Auto-fit complete, state: ready`);
-                    } catch (e) {
-                        console.warn('[Chart] Auto-fit failed:', e);
-                        chartStateRef.current = 'ready'; // Still mark as ready to prevent stuck state
-                    }
-                });
-                isInitialMount.current = false;
-            }
-
-
             lastDataLength.current = currentCandles.length;
         }
     }, [isReady, candlesCount, key, chartType, isConnected]);
 
-    return { candles: getCandles() };
+    const updateSyncData = (formatted: any[], subRef: any, timeRef: any) => {
+        const lastT = Number(formatted[formatted.length - 1].time);
+        const timeStep = formatted.length > 1 ? lastT - Number(formatted[formatted.length - 2].time) : 60;
+        const syncData = formatted.map(c => ({ time: c.time, value: 0 }))
+            .concat(Array.from({ length: 50 }, (_, i) => ({ time: (lastT + timeStep * (i + 1)) as Time, value: 0 })));
+        subRef.current?.setData(syncData);
+        timeRef.current?.setData(syncData);
+    };
+
+    const handleAutoFit = () => {
+        const candles = getCandles();
+        requestAnimationFrame(() => {
+            try {
+                chartRef.current?.timeScale().setVisibleLogicalRange({
+                    from: candles.length - (window.innerWidth < 768 ? 50 : 100),
+                    to: candles.length + 5
+                });
+                chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                chartStateRef.current = 'ready';
+            } catch (e) {
+                chartStateRef.current = 'ready';
+            }
+        });
+        isInitialMount.current = false;
+    };
+
+    const currentCandles = getCandles();
+
+    return {
+        candles: currentCandles,
+        latestHHPrice: latestHHRef.current,
+        latestLLPrice: latestLLRef.current
+    };
 }
+export { toSec };
