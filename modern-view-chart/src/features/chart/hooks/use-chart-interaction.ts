@@ -326,7 +326,11 @@ export function useChartInteraction(
             isDragging.current = false;
             dragState.current = null;
             mouseDownPos.current = null;
-            chart.applyOptions({ handleScroll: true, handleScale: true });
+            // Only re-enable if no drawing is selected (drawing system manages its own scroll state)
+            const drawingSelected = useMarketStore.getState().selectedDrawingId;
+            if (!drawingSelected) {
+                chart.applyOptions({ handleScroll: true, handleScale: true });
+            }
         };
 
         container.addEventListener('pointerdown', handlePointerDown);

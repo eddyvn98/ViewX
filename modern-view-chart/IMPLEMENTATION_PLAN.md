@@ -16,6 +16,20 @@ Refactor 3 heavy chart hooks to reduce file size (< 200 lines) and improve maint
   - These can be standalone functions that accept Chart API instances.
   - Removes ~150 lines of complex sync logic.
 
+## Proposed Changes
+
+### Chart UI Refinement
+
+#### [MODIFY] [tag-renderer.ts](file:///d:/TradingWeb/BE_ViewChart/modern-view-chart/src/features/chart/logic/tag-renderer.ts)
+- Hide the numeric price label on floating order tags for existing positions and pending orders.
+- Maintain price visibility for "Draft" orders (new orders being prepared) to ensure user knows the target entry level.
+- This unclutters the chart while keeping essential information on the Y-axis.
+
+---
+
+### Strategy View Refinement (Completed)
+x sync logic.
+
 - **`src/features/chart/hooks/use-chart-init.ts` (Main)**
   - Will only handle:
     - `useRef` creation.

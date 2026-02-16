@@ -3,7 +3,7 @@
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { MarketList } from '@/features/market/MarketList';
-import { IndicatorManager } from '@/features/chart/components/IndicatorManager';
+import { LayerManager } from '@/features/chart/components/LayerManager';
 import { OrderForm } from '@/features/terminal/components/OrderForm';
 import { motion, LayoutGroup } from 'framer-motion';
 import { StrategyPanel } from '@/features/chart/components/StrategyPanel';
@@ -85,7 +85,7 @@ export const RightSidebar = memo(function RightSidebar() {
 
     const tabConfigs: Record<string, { icon: any, label: string, component: React.ReactNode }> = {
         market: { icon: LineChart, label: 'Watchlist', component: <MarketList mode="watchlist" /> },
-        indicators: { icon: Layout, label: 'Indicators', component: <IndicatorManager /> },
+        layer: { icon: Layout, label: 'Layer', component: <LayerManager /> },
         strategy: { icon: Brain, label: 'Strategy', component: <StrategyPanel /> },
         trade: { icon: ShoppingCart, label: 'Trade', component: <OrderForm /> }
     };

@@ -11,6 +11,8 @@ interface StrategyState {
     virtualPositions: VirtualPosition[];
     virtualBalance: number;
     initialVirtualBalance: number;
+    lastBacktestPnL: number;
+    backtestCount: number;
     addStrategy: (strategy: Strategy) => void;
     updateStrategy: (id: string, updates: Partial<Strategy>) => void;
     deleteStrategy: (id: string) => void;
@@ -30,6 +32,7 @@ interface StrategyState {
     setVirtualBalance: (balance: number) => void;
     resetVirtualBalance: () => void;
     resetVirtualAccount: () => void;
+    lastResetTime: number; // For synchronization
     runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => Promise<void>;
 }
 
@@ -186,6 +189,8 @@ export const useStrategyStore = create<StrategyState>()(
             virtualPositions: [],
             virtualBalance: 10000,
             initialVirtualBalance: 10000,
+            lastBacktestPnL: 0,
+            backtestCount: 0,
             addStrategy: (strategy) => {
                 console.log('[Store] Adding strategy:', strategy.name);
                 set((state) => ({ strategies: [...state.strategies, strategy] }));
@@ -266,8 +271,12 @@ export const useStrategyStore = create<StrategyState>()(
             resetVirtualAccount: () => set((state) => ({
                 virtualPositions: [],
                 signals: [],
-                virtualBalance: state.initialVirtualBalance
+                virtualBalance: state.initialVirtualBalance,
+                lastBacktestPnL: 0,
+                backtestCount: 0,
+                lastResetTime: Date.now()
             })),
+            lastResetTime: 0,
             runBacktest: async (strategyId, candles, overrideSymbol) => {
                 const strategy = get().strategies.find(s => s.id === strategyId);
                 if (!strategy) return;
@@ -295,10 +304,15 @@ export const useStrategyStore = create<StrategyState>()(
                         // 3. Merge: Live + Historical from other strats + New Backtest results
                         const mergedPositions = [...livePositions, ...otherHistorical, ...backtestPositions];
 
-                        console.log(`[Store] Backtest Complete. Total Positions: ${mergedPositions.length} (New: ${backtestPositions.length})`);
+                        // 4. Calculate Backtest Summary
+                        const backtestPnL = backtestPositions.reduce((sum: number, p: VirtualPosition) => sum + (p.pnl || 0), 0);
+
+                        console.log(`[Store] Backtest Complete. Total Positions: ${mergedPositions.length} (New: ${backtestPositions.length}) | PnL: ${backtestPnL}`);
 
                         return {
                             virtualPositions: mergedPositions,
+                            lastBacktestPnL: backtestPnL,
+                            backtestCount: backtestPositions.length
                         };
                     });
                 } catch (err) {

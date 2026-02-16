@@ -30,7 +30,8 @@ export function useStrategyRunner() {
         cancelVirtualPosition,
         updateVirtualPosition,
         updateSignal,
-        virtualPositions
+        virtualPositions,
+        lastResetTime
     } = useStrategyStore();
     const { sendMessage } = useWebSocket();
     const candleData = useMarketStore(state => state.candleData);
@@ -47,8 +48,24 @@ export function useStrategyRunner() {
     const isRunningRef = useRef(false);
 
     const runBacktest = useStrategyStore(state => state.runBacktest);
-    const backtestRunRef = useRef<Record<string, number>>({});
+    const backtestRunRef = useRef<Record<string, number>>({}); // Track backtest runs to avoid loops
 
+    // Reset backtest tracking when account is reset or strategy toggled
+    useEffect(() => {
+        console.log("🕯️ [Runner] Resetting backtest tracking due to account reset or strategy change");
+        backtestRunRef.current = {};
+    }, [lastResetTime]);
+
+    // Handle single strategy activation - clear its specific cache
+    useEffect(() => {
+        strategies.forEach(s => {
+            if (s.active && !backtestRunRef.current[s.id]) {
+                // Keep it empty to trigger run
+            }
+        });
+    }, [strategies]);
+
+    // Track active tabs/charts to only run what's visible
     useEffect(() => {
         // MIGRATION: Auto-patch existing strategies with missing cancelConditions
         strategies.forEach(s => {
@@ -89,18 +106,38 @@ export function useStrategyRunner() {
                     });
                 } else {
                     // DYNAMIC MODE: Priority to active chart or any valid data
-                    dataKey = availableKeys.find(k => normalizeTF(k.split(':').pop()) === intervalNorm && candleData[k].length >= 50);
+                    const activeTab = activeTabId ? tabs[activeTabId] : null;
+                    const activeChart = (activeTab?.activeChartId && activeTab?.charts) ? activeTab.charts[activeTab.activeChartId] : null;
+                    const activeSymbol = normalizeSymbol(activeChart?.symbol).toLowerCase();
+
+                    // Try to find active chart's data first
+                    dataKey = availableKeys.find(k => {
+                        const parts = k.toLowerCase().split(':');
+                        return parts[1] === activeSymbol && normalizeTF(parts[2]) === intervalNorm && candleData[k].length >= 50;
+                    });
+
+                    // Fallback to any valid data if active chart doesn't match TF
+                    if (!dataKey) {
+                        dataKey = availableKeys.find(k => normalizeTF(k.split(':').pop()) === intervalNorm && candleData[k].length >= 50);
+                    }
                 }
 
                 if (dataKey && candleData[dataKey] && candleData[dataKey].length >= 50) {
                     const lastRun = backtestRunRef.current[s.id] || 0;
-                    if (lastRun === 0) {
-                        console.log(`[Warmup] Triggering for ${s.name} on ${dataKey}. Current Pos count: ${virtualPositions.length}`);
+                    const hasActivePos = virtualPositions.some(p => p.strategyId === s.id && p.status !== 'closed');
+                    const hasHistoricalPos = virtualPositions.some(p => p.strategyId === s.id && p.isHistorical);
+
+                    // TRIGGER: If no run recorded OR (is active but no positions at all AND enough time passed since last run)
+                    const shouldTrigger = !lastRun || (!hasActivePos && !hasHistoricalPos && (Date.now() - lastRun > 10000));
+
+                    if (shouldTrigger) {
                         const parts = dataKey.split(':');
+                        console.log(`[Warmup] Triggering for ${s.name} (${s.id}) on ${dataKey}. Symbols identical: ${s.symbol === (parts[1] || '')}`);
                         const actualSymbol = s.symbol || (parts.length >= 2 ? parts[1] : 'BACKTEST');
 
-                        runBacktest(s.id, [...candleData[dataKey]], actualSymbol);
+                        // Set run time BEFORE async call to prevent rapid double-triggering
                         backtestRunRef.current[s.id] = Date.now();
+                        runBacktest(s.id, [...candleData[dataKey]], actualSymbol);
                     }
                 } else if (s.active && availableKeys.length > 0) {
                     // Only warn if we HAVE data but none matches this strategy
@@ -121,7 +158,7 @@ export function useStrategyRunner() {
 
         console.log(`[Store] Total Strategies: ${strategies.length}`);
         strategies.forEach(s => console.log(`  > ${s.name} (${s.id}) | Active: ${s.active} | Sym: ${s.symbol}`));
-    }, [strategies.length, strategies, candleData, runBacktest]);
+    }, [strategies.length, strategies, candleData, runBacktest, lastResetTime]);
 
 
     // ⚡ BACKGROUND KEEP-ALIVE
@@ -383,36 +420,43 @@ export function useStrategyRunner() {
                                                 session: metrics.session
                                             };
 
-                                            console.log(`[AI Audit] Starting automated audit for ${strategy.name} on ${symbol}...`);
-                                            console.log(`[AI Audit] Metrics:`, aiMetrics);
-                                            toast.info(`AI is auditing ${strategy.name} signal...`, { icon: '🧠' });
-                                            soundService.playAIThinking();
+                                            let aiResult = null;
 
-                                            const ai = await AiAnalyzer.analyzeSignal(strategy, final!, aiMetrics, stats, AnalysisType.PRE_TRADE);
-                                            console.log(`[AI Audit] Response received for ${strategy.name}:`, ai);
-                                            console.log(`[AI Audit] Complete: ${ai.confidence}% Confidence | Risk: ${ai.riskLevel}`);
+                                            // ONLY run AI analysis if AI Guard is ON
+                                            if (strategy.aiGuard) {
+                                                console.log(`[AI Guard] Active. Starting automated audit for ${strategy.name} on ${symbol}...`);
+                                                toast.info(`AI is auditing ${strategy.name} signal...`, { icon: '🧠' });
+                                                soundService.playAIThinking();
 
-                                            // Update the signal in store once AI responds
-                                            const store = useStrategyStore.getState();
-                                            const latestSignals = store.signals;
-                                            const sigIndex = latestSignals.findIndex(s => s.symbol === symbol && s.timestamp === final!.timestamp);
-                                            if (sigIndex !== -1) {
-                                                const updatedSig = { ...latestSignals[sigIndex], aiAnalysis: ai };
-                                                store.updateSignal(sigIndex, updatedSig);
-                                            }
+                                                const ai = await AiAnalyzer.analyzeSignal(strategy, final!, aiMetrics, stats, AnalysisType.PRE_TRADE);
+                                                aiResult = ai;
 
-                                            // Update the position confidence if it's an entry
-                                            if (ai.confidence) {
-                                                const latestPos = store.virtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
-                                                if (latestPos) {
-                                                    console.log(`[AI Audit] Updating Active Position ${latestPos.id} with Gemini Confidence: ${ai.confidence}%`);
-                                                    store.updateVirtualPosition(latestPos.id, { confidence: ai.confidence });
+                                                console.log(`[AI Audit] Complete for ${strategy.name}: ${ai.confidence}% Confidence`);
+
+                                                // Update the signal in store once AI responds
+                                                const store = useStrategyStore.getState();
+                                                const latestSignals = store.signals;
+                                                const sigIndex = latestSignals.findIndex(s => s.symbol === symbol && s.timestamp === final!.timestamp);
+                                                if (sigIndex !== -1) {
+                                                    const updatedSig = { ...latestSignals[sigIndex], aiAnalysis: ai };
+                                                    store.updateSignal(sigIndex, updatedSig);
                                                 }
+
+                                                // Update the position confidence
+                                                if (ai.confidence) {
+                                                    const latestPos = store.virtualPositions.find(p => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+                                                    if (latestPos) {
+                                                        store.updateVirtualPosition(latestPos.id, { confidence: ai.confidence });
+                                                    }
+                                                }
+                                            } else {
+                                                console.log(`[AI Guard] OFF for ${strategy.name}. Skipping AI analysis.`);
                                             }
 
-                                            await TradeLogger.logEntry({ ...final!, aiAnalysis: ai }, aiMetrics);
-                                        } catch (e) {
-                                            console.error("[Runner] Sync Task Failed:", e);
+                                            // Always log the trade, even if AI was skipped
+                                            await TradeLogger.logEntry({ ...final!, aiAnalysis: aiResult }, aiMetrics);
+                                        } catch (err) {
+                                            console.error('[Runner] Background tasks failed:', err);
                                             toast.error("AI Audit failed for live signal");
                                         }
                                     })();

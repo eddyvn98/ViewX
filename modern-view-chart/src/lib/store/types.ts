@@ -110,16 +110,34 @@ export interface SymbolInfo {
     currency_margin: string;
 }
 
-export type RightSidebarTab = 'market' | 'indicators' | 'strategy' | 'trade';
+export type RightSidebarTab = 'market' | 'layer' | 'strategy' | 'trade';
 
 export interface IndicatorConfig {
     id: string;
-    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SIGNALS' | 'SMA' | 'WMA' | 'MACD' | 'MARKET_STRUCTURE' | 'MarketStructure' | 'BREAKOUT_RAYS' | 'BreakoutRays' | 'TREND_LINES' | 'TrendLines';
+    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SIGNALS' | 'SMA' | 'WMA' | 'MACD' | 'MARKET_STRUCTURE' | 'MarketStructure' | 'BREAKOUT_RAYS' | 'BreakoutRays' | 'TREND_LINES' | 'TrendLines' | 'FIBONACCI' | 'Fibonacci' | 'FIBONACCI_EXTENSION' | 'FibonacciExtension';
     params: Record<string, any>;
     color: string;
     visible: boolean;
     lineWidth: number;
     pane: 'main' | 'rsi' | 'subchart';
+}
+
+export type DrawingTool = 'none' | 'fib-retracement' | 'fib-extension' | 'trend-line' | 'horizontal-line' | 'rectangle';
+
+export interface DrawingPoint {
+    time: number;
+    price: number;
+}
+
+export interface DrawingConfig {
+    id: string;
+    type: DrawingTool;
+    points: DrawingPoint[];
+    color: string;
+    visible: boolean;
+    lineWidth: number;
+    lineStyle: 'solid' | 'dashed' | 'dotted';
+    params?: Record<string, any>;
 }
 
 export interface Alert {

@@ -2,6 +2,7 @@ import { useEffect, useRef, memo } from 'react';
 import { IChartApi, ISeriesApi, createSeriesMarkers, ISeriesMarkersPluginApi, Time, SeriesMarker } from 'lightweight-charts';
 import { useStrategyStore } from '../store/strategy-store';
 import { normalizeTF } from '../utils/time-utils';
+import { isSameSymbol } from '@/lib/utils/symbol';
 
 interface StrategyMarkersProps {
     chart: IChartApi;
@@ -48,8 +49,7 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
         const closedPositions = virtualPositions.filter(p => {
             const isMatch = p.status === 'closed' && (
                 !p.symbol ||
-                p.symbol === symbol ||
-                p.symbol.replace(/[.m]/g, '') === symbol.replace(/[.m]/g, '')
+                isSameSymbol(p.symbol, symbol)
             );
 
             if (!isMatch) return false;

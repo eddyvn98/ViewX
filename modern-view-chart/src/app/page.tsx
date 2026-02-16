@@ -21,7 +21,7 @@ import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import { useStrategyRunner } from "@/features/strategy/hooks/use-strategy-runner";
 import { StrategyPanel } from "@/features/chart/components/StrategyPanel";
-import { IndicatorManager } from "@/features/chart/components/IndicatorManager";
+import { LayerManager } from "@/features/chart/components/LayerManager";
 import React from "react";
 
 export default function Home() {
@@ -283,7 +283,7 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <IndicatorManager />
+                  <LayerManager />
                 </div>
               </div>
             )}

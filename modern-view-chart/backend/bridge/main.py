@@ -11,9 +11,18 @@ from alert_service import AlertService
 from memory_service import MemoryService
 import MetaTrader5 as mt5
 
+# Fix Windows encoding issues for emojis
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 # Configuration
 NODE_WS_URL = "ws://127.0.0.1:8091"
-SYMBOLS = ["XAUUSDm", "BTCUSDm", "EURUSDm", "GBPUSDm"]
+SYMBOLS = [
+    "XAUUSDm", "BTCUSDm", "ETHUSDm", 
+    "EURUSDm", "GBPUSDm", "USDJPYm", "AUDUSDm", 
+    "USDCADm", "GBPJPm", "EURJPYm"
+]
 TIMEFRAME_MAP = {
     '1m': mt5.TIMEFRAME_M1, '5m': mt5.TIMEFRAME_M5, '15m': mt5.TIMEFRAME_M15,
     '30m': mt5.TIMEFRAME_M30, '1h': mt5.TIMEFRAME_H1, '4h': mt5.TIMEFRAME_H4, '1d': mt5.TIMEFRAME_D1,
@@ -60,7 +69,7 @@ async def main():
                     if d_open:
                         daily_opens[symbol] = d_open
                 last_daily_open_refresh = current_time
-                print(f"📊 [REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
+                print(f"[REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
 
             # 1. Send Ticks
             for symbol in SYMBOLS:

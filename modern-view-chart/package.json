@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "eslint",
     "server:dev": "nodemon backend/index.js",
-    "server:start": "node backend/index.js"
+    "server:start": "node backend/index.js",
+    "dev:all": "dev.bat",
+    "dev:ide": "concurrently -n \"FE,BE,BRIDGE,TUNNEL\" -c \"cyan,magenta,yellow,green\" \"npm run dev\" \"npm run server:dev\" \"python backend/bridge/main.py\" \"python start_mobile_access.py\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
@@ -55,6 +57,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-window": "^1.8.8",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^28.0.0",

@@ -17,6 +17,7 @@ import { useChartContextMenu } from './hooks/use-chart-context-menu';
 import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
 import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
 import { useChartShortcuts } from './hooks/use-chart-shortcuts';
+import { useChartDrawings } from './hooks/use-chart-drawings';
 import { useTheme } from 'next-themes';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { getNearElement } from './logic/chart-hit-test';
@@ -112,6 +113,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         undefined, // Removed currentPrice from props (hook now handles it if needed)
         isReady
     );
+
+    /* ================= DRAWINGS ================= */
+    useChartDrawings(chartId, priceChartRef.current, seriesRef.current, isReady, priceContainerRef, symbol, interval, source);
 
     /* ================= ALERTS ================= */
     const {

@@ -16,13 +16,11 @@ import { cn } from '@/lib/utils';
 
 const DRAWING_TOOLS = [
     { id: 'cursor', label: 'Cursor', icon: MousePointer2 },
-    { id: 'trendline', label: 'Trendline', icon: TrendingUp },
-    { id: 'h-line', label: 'H-Line', icon: Minus },
-    { id: 'ray', label: 'Ray', icon: ArrowUpRight },
-    { id: 'rect', label: 'Rect', icon: Square },
-    { id: 'fib', label: 'Fib', icon: GitCommit },
-    { id: 'text', label: 'Text', icon: Type },
-    { id: 'eraser', label: 'Eraser', icon: Eraser },
+    { id: 'trend-line', label: 'Trend Line', icon: TrendingUp },
+    { id: 'horizontal-line', label: 'Horz Line', icon: Minus },
+    { id: 'rectangle', label: 'Rectangle', icon: Square },
+    { id: 'fib-retracement', label: 'Fib Ret', icon: GitCommit },
+    { id: 'fib-extension', label: 'Fib Ext', icon: GitCommit },
     { id: 'clear', label: 'Clear', icon: Trash2 },
 ];
 

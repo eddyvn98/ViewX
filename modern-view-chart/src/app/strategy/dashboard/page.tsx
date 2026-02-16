@@ -62,18 +62,10 @@ export default function StrategyDashboardPage() {
                             <LayoutDashboard className="text-blue-500" size={24} />
                         </div>
                         <div className="flex flex-col">
-                            <h1 className="text-2xl font-black text-foreground tracking-tight uppercase">Strategy Performance</h1>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time Analysis</span>
-                                </div>
-                                {virtualPositions.length > 0 && (
-                                    <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-md">
-                                        <Shield size={10} className="text-blue-400" />
-                                        <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Background Priority Active</span>
-                                    </div>
-                                )}
+                            <h1 className="text-2xl font-black text-foreground tracking-tight uppercase">Strategy Backtest Analysis</h1>
+                            <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                                <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Backtest Mode</span>
                             </div>
                         </div>
                     </div>

@@ -12,6 +12,8 @@ import { chartWorkerClient } from '@/workers/worker-client';
 import { MACDIndicator } from '../indicators/MACDIndicator';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { TrendLineIndicator } from '../indicators/TrendLineIndicator';
+import { FibonacciIndicator } from '../indicators/FibonacciIndicator';
+import { FibonacciExtensionIndicator } from '../indicators/FibonacciExtensionIndicator';
 
 const EMPTY_INDICATORS: any[] = [];
 
@@ -61,6 +63,50 @@ export function useChartIndicators(
             { type: 'MARKET_STRUCTURE', params: { depth: 7 }, color: '#ffffff', visible: false, lineWidth: 1, pane: 'main' },
             { type: 'BREAKOUT_RAYS', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
             { type: 'TREND_LINES', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
+            {
+                type: 'FIBONACCI',
+                params: {
+                    depth: 7,
+                    showPercent: true,
+                    showPrice: true,
+                    levels: {
+                        '0': true,
+                        '0.236': true,
+                        '0.382': false,
+                        '0.5': true,
+                        '0.618': true,
+                        '0.786': false,
+                        '1.0': true
+                    }
+                },
+                color: '#ffffff',
+                visible: false,
+                lineWidth: 1,
+                pane: 'main'
+            },
+            {
+                type: 'FIBONACCI_EXTENSION',
+                params: {
+                    depth: 7,
+                    showPercent: true,
+                    showPrice: true,
+                    levels: {
+                        '0': true,
+                        '0.236': true,
+                        '0.382': true,
+                        '0.5': true,
+                        '0.618': true,
+                        '0.786': true,
+                        '1.0': true,
+                        '1.618': true,
+                        '2.618': true
+                    }
+                },
+                color: '#ffffff',
+                visible: false,
+                lineWidth: 1,
+                pane: 'main'
+            },
         ]);
 
         defaultsAppliedRef.current = true;
@@ -182,6 +228,10 @@ export function useChartIndicators(
                         case 'TrendLines': instance = new TrendLineIndicator(markerSeriesRef.current as any, config); break;
                         case 'MARKET_STRUCTURE':
                         case 'MarketStructure': instance = new MarketStructureIndicator(markerSeriesRef.current as any, config); break;
+                        case 'FIBONACCI':
+                        case 'Fibonacci': instance = new FibonacciIndicator(markerSeriesRef.current as any, config); break;
+                        case 'FIBONACCI_EXTENSION':
+                        case 'FibonacciExtension': instance = new FibonacciExtensionIndicator(markerSeriesRef.current as any, config); break;
                     }
                     if (instance) {
                         instancesRef.current[config.id] = instance;

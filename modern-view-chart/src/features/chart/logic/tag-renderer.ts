@@ -178,6 +178,13 @@ export function updateTagVisuals(
     if (elements.label) elements.label.style.color = tag.color;
     if (elements.price) elements.price.style.color = tag.color;
 
+    // ⚡ Logic: Hide price label for existing positions/orders (User requested)
+    // Only keep it for Draft items (Draft Group or Draft SL/TP)
+    const isDraft = tag.ticket === 'draft';
+    if (elements.priceBox) {
+        elements.priceBox.style.display = isDraft ? 'flex' : 'none';
+    }
+
     // PnL Logic
     // Hide PnL for Pending/Draft Entry (if not part of group)
     const isPos = tag.pOriginal && 'open_price' in tag.pOriginal;

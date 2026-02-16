@@ -130,7 +130,10 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                                 className="bg-secondary/60 border border-border focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded appearance-none hover:bg-secondary/80 transition-all cursor-pointer"
                             >
                                 <option value="" className="bg-popover text-muted-foreground">Active ({activeSymbol})</option>
-                                {Object.keys(symbolInfo).sort().map(s => (
+                                {Array.from(new Set([
+                                    ...useMarketStore.getState().watchlist,
+                                    ...Object.keys(symbolInfo)
+                                ])).sort().map(s => (
                                     <option key={s} value={s} className="bg-popover text-foreground">{s}</option>
                                 ))}
                             </select>

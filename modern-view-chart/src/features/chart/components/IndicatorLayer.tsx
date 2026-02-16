@@ -8,7 +8,7 @@ import { IndicatorSelector } from './IndicatorSelector';
 const EMPTY_INDICATORS: any[] = [];
 const EMPTY_CHARTS: any = {};
 
-export function IndicatorManager() {
+export function IndicatorLayer() {
     const activeTabId = useMarketStore(state => state.activeTabId);
     const charts = useMarketStore(useShallow(state => state.tabs[activeTabId || '']?.charts || EMPTY_CHARTS));
     const activeChartId = useMarketStore(state => state.tabs[activeTabId || '']?.activeChartId);
@@ -74,7 +74,7 @@ export function IndicatorManager() {
                                 <div className="flex-1 flex items-center gap-2 overflow-hidden">
                                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: indicator.color }} />
                                     <span className="text-[11px] truncate text-foreground font-bold tracking-tight">
-                                        {indicator.type} ({indicator.params.period || indicator.params.upperLimit || ''})
+                                        {indicator.type} ({indicator.params.period || indicator.params.depth || indicator.params.upperLimit || ''})
                                     </span>
                                 </div>
 

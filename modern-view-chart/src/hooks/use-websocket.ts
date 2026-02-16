@@ -305,6 +305,16 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                     command: "get_history",
                     limit: 100
                 }));
+
+                // Fetch symbol info for all watchlist symbols
+                const watchlist = useMarketStore.getState().watchlist;
+                watchlist.forEach(s => {
+                    globalSocket?.send(JSON.stringify({
+                        topic: "mt5_command",
+                        command: "get_symbol_info",
+                        symbol: s
+                    }));
+                });
             }
 
             // 2. Tab Visibility Recovery (Optimized: Only if data is stale)

@@ -74,6 +74,22 @@ const AVAILABLE_INDICATORS = [
         defaultParams: {},
         defaultColor: '#ffffff',
         pane: 'main' as const
+    },
+    {
+        type: 'Fibonacci' as const,
+        name: 'Fibonacci Retracement',
+        description: 'Tự động tính toán các mức thoái lui Fibonacci từ các đỉnh/đáy gần nhất.',
+        defaultParams: { depth: 7 },
+        defaultColor: '#00ff88',
+        pane: 'main' as const
+    },
+    {
+        type: 'FibonacciExtension' as const,
+        name: 'Trend-Based Fibonacci Extension',
+        description: 'Mở rộng Fibonacci dựa trên xu hướng, sử dụng 3 điểm swing gần nhất.',
+        defaultParams: { depth: 7 },
+        defaultColor: '#ff3366',
+        pane: 'main' as const
     }
 ];
 

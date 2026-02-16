@@ -49,7 +49,8 @@ export class TrendLineIndicator {
             const p2 = highs[highs.length - 1]; // Last point
             const p1 = highs[highs.length - 2]; // Previous point
 
-            if (p1 && p2 && p1.time !== p2.time) {
+            // Filter: Only draw if descending (Lower High)
+            if (p1 && p2 && p1.time !== p2.time && p2.price < p1.price) {
                 // Find indices for slope calculation
                 const p1Idx = formattedData.findIndex(d => d.time === p1.time);
                 const p2Idx = formattedData.findIndex(d => d.time === p2.time);
@@ -89,7 +90,8 @@ export class TrendLineIndicator {
             const p2 = lows[lows.length - 1];
             const p1 = lows[lows.length - 2];
 
-            if (p1 && p2 && p1.time !== p2.time) {
+            // Filter: Only draw if ascending (Higher Low)
+            if (p1 && p2 && p1.time !== p2.time && p2.price > p1.price) {
                 const p1Idx = formattedData.findIndex(d => d.time === p1.time);
                 const p2Idx = formattedData.findIndex(d => d.time === p2.time);
 

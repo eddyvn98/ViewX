@@ -25,7 +25,7 @@ export function PositionModifier() {
         ? (currentPrice - editingPosition.open_price) * editingPosition.volume * 100
         : (editingPosition.open_price - currentPrice) * editingPosition.volume * 100;
 
-    const formatPrice = (p: number) => p.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    const formatPrice = (p: number) => p.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
     const formatPnl = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(2)} USD`;
 
     const handleAdjust = (val: string, setVal: (v: string) => void, step: number) => {

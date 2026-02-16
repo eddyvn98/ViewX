@@ -48,7 +48,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     notifications: [],
     focusedTicket: null,
     sidebarTopHeight: 40,
-    rightSidebarTabOrder: ['strategy', 'indicators', 'trade'],
+    rightSidebarTabOrder: ['strategy', 'layer', 'trade'],
     themeColor: 'blue',
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),

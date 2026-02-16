@@ -1,4 +1,7 @@
 import React, { memo, useState, useRef, useCallback } from "react";
+import { useMarketStore } from "@/lib/store";
+import { useShallow } from "zustand/react/shallow";
+import { DrawingTool } from "@/lib/store/types";
 import { List, Menu, ArrowLeftRight, Briefcase, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,6 +45,21 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
     });
 
     const orderLogic = useOrderFormLogic();
+
+    const startDrawing = useMarketStore(state => state.startDrawing);
+    const cancelDrawing = useMarketStore(state => state.cancelDrawing);
+    const clearDrawings = useMarketStore(state => state.clearDrawings);
+    const chartId = useMarketStore(state => state.tabs[activeTab]?.activeChartId || '');
+
+    const handleToolSelect = useCallback((toolId: string) => {
+        if (toolId === 'cursor') {
+            cancelDrawing();
+        } else if (toolId === 'clear') {
+            if (chartId) clearDrawings(chartId);
+        } else {
+            startDrawing(toolId as DrawingTool);
+        }
+    }, [startDrawing, cancelDrawing, clearDrawings, chartId]);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         if (isTimeframe || isAnimating) return;
@@ -129,7 +147,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
                 </div>;
             case 'drawing':
                 return <div className="w-full flex items-center justify-center" style={itemStyle}>
-                    <MobileDrawingToolbar onToolSelect={() => { }} />
+                    <MobileDrawingToolbar onToolSelect={handleToolSelect} />
                 </div>;
             case 'actions':
                 return <div className="w-full flex items-center justify-center" style={itemStyle}>
