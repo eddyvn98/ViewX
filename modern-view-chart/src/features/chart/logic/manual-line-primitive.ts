@@ -11,7 +11,7 @@ import { CanvasRenderingTarget2D } from 'fancy-canvas';
 
 export interface ManualLineData {
     points: { time: number; price: number }[];
-    type: 'trend-line' | 'horizontal-line';
+    type: 'trend-line' | 'horizontal-line' | 'vertical-line' | 'crosshair';
     color: string;
     lineWidth: number;
     lineStyle: 'solid' | 'dashed' | 'dotted';
@@ -78,6 +78,31 @@ class ManualLinePaneRenderer implements IPrimitivePaneRenderer {
                     ctx.lineTo(x2 * horizontalPixelRatio, y2 * verticalPixelRatio);
                     ctx.stroke();
                 }
+            } else if (type === 'vertical-line') {
+                const x = timeScale.timeToCoordinate(points[0].time as Time);
+                if (x !== null) {
+                    const phyX = x * horizontalPixelRatio;
+                    ctx.moveTo(phyX, 0);
+                    ctx.lineTo(phyX, bitmapSize.height);
+                    ctx.stroke();
+                }
+            } else if (type === 'crosshair') {
+                const x = timeScale.timeToCoordinate(points[0].time as Time);
+                const y = series.priceToCoordinate(points[0].price);
+                if (x !== null && y !== null) {
+                    const phyX = x * horizontalPixelRatio;
+                    const phyY = y * verticalPixelRatio;
+
+                    // Horizontal part
+                    ctx.moveTo(0, phyY);
+                    ctx.lineTo(bitmapSize.width, phyY);
+
+                    // Vertical part
+                    ctx.moveTo(phyX, 0);
+                    ctx.lineTo(phyX, bitmapSize.height);
+
+                    ctx.stroke();
+                }
             }
             ctx.restore();
 
@@ -109,6 +134,19 @@ class ManualLinePaneRenderer implements IPrimitivePaneRenderer {
                     if (y !== null) {
                         midX = (timeScale.width() - 50) * horizontalPixelRatio; // 50px from right
                         midY = y * verticalPixelRatio;
+                    }
+                } else if (type === 'vertical-line') {
+                    const x = timeScale.timeToCoordinate(points[0].time as Time);
+                    if (x !== null) {
+                        midX = x * horizontalPixelRatio;
+                        midY = 50 * verticalPixelRatio; // 50px from top
+                    }
+                } else if (type === 'crosshair') {
+                    const x = timeScale.timeToCoordinate(points[0].time as Time);
+                    const y = series.priceToCoordinate(points[0].price);
+                    if (x !== null && y !== null) {
+                        midX = (x + 20 / horizontalPixelRatio) * horizontalPixelRatio; // Offset from center
+                        midY = (y - 20 / verticalPixelRatio) * verticalPixelRatio;
                     }
                 } else if (points.length >= 2) {
                     const x1 = timeScale.timeToCoordinate(points[0].time as Time);
@@ -155,6 +193,7 @@ export class ManualLinePrimitive implements ISeriesPrimitive {
     _paneViews: ManualLinePaneView[] = [];
     _series: ISeriesApi<any> | null = null;
     _chart: IChartApi | null = null;
+    _requestUpdate: (() => void) | null = null;
 
     constructor() {
         this._paneViews = [new ManualLinePaneView(this)];
@@ -163,16 +202,19 @@ export class ManualLinePrimitive implements ISeriesPrimitive {
     update(data: ManualLineData) {
         this._data = data;
         this._paneViews[0].update(data);
+        this._requestUpdate?.();
     }
 
-    attached({ chart, series }: any) {
+    attached({ chart, series, requestUpdate }: any) {
         this._series = series;
         this._chart = chart;
+        this._requestUpdate = requestUpdate;
     }
 
     detached() {
         this._series = null;
         this._chart = null;
+        this._requestUpdate = null;
     }
 
     paneViews() {
@@ -213,11 +255,21 @@ export function getDeleteButtonPosition(
     if (drawing.type === 'horizontal-line') {
         const py = series.priceToCoordinate(drawing.points[0].price);
         if (py !== null) {
-            // Match the renderer logic: 50px from right edge
-            // Note: Renderer uses (width - 50) * pixelRatio.
-            // Here we return logical coordinates, so just width - 50.
             x = timeScale.width() - 50;
             y = py;
+        }
+    } else if (drawing.type === 'vertical-line') {
+        const px = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+        if (px !== null) {
+            x = px;
+            y = 50; // Match renderer logic
+        }
+    } else if (drawing.type === 'crosshair') {
+        const px = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+        const py = series.priceToCoordinate(drawing.points[0].price);
+        if (px !== null && py !== null) {
+            x = px + 20;
+            y = py - 20;
         }
     } else if (drawing.points.length >= 2) {
         const x1 = timeScale.timeToCoordinate(drawing.points[0].time as Time);

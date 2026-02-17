@@ -6,7 +6,8 @@ export const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 
 export function calculateFibLevels(
     type: string,
     points: { time: Time | number; price: number }[],
-    params?: any
+    params?: any,
+    defaultColor: string = '#2962FF'
 ) {
     if (points.length < 2) return [];
 
@@ -29,7 +30,7 @@ export function calculateFibLevels(
         levels.push({
             price: p1.price + diff * level,
             ratio: level,
-            color: '#2962FF',
+            color: defaultColor,
             label: `${level}`
         });
     });

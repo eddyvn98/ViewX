@@ -122,7 +122,7 @@ export interface IndicatorConfig {
     pane: 'main' | 'rsi' | 'subchart';
 }
 
-export type DrawingTool = 'none' | 'fib-retracement' | 'fib-extension' | 'trend-line' | 'horizontal-line' | 'rectangle';
+export type DrawingTool = 'none' | 'fib-retracement' | 'fib-extension' | 'trend-line' | 'horizontal-line' | 'vertical-line' | 'crosshair' | 'rectangle';
 
 export interface DrawingPoint {
     time: number;
@@ -135,6 +135,7 @@ export interface DrawingConfig {
     points: DrawingPoint[];
     color: string;
     visible: boolean;
+    locked?: boolean;
     lineWidth: number;
     lineStyle: 'solid' | 'dashed' | 'dotted';
     params?: Record<string, any>;

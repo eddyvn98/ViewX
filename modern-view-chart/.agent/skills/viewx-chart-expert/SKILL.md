@@ -88,3 +88,47 @@ Sự phối hợp giữa Canvas (thư viện) và DOM (web) cần tuân thủ c�
 ### 9.2. Tương tác Kéo - Thả (Drag & Drop)
 - **Tắt hành vi mặc định**: Khi bắt đầu kéo một phần tử overlay (ví dụ: SL/TP), phải gọi `e.preventDefault()` để tránh xung đột với sự kiện scroll của Chart.
 - **Coordinate Conversion**: Khi di chuyển chuột trên Chart, sử dụng `series.coordinateToPrice(y)` để chuyển đổi tọa độ pixel ngược lại thành mức giá thực tế trước khi cập nhật vào Store.
++
++## 10. Logic Tương tác Drawing (Drawing Interaction)
++
++Hệ thống vẽ (Drawings) yêu cầu cơ chế đăng ký sự kiện (event subscription) riêng biệt để xử lý việc chọn (selection) và kéo (dragging) các đối tượng trên canvas.
++
++### 10.1. Đăng ký Click Event cho Selection
++- **Root Cause Lesson**: Một lỗi phổ biến là các hook trả về event handler nhưng không bao giờ subscribe chúng vào chart instance. 
++- **Best Practice**: Luôn sử dụng `chart.subscribeClick` bên trong hook quản lý drawings để thực hiện hit-test và cập nhật `selectedDrawingId`.
++```typescript
++useEffect(() => {
++    if (!chart) return;
++    chart.subscribeClick(handleClick);
++    return () => chart.unsubscribeClick(handleClick);
++}, [chart, handleClick]);
++```
++
++### 10.2. Xử lý Dragging với Pointer Events
++- Để tránh xung đột với hành vi scroll của thư viện khi đang kéo drawing, cần lắng nghe trực tiếp các sự kiện pointer trên `container` của chart:
++    1. **pointerdown**: Thực hiện hit-test anchor point. Nếu trúng, tắt scroll/scale của chart (`handleScroll: false`).
++    2. **pointermove**: Tính toán tọa độ và cập nhật state thông qua `updateDrawing`.
++    3. **pointerup**: Bật lại scroll/scale của chart và reset dragging state.
++
++### 10.3. Xây dựng MouseEventParams "Giả"
++- Khi gọi các editor handler từ native pointer events, cần xây dựng object `MouseEventParams` thủ công để tương thích với logic hit-test:
++```typescript
++const param = {
++    point: { x: x as any, y: y as any }, // Ép kiểu Coordinate
++    time: chart.timeScale().coordinateToTime(x) || undefined,
++    seriesData: new Map(), // Bắt buộc phải có Map rỗng
++    sourceEvent: { ...e, localX: x, localY: y } as any // Phải có localX/Y cho mobile
++} as MouseEventParams;
++```
++
++### 10.4. Hit-Test Visualization
++- **Feedback Loop**: Khi một drawing được chọn, primitive của nó phải nhận được state `selected: true` để render thêm:
++    - **Glow effect**: `ctx.shadowBlur` kết hợp với màu của line.
+    - **Handles**: Các hình tròn nhỏ tại mỗi point.
+    - **Delete Button**: Nút "X" tại trung điểm hoặc góc để hỗ trợ xóa nhanh.
+
+### 10.5. Hệ thống Snapping (Hít nến)
+- **Pixel-based Logic**: Luôn đo khoảng cách theo pixel (`Math.abs(coordinate - mouseY)`) thay vì theo giá (price). Khoảng cách lý tưởng là ~20px.
+- **Multi-point Snap**: Kiểm tra đồng thời cả 4 mức giá của nến: High, Low, Open, Close để hít vào điểm gần nhất.
+- **Visual Feedback**: Luôn thay đổi thuộc tính hiển thị (Màu sắc nổi bật hơn như Vàng #FFCC00, nét vẽ đậm hơn) khi trạng thái `isSnapped` được kích hoạt. Điều này giúp người dùng xác nhận điểm vẽ đã khớp chính xác vào nến.
+

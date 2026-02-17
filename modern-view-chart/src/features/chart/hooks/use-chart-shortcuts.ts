@@ -29,6 +29,11 @@ export function useChartShortcuts(chartId: string) {
             } else if (key === 'm') {
                 updateChart(chartId, { source: 'MT5' });
                 addNotification('Chart Switched to DEMO (MT5)', 'info');
+            } else if (key === 'delete' || key === 'backspace') {
+                const state = useMarketStore.getState();
+                if (state.selectedDrawingId) {
+                    state.removeDrawing(chartId, state.selectedDrawingId);
+                }
             }
         };
 

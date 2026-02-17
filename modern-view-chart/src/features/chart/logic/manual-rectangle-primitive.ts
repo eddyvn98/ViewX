@@ -104,6 +104,7 @@ export class ManualRectanglePrimitive implements ISeriesPrimitive {
     _paneViews: ManualRectanglePaneView[] = [];
     _series: ISeriesApi<any> | null = null;
     _chart: IChartApi | null = null;
+    _requestUpdate: (() => void) | null = null;
 
     constructor() {
         this._paneViews = [new ManualRectanglePaneView(this)];
@@ -112,16 +113,19 @@ export class ManualRectanglePrimitive implements ISeriesPrimitive {
     update(data: ManualRectangleData) {
         this._data = data;
         this._paneViews[0].update(data);
+        this._requestUpdate?.();
     }
 
-    attached({ chart, series }: any) {
+    attached({ chart, series, requestUpdate }: any) {
         this._series = series;
         this._chart = chart;
+        this._requestUpdate = requestUpdate;
     }
 
     detached() {
         this._series = null;
         this._chart = null;
+        this._requestUpdate = null;
     }
 
     paneViews() {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMarketStore } from '@/lib/store';
-import { Trash2, Eye, EyeOff, Settings2, ChevronDown, ChevronUp, Magnet, TrendingUp, Minus, Square } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Settings2, ChevronDown, ChevronUp, Magnet, TrendingUp, Minus, Square, Lock, Unlock, MoveVertical, Crosshair } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -14,31 +14,37 @@ export function DrawingLayer() {
     const drawings = useMarketStore(useShallow(state => chartId ? state.chartDrawings[chartId] || [] : []));
     const currentTool = useMarketStore(state => state.currentDrawingTool);
     const isDrawing = useMarketStore(state => state.isDrawing);
+    const themeColor = useMarketStore(state => state.themeColor);
 
     const startDrawing = useMarketStore(state => state.startDrawing);
     const cancelDrawing = useMarketStore(state => state.cancelDrawing);
     const removeDrawing = useMarketStore(state => state.removeDrawing);
     const updateDrawing = useMarketStore(state => state.updateDrawing);
     const toggleVisibility = useMarketStore(state => state.toggleDrawingVisibility);
+    const toggleAllVisibility = useMarketStore(state => state.toggleAllDrawingVisibility);
+    const toggleAllLock = useMarketStore(state => state.toggleAllDrawingLock);
+    const clearDrawings = useMarketStore(state => state.clearDrawings);
     const snapToCandle = useMarketStore(state => state.snapToCandle);
     const setSnapToCandle = useMarketStore(state => state.setSnapToCandle);
 
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
 
     const tools = [
-        { id: 'fib-retracement', label: 'Fib Retracement', icon: 'F' },
-        { id: 'fib-extension', label: 'Fib Extension', icon: 'FE' },
         { id: 'trend-line', label: 'Trend Line', icon: <TrendingUp size={16} /> },
         { id: 'horizontal-line', label: 'Horizontal Line', icon: <Minus size={16} /> },
+        { id: 'vertical-line', label: 'Vertical Line', icon: <MoveVertical size={16} /> },
+        { id: 'crosshair', label: 'Crosshair', icon: <Crosshair size={16} /> },
         { id: 'rectangle', label: 'Rectangle', icon: <Square size={16} /> },
+        { id: 'fib-retracement', label: 'Fib Retracement', icon: 'F' },
+        { id: 'fib-extension', label: 'Fib Extension', icon: 'FE' },
     ];
 
     if (!chartId) return null;
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden">
+        <div className="flex flex-col h-full bg-background relative overflow-y-auto custom-scrollbar">
             {/* Drawing Tools Selector */}
-            <div className="p-3 border-b border-border bg-secondary/10">
+            <div className="p-3 border-b border-border bg-secondary/10 flex-shrink-0">
                 <h4 className="text-[10px] font-bold uppercase text-muted-foreground/60 mb-2 tracking-tight">Active Tools</h4>
                 <div className="grid grid-cols-2 gap-2">
                     {tools.map(tool => (
@@ -48,7 +54,7 @@ export function DrawingLayer() {
                             className={cn(
                                 "flex items-center gap-2 p-2 rounded-md border transition-all text-left",
                                 currentTool === tool.id
-                                    ? "bg-blue-500/10 border-blue-500/50 text-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+                                    ? `bg-primary/10 border-primary/50 text-primary shadow-[0_0_10px_var(--glow-primary)]`
                                     : "bg-secondary/20 border-transparent hover:border-border text-foreground/70"
                             )}
                         >
@@ -65,8 +71,8 @@ export function DrawingLayer() {
                 </div>
 
                 {isDrawing && (
-                    <div className="mt-3 p-2 bg-blue-500/10 rounded-md border border-blue-500/30 animate-pulse">
-                        <p className="text-[9px] text-blue-400 font-bold uppercase tracking-wider text-center">
+                    <div className="mt-3 p-2 bg-primary/10 rounded-md border border-primary/30 animate-pulse text-center">
+                        <p className="text-[9px] text-primary font-bold uppercase tracking-wider">
                             Drawing Active - Click on chart
                         </p>
                     </div>
@@ -94,10 +100,46 @@ export function DrawingLayer() {
             </div>
 
             {/* List of active drawings */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-0.5">
-                <h4 className="text-[10px] font-bold uppercase text-muted-foreground/60 mb-2 tracking-tight">Applied Objects</h4>
+            <div className="p-3 flex flex-col gap-0.5 flex-shrink-0">
+                <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-tight">Applied Objects</h4>
+                    {drawings.length > 0 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => {
+                                    const anyVisible = drawings.some(d => d.visible);
+                                    toggleAllVisibility(chartId, !anyVisible);
+                                }}
+                                title={drawings.some(d => d.visible) ? "Hide All" : "Show All"}
+                                className="p-1 text-muted-foreground/60 hover:text-primary transition-colors"
+                            >
+                                {drawings.some(d => d.visible) ? <Eye size={12} /> : <EyeOff size={12} />}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const anyLocked = drawings.some(d => d.locked);
+                                    toggleAllLock(chartId, !anyLocked);
+                                }}
+                                title={drawings.some(d => d.locked) ? "Unlock All" : "Lock All"}
+                                className="p-1 text-muted-foreground/60 hover:text-primary transition-colors"
+                            >
+                                {drawings.some(d => d.locked) ? <Lock size={12} /> : <Unlock size={12} />}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (confirm('Delete all drawings?')) clearDrawings(chartId);
+                                }}
+                                title="Delete All"
+                                className="p-1 text-muted-foreground/60 hover:text-red-400 transition-colors"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 {drawings.length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground/30 text-[10px] italic">
+                    <div className="text-center py-6 text-muted-foreground/30 text-[10px] italic bg-secondary/5 rounded-lg border border-dashed border-border/40">
                         No manual drawings
                     </div>
                 )}
@@ -110,9 +152,18 @@ export function DrawingLayer() {
                         )}>
                             <button
                                 onClick={() => toggleVisibility(chartId, drawing.id)}
-                                className={cn("transition-colors flex-shrink-0", drawing.visible ? "text-blue-500" : "text-muted-foreground/40")}
+                                className={cn("transition-colors flex-shrink-0 p-1 rounded hover:bg-secondary/40", drawing.visible ? "text-blue-500" : "text-muted-foreground/40")}
+                                title={drawing.visible ? "Hide" : "Show"}
                             >
                                 {drawing.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+                            </button>
+
+                            <button
+                                onClick={() => updateDrawing(chartId, drawing.id, { locked: !drawing.locked })}
+                                className={cn("transition-colors flex-shrink-0 p-1 rounded hover:bg-secondary/40", drawing.locked ? "text-amber-500" : "text-muted-foreground/40")}
+                                title={drawing.locked ? "Unlock" : "Lock"}
+                            >
+                                {drawing.locked ? <Lock size={12} /> : <Unlock size={12} />}
                             </button>
 
                             <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => setExpandedId(expandedId === drawing.id ? null : drawing.id)}>
@@ -122,7 +173,9 @@ export function DrawingLayer() {
                                         drawing.type === 'fib-extension' ? 'Fib Extension' :
                                             drawing.type === 'trend-line' ? 'Trend Line' :
                                                 drawing.type === 'horizontal-line' ? 'Horizontal Line' :
-                                                    drawing.type === 'rectangle' ? 'Rectangle' : drawing.type}
+                                                    drawing.type === 'vertical-line' ? 'Vertical Line' :
+                                                        drawing.type === 'crosshair' ? 'Crosshair' :
+                                                            drawing.type === 'rectangle' ? 'Rectangle' : drawing.type}
                                 </span>
                             </div>
 

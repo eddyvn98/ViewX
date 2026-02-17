@@ -47,3 +47,10 @@ Khi làm việc với hàng trăm cặp tiền và dữ liệu lịch sử lớn
 - **Bypass React State**: Đối với các giá trị thay đổi cực nhanh (như tọa độ chuột, giá nhảy tick), hãy sử dụng `window.dispatchEvent` hoặc Direct DOM manipulation thay vì đẩy vào React State để tránh toàn bộ ứng dụng bị re-render không cần thiết.
 - **Zustand Subscription**: Sử dụng `store.subscribe` để lắng nghe các thay đổi cụ thể (như `draggingPosition`) và cập nhật trực tiếp vào đối tượng Canvas/PriceLine của thư viện mà không thông qua chu kỳ render của React.
 - **RAF for UI Visuals**: Luôn bọc các logic cập nhật vị trí overlay (nhãn giá, đường kẻ) trong `requestAnimationFrame` để đảm bảo khớp hoàn hảo với tần số quét của màn hình.
+
+## 8. Tối ưu hóa Custom Primitives (Drawing Tools)
+
+Khi xây dựng các công cụ vẽ tùy chỉnh (Line, Rectangle, Fibonacci) bằng `createCustomSeries`:
+- **Cơ chế requestUpdate**: Bên trong primitive class, luôn lưu trữ `requestUpdate` callback từ method `attached`. Gọi `this._requestUpdate?()` ngay sau khi cập nhật dữ liệu (`update` hoặc `setData`) để thông báo cho engine vẽ lại canvas lập tức. 
+  - *Lý do*: Nếu không, hình vẽ nháp (draft) sẽ bị trễ (lag) so với con trỏ chuột vì engine không biết dữ liệu primitive đã thay đổi.
+- **Native Event Loop**: Để đạt độ trễ cực thấp (Ultra-low latency), hãy lắng nghe sự kiện `mousemove` trực tiếp từ DOM container thay vì qua React state. Kết hợp với `requestAnimationFrame` để cập nhật tọa độ vào primitive.

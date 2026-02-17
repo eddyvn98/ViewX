@@ -59,7 +59,7 @@ export function useDrawingPrimitives(
 
             // Update primitive based on type
             if (drawing.type.startsWith('fib-')) {
-                const levels = calculateFibLevels(drawing.type, drawing.points, drawing.params);
+                const levels = calculateFibLevels(drawing.type, drawing.points, drawing.params, drawing.color);
                 primitive.update({
                     points: drawing.points,
                     type: drawing.type as any,
@@ -81,4 +81,6 @@ export function useDrawingPrimitives(
             }
         });
     }, [chartDrawings, series, isReady, selectedDrawingId]);
+
+    return { primitivesRef };
 }

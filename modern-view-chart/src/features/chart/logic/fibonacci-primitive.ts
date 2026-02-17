@@ -89,15 +89,17 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 const fontSize = Math.max(10, 10 * verticalPixelRatio);
                 ctx.font = `${fontSize}px Inter, sans-serif, Arial`;
                 ctx.textAlign = 'right';
-                ctx.textBaseline = 'middle'; // Center label on line
+                // Position above the line
+                ctx.textBaseline = 'bottom';
 
                 let labelParts = [];
-                if (this._data!.showPercent) labelParts.push(level.label);
+                // Only keep price as requested
                 if (this._data!.showPrice) labelParts.push(level.price.toFixed(2));
 
                 const text = labelParts.join(' ');
                 if (text) {
-                    ctx.fillText(text, canvasWidth - 10 * horizontalPixelRatio, phyY);
+                    // Small offset from top and right
+                    ctx.fillText(text, canvasWidth - 10 * horizontalPixelRatio, phyY - 2 * verticalPixelRatio);
                 }
 
                 // 3. Draw Background Fill (Golden Zone: 0.382 - 0.618)
@@ -133,6 +135,7 @@ export class FibonacciPrimitive implements ISeriesPrimitive {
     _paneViews: FibonacciPaneView[] = [];
     _series: ISeriesApi<any> | null = null;
     _chart: IChartApi | null = null;
+    _requestUpdate: (() => void) | null = null;
 
     constructor(data: FibonacciData | null) {
         this._data = data;
@@ -142,16 +145,36 @@ export class FibonacciPrimitive implements ISeriesPrimitive {
     setData(data: FibonacciData | null) {
         this._data = data;
         this._paneViews.forEach(v => v.update(data));
+        this._requestUpdate?.();
     }
 
-    attached({ chart, series }: any) {
+    update(data: any) {
+        if (!data.points || data.points.length < 2) {
+            this.setData(null);
+            return;
+        }
+
+        const fibData: FibonacciData = {
+            levels: data.levels || [],
+            startTime: data.points[0].time as Time,
+            endTime: data.points[1].time as Time,
+            showPercent: false, // Default to false as requested
+            showPrice: true
+        };
+
+        this.setData(fibData);
+    }
+
+    attached({ chart, series, requestUpdate }: any) {
         this._series = series;
         this._chart = chart;
+        this._requestUpdate = requestUpdate;
     }
 
     detached() {
         this._series = null;
         this._chart = null;
+        this._requestUpdate = null;
     }
 
     paneViews() {

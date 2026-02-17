@@ -14,7 +14,8 @@ export function useDrawingEditor(
     chart: IChartApi | null,
     series: ISeriesApi<any> | null,
     containerRef: React.RefObject<HTMLDivElement | null>,
-    isDrawing: boolean
+    isDrawing: boolean,
+    primitivesRef?: React.MutableRefObject<Record<string, any>>
 ) {
     const chartDrawings = useMarketStore(state => state.chartDrawings[chartId] || EMPTY_ARRAY);
     const {
@@ -31,6 +32,7 @@ export function useDrawingEditor(
     const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
     const coordOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const lastCrosshairPointRef = useRef<{ x: number; y: number } | null>(null);
+    const draggedFinalPointsRef = useRef<{ time: number, price: number }[] | null>(null);
 
     // Track Chart Coordinates
     useEffect(() => {
@@ -75,6 +77,7 @@ export function useDrawingEditor(
         // Reverse iterate for Z-order (topmost first)
         for (let i = chartDrawings.length - 1; i >= 0; i--) {
             const drawing = chartDrawings[i];
+            if (drawing.visible === false) continue; // Skip invisible drawings
 
             // Fibonacci Hit Test
             if (drawing.type.startsWith('fib-')) {
@@ -111,6 +114,33 @@ export function useDrawingEditor(
                         } else if (clickX !== null) {
                             const dist = distanceToSegment(clickX, y, x1!, y1, x2!, y2!);
                             if (dist < 10) clickedId = drawing.id;
+                        }
+                    }
+                }
+            }
+            // Vertical Line Hit Test
+            else if (drawing.type === 'vertical-line' && drawing.points.length >= 1) {
+                const timeScale = chart.timeScale();
+                const x = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+                if (x !== null) {
+                    const clickX = timeScale.timeToCoordinate(param.time as Time);
+                    if (clickX !== null && Math.abs(clickX - x) < 10) {
+                        clickedId = drawing.id;
+                    }
+                }
+            }
+            // Crosshair Hit Test
+            else if (drawing.type === 'crosshair' && drawing.points.length >= 1) {
+                const timeScale = chart.timeScale();
+                const x = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+                const y = series.priceToCoordinate(drawing.points[0].price);
+                if (x !== null && y !== null) {
+                    const clickX = timeScale.timeToCoordinate(param.time as Time);
+                    if (clickX !== null) {
+                        const isNearVertical = Math.abs(clickX - x) < 10;
+                        const isNearHorizontal = Math.abs(param.point.y - y) < 10;
+                        if (isNearVertical || isNearHorizontal) {
+                            clickedId = drawing.id;
                         }
                     }
                 }
@@ -182,7 +212,7 @@ export function useDrawingEditor(
         // If selected drawing, check its anchors
         if (selectedDrawingId) {
             const drawing = chartDrawings.find(d => d.id === selectedDrawingId);
-            if (drawing) {
+            if (drawing && !drawing.locked) {
                 const anchorIndex = findNearAnchor(drawing.points);
                 if (anchorIndex !== -1) {
                     foundAnchor = true;
@@ -190,6 +220,7 @@ export function useDrawingEditor(
                     draggedPointIndexRef.current = anchorIndex;
                     draggedDrawingIdRef.current = selectedDrawingId;
                     dragStartPosRef.current = { x, y };
+                    draggedFinalPointsRef.current = [...drawing.points];
 
                     // Disable scroll
                     const options = chart.options();
@@ -257,24 +288,60 @@ export function useDrawingEditor(
         const newPrice = series.coordinateToPrice(targetY);
 
         if (newTime && newPrice !== null) {
-            const drawing = chartDrawings.find(d => d.id === draggedDrawingIdRef.current);
-            if (drawing) {
-                const newPoints = [...drawing.points];
+            const drawingId = draggedDrawingIdRef.current;
+            const primitive = primitivesRef?.current?.[drawingId];
+            const drawing = chartDrawings.find(d => d.id === drawingId);
+
+            if (drawing && primitive) {
+                const newPoints = [...draggedFinalPointsRef.current!!];
                 newPoints[draggedPointIndexRef.current] = {
                     time: toSec(newTime as Time),
                     price: newPrice
                 };
-                updateDrawing(chartId, drawing.id, { points: newPoints });
+                draggedFinalPointsRef.current = newPoints;
+
+                // 1. DIRECT PRIMITIVE UPDATE (Fast, no re-render)
+                if (drawing.type.startsWith('fib-')) {
+                    const levels = calculateFibLevels(drawing.type, newPoints, drawing.params, drawing.color);
+                    primitive.update({
+                        points: newPoints,
+                        type: drawing.type as any,
+                        levels,
+                        color: drawing.color,
+                        lineWidth: drawing.lineWidth,
+                        lineStyle: drawing.lineStyle,
+                        selected: true
+                    });
+                } else {
+                    primitive.update({
+                        points: newPoints,
+                        type: drawing.type as any,
+                        color: drawing.color,
+                        lineWidth: drawing.lineWidth,
+                        lineStyle: drawing.lineStyle,
+                        selected: true
+                    });
+                }
+
+                // We do NOT call updateDrawing (store) here.
             }
         }
     };
 
     const handleDragEnd = () => {
         if (isDraggingRef.current) {
+            // COMMIT TO STORE
+            if (draggedDrawingIdRef.current && draggedFinalPointsRef.current) {
+                updateDrawing(chartId, draggedDrawingIdRef.current, {
+                    points: draggedFinalPointsRef.current
+                });
+            }
+
             isDraggingRef.current = false;
             draggedPointIndexRef.current = -1;
             draggedDrawingIdRef.current = null;
             dragStartPosRef.current = null;
+            draggedFinalPointsRef.current = null;
 
             // Re-enable options
             if (chart) {

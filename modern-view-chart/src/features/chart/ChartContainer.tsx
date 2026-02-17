@@ -115,7 +115,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     );
 
     /* ================= DRAWINGS ================= */
-    useChartDrawings(chartId, priceChartRef.current, seriesRef.current, isReady, priceContainerRef, symbol, interval, source);
+    useChartDrawings(chartId, priceChartRef.current, seriesRef.current, isReady, priceContainerRef, symbol, interval, source, candles);
 
     /* ================= ALERTS ================= */
     const {
