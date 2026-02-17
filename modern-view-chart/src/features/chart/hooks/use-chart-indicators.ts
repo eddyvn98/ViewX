@@ -60,7 +60,7 @@ export function useChartIndicators(
             { type: 'HMA', params: { period: 25 }, color: '#00bcd4', visible: true, lineWidth: 2, pane: 'main' },
             { type: 'RSI', params: { period: 14 }, color: '#f06292', visible: true, lineWidth: 2, pane: 'subchart' },
             { type: 'MACD', params: { fast: 12, slow: 26, signal: 9 }, color: '#2962FF', visible: false, lineWidth: 1, pane: 'subchart' },
-            { type: 'MARKET_STRUCTURE', params: { depth: 7 }, color: '#ffffff', visible: false, lineWidth: 1, pane: 'main' },
+            { type: 'MARKET_STRUCTURE', params: { depth: 7 }, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
             { type: 'BREAKOUT_RAYS', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
             { type: 'TREND_LINES', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
             {
