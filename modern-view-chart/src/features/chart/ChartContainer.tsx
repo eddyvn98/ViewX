@@ -35,6 +35,7 @@ import { ChartTradingOverlay } from './components/ChartTradingOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { StrategyMarkers } from '../strategy/components/StrategyMarkers';
+import { DrawingToolbar } from './components/DrawingToolbar';
 
 const EMPTY_CANDLES: any[] = [];
 
@@ -252,6 +253,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}
                 <ChartTradingOverlay symbol={symbol} source={source} />
 
+                {/* LEFT-SIDE DRAWING TOOLBAR */}
+                <DrawingToolbar chartId={chartId} />
+
                 {/* STRATEGY VISUAL MARKERS (Virtual Trades) */}
                 {isReady && priceChartRef.current && seriesRef.current && symbol && (
                     <StrategyMarkers
@@ -265,7 +269,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
                 <div
                     className={cn(
-                        "absolute right-[50px] md:right-[80px] z-30 flex items-end transition-all duration-300",
+                        "absolute right-[50px] md:right-[62px] z-30 flex items-end transition-all duration-300",
                         isMinimized && isSubchartVisible ? "bottom-[32px]" : (isSubchartVisible ? "bottom-[25%]" : "bottom-0")
                     )}
                 >

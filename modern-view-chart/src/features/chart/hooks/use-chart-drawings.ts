@@ -37,7 +37,7 @@ export function useChartDrawings(
         handleDragStart,
         handleDragMove,
         handleDragEnd
-    } = useDrawingEditor(chartId, chart, series, containerRef, isDrawing, primitivesRef);
+    } = useDrawingEditor(chartId, chart, series, containerRef, isDrawing, primitivesRef, candles);
 
     // 4. Main Event Handlers (Aggregate logic)
     const handleClick = (param: MouseEventParams) => {

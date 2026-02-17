@@ -13,8 +13,8 @@ export default function StandaloneChartPage() {
     const chartId = params.id as string;
 
     // Extract initial config from URL
-    const symbol = searchParams.get('symbol') || 'BTCUSDm';
-    const interval = searchParams.get('interval') || '15';
+    const symbol = searchParams.get('symbol') || 'XAUUSDm';
+    const interval = searchParams.get('interval') || '1';
     const source = (searchParams.get('source') || 'MT5') as any;
 
     const addChart = useMarketStore((state) => state.addChart);

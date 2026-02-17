@@ -9,7 +9,7 @@ import { useSeriesSwitcher } from './use-series-switcher';
 import { calculateDynamicSwingPoints } from '@/features/chart/logic/candle-patterns';
 
 const EMPTY_CANDLES: any[] = [];
-const MIN_CANDLES_THRESHOLD = 50;
+const MIN_CANDLES_THRESHOLD = 150;
 
 interface UseChartHistoryProps {
     symbol: string | undefined;
@@ -88,7 +88,15 @@ export function useChartHistory(props: UseChartHistoryProps) {
             if (formatted.length > 0) {
                 onHistoryLoaded(currentCandles[currentCandles.length - 1]);
                 updateSyncData(formatted, subSyncRef, timescaleSyncRef);
-                if (chartStateRef.current === 'loading') handleAutoFit();
+
+                // Only mark as ready once we have enough data to fit properly
+                // OR if it's been loading for a while and we only have a few bars (new symbol)
+                if (formatted.length >= MIN_CANDLES_THRESHOLD) {
+                    chartStateRef.current = 'ready';
+                } else {
+                    // Call autofit again as more data flows in during the "loading" stage
+                    handleAutoFit();
+                }
             }
             lastDataLength.current = currentCandles.length;
         }
@@ -105,17 +113,20 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const handleAutoFit = () => {
         const candles = getCandles();
+        if (candles.length === 0) return;
+
         requestAnimationFrame(() => {
             try {
+                // Ensure the chart is following the END of the data
                 chartRef.current?.timeScale().setVisibleLogicalRange({
-                    from: candles.length - (window.innerWidth < 768 ? 50 : 100),
+                    from: candles.length - (window.innerWidth < 768 ? 40 : 80),
                     to: candles.length + 5
                 });
+
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                 subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                chartStateRef.current = 'ready';
             } catch (e) {
-                chartStateRef.current = 'ready';
+                // Ignore transient errors during init
             }
         });
         isInitialMount.current = false;

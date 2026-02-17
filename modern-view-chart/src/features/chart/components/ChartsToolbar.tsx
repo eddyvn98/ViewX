@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { RootState } from '@/lib/store';
 
-import { Plus, Crosshair, Link, History as HistoryIcon } from 'lucide-react';
+import { Plus, Crosshair, Link, History as HistoryIcon, Pencil } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { TimeframeToolbar } from './TimeframeToolbar';
@@ -96,6 +96,19 @@ export function ChartsToolbar() {
                 <div className="h-4 w-[1px] bg-border" />
 
                 <div className="flex items-center gap-2 pl-2">
+                    <button
+                        onClick={() => useMarketStore.getState().toggleDrawingToolbar()}
+                        className={cn(
+                            "p-1 rounded transition-all active:scale-95",
+                            useMarketStore(state => state.isDrawingToolbarVisible)
+                                ? "text-primary bg-primary/10 border border-primary/20"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent"
+                        )}
+                        title="Toggle Drawing Toolbar"
+                    >
+                        <Pencil size={14} />
+                    </button>
+
                     <button onClick={() => setCrosshairSync(!isCrosshairSyncEnabled)} className={cn("p-1 rounded transition-all", isCrosshairSyncEnabled ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/40")} title="Crosshair Sync"><Crosshair size={14} /></button>
 
                     {/* Marker Toggle */}

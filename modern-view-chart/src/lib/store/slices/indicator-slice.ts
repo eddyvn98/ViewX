@@ -14,14 +14,47 @@ export interface IndicatorSlice {
     setActiveIndicatorId: (id: string | null) => void;
 }
 
+const INDICATOR_COLORS = [
+    '#00ff88', // Emerald
+    '#2196F3', // Azure
+    '#9C27B0', // Amethyst
+    '#FF9800', // Amber
+    '#e91e63', // Rose
+    '#00BCD4', // Cyan
+    '#FFD700', // Gold
+];
+
 export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlice> = (set) => ({
     chartIndicators: {},
     activeIndicatorId: null,
 
     addIndicator: (chartId, indicator) => set((state) => {
         const id = Math.random().toString(36).substring(7);
-        const newIndicator = { ...indicator, id } as IndicatorConfig;
         const currentIndicators = state.chartIndicators[chartId] || [];
+
+        // Smart Color Selection:
+        // 1. Find colors currently used by indicators on this chart
+        const usedColors = currentIndicators.map(ind => ind.color.toLowerCase());
+
+        // 2. Find the first color in our palette that isn't used
+        let assignedColor = indicator.color;
+
+        // If the indicator color is a "default" or "white" or not provided, we override it
+        const isGenericColor = !indicator.color || indicator.color === '#ffffff' || indicator.color === 'white';
+
+        if (isGenericColor) {
+            const availableColor = INDICATOR_COLORS.find(c => !usedColors.includes(c.toLowerCase()));
+
+            if (availableColor) {
+                assignedColor = availableColor;
+            } else {
+                // If all colors are used, pick the one that appears least frequently, or just cycle
+                assignedColor = INDICATOR_COLORS[currentIndicators.length % INDICATOR_COLORS.length];
+            }
+        }
+
+        const newIndicator = { ...indicator, id, color: assignedColor } as IndicatorConfig;
+
         return {
             chartIndicators: {
                 ...state.chartIndicators,
@@ -31,16 +64,33 @@ export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlic
     }),
 
     addIndicators: (chartId, indicators) => set((state) => {
-        const newIndicators = indicators.map(ind => ({
-            ...ind,
-            id: Math.random().toString(36).substring(7)
-        })) as IndicatorConfig[];
+        const currentIndicators = [...(state.chartIndicators[chartId] || [])];
 
-        const currentIndicators = state.chartIndicators[chartId] || [];
+        const newIndicators = indicators.map(ind => {
+            const id = Math.random().toString(36).substring(7);
+            const usedColors = currentIndicators.map(i => i.color.toLowerCase());
+
+            let assignedColor = ind.color;
+            const isGenericColor = !ind.color || ind.color === '#ffffff' || ind.color === 'white';
+
+            if (isGenericColor) {
+                const availableColor = INDICATOR_COLORS.find(c => !usedColors.includes(c.toLowerCase()));
+                if (availableColor) {
+                    assignedColor = availableColor;
+                } else {
+                    assignedColor = INDICATOR_COLORS[currentIndicators.length % INDICATOR_COLORS.length];
+                }
+            }
+
+            const newInd = { ...ind, id, color: assignedColor } as IndicatorConfig;
+            currentIndicators.push(newInd); // Push to track colors for the next one in the map loop
+            return newInd;
+        });
+
         return {
             chartIndicators: {
                 ...state.chartIndicators,
-                [chartId]: [...currentIndicators, ...newIndicators]
+                [chartId]: [...(state.chartIndicators[chartId] || []), ...newIndicators]
             }
         };
     }),

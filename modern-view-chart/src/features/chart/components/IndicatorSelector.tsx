@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMarketStore } from '@/lib/store';
-import { X, Plus, Info } from 'lucide-react';
+import { X, Plus, Info, Activity, TrendingUp, LayoutTemplate, Ruler, Search, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface IndicatorSelectorProps {
@@ -10,145 +10,252 @@ interface IndicatorSelectorProps {
     chartId: string;
 }
 
-const AVAILABLE_INDICATORS = [
+const CATEGORIES = [
     {
-        type: 'EMA' as const,
-        name: 'Exponential Moving Average',
-        description: 'Đường trung bình động lũy thừa, phản ứng nhanh hơn với biến động giá.',
-        defaultParams: { period: 20 },
-        defaultColor: '#2196F3',
-        pane: 'main' as const
+        id: 'averages',
+        name: 'Moving Averages',
+        icon: TrendingUp,
+        indicators: [
+            {
+                type: 'EMA' as const,
+                name: 'Exponential Moving Average',
+                description: 'Đường trung bình động lũy thừa, phản ứng nhanh hơn.',
+                defaultParams: { period: 20 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'SMA' as const,
+                name: 'Simple Moving Average',
+                description: 'Đường trung bình động đơn giản, xác định xu hướng dài hạn.',
+                defaultParams: { period: 50 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'HMA' as const,
+                name: 'Hull Moving Average',
+                description: 'Đường trung bình động Hull, cực kỳ mượt mà và ít trễ.',
+                defaultParams: { period: 25 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+        ]
     },
     {
-        type: 'SMA' as const,
-        name: 'Simple Moving Average',
-        description: 'Đường trung bình động đơn giản, giúp xác định xu hướng dài hạn.',
-        defaultParams: { period: 50 },
-        defaultColor: '#FF9800',
-        pane: 'main' as const
+        id: 'oscillators',
+        name: 'Oscillators',
+        icon: Activity,
+        indicators: [
+            {
+                type: 'RSI' as const,
+                name: 'Relative Strength Index',
+                description: 'Chỉ số sức mạnh tương đối, đo lường quá mua/quá bán.',
+                defaultParams: { period: 14, overbought: 70, oversold: 30 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'rsi' as const
+            },
+            {
+                type: 'RSI' as const,
+                name: 'RSI Subchart',
+                description: 'RSI hiển thị trong một khung riêng biệt bên dưới.',
+                defaultParams: { period: 14, overbought: 70, oversold: 30 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'subchart' as const
+            },
+        ]
     },
     {
-        type: 'HMA' as const,
-        name: 'Hull Moving Average',
-        description: 'Đường trung bình động Hull, cực kỳ mượt mà và ít trễ.',
-        defaultParams: { period: 25 },
-        defaultColor: '#00BCD4',
-        pane: 'main' as const
+        id: 'structure',
+        name: 'Price Action & Structure',
+        icon: LayoutTemplate,
+        indicators: [
+            {
+                type: 'TrendLines' as const,
+                name: 'Trend Lines',
+                description: 'Vẽ đường xu hướng dựa trên đỉnh/đáy cấu trúc.',
+                defaultParams: {},
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'MarketStructure' as const,
+                name: 'Market Structure Labels',
+                description: 'Hiển thị HH, LL, HL, LH trực tiếp trên biểu đồ.',
+                defaultParams: { depth: 7 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'BreakoutRays' as const,
+                name: 'Breakout Horizontal Rays',
+                description: 'Vẽ các đường ngang tại mức đỉnh/đáy đột phá.',
+                defaultParams: {},
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+        ]
     },
     {
-        type: 'RSI' as const,
-        name: 'Relative Strength Index',
-        description: 'Chỉ số sức mạnh tương đối, đo lường quá mua/quá bán.',
-        defaultParams: { period: 14, overbought: 70, oversold: 30 },
-        defaultColor: '#9C27B0',
-        pane: 'rsi' as const
-    },
-    {
-        type: 'RSI' as const,
-        name: 'RSI Subchart',
-        description: 'RSI hiển thị trong một khung riêng biệt bên dưới biểu đồ chính.',
-        defaultParams: { period: 14, overbought: 70, oversold: 30 },
-        defaultColor: '#e91e63',
-        pane: 'subchart' as const
-    },
-    {
-        type: 'TrendLines' as const,
-        name: 'Trend Lines',
-        description: 'Vẽ đường xu hướng dựa trên cấu trúc thị trường (Highs/Lows).',
-        defaultParams: {},
-        defaultColor: '#ffffff',
-        pane: 'main' as const
-    },
-    {
-        type: 'MarketStructure' as const,
-        name: 'Market Structure Labels',
-        description: 'Hiển thị các cấu trúc thị trường (HH, LL, HL, LH) trực tiếp trên biểu đồ.',
-        defaultParams: { depth: 7 },
-        defaultColor: '#ffffff',
-        pane: 'main' as const
-    },
-    {
-        type: 'BreakoutRays' as const,
-        name: 'Breakout Horizontal Rays',
-        description: 'Vẽ các đường ngang tại mức đỉnh/đáy gần nhất để theo dõi đột phá.',
-        defaultParams: {},
-        defaultColor: '#ffffff',
-        pane: 'main' as const
-    },
-    {
-        type: 'Fibonacci' as const,
-        name: 'Fibonacci Retracement',
-        description: 'Tự động tính toán các mức thoái lui Fibonacci từ các đỉnh/đáy gần nhất.',
-        defaultParams: { depth: 7 },
-        defaultColor: '#00ff88',
-        pane: 'main' as const
-    },
-    {
-        type: 'FibonacciExtension' as const,
-        name: 'Trend-Based Fibonacci Extension',
-        description: 'Mở rộng Fibonacci dựa trên xu hướng, sử dụng 3 điểm swing gần nhất.',
-        defaultParams: { depth: 7 },
-        defaultColor: '#ff3366',
-        pane: 'main' as const
+        id: 'fibonacci',
+        name: 'Fibonacci Tools',
+        icon: Ruler,
+        indicators: [
+            {
+                type: 'Fibonacci' as const,
+                name: 'Fibonacci Retracement',
+                description: 'Tự động tính toán các mức thoái lui Fibonacci.',
+                defaultParams: { depth: 7 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'FibonacciExtension' as const,
+                name: 'Trend-Based Fibonacci Extension',
+                description: 'Mở rộng Fibonacci dựa trên xu hướng (3 điểm swing).',
+                defaultParams: { depth: 7 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            }
+        ]
     }
 ];
 
 export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) {
     const addIndicator = useMarketStore(state => state.addIndicator);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
-    const handleAdd = (config: typeof AVAILABLE_INDICATORS[0]) => {
+    const filteredCategories = useMemo(() => {
+        if (!searchQuery) return CATEGORIES;
+
+        const q = searchQuery.toLowerCase();
+        return CATEGORIES.map(cat => ({
+            ...cat,
+            indicators: cat.indicators.filter(ind =>
+                ind.name.toLowerCase().includes(q) ||
+                ind.type.toLowerCase().includes(q)
+            )
+        })).filter(cat => cat.indicators.length > 0);
+    }, [searchQuery]);
+
+    const handleAdd = (indicator: any) => {
         addIndicator(chartId, {
-            type: config.type as any,
-            params: { ...config.defaultParams },
-            color: config.defaultColor,
+            type: indicator.type as any,
+            params: { ...indicator.defaultParams },
+            color: indicator.defaultColor,
             visible: true,
             lineWidth: 2,
-            pane: config.pane
+            pane: indicator.pane
         });
         onClose();
     };
 
     return (
-        <div className="absolute inset-0 bg-zinc-950 z-50 flex flex-col">
-            <div className="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
-                <h3 className="text-xs font-bold uppercase text-zinc-300">Thêm Chỉ báo</h3>
-                <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
-                    <X size={16} />
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                <div className="grid gap-2">
-                    {AVAILABLE_INDICATORS.map(indicator => (
+        <div className="absolute inset-0 z-50 flex flex-col glass-panel animate-in fade-in zoom-in-95 duration-200">
+            {/* Ultra-Compact Header */}
+            <div className="px-4 py-3 border-b border-white/5 bg-white/5 backdrop-blur-xl flex items-center justify-between min-h-[52px]">
+                {!isSearching ? (
+                    <>
+                        <div className="flex flex-col">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-primary text-glow-primary">
+                                Indicators
+                            </h3>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setIsSearching(true)}
+                                className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground transition-all"
+                            >
+                                <Search size={14} />
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-white transition-all active:scale-95"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-right-2 duration-200">
+                        <Search size={14} className="text-primary shrink-0" />
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="Tìm chỉ báo..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onBlur={() => !searchQuery && setIsSearching(false)}
+                            className="flex-1 bg-transparent border-none py-1 text-[11px] text-foreground placeholder:text-muted-foreground/30 focus:outline-none font-medium"
+                        />
                         <button
-                            key={indicator.type}
-                            onClick={() => handleAdd(indicator)}
-                            className="flex flex-col gap-1 p-3 rounded-lg bg-zinc-900/40 hover:bg-blue-500/10 border border-zinc-800 hover:border-blue-500/50 transition-all text-left group"
+                            onClick={() => {
+                                setSearchQuery('');
+                                setIsSearching(false);
+                            }}
+                            className="p-2 rounded-lg hover:bg-white/5 text-muted-foreground"
                         >
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold text-zinc-200 group-hover:text-blue-400 transition-colors">
-                                    {indicator.type}
-                                </span>
-                                <Plus size={14} className="text-zinc-600 group-hover:text-blue-500" />
-                            </div>
-                            <span className="text-[10px] text-zinc-500 leading-tight">
-                                {indicator.name}
-                            </span>
-                            <p className="text-[9px] text-zinc-600 mt-1 italic">
-                                {indicator.description}
-                            </p>
+                            <X size={14} />
                         </button>
-                    ))}
-                </div>
+                    </div>
+                )}
             </div>
 
-            <div className="p-4 border-t border-zinc-800/50 bg-zinc-900/20">
-                <div className="flex items-start gap-2">
-                    <Info size={14} className="text-blue-500/50 shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-zinc-500 leading-normal">
-                        Mẹo: Bạn có thể thêm nhiều chỉ báo cùng loại với các thông số khác nhau.
-                    </p>
-                </div>
+            {/* Content area covering almost everything */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar touch-scrolling p-3 pb-10 space-y-4">
+                {filteredCategories.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 opacity-10 gap-3">
+                        <Search size={24} />
+                        <span className="text-[9px] font-bold uppercase tracking-widest">No results</span>
+                    </div>
+                ) : (
+                    filteredCategories.map(category => (
+                        <div key={category.id} className="space-y-1.5">
+                            {/* Minimal Category Heading */}
+                            <div className="flex items-center gap-2 px-1">
+                                <h4 className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
+                                    {category.name}
+                                </h4>
+                                <div className="h-[1px] flex-1 bg-white/5" />
+                            </div>
+
+                            {/* Indicator Grid (Ultra-Compact) */}
+                            <div className="grid gap-1">
+                                {category.indicators.map(indicator => (
+                                    <button
+                                        key={`${indicator.type}-${indicator.pane}`}
+                                        onClick={() => handleAdd(indicator)}
+                                        className="group relative flex items-center justify-between gap-3 p-2.5 rounded-xl glass-card border-white/5 hover:glow-primary-border transition-all duration-300 text-left overflow-hidden active:scale-[0.98] min-h-[42px]"
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0 relative z-10">
+                                            {indicator.defaultColor === '#ffffff' ? (
+                                                <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                                                    <Sparkles size={10} className="text-primary animate-pulse" />
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor] shrink-0"
+                                                    style={{ backgroundColor: indicator.defaultColor, color: indicator.defaultColor }}
+                                                />
+                                            )}
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-[10px] font-bold text-foreground tracking-tight uppercase truncate">
+                                                    {indicator.type === 'RSI' && indicator.pane === 'subchart' ? 'RSI (Sub)' : indicator.type}
+                                                </span>
+                                                <span className="text-[8px] text-muted-foreground/40 font-semibold truncate leading-none">
+                                                    {indicator.name}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <Plus size={12} className="text-muted-foreground/20 group-hover:text-primary transition-all shrink-0" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );

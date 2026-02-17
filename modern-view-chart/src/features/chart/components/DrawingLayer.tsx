@@ -12,92 +12,19 @@ export function DrawingLayer() {
     const chartId = activeChartId || '';
 
     const drawings = useMarketStore(useShallow(state => chartId ? state.chartDrawings[chartId] || [] : []));
-    const currentTool = useMarketStore(state => state.currentDrawingTool);
-    const isDrawing = useMarketStore(state => state.isDrawing);
-    const themeColor = useMarketStore(state => state.themeColor);
-
-    const startDrawing = useMarketStore(state => state.startDrawing);
-    const cancelDrawing = useMarketStore(state => state.cancelDrawing);
     const removeDrawing = useMarketStore(state => state.removeDrawing);
     const updateDrawing = useMarketStore(state => state.updateDrawing);
     const toggleVisibility = useMarketStore(state => state.toggleDrawingVisibility);
     const toggleAllVisibility = useMarketStore(state => state.toggleAllDrawingVisibility);
     const toggleAllLock = useMarketStore(state => state.toggleAllDrawingLock);
     const clearDrawings = useMarketStore(state => state.clearDrawings);
-    const snapToCandle = useMarketStore(state => state.snapToCandle);
-    const setSnapToCandle = useMarketStore(state => state.setSnapToCandle);
 
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
-
-    const tools = [
-        { id: 'trend-line', label: 'Trend Line', icon: <TrendingUp size={16} /> },
-        { id: 'horizontal-line', label: 'Horizontal Line', icon: <Minus size={16} /> },
-        { id: 'vertical-line', label: 'Vertical Line', icon: <MoveVertical size={16} /> },
-        { id: 'crosshair', label: 'Crosshair', icon: <Crosshair size={16} /> },
-        { id: 'rectangle', label: 'Rectangle', icon: <Square size={16} /> },
-        { id: 'fib-retracement', label: 'Fib Retracement', icon: 'F' },
-        { id: 'fib-extension', label: 'Fib Extension', icon: 'FE' },
-    ];
 
     if (!chartId) return null;
 
     return (
         <div className="flex flex-col h-full bg-background relative overflow-y-auto custom-scrollbar">
-            {/* Drawing Tools Selector */}
-            <div className="p-3 border-b border-border bg-secondary/10 flex-shrink-0">
-                <h4 className="text-[10px] font-bold uppercase text-muted-foreground/60 mb-2 tracking-tight">Active Tools</h4>
-                <div className="grid grid-cols-2 gap-2">
-                    {tools.map(tool => (
-                        <button
-                            key={tool.id}
-                            onClick={() => isDrawing && currentTool === tool.id ? cancelDrawing() : startDrawing(tool.id as DrawingTool)}
-                            className={cn(
-                                "flex items-center gap-2 p-2 rounded-md border transition-all text-left",
-                                currentTool === tool.id
-                                    ? `bg-primary/10 border-primary/50 text-primary shadow-[0_0_10px_var(--glow-primary)]`
-                                    : "bg-secondary/20 border-transparent hover:border-border text-foreground/70"
-                            )}
-                        >
-                            <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-                                {typeof tool.icon === 'string' ? (
-                                    <span className="text-[10px] font-bold">{tool.icon}</span>
-                                ) : (
-                                    tool.icon
-                                )}
-                            </div>
-                            <span className="text-[10px] font-bold truncate">{tool.label}</span>
-                        </button>
-                    ))}
-                </div>
-
-                {isDrawing && (
-                    <div className="mt-3 p-2 bg-primary/10 rounded-md border border-primary/30 animate-pulse text-center">
-                        <p className="text-[9px] text-primary font-bold uppercase tracking-wider">
-                            Drawing Active - Click on chart
-                        </p>
-                    </div>
-                )}
-
-                {/* Snapping Toggle */}
-                <div className="mt-3 flex items-center justify-between p-2 bg-secondary/10 rounded-md border border-border/40">
-                    <div className="flex items-center gap-2">
-                        <Magnet size={12} className={cn("transition-colors", snapToCandle ? "text-primary" : "text-muted-foreground/40")} />
-                        <span className="text-[10px] font-bold uppercase tracking-tight">Snap to High/Low</span>
-                    </div>
-                    <button
-                        onClick={() => setSnapToCandle(!snapToCandle)}
-                        className={cn(
-                            "w-8 h-4 rounded-full relative transition-colors duration-300",
-                            snapToCandle ? "bg-primary" : "bg-secondary/40"
-                        )}
-                    >
-                        <motion.div
-                            animate={{ x: snapToCandle ? 16 : 2 }}
-                            className="absolute top-1 w-2 h-2 rounded-full bg-white shadow-sm"
-                        />
-                    </button>
-                </div>
-            </div>
 
             {/* List of active drawings */}
             <div className="p-3 flex flex-col gap-0.5 flex-shrink-0">

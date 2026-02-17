@@ -85,7 +85,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
 
     // Emit symbol change when settling
     useEffect(() => {
-        if (centerSymbol && centerSymbol !== lastEmittedSymbol.current) {
+        if (centerSymbol && centerSymbol !== lastEmittedSymbol.current && initialCentered.current) {
             const timer = setTimeout(() => {
                 setChartSymbol(activeChartId, centerSymbol);
                 lastEmittedSymbol.current = centerSymbol;

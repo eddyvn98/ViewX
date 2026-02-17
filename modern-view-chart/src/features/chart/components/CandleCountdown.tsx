@@ -57,7 +57,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
 
                 // Color based on trend
                 const isUp = currentPrice >= (lastCandle.open || currentPrice);
-                containerRef.current.className = `absolute right-0 z-50 flex flex-col items-start pl-2 justify-center pointer-events-none select-none transition-colors duration-200 ${isUp ? 'bg-emerald-600' : 'bg-rose-600'} rounded-l-md shadow-sm border-y border-l border-white/20 w-[80px] h-[36px]`;
+                containerRef.current.className = `absolute right-0 z-50 flex flex-col items-start pl-2 justify-center pointer-events-none select-none transition-colors duration-200 ${isUp ? 'bg-emerald-600' : 'bg-rose-600'} rounded-l-md shadow-sm border-y border-l border-white/20 w-[62px] h-[36px]`;
             } else {
                 containerRef.current.style.display = 'none';
             }

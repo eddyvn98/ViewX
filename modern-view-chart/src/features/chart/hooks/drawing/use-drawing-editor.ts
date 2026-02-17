@@ -6,6 +6,8 @@ import { distanceToSegment, getDeleteButtonPosition } from '../../utils/geometry
 import { ManualLineData } from '../../logic/manual-line-primitive';
 import { calculateFibLevels } from '../../utils/fib-utils';
 import { toSec } from '../../utils/time-utils';
+import { findSnapPoint } from '../../utils/snap-utils';
+import { Candle } from '@/lib/store/types';
 
 const EMPTY_ARRAY: any[] = [];
 
@@ -15,9 +17,11 @@ export function useDrawingEditor(
     series: ISeriesApi<any> | null,
     containerRef: React.RefObject<HTMLDivElement | null>,
     isDrawing: boolean,
-    primitivesRef?: React.MutableRefObject<Record<string, any>>
+    primitivesRef?: React.MutableRefObject<Record<string, any>>,
+    candles: Candle[] = EMPTY_ARRAY
 ) {
     const chartDrawings = useMarketStore(state => state.chartDrawings[chartId] || EMPTY_ARRAY);
+    const snapToCandle = useMarketStore(state => state.snapToCandle);
     const {
         selectedDrawingId,
         setSelectedDrawing,
@@ -258,23 +262,21 @@ export function useDrawingEditor(
         let targetY = rawY;
 
         // If we have crosshair data, use it + offset
-        if (lastCrosshairPointRef.current) {
-            // Re-calculate target based on crosshair to be safe, or just use raw if standard
-            // The "fix" was using crosshair to drive logic. 
-            // Let's stick to the verified fix: 
-            // Actually, the fix was: use `lastCrosshairPointRef` for reliable coordinate, 
-            // but `param.point` in `subscribeCrosshairMove` IS the reliable one.
-            // Wait, `handleDragMove` comes from Chart container listener or Window? 
-            // If it comes from `useChartInteraction`, it's receiving Chart's MouseEventParams.
-            // If so, `param.point` IS reliable chart coordinates.
+        // Re-calculate target based on crosshair to be safe, or just use raw if standard
+        // The "fix" was using crosshair to drive logic. 
+        // Let's stick to the verified fix: 
+        // Actually, the fix was: use `lastCrosshairPointRef` for reliable coordinate, 
+        // but `param.point` in `subscribeCrosshairMove` IS the reliable one.
+        // Wait, `handleDragMove` comes from Chart container listener or Window? 
+        // If it comes from `useChartInteraction`, it's receiving Chart's MouseEventParams.
+        // If so, `param.point` IS reliable chart coordinates.
 
-            // BUT! The previous fix used `coordOffset`. 
-            // Let's apply that if we are using RAW window events.
-            // If `handleDragMove` is called with Chart params, `param.point` is already good.
-            // Let's assume standard behavior first.
-            // Actually, `use-chart-interaction` calls this with `MouseEventParams` from the chart.
-            // So `param.point` is (x,y) in chart logical space.
-        }
+        // BUT! The previous fix used `coordOffset`. 
+        // Let's apply that if we are using RAW window events.
+        // If `handleDragMove` is called with Chart params, `param.point` is already good.
+        // Let's assume standard behavior first.
+        // Actually, `use-chart-interaction` calls this with `MouseEventParams` from the chart.
+        // So `param.point` is (x,y) in chart logical space.
 
         // Re-implementing the specific offset fix because `param.point` might jitter
         // The fix logic:
@@ -284,10 +286,19 @@ export function useDrawingEditor(
 
         // Simplify: Just use coordinateToTime/Price
         const timeScale = chart.timeScale();
-        const newTime = timeScale.coordinateToTime(targetX);
-        const newPrice = series.coordinateToPrice(targetY);
+        const time = timeScale.coordinateToTime(targetX);
+        let newPrice = series.coordinateToPrice(targetY) as number | null;
 
-        if (newTime && newPrice !== null) {
+        // MAGNET MODE: Snapping during edit
+        if (snapToCandle && time && newPrice !== null) {
+            const snap = findSnapPoint(targetY, time, candles, series, 20);
+            if (snap) {
+                targetY = series.priceToCoordinate(snap.price) || targetY;
+                newPrice = snap.price;
+            }
+        }
+
+        if (time && newPrice !== null) {
             const drawingId = draggedDrawingIdRef.current;
             const primitive = primitivesRef?.current?.[drawingId];
             const drawing = chartDrawings.find(d => d.id === drawingId);
@@ -295,7 +306,7 @@ export function useDrawingEditor(
             if (drawing && primitive) {
                 const newPoints = [...draggedFinalPointsRef.current!!];
                 newPoints[draggedPointIndexRef.current] = {
-                    time: toSec(newTime as Time),
+                    time: toSec(time as Time),
                     price: newPrice
                 };
                 draggedFinalPointsRef.current = newPoints;

@@ -21,7 +21,7 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
     isBridgeOnline: false,
     tickers: {},
     symbolInfo: {},
-    watchlist: ['BTCUSDm', 'XAUUSDm', 'EURUSDm'],
+    watchlist: ['XAUUSDm', 'BTCUSDm', 'EURUSDm'],
 
     setConnected: (status) => set({ isConnected: status }),
     setBridgeOnline: (status) => set({ isBridgeOnline: status }),

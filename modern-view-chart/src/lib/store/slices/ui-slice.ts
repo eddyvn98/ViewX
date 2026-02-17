@@ -21,11 +21,14 @@ export interface UISlice {
     themeColor: 'blue' | 'green' | 'amber' | 'red' | 'slate';
     sidebarTopHeight: number;
     rightSidebarTabOrder: string[];
+    isDrawingToolbarVisible: boolean;
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
     setRightSidebarOpen: (isOpen: boolean) => void;
     toggleRightSidebar: () => void;
+    toggleDrawingToolbar: () => void;
+    setDrawingToolbarVisible: (visible: boolean) => void;
     setActiveRightSidebarTab: (tab: RightSidebarTab) => void;
     setActiveMobileTab: (tab: string) => void;
     setInputFocused: (focused: boolean) => void;
@@ -50,11 +53,14 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     sidebarTopHeight: 40,
     rightSidebarTabOrder: ['strategy', 'layer', 'trade'],
     themeColor: 'green',
+    isDrawingToolbarVisible: true,
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
     setRightSidebarOpen: (isOpen) => set({ isRightSidebarOpen: isOpen }),
     toggleRightSidebar: () => set((state) => ({ isRightSidebarOpen: !state.isRightSidebarOpen })),
+    toggleDrawingToolbar: () => set((state) => ({ isDrawingToolbarVisible: !state.isDrawingToolbarVisible })),
+    setDrawingToolbarVisible: (visible) => set({ isDrawingToolbarVisible: visible }),
     setActiveRightSidebarTab: (tab) => set({ activeRightSidebarTab: tab }),
     setActiveMobileTab: (tab) => set({ activeMobileTab: tab }),
     setInputFocused: (focused) => set({ isInputFocused: focused }),
