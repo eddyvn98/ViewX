@@ -5,10 +5,11 @@ import { cn } from '@/lib/utils';
 
 export function VirtualBalanceCard() {
     const { virtualBalance, initialVirtualBalance, lastBacktestPnL, backtestCount, setVirtualBalance, resetVirtualAccount } = useStrategyStore();
+    const [mounted, setMounted] = React.useState(false);
     const [confirmAction, setConfirmAction] = React.useState<'balance' | 'all' | null>(null);
 
-    // Auto-cancel confirmation after 3 seconds
     React.useEffect(() => {
+        setMounted(true);
         if (confirmAction) {
             const timer = setTimeout(() => setConfirmAction(null), 3000);
             return () => clearTimeout(timer);
@@ -53,7 +54,10 @@ export function VirtualBalanceCard() {
                     </div>
                     <div className="flex items-center gap-1">
                         <span className="text-[12px] font-bold text-foreground tracking-tight leading-none">
-                            ${Number(virtualBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {mounted
+                                ? `$${Number(virtualBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : `$${Number(virtualBalance).toFixed(2)}`
+                            }
                         </span>
                         <span className={cn(
                             "text-[8px] font-bold",

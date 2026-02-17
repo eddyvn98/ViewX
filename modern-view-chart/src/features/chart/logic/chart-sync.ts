@@ -84,16 +84,25 @@ export const autoSyncLayout = (
         setSyncRequestId(null);
         if (!priceContainer || !subchartContainer) return;
 
-        const priceW = priceChart.priceScale('right').width();
-        const subW = subchartChart.priceScale('right').width();
-        const maxW = Math.max(priceW, subW, initialMinW);
+        try {
+            const priceScale = priceChart?.priceScale('right');
+            const subchartScale = subchartChart?.priceScale('right');
 
-        if (Math.abs(maxW - lastMaxW) > 1) {
-            setLastMaxW(maxW);
-            const opt = { rightPriceScale: { minimumWidth: maxW } };
-            priceChart.applyOptions(opt);
-            subchartChart.applyOptions(opt);
-            timescaleChart.applyOptions(opt);
+            if (!priceScale || !subchartScale) return;
+
+            const priceW = priceScale.width();
+            const subW = subchartScale.width();
+            const maxW = Math.max(priceW, subW, initialMinW);
+
+            if (Math.abs(maxW - lastMaxW) > 1) {
+                setLastMaxW(maxW);
+                const opt = { rightPriceScale: { minimumWidth: maxW } };
+                priceChart?.applyOptions(opt);
+                subchartChart?.applyOptions(opt);
+                timescaleChart?.applyOptions(opt);
+            }
+        } catch (e) {
+            // Chart might have been destroyed/removed during RAF
         }
     });
 

@@ -97,12 +97,17 @@ export const renderStatus = (refs: OHLCRefs, isLive: boolean) => {
         refs.statusText.classList.add(isLive ? 'text-emerald-500' : 'text-amber-500');
     }
     if (refs.container) {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
         if (isLive) {
             refs.container.classList.remove('bg-amber-500/10', 'border-amber-500/20');
-            refs.container.classList.add('bg-primary/5', 'border-primary/10');
+            if (!isMobile) refs.container.classList.add('bg-primary/5', 'border-primary/10');
         } else {
-            refs.container.classList.remove('bg-primary/5', 'border-primary/10');
-            refs.container.classList.add('bg-amber-500/10', 'border-amber-500/20');
+            refs.container.classList.remove('bg-primary/5', 'border-primary/10', 'bg-transparent', 'border-none');
+            if (!isMobile) {
+                refs.container.classList.add('bg-amber-500/10', 'border-amber-500/20');
+            } else {
+                refs.container.classList.add('bg-transparent', 'border-none');
+            }
         }
     }
 };

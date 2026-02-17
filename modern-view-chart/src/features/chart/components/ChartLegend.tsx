@@ -39,7 +39,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
             {/* Main Info Card - Unified DNA */}
             <div
                 data-legend-container
-                className="flex flex-col gap-1.5 p-1.5 backdrop-blur-xl border rounded-xl shadow-sm w-[114px] bg-primary/5 border-primary/10 transition-colors duration-300"
+                className="flex flex-col gap-1.5 p-1.5 md:backdrop-blur-xl md:border rounded-xl md:shadow-sm w-[114px] bg-transparent border-none md:bg-primary/5 md:border-primary/10 transition-colors duration-300"
             >
                 {/* Status Column */}
                 <div className="flex flex-col gap-0.5 pb-1 border-b border-border/10">
