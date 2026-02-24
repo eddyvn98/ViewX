@@ -5,10 +5,14 @@ import { useCrossWindowSync } from '@/hooks/use-cross-window-sync';
 import { cn } from '@/lib/utils';
 import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
 import { Trash2, Search, Star } from 'lucide-react';
-import React, { useMemo, useState, memo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useState, memo, useCallback, useRef, useEffect, useDeferredValue } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
+import { List, type RowComponentProps } from 'react-window';
 
 type DataSource = 'BINANCE' | 'MT5';
+type SourceTab = 'ALL' | 'BINANCE' | 'MT5';
+const SOURCE_TABS: SourceTab[] = ['ALL', 'BINANCE', 'MT5'];
 
 interface TickerRowProps {
     symbol: string;
@@ -100,7 +104,7 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
 
             {/* Column 1: Symbol & Source */}
             <div className="min-w-0 flex items-center gap-2.5 relative z-10">
-                <SymbolIcon symbol={symbol} className="w-6 h-6 shrink-0" />
+                <SymbolIcon symbol={symbol} className="w-7 h-7 shrink-0" />
                 <div className="flex flex-col min-w-0">
                     <span className={cn(
                         "text-[13px] font-bold tracking-tight transition-all duration-300 whitespace-nowrap",
@@ -163,6 +167,36 @@ interface MarketListProps {
     mode?: 'discovery' | 'watchlist';
 }
 
+interface RowData {
+    items: { symbol: string; source: DataSource }[];
+    mode: 'discovery' | 'watchlist';
+    activeChartSymbol: string | null;
+    watchedSet: Set<string>;
+    onSelect: (symbol: string, source: DataSource) => void;
+    onAdd: (symbol: string) => void;
+    onRemove: (symbol: string) => void;
+}
+
+function VirtualRow({ index, style, ...data }: RowComponentProps<RowData>): React.ReactElement | null {
+    const item = data.items[index];
+    if (!item) return null;
+
+    return (
+        <div style={style}>
+            <TickerRow
+                symbol={item.symbol}
+                source={item.source}
+                mode={data.mode}
+                isActive={data.activeChartSymbol === item.symbol}
+                isWatched={data.watchedSet.has(item.symbol)}
+                onSelect={data.onSelect}
+                onAdd={data.onAdd}
+                onRemove={data.onRemove}
+            />
+        </div>
+    );
+}
+
 function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const watchlist = useMarketStore((state) => state.watchlist);
     const addToWatchlist = useMarketStore((state) => state.addToWatchlist);
@@ -183,7 +217,8 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const activeChartSymbol = (activeChartId && charts[activeChartId]) ? charts[activeChartId].symbol : null;
 
     const [search, setSearch] = useState('');
-    const [sourceTab, setSourceTab] = useState<'ALL' | 'BINANCE' | 'MT5'>('ALL');
+    const deferredSearch = useDeferredValue(search);
+    const [sourceTab, setSourceTab] = useState<SourceTab>('ALL');
 
     // FORCE DEFAULT WATCHLIST IF EMPTY
     React.useEffect(() => {
@@ -223,12 +258,14 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
         return symbols
             .filter(t => {
                 const s = t.symbol.toLowerCase();
-                const matchesSearch = s.includes(search.toLowerCase());
+                const matchesSearch = s.includes(deferredSearch.toLowerCase());
                 const matchesTab = sourceTab === 'ALL' || t.source === sourceTab;
                 return matchesSearch && matchesTab;
             })
             .sort((a, b) => a.symbol.localeCompare(b.symbol));
-    }, [allSymbols, availableSymbols, search, sourceTab, watchlist, mode]);
+    }, [allSymbols, availableSymbols, deferredSearch, sourceTab, watchlist, mode]);
+
+    const watchedSet = useMemo(() => new Set(watchlist), [watchlist]);
 
     const handleSymbolSelect = useCallback((symbol: string, source: 'BINANCE' | 'MT5') => {
         if (activeChartId) {
@@ -247,6 +284,16 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
         }
     }, [activeChartId, charts, mode, setChartSymbol, watchlist, addToWatchlist, broadcastGroupSymbolChange, broadcastSymbolChange]);
 
+    const rowData = useMemo<RowData>(() => ({
+        items: symbolList,
+        mode,
+        activeChartSymbol,
+        watchedSet,
+        onSelect: handleSymbolSelect,
+        onAdd: addToWatchlist,
+        onRemove: removeFromWatchlist,
+    }), [symbolList, mode, activeChartSymbol, watchedSet, handleSymbolSelect, addToWatchlist, removeFromWatchlist]);
+
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-0 h-full">
             {/* Premium Header: Search & Filters */}
@@ -263,10 +310,10 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                 </div>
 
                 <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-0.5 rounded-xl border border-border dark:border-white/5 h-7 ml-2 shadow-sm">
-                    {['ALL', 'BINANCE', 'MT5'].map((tab) => (
+                    {SOURCE_TABS.map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setSourceTab(tab as any)}
+                            onClick={() => setSourceTab(tab)}
                             className={cn(
                                 "px-2.5 text-[9px] font-bold rounded-lg transition-all flex items-center justify-center tracking-wide",
                                 sourceTab === tab
@@ -290,25 +337,25 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
             )}
 
             {/* Scrollable List Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-background/5">
+            <div className="flex-1 min-h-0 bg-background/5">
                 {symbolList.length === 0 ? (
                     <div className="p-10 text-center text-muted-foreground text-xs italic">
                         {mode === 'watchlist' ? 'Your watchlist is empty' : 'No tickers found'}
                     </div>
                 ) : (
-                    symbolList.map((item) => (
-                        <TickerRow
-                            key={item.symbol}
-                            symbol={item.symbol}
-                            source={item.source}
-                            mode={mode}
-                            isActive={activeChartSymbol === item.symbol}
-                            isWatched={watchlist.includes(item.symbol)}
-                            onSelect={handleSymbolSelect}
-                            onAdd={addToWatchlist}
-                            onRemove={removeFromWatchlist}
-                        />
-                    ))
+                    <AutoSizer
+                        renderProp={({ height, width }) => (
+                            <List
+                                style={{ height: height ?? 0, width: width ?? 0 }}
+                                rowCount={symbolList.length}
+                                rowHeight={mode === 'watchlist' ? 56 : 52}
+                                rowComponent={VirtualRow}
+                                rowProps={rowData}
+                                overscanCount={8}
+                                className="custom-scrollbar"
+                            />
+                        )}
+                    />
                 )}
             </div>
         </div>

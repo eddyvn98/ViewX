@@ -83,7 +83,7 @@ export class SARIndicator {
                 this.series.update({
                     time: candleTime as any,
                     value: lastVal
-                });
+                } as any);
             } catch (err) { }
         }
     }

@@ -109,8 +109,13 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
     return useMemo(() => {
         if (!indicatorsWithRealtime.length) return [];
 
-        const symbolMeta = useMarketStore.getState().symbolInfo[candles[0]?.symbol || ''] ||
-            Object.values(useMarketStore.getState().symbolInfo).find(s => s.symbol.includes(candles[0]?.symbol || ''));
+        const state = useMarketStore.getState();
+        const chartSymbol = Object.values(state.tabs)
+            .flatMap((tab) => Object.values(tab.charts || {}))
+            .find((chart) => chart.id === chartId)?.symbol || '';
+
+        const symbolMeta = state.symbolInfo[chartSymbol] ||
+            Object.values(state.symbolInfo).find(s => chartSymbol && s.symbol.includes(chartSymbol));
         const digits = symbolMeta?.digits || 2;
 
         return indicatorsWithRealtime.map(({ config, results, period }) => {

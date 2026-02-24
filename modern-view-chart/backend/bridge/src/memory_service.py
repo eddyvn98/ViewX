@@ -1,8 +1,13 @@
 import asyncio
-from neural_memory import Brain
-from neural_memory.storage import InMemoryStorage
-from neural_memory.engine.encoder import MemoryEncoder
-from neural_memory.engine.retrieval import ReflexPipeline
+
+try:
+    from neural_memory import Brain
+    from neural_memory.storage import InMemoryStorage
+    from neural_memory.engine.encoder import MemoryEncoder
+    from neural_memory.engine.retrieval import ReflexPipeline
+    HAS_NEURAL_MEMORY = True
+except Exception:
+    HAS_NEURAL_MEMORY = False
 
 class MemoryService:
     def __init__(self):
@@ -12,6 +17,9 @@ class MemoryService:
         self.pipeline = None
 
     async def initialize(self):
+        if not HAS_NEURAL_MEMORY:
+            print("[MEMORY] neural-memory not available. Running bridge without memory features.")
+            return False
         try:
             self.storage = InMemoryStorage()
             # Create a brain

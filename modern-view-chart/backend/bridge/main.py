@@ -38,8 +38,9 @@ async def main():
     # Init Memory Service
     await memory_service.initialize()
     
-    if not service.initialize():
-        return
+    while not service.initialize():
+        print("[BRIDGE] MT5 not ready. Retrying in 10s...")
+        await asyncio.sleep(10)
 
     # Fetch dynamic symbols
     available_symbols = service.fetch_available_symbols()
