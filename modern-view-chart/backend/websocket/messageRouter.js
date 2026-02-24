@@ -1,5 +1,5 @@
 import { handleAuth } from "./handlers/authHandler.js";
-import { handleSubscribeCandle } from "./handlers/subscribeHandler.js";
+import { handleSubscribeCandle, handleSubscribeSymbols } from "./handlers/subscribeHandler.js";
 import { handleMt5Update } from "./handlers/mt5UpdateHandler.js";
 import { handleMt5Positions } from "./handlers/mt5PositionsHandler.js";
 import { handleMt5Candles } from "./handlers/mt5CandlesHandler.js";
@@ -26,6 +26,9 @@ export function setupMessageRouter(clients, mt5Prices) {
                     break;
                 case "subscribeCandle":
                     handleSubscribeCandle(context, data);
+                    break;
+                case "subscribeSymbols":
+                    handleSubscribeSymbols(context, data);
                     break;
                 case "mt5_update":
                     handleMt5Update(context, data);

@@ -1,0 +1,12 @@
+services:
+  viewx-mongo:
+    image: mongo:7
+    container_name: viewx-mongo
+    restart: unless-stopped
+    ports:
+      - "27027:27017"
+    volumes:
+      - viewx_mongo_data:/data/db
+
+volumes:
+  viewx_mongo_data:

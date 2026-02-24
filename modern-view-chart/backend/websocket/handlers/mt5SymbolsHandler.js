@@ -1,5 +1,3 @@
-import { broadcastToAll } from "../services/broadcastService.js";
-
 export function handleMt5SymbolsAvailable({ ws, clients }, data) {
     console.log(`[MT5] Received ${data.symbols?.length} available symbols from bridge`);
 
@@ -11,5 +9,9 @@ export function handleMt5SymbolsAvailable({ ws, clients }, data) {
         symbols: data.symbols
     });
 
-    broadcastToAll(clients, payload);
+    for (const [clientWs] of clients.entries()) {
+        if (!clientWs.isBridge && clientWs.readyState === clientWs.OPEN) {
+            clientWs.send(payload);
+        }
+    }
 }

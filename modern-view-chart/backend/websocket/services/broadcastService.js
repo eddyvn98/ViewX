@@ -1,12 +1,18 @@
 import { RSI } from "technicalindicators";
 import { calcBollingerBands } from "../../services/indicators.js";
-import { fetchLatestCandle } from "./dataService.js";
+import { fetchLatestCandle, fetchPrices } from "./dataService.js";
+import { getBinancePrices } from "./binanceTickerService.js";
 import { candleBuffers } from "../handlers/subscribeHandler.js";
 
+const CORE_SYMBOLS = (process.env.CORE_SYMBOLS || "XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 export async function broadcastCandleForSymbol({ clients, mt5Prices }, symbolTarget) {
-    const normalizedTarget = (symbolTarget || "").replace(/[mM]$/, 'm');
+    const normalizedTarget = (symbolTarget || "").replace(/[mM]$/, "m");
     const groups = groupClientsByChart(clients);
-    const keys = Object.keys(groups).filter(k => k.startsWith(`${normalizedTarget}|`));
+    const keys = Object.keys(groups).filter((k) => k.startsWith(`${normalizedTarget}|`));
 
     for (const key of keys) {
         const [symbol, interval] = key.split("|");
@@ -44,7 +50,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices }, symbolTar
                 symbol,
                 interval,
                 rsi: rsiValue,
-                bollinger: bollinger,
+                bollinger,
             },
         });
 
@@ -56,34 +62,55 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices }, symbolTar
     }
 }
 
-import { fetchPrices } from "./dataService.js";
-import { getBinancePrices } from "./binanceTickerService.js";
+function collectClientSymbols(meta) {
+    const wanted = new Set();
+    for (const chartKey of meta?.charts || []) {
+        const [symbol] = chartKey.split("|");
+        if (symbol) wanted.add(symbol);
+    }
+    for (const symbol of meta?.symbols || []) {
+        if (symbol) wanted.add(symbol);
+    }
+    return wanted;
+}
 
 export async function broadcastPricesToSubscribers({ clients, mt5Prices }) {
     try {
-        // Use real-time prices from our WebSocket service for better performance
         const allPrices = getBinancePrices();
-
-        // If WebSocket hasn't filled yet, fallback to REST once
         const tickers = allPrices.length > 0 ? allPrices : await fetchPrices();
+        const mt5Data = Array.from(mt5Prices.values());
 
-        for (const [ws] of clients.entries()) {
+        for (const [ws, meta] of clients.entries()) {
             if (ws.readyState !== ws.OPEN) continue;
 
-            if (tickers.length > 0) {
-                const mt5Data = Array.from(mt5Prices.values());
-                const combinedPrices = [...tickers, ...mt5Data];
+            const wantedSymbols = collectClientSymbols(meta);
+            let combinedPrices;
+
+            if (wantedSymbols.size === 0) {
+                const coreSet = new Set(CORE_SYMBOLS);
+                combinedPrices = [
+                    ...tickers.filter((item) => coreSet.has(item.symbol)),
+                    ...mt5Data.filter((item) => coreSet.has(item.symbol)),
+                ];
+            } else {
+                combinedPrices = [
+                    ...tickers.filter((item) => wantedSymbols.has(item.symbol)),
+                    ...mt5Data.filter((item) => wantedSymbols.has(item.symbol)),
+                ];
+            }
+
+            if (combinedPrices.length > 0) {
                 ws.send(JSON.stringify({ topic: "priceUpdate", data: combinedPrices }));
             }
         }
     } catch (err) {
-        console.error("❌ Error broadcasting prices:", err.message);
+        console.error("[WS] Error broadcasting prices:", err.message);
     }
 }
 
 export async function broadcastChartCandles({ clients, mt5Prices }) {
     const groups = groupClientsByChart(clients);
-    const uniqueSymbols = new Set(Object.keys(groups).map(k => k.split("|")[0]));
+    const uniqueSymbols = new Set(Object.keys(groups).map((k) => k.split("|")[0]));
 
     for (const symbol of uniqueSymbols) {
         await broadcastCandleForSymbol({ clients, mt5Prices }, symbol);
@@ -104,7 +131,6 @@ function groupClientsByChart(clients) {
         if (!meta.charts || meta.charts.size === 0) continue;
 
         for (const key of meta.charts) {
-            // Key is already normalized in handleSubscribeCandle as "symbol|interval"
             if (!groups[key]) groups[key] = [];
             groups[key].push(ws);
         }

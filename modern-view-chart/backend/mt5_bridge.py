@@ -4,9 +4,20 @@ import websockets
 import json
 import time
 import sys
+import os
+from urllib.parse import urlencode
 
 # Configuration
-NODE_WS_URL = "ws://localhost:8091"
+def build_node_ws_url():
+    base_url = os.getenv("NODE_WS_URL", "ws://localhost:8091").strip()
+    access_token = os.getenv("ACCESS_TOKEN", "").strip()
+    if not access_token:
+        return base_url
+    sep = "&" if "?" in base_url else "?"
+    return f"{base_url}{sep}{urlencode({'access_token': access_token})}"
+
+
+NODE_WS_URL = build_node_ws_url()
 SYMBOLS = ["XAUUSDm", "BTCUSDm", "EURUSDm", "GBPUSDm"]
 
 # Timeframe mapping for historical data

@@ -1,13 +1,40 @@
-﻿import json
+import json
 import os
 import re
 import subprocess
 import threading
 import time
+from urllib.parse import urlencode
 
 frontend_url = None
 backend_url = None
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def load_access_token():
+    env_token = (os.getenv("ACCESS_TOKEN") or "").strip()
+    if env_token:
+        return env_token
+
+    env_path = os.path.join(BASE_DIR, ".env")
+    if not os.path.exists(env_path):
+        return ""
+
+    try:
+        with open(env_path, "r", encoding="utf-8") as file_obj:
+            for line in file_obj:
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                if key.strip() == "ACCESS_TOKEN":
+                    return value.strip().strip("\"'")
+    except Exception as exc:
+        print(f"[TUNNEL] Warning: failed to parse .env for ACCESS_TOKEN: {exc}")
+
+    return ""
+
+
+ACCESS_TOKEN = load_access_token()
 
 
 def run_tunnel(port, type_name):
@@ -59,12 +86,20 @@ def save_access_info():
     time.sleep(1)
 
     ws_url = backend_url.replace("https://", "wss://")
-    final_link = f"{frontend_url}?mobile=1&ws_url={ws_url}"
+    if ACCESS_TOKEN:
+        ws_url = f"{ws_url}?{urlencode({'access_token': ACCESS_TOKEN})}"
+
+    params = {"mobile": "1", "ws_url": ws_url}
+    if ACCESS_TOKEN:
+        params["access_token"] = ACCESS_TOKEN
+    final_link = f"{frontend_url}?{urlencode(params)}"
 
     data = {
         "frontend": frontend_url,
         "backend": backend_url,
         "mobile_link": final_link,
+        "ws_url": ws_url,
+        "access_token_configured": bool(ACCESS_TOKEN),
         "updated_at": time.time(),
     }
 
@@ -91,6 +126,8 @@ def save_access_info():
 
 if __name__ == "__main__":
     print("Initializing 2 Cloudflare tunnels...")
+    if not ACCESS_TOKEN:
+        print("[TUNNEL] WARNING: ACCESS_TOKEN is missing. Public API/WS calls will fail.")
 
     thread_frontend = threading.Thread(target=run_tunnel, args=(3000, "FRONTEND"), daemon=True)
     thread_backend = threading.Thread(target=run_tunnel, args=(8091, "BACKEND"), daemon=True)

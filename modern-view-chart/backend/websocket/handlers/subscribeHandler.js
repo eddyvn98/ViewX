@@ -54,3 +54,16 @@ export function handleSubscribeCandle({ ws, clients }, data) {
         }));
     }
 }
+
+export function handleSubscribeSymbols({ ws, clients }, data) {
+    const clientData = clients.get(ws);
+    if (!clientData) return;
+
+    if (!Array.isArray(data.symbols)) return;
+
+    clientData.symbols = data.symbols
+        .filter((symbol) => typeof symbol === "string")
+        .map((symbol) => symbol.trim())
+        .filter(Boolean)
+        .slice(0, 300);
+}

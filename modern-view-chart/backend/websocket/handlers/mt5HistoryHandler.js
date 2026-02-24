@@ -1,9 +1,12 @@
+import { setBridgeOnline } from "../../runtime-state.js";
+
 // Throttle history broadcasts to prevent spam
 let lastHistoryBroadcast = 0;
 let lastHistoryHash = null;
 const HISTORY_THROTTLE_MS = 5000; // 5 seconds
 
 export function handleMt5History({ ws, clients }, data) {
+    setBridgeOnline(true);
     if (!ws.isBridge) {
         ws.isBridge = true;
     }

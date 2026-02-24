@@ -27,6 +27,17 @@ if (-not (Test-Path $PythonCmd)) {
 Set-Location $RepoRoot
 New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null
 
+$dbUpScript = Join-Path $PSScriptRoot "db-up.ps1"
+if (Test-Path $dbUpScript) {
+    try {
+        Write-Host "[run-all] Ensuring MongoDB container is running..."
+        & $dbUpScript
+    }
+    catch {
+        Write-Warning ("[run-all] MongoDB startup skipped: " + $_.Exception.Message)
+    }
+}
+
 $stopScript = Join-Path $PSScriptRoot "stop-all.ps1"
 if (Test-Path $stopScript) {
     & $stopScript | Out-Null

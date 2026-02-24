@@ -1,12 +1,22 @@
 import asyncio
 import websockets
 import json
+import os
 from strategy_manager import StrategyManager
 
 from analyzer_service import AnalyzerService
 from optimizer_service import OptimizerService
 
-WS_URL = "ws://127.0.0.1:8091"
+def build_ws_url():
+    base_url = os.getenv("NODE_WS_URL", "ws://127.0.0.1:8091").strip()
+    access_token = os.getenv("ACCESS_TOKEN", "").strip()
+    if not access_token:
+        return base_url
+    sep = "&" if "?" in base_url else "?"
+    return f"{base_url}{sep}access_token={access_token}"
+
+
+WS_URL = build_ws_url()
 SYMBOL = "XAUUSDm"
 TIMEFRAME = "1m" # Default M1 for Bot
 

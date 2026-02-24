@@ -14,6 +14,33 @@ interface PositionsTableProps {
 type SortField = 'symbol' | 'ticket' | 'type' | 'volume' | 'open_price' | 'current_price' | 'sl' | 'tp' | 'profit' | 'time' | 'magic';
 type SortDirection = 'asc' | 'desc';
 
+function SortIcon({ field, sortField, sortDirection }: { field: SortField; sortField: SortField; sortDirection: SortDirection }) {
+    if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
+    return sortDirection === 'asc' ? <ArrowUp size={12} className="ml-1 text-blue-500" /> : <ArrowDown size={12} className="ml-1 text-blue-500" />;
+}
+
+function HeaderCell({
+    field,
+    label,
+    className = "",
+    sortField,
+    sortDirection,
+    onSort,
+}: {
+    field: SortField;
+    label: string;
+    className?: string;
+    sortField: SortField;
+    sortDirection: SortDirection;
+    onSort: (field: SortField) => void;
+}) {
+    return (
+        <th className={`p-2 font-medium border-b border-border cursor-pointer hover:bg-secondary/40 transition-colors ${className}`} onClick={() => onSort(field)}>
+            <div className="flex items-center">{label}<SortIcon field={field} sortField={sortField} sortDirection={sortDirection} /></div>
+        </th>
+    );
+}
+
 function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition, onSymbolClick }: PositionsTableProps) {
     const [editingCell, setEditingCell] = useState<{ ticket: number, field: 'sl' | 'tp', value: string } | null>(null);
     const [sortField, setSortField] = useState<SortField>('time');
@@ -55,32 +82,21 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
         else if (e.key === 'Escape') setEditingCell(null);
     }, [commitEdit]);
 
-    const SortIcon = ({ field }: { field: SortField }) => {
-        if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
-        return sortDirection === 'asc' ? <ArrowUp size={12} className="ml-1 text-blue-500" /> : <ArrowDown size={12} className="ml-1 text-blue-500" />;
-    };
-
-    const HeaderCell = ({ field, label, className = "" }: { field: SortField, label: string, className?: string }) => (
-        <th className={`p-2 font-medium border-b border-border cursor-pointer hover:bg-secondary/40 transition-colors ${className}`} onClick={() => handleSort(field)}>
-            <div className="flex items-center">{label}<SortIcon field={field} /></div>
-        </th>
-    );
-
     return (
         <table className="w-full text-[11px] text-left border-collapse min-w-[1000px]">
             <thead className="sticky top-0 bg-secondary/10 text-muted-foreground z-10 transition-colors">
                 <tr>
-                    <HeaderCell field="time" label="Time" />
-                    <HeaderCell field="symbol" label="Symbol" />
-                    <HeaderCell field="ticket" label="Ticket" />
-                    <HeaderCell field="magic" label="Magic" />
-                    <HeaderCell field="type" label="Type" />
-                    <HeaderCell field="volume" label="Volume" />
-                    <HeaderCell field="open_price" label="Open P." />
-                    <HeaderCell field="current_price" label="Current P." />
-                    <HeaderCell field="sl" label="SL" />
-                    <HeaderCell field="tp" label="TP" />
-                    <HeaderCell field="profit" label="Profit" />
+                    <HeaderCell field="time" label="Time" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="symbol" label="Symbol" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="ticket" label="Ticket" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="magic" label="Magic" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="type" label="Type" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="volume" label="Volume" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="open_price" label="Open P." sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="current_price" label="Current P." sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="sl" label="SL" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="tp" label="TP" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="profit" label="Profit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <th className="p-2 font-medium border-b border-border">Actions</th>
                 </tr>
             </thead>
@@ -118,7 +134,7 @@ interface PositionRowProps {
  * PositionRow with DOM-based updates for realtime fields (price, profit)
  * Avoids React re-renders on every ticker update
  */
-const PositionRow = memo(({ pos, onClosePosition, onSymbolClick, editingCell, setEditingCell, commitEdit, handleKeyDown }: PositionRowProps) => {
+const PositionRow = memo(function PositionRow({ pos, onClosePosition, onSymbolClick, editingCell, setEditingCell, commitEdit, handleKeyDown }: PositionRowProps) {
     const priceRef = useRef<HTMLTableCellElement>(null);
     const profitRef = useRef<HTMLTableCellElement>(null);
     const rafIdRef = useRef<number | null>(null);

@@ -20,7 +20,16 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
     const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
     const removeAlert = useMarketStore(state => state.removeAlert);
     const updateAlert = useMarketStore(state => state.updateAlert);
+    const [overlaySeries, setOverlaySeries] = useState<ISeriesApi<"Candlestick"> | null>(null);
     const [editingState, setEditingState] = useState<{ id: string, ticket: any, type: string, price: number, value: number, x?: number } | null>(null);
+
+    useEffect(() => {
+        if (editingState) {
+            setOverlaySeries(seriesRef.current);
+        } else {
+            setOverlaySeries(null);
+        }
+    }, [editingState, seriesRef]);
 
     // 1. Sync Tags (Structure & Visuals)
     useEffect(() => {
@@ -183,10 +192,10 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
 
     return (
         <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[5] overflow-hidden touch-none">
-            {editingState && seriesRef.current && (
+            {editingState && overlaySeries && (
                 <EditOverlay
                     state={editingState}
-                    series={seriesRef.current}
+                    series={overlaySeries}
                     isDeletingRef={isDeletingRef}
                     onFinish={handleInputFinish}
                 />

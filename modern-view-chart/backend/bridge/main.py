@@ -1,9 +1,11 @@
 import asyncio
-import sys
+import json
 import os
+import sys
+from urllib.parse import urlencode
 
 # Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from mt5_service import MT5Service
 from websocket_client import BridgeClient
@@ -11,141 +13,222 @@ from alert_service import AlertService
 from memory_service import MemoryService
 import MetaTrader5 as mt5
 
-# Fix Windows encoding issues for emojis
 if sys.platform == "win32":
     import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-# Configuration
-NODE_WS_URL = "ws://127.0.0.1:8091"
-SYMBOLS = [
-    "XAUUSDm", "BTCUSDm", "ETHUSDm", 
-    "EURUSDm", "GBPUSDm", "USDJPYm", "AUDUSDm", 
-    "USDCADm", "GBPJPm", "EURJPYm"
-]
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+
+DEFAULT_CORE_SYMBOLS = ["XAUUSDm", "BTCUSDm", "ETHUSDm", "EURUSDm", "GBPUSDm"]
 TIMEFRAME_MAP = {
-    '1m': mt5.TIMEFRAME_M1, '5m': mt5.TIMEFRAME_M5, '15m': mt5.TIMEFRAME_M15,
-    '30m': mt5.TIMEFRAME_M30, '1h': mt5.TIMEFRAME_H1, '4h': mt5.TIMEFRAME_H4, '1d': mt5.TIMEFRAME_D1,
-    '1': mt5.TIMEFRAME_M1, '5': mt5.TIMEFRAME_M5, '15': mt5.TIMEFRAME_M15,
-    '30': mt5.TIMEFRAME_M30, '60': mt5.TIMEFRAME_H1, '240': mt5.TIMEFRAME_H4, '1440': mt5.TIMEFRAME_D1
+    "1m": mt5.TIMEFRAME_M1,
+    "5m": mt5.TIMEFRAME_M5,
+    "15m": mt5.TIMEFRAME_M15,
+    "30m": mt5.TIMEFRAME_M30,
+    "1h": mt5.TIMEFRAME_H1,
+    "4h": mt5.TIMEFRAME_H4,
+    "1d": mt5.TIMEFRAME_D1,
+    "1": mt5.TIMEFRAME_M1,
+    "5": mt5.TIMEFRAME_M5,
+    "15": mt5.TIMEFRAME_M15,
+    "30": mt5.TIMEFRAME_M30,
+    "60": mt5.TIMEFRAME_H1,
+    "240": mt5.TIMEFRAME_H4,
+    "1440": mt5.TIMEFRAME_D1,
 }
 
+
+def normalize_symbol(symbol):
+    if not isinstance(symbol, str):
+        return ""
+    trimmed = symbol.strip()
+    if not trimmed:
+        return ""
+    if "USDT" in trimmed.upper():
+        return trimmed.upper()
+    if trimmed.endswith("m") or trimmed.endswith("M"):
+        return trimmed[:-1] + "m"
+    return trimmed
+
+
+def parse_core_symbols():
+    from_env = os.getenv("CORE_SYMBOLS", "").strip()
+    if not from_env:
+        return DEFAULT_CORE_SYMBOLS
+    parsed = [item.strip() for item in from_env.split(",") if item.strip()]
+    return parsed if parsed else DEFAULT_CORE_SYMBOLS
+
+
+def load_env_file():
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    env_path = os.path.join(repo_root, ".env")
+    if not os.path.exists(env_path):
+        return
+
+    try:
+        with open(env_path, "r", encoding="utf-8") as file_obj:
+            for line in file_obj:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+    except Exception as exc:
+        print(f"[BRIDGE] Warning: failed to load .env ({exc})")
+
+
+def build_node_ws_url():
+    base_url = os.getenv("NODE_WS_URL", "ws://127.0.0.1:8091").strip()
+    access_token = os.getenv("ACCESS_TOKEN", "").strip()
+    if not access_token:
+        print("[BRIDGE] WARNING: ACCESS_TOKEN is missing; WS auth may fail.")
+        return base_url
+
+    sep = "&" if "?" in base_url else "?"
+    return f"{base_url}{sep}{urlencode({'access_token': access_token})}"
+
+
+load_env_file()
+NODE_WS_URL = build_node_ws_url()
+
+
 async def main():
-    service = MT5Service(SYMBOLS, TIMEFRAME_MAP)
+    core_candidates = parse_core_symbols()
+    service = MT5Service(core_candidates, TIMEFRAME_MAP)
     alert_service = AlertService()
     memory_service = MemoryService()
-    
-    # Init Memory Service
     await memory_service.initialize()
-    
+
     while not service.initialize():
         print("[BRIDGE] MT5 not ready. Retrying in 10s...")
         await asyncio.sleep(10)
 
-    # Fetch dynamic symbols
     available_symbols = service.fetch_available_symbols()
-    dynamic_symbol_names = [s['symbol'] for s in available_symbols]
-    
-    # Symbols to track for live ticks (limit to avoid overloading if needed, but here we use all)
-    # We can use the original SYMBOLS as "core" and add others if desired, 
-    # or just use everything found.
-    symbols_to_track = dynamic_symbol_names if dynamic_symbol_names else SYMBOLS
+    available_symbol_map = {}
+    for item in available_symbols:
+        raw_symbol = item.get("symbol")
+        normalized = normalize_symbol(raw_symbol)
+        if normalized and normalized not in available_symbol_map:
+            available_symbol_map[normalized] = raw_symbol
+
+    core_symbols_actual = []
+    for symbol in core_candidates:
+        normalized = normalize_symbol(symbol)
+        if normalized in available_symbol_map:
+            core_symbols_actual.append(available_symbol_map[normalized])
+
+    if not core_symbols_actual:
+        core_symbols_actual = list(available_symbol_map.values())[:5]
+
+    symbols_to_track = set(core_symbols_actual)
+    symbols_lock = asyncio.Lock()
+
+    async def update_symbols_interest(symbols):
+        mapped = []
+        for symbol in symbols:
+            normalized = normalize_symbol(symbol)
+            actual = available_symbol_map.get(normalized)
+            if actual:
+                mapped.append(actual)
+
+        deduped = list(dict.fromkeys(mapped))
+        if not deduped:
+            deduped = list(core_symbols_actual)
+
+        async with symbols_lock:
+            symbols_to_track.clear()
+            symbols_to_track.update(deduped)
+
+        print(f"[BRIDGE] Updated interest symbols ({len(deduped)}): {', '.join(deduped[:10])}")
 
     try:
-        client = BridgeClient(NODE_WS_URL, service, alert_service, memory_service)
+        client = BridgeClient(
+            NODE_WS_URL,
+            service,
+            alert_service,
+            memory_service,
+            symbols_interest_callback=update_symbols_interest,
+        )
         await client.connect()
-        
-        # Send available symbols list to backend
-        await client.send_json({
-            "topic": "mt5_symbols_available",
-            "symbols": available_symbols
-        })
-        
-        # Start command listener
-        asyncio.create_task(client.listen_commands())
-        
-        # Track last sent positions to avoid redundant updates
+
+        await client.send_json({"topic": "mt5_symbols_available", "symbols": available_symbols})
         last_positions_hash = None
         last_positions_time = 0
-        POSITION_UPDATE_INTERVAL = 2.0  # Only send position updates every 2 seconds unless changed
-        
-        # Cache for Daily Open prices
+        position_update_interval = 2.0
+
         daily_opens = {}
         last_daily_open_refresh = 0
-        DAILY_OPEN_REFRESH_INTERVAL = 300 # refresh every 5 mins
-        
+        daily_open_refresh_interval = 300
+
         while True:
             import time
+
             current_time = time.time()
-            
-            # Refresh Daily Opens
-            if current_time - last_daily_open_refresh > DAILY_OPEN_REFRESH_INTERVAL:
-                for symbol in symbols_to_track:
-                    d_open = service.get_daily_open(symbol)
+            await client.drain_pending_commands()
+
+            async with symbols_lock:
+                symbols_snapshot = list(symbols_to_track)
+            if not symbols_snapshot:
+                symbols_snapshot = list(core_symbols_actual)
+
+            if current_time - last_daily_open_refresh > daily_open_refresh_interval:
+                for symbol in symbols_snapshot:
+                    d_open = await asyncio.to_thread(service.get_daily_open, symbol)
                     if d_open:
                         daily_opens[symbol] = d_open
                 last_daily_open_refresh = current_time
                 print(f"[REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
 
-            # 1. Send Ticks
-            for symbol in symbols_to_track:
-                tick = service.get_tick(symbol)
+            for symbol in symbols_snapshot:
+                tick = await asyncio.to_thread(service.get_tick, symbol)
                 if tick:
-                    # Check Alerts
-                    await alert_service.check_alerts(symbol, tick.bid, client.send_json) # Check Logic
-                    
-                    await client.send_json({
-                        "topic": "mt5_update",
-                        "symbol": symbol,
-                        "price": tick.bid,
-                        "ask": tick.ask,
-                        "daily_open": daily_opens.get(symbol),
-                        "time": int(tick.time * 1000)
-                    })
-            
-            # 2. Send Positions & Account (THROTTLED)
-            import time
-            current_time = time.time()
-            
-            acc_data = service.get_account_info()
-            pos_list = service.get_positions()
-            order_list = service.get_orders()
-            
-            # Create hash of positions to detect changes
-            import json
-            positions_hash = json.dumps([
-                {"ticket": p["ticket"], "sl": p["sl"], "tp": p["tp"], "profit": round(p["profit"], 2)}
-                for p in pos_list
-            ], sort_keys=True)
-            
-            # CRITICAL FIX: Don't broadcast empty positions if hash hasn't changed
-            # This prevents flickering when MT5 temporarily returns empty positions
-            is_empty_unchanged = (len(pos_list) == 0 and positions_hash == last_positions_hash)
-            
-            # Only send if positions changed OR 2 seconds passed (and not empty unchanged)
-            should_send = (
-                not is_empty_unchanged and (
-                    positions_hash != last_positions_hash or 
-                    (current_time - last_positions_time) >= POSITION_UPDATE_INTERVAL
-                )
+                    await alert_service.check_alerts(symbol, tick.bid, client.send_json)
+                    await client.send_json(
+                        {
+                            "topic": "mt5_update",
+                            "symbol": symbol,
+                            "price": tick.bid,
+                            "ask": tick.ask,
+                            "daily_open": daily_opens.get(symbol),
+                            "time": int(tick.time * 1000),
+                        }
+                    )
+
+            acc_data = await asyncio.to_thread(service.get_account_info)
+            pos_list = await asyncio.to_thread(service.get_positions)
+            order_list = await asyncio.to_thread(service.get_orders)
+
+            positions_hash = json.dumps(
+                [
+                    {"ticket": p["ticket"], "sl": p["sl"], "tp": p["tp"], "profit": round(p["profit"], 2)}
+                    for p in pos_list
+                ],
+                sort_keys=True,
             )
-            
+
+            is_empty_unchanged = len(pos_list) == 0 and positions_hash == last_positions_hash
+            should_send = not is_empty_unchanged and (
+                positions_hash != last_positions_hash or (current_time - last_positions_time) >= position_update_interval
+            )
+
             if should_send:
-                await client.send_json({
-                    "topic": "mt5_positions_update",
-                    "account": acc_data,
-                    "positions": pos_list,
-                    "orders": order_list
-                })
+                await client.send_json(
+                    {
+                        "topic": "mt5_positions_update",
+                        "account": acc_data,
+                        "positions": pos_list,
+                        "orders": order_list,
+                    }
+                )
                 last_positions_hash = positions_hash
                 last_positions_time = current_time
-            
+
             await asyncio.sleep(0.5)
-            
+
     except Exception as e:
         print(f"[CRITICAL] Bridge loop error: {e}")
     finally:
         service.shutdown()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
