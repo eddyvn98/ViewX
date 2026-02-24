@@ -14,6 +14,16 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import { TrendLineIndicator } from '../indicators/TrendLineIndicator';
 import { FibonacciIndicator } from '../indicators/FibonacciIndicator';
 import { FibonacciExtensionIndicator } from '../indicators/FibonacciExtensionIndicator';
+import { ATRIndicator } from '../indicators/ATRIndicator';
+import { BollingerBandsIndicator } from '../indicators/BollingerBandsIndicator';
+import { StochasticIndicator } from '../indicators/StochasticIndicator';
+import { SuperTrendIndicator } from '../indicators/SuperTrendIndicator';
+import { VWAPIndicator } from '../indicators/VWAPIndicator';
+import { IchimokuIndicator } from '../indicators/IchimokuIndicator';
+import { ADXIndicator } from '../indicators/ADXIndicator';
+import { OrderBlockIndicator } from '../indicators/OrderBlockIndicator';
+import { FVGIndicator } from '../indicators/FVGIndicator';
+import { SARIndicator } from '../indicators/SARIndicator';
 
 const EMPTY_INDICATORS: any[] = [];
 
@@ -232,6 +242,20 @@ export function useChartIndicators(
                         case 'Fibonacci': instance = new FibonacciIndicator(markerSeriesRef.current as any, config); break;
                         case 'FIBONACCI_EXTENSION':
                         case 'FibonacciExtension': instance = new FibonacciExtensionIndicator(markerSeriesRef.current as any, config); break;
+                        case 'ATR': instance = new ATRIndicator(subchartChartRef.current!, config); break;
+                        case 'BollingerBands':
+                        case 'BOLLINGER_BANDS': instance = new BollingerBandsIndicator(priceChartRef.current!, config); break;
+                        case 'Stochastic':
+                        case 'STOCHASTIC': instance = new StochasticIndicator(subchartChartRef.current!, config); break;
+                        case 'SuperTrend':
+                        case 'SUPERTREND': instance = new SuperTrendIndicator(priceChartRef.current!, config); break;
+                        case 'VWAP': instance = new VWAPIndicator(priceChartRef.current!, config); break;
+                        case 'Ichimoku':
+                        case 'ICHIMOKU': instance = new IchimokuIndicator(priceChartRef.current!, config); break;
+                        case 'ADX': instance = new ADXIndicator(subchartChartRef.current!, config); break;
+                        case 'OrderBlock': instance = new OrderBlockIndicator(priceChartRef.current!, seriesRef.current!, config); break;
+                        case 'FVG': instance = new FVGIndicator(priceChartRef.current!, seriesRef.current!, config); break;
+                        case 'SAR': instance = new SARIndicator(priceChartRef.current!, config); break;
                     }
                     if (instance) {
                         instancesRef.current[config.id] = instance;

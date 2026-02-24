@@ -217,6 +217,29 @@ def modify_position_by_ticket(ticket, sl, tp):
 
     return False
 
+def fetch_available_symbols():
+    """Fetch all tradeable symbols from MT5"""
+    symbols = mt5.symbols_get()
+    if symbols is None:
+        print("[ERROR] Failed to fetch symbols")
+        return []
+    
+    available = []
+    for s in symbols:
+        # Filter: trade_mode != SYMBOL_TRADE_MODE_DISABLED (0)
+        # We also prefer symbols that are visible or have quotes
+        if s.trade_mode != mt5.SYMBOL_TRADE_MODE_DISABLED:
+            available.append({
+                "symbol": s.name,
+                "path": s.path,
+                "description": s.description,
+                "digits": s.digits,
+                "trade_mode": s.trade_mode,
+                "type": "forex" if "Forex" in s.path else "crypto" if "Crypto" in s.path else "other"
+            })
+    print(f"[OK] Found {len(available)} tradeable symbols")
+    return available
+
 async def bridge_loop():
     if not mt5.initialize():
         print("[ERROR] MT5 Init failed")
@@ -225,14 +248,29 @@ async def bridge_loop():
     async with websockets.connect(NODE_WS_URL) as websocket:
         print(f"[OK] Bridge connected to {NODE_WS_URL}")
         
+        # 1. Send initial available symbols
+        available_symbols = fetch_available_symbols()
+        await websocket.send(json.dumps({
+            "type": "mt5_symbols_available",
+            "symbols": available_symbols
+        }))
+
         # Start command listener in background
         asyncio.create_task(handle_node_commands(websocket))
         
+        # Define dynamic symbols to track (initially the ones from config, then maybe expanded)
+        # For now, let's track the first few available or the ones in SYMBOLS
+        tracking_symbols = list(set(SYMBOLS + [s["symbol"] for s in available_symbols[:10]]))
+
         while True:
             # 1. Send Prices (Fast)
-            for symbol in SYMBOLS:
+            for symbol in tracking_symbols:
                 tick = mt5.symbol_info_tick(symbol)
                 if tick:
+                    # Get Daily Open for change calculation (accurate from MT5)
+                    # Use mt5.copy_rates_from_pos for current day's first candle
+                    # This is slightly expensive, maybe cache it per day
+                    
                     await websocket.send(json.dumps({
                         "type": "mt5_update",
                         "symbol": symbol,

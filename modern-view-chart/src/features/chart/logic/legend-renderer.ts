@@ -1,11 +1,11 @@
 import { IndicatorCache } from './indicator-calculations';
 
-export const formatPrice = (p: number) => {
+export const formatPrice = (p: number, digits: number = 2) => {
+    if (isNaN(p)) return '···';
     const absP = Math.abs(p);
-    if (p === 0) return '0.00';
-    if (absP < 0.0001) return p.toExponential(4);
-    if (absP < 1) return p.toFixed(5);
-    return p.toFixed(2);
+    if (p === 0) return (0).toFixed(digits);
+    if (absP < 0.000001) return p.toExponential(4);
+    return p.toFixed(digits);
 };
 
 export interface OHLCRefs {
@@ -58,23 +58,24 @@ export const renderOHLC = (
     open: number,
     high: number,
     low: number,
-    close: number
+    close: number,
+    digits: number = 2
 ) => {
     const changeValue = close - open;
     const changePercent = open !== 0 ? (changeValue / open * 100) : 0;
     const isPositive = changeValue >= 0;
     const color = isPositive ? 'text-blue-500' : 'text-rose-500';
 
-    if (refs.open) refs.open.textContent = formatPrice(open);
-    if (refs.high) refs.high.textContent = formatPrice(high);
-    if (refs.low) refs.low.textContent = formatPrice(low);
+    if (refs.open) refs.open.textContent = formatPrice(open, digits);
+    if (refs.high) refs.high.textContent = formatPrice(high, digits);
+    if (refs.low) refs.low.textContent = formatPrice(low, digits);
     if (refs.close) {
-        refs.close.textContent = formatPrice(close);
+        refs.close.textContent = formatPrice(close, digits);
         refs.close.classList.remove('text-blue-500', 'text-rose-500', 'text-green-500', 'text-red-500');
         refs.close.classList.add(isPositive ? 'text-blue-500' : 'text-rose-500');
     }
     if (refs.change) {
-        refs.change.textContent = (isPositive ? '+' : '') + formatPrice(changeValue);
+        refs.change.textContent = (isPositive ? '+' : '') + formatPrice(changeValue, digits);
         refs.change.classList.remove('text-blue-500', 'text-rose-500');
         refs.change.classList.add(isPositive ? 'text-blue-500' : 'text-rose-500');
     }

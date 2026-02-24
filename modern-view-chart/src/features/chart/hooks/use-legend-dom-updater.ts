@@ -92,7 +92,8 @@ export function useLegendDOMUpdater(
                 fresh.raw.length - 1, true, price,
                 fresh.raw, fresh.display, indicatorCacheRef.current,
                 ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
-                chartType, chartId, indicatorRefsRef.current
+                chartType, chartId, indicatorRefsRef.current,
+                useMarketStore.getState().symbolInfo[symbol!]?.digits || 2
             );
         }
     }, [candles, chartId]);
@@ -154,7 +155,8 @@ export function useLegendDOMUpdater(
                     isLastCandle ? (useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price) : undefined,
                     fresh.raw, fresh.display, currentIndicators,
                     ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
-                    chartType, chartId, indicatorRefsRef.current
+                    chartType, chartId, indicatorRefsRef.current,
+                    useMarketStore.getState().symbolInfo[symbol!]?.digits || 2
                 );
             });
         };
@@ -171,7 +173,8 @@ export function useLegendDOMUpdater(
                 useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                 initialFresh.raw, initialFresh.display, currentIndicators,
                 ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
-                chartType, chartId, indicatorRefsRef.current
+                chartType, chartId, indicatorRefsRef.current,
+                useMarketStore.getState().symbolInfo[symbol!]?.digits || 2
             );
         }
 
@@ -194,7 +197,8 @@ export function useLegendDOMUpdater(
                         fresh.raw.length - 1, true, price,
                         fresh.raw, fresh.display, currentIndicators,
                         ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
-                        chartType, chartId, indicatorRefsRef.current
+                        chartType, chartId, indicatorRefsRef.current,
+                        useMarketStore.getState().symbolInfo[symbol!]?.digits || 2
                     );
                 });
             }
@@ -214,7 +218,8 @@ export function useLegendDOMUpdater(
                         useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                         fresh.raw, fresh.display, indicatorCacheRef.current,
                         ohlcRefsRef.current, lastUpdateAtRef, lastIsLiveRef,
-                        chartType, chartId, indicatorRefsRef.current
+                        chartType, chartId, indicatorRefsRef.current,
+                        useMarketStore.getState().symbolInfo[symbol!]?.digits || 2
                     );
                 }
             }
@@ -244,7 +249,8 @@ function updateLegendDirect(
     lastIsLiveRef: React.MutableRefObject<boolean | null>,
     chartType: string,
     chartId: string,
-    indicatorRefs: Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>
+    indicatorRefs: Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>,
+    digits: number = 2
 ) {
     if (!rawCandles.length || !ohlcRefs) return;
 
@@ -279,7 +285,7 @@ function updateLegendDirect(
         }
     }
 
-    renderOHLC(ohlcRefs, open, high, low, close);
+    renderOHLC(ohlcRefs, open, high, low, close, digits);
 
     if (lastIsLiveRef.current !== isLive) {
         lastIsLiveRef.current = isLive;

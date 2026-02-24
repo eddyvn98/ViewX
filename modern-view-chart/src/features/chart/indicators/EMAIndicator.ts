@@ -13,23 +13,27 @@ export class EMAIndicator {
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
+        const styles = this.config.styles || {};
+        const lineColor = styles.line || this.config.color;
+        const lineWidth = styles.width || this.config.lineWidth || 2;
+
         if (!this.series) {
             this.series = this.chart.addSeries(LineSeries, {
-                color: this.config.color,
-                lineWidth: this.config.lineWidth as any,
+                color: lineColor,
+                lineWidth: lineWidth as any,
                 priceLineVisible: false,
                 lastValueVisible: false,
-                crosshairMarkerVisible: false, // Disable for performance
+                crosshairMarkerVisible: false,
                 visible: this.config.visible,
             });
         } else {
             this.series.applyOptions({
-                color: this.config.color,
-                lineWidth: this.config.lineWidth as any,
+                color: lineColor,
+                lineWidth: lineWidth as any,
                 visible: this.config.visible,
                 priceLineVisible: false,
                 lastValueVisible: false,
-                crosshairMarkerVisible: false, // Disable for performance
+                crosshairMarkerVisible: false,
             });
         }
 

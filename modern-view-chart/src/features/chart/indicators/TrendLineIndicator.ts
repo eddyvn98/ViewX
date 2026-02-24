@@ -33,8 +33,13 @@ export class TrendLineIndicator {
             time: toSec(c.time) as any
         }));
 
+        const styles = this.config.styles || {};
+        const supportColor = styles.support || '#00ff88';
+        const resistanceColor = styles.resistance || '#ff3366';
+        const lineWidth = styles.width || 2;
+
         // 1. Use EXACTLY the same depth as Market Structure to match markers
-        const markers = calculateDynamicSwingPoints(formattedData, 7);
+        const markers = calculateDynamicSwingPoints(formattedData, 7, supportColor, resistanceColor);
 
         const lines: TrendLineData[] = [];
 
@@ -75,8 +80,8 @@ export class TrendLineIndicator {
                         lines.push({
                             p1: { time: p1.time, price: p1.price },
                             p2: { time: p2.time, price: p2.price },
-                            color: '#ff3366', // Red
-                            width: 2,
+                            color: resistanceColor,
+                            width: lineWidth,
                             style: 2, // Dashed
                             extendRight: true
                         });
@@ -115,8 +120,8 @@ export class TrendLineIndicator {
                         lines.push({
                             p1: { time: (p1 as any).time, price: (p1 as any).price },
                             p2: { time: (p2 as any).time, price: (p2 as any).price },
-                            color: '#00ff88', // Green
-                            width: 2,
+                            color: supportColor,
+                            width: lineWidth,
                             style: 2, // Dashed
                             extendRight: true
                         });

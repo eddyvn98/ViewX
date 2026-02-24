@@ -41,9 +41,24 @@ async def main():
     if not service.initialize():
         return
 
+    # Fetch dynamic symbols
+    available_symbols = service.fetch_available_symbols()
+    dynamic_symbol_names = [s['symbol'] for s in available_symbols]
+    
+    # Symbols to track for live ticks (limit to avoid overloading if needed, but here we use all)
+    # We can use the original SYMBOLS as "core" and add others if desired, 
+    # or just use everything found.
+    symbols_to_track = dynamic_symbol_names if dynamic_symbol_names else SYMBOLS
+
     try:
         client = BridgeClient(NODE_WS_URL, service, alert_service, memory_service)
         await client.connect()
+        
+        # Send available symbols list to backend
+        await client.send_json({
+            "topic": "mt5_symbols_available",
+            "symbols": available_symbols
+        })
         
         # Start command listener
         asyncio.create_task(client.listen_commands())
@@ -64,7 +79,7 @@ async def main():
             
             # Refresh Daily Opens
             if current_time - last_daily_open_refresh > DAILY_OPEN_REFRESH_INTERVAL:
-                for symbol in SYMBOLS:
+                for symbol in symbols_to_track:
                     d_open = service.get_daily_open(symbol)
                     if d_open:
                         daily_opens[symbol] = d_open
@@ -72,7 +87,7 @@ async def main():
                 print(f"[REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
 
             # 1. Send Ticks
-            for symbol in SYMBOLS:
+            for symbol in symbols_to_track:
                 tick = service.get_tick(symbol)
                 if tick:
                     # Check Alerts

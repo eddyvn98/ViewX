@@ -1,5 +1,5 @@
 import { Candle } from '@/lib/store/types';
-import { calculateEMA, calculateSMA, calculateRSI, calculateMACD, calculateHullMA, calculateHeikinAshi, calculateATR } from '../../chart/utils/indicator-math';
+import { calculateEMA, calculateSMA, calculateRSI, calculateMACD, calculateHullMA, calculateHeikinAshi, calculateATR, calculateSuperTrend, calculateVWAP, calculateIchimoku, calculateADX, calculateOrderBlocks, calculateFVG } from '../../chart/utils/indicator-math';
 import { Indicator } from '../types';
 
 export class IndicatorCalculator {
@@ -35,6 +35,24 @@ export class IndicatorCalculator {
             }
             case "ATR":
                 return calculateATR(candles, indicator.params[0] || 14);
+            case "SuperTrend": {
+                const res = calculateSuperTrend(candles, indicator.params[0] || 10, indicator.params[1] || 3);
+                return res.superTrend;
+            }
+            case "VWAP":
+                return calculateVWAP(candles);
+            case "Ichimoku": {
+                const res = calculateIchimoku(candles, indicator.params[0] || 9, indicator.params[1] || 26, indicator.params[2] || 52, indicator.params[3] || 26);
+                return res.kijun; // Default to kijun for strategy single line
+            }
+            case "ADX": {
+                const res = calculateADX(candles, indicator.params[0] || 14);
+                return res.adx;
+            }
+            case "OrderBlock":
+                return new Array(candles.length).fill(NaN);
+            case "FVG":
+                return new Array(candles.length).fill(NaN);
             case "SIGNALS":
             case "Signals": {
                 // Return RSI14 values for SignalIndicator to use as 'calculatedValues'

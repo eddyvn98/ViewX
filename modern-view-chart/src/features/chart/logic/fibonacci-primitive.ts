@@ -22,6 +22,9 @@ export interface FibonacciData {
     endTime: Time;
     showPercent: boolean;
     showPrice: boolean;
+    lineColor?: string;
+    labelColor?: string;
+    backgroundOpacity?: number;
 }
 
 class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
@@ -62,6 +65,10 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
 
             const phyXEnd = xEnd !== null ? xEnd * horizontalPixelRatio : canvasWidth;
 
+            const globalLineColor = this._data?.lineColor;
+            const globalLabelColor = this._data?.labelColor;
+            const bgOpacity = this._data?.backgroundOpacity ?? 0.15;
+
             levels.forEach((level, index) => {
                 // @ts-ignore
                 const y = series.priceToCoordinate(level.price);
@@ -72,7 +79,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 // 1. Draw Level Line
                 ctx.save();
                 ctx.beginPath();
-                ctx.strokeStyle = level.color;
+                ctx.strokeStyle = globalLineColor || level.color;
                 ctx.lineWidth = Math.max(1, 1 * verticalPixelRatio);
 
                 // Solid for 0 and 1, dashed for others
@@ -85,7 +92,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 ctx.stroke();
 
                 // 2. Draw Label
-                ctx.fillStyle = level.color;
+                ctx.fillStyle = globalLabelColor || level.color;
                 const fontSize = Math.max(10, 10 * verticalPixelRatio);
                 ctx.font = `${fontSize}px Inter, sans-serif, Arial`;
                 ctx.textAlign = 'right';
@@ -93,20 +100,17 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 ctx.textBaseline = 'bottom';
 
                 let labelParts = [];
-                // Only keep price as requested
+                if (this._data!.showPercent) labelParts.push(level.label);
                 if (this._data!.showPrice) labelParts.push(level.price.toFixed(2));
 
                 const text = labelParts.join(' ');
                 if (text) {
-                    // Small offset from top and right
                     ctx.fillText(text, canvasWidth - 10 * horizontalPixelRatio, phyY - 2 * verticalPixelRatio);
                 }
 
                 // 3. Draw Background Fill (Golden Zone: 0.382 - 0.618)
                 if (index > 0) {
                     const prevLevel = levels[index - 1];
-                    // Fill between any two levels that are within the range 0.236 to 0.786 for visibility, 
-                    // or strictly 0.382 - 0.618 if you want exactly that.
                     const isGoldenZone = (level.ratio >= 0.382 && level.ratio <= 0.618) &&
                         (prevLevel.ratio >= 0.382 && prevLevel.ratio <= 0.618);
 
@@ -115,9 +119,8 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                         const yPrev = series.priceToCoordinate(prevLevel.price);
                         if (yPrev !== null) {
                             const phyYPrev = yPrev * verticalPixelRatio;
-                            // Safe rgba conversion for hex or named colors
-                            ctx.globalAlpha = 0.15;
-                            ctx.fillStyle = level.color;
+                            ctx.globalAlpha = bgOpacity;
+                            ctx.fillStyle = globalLineColor || level.color;
                             ctx.fillRect(phyXStart, Math.min(phyY, phyYPrev), canvasWidth - phyXStart, Math.abs(phyY - phyYPrev));
                             ctx.globalAlpha = 1.0;
                         }

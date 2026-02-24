@@ -12,7 +12,12 @@ export interface CandleData {
  * Calculates ZigZag Swing Points and Market Structure (HH, HL, LH, LL)
  * depth: minimum candles between swing points
  */
-export function calculateSwingPoints(data: CandleData[], depth: number = 7): SeriesMarker<Time>[] {
+export function calculateSwingPoints(
+    data: CandleData[],
+    depth: number = 7,
+    bullColor: string = '#00ff88',
+    bearColor: string = '#ff3366'
+): SeriesMarker<Time>[] {
     if (data.length < depth * 2) return [];
 
     const markers: SeriesMarker<Time>[] = [];
@@ -96,7 +101,7 @@ export function calculateSwingPoints(data: CandleData[], depth: number = 7): Ser
                 label = 'LH';
             }
             prevHigh = current.price;
-            color = '#ff3366'; // Bearish Peak (High)
+            color = bearColor; // Bearish Peak (High)
         } else {
             if (prevLow === null) {
                 label = 'L';
@@ -106,7 +111,7 @@ export function calculateSwingPoints(data: CandleData[], depth: number = 7): Ser
                 label = 'HL';
             }
             prevLow = current.price;
-            color = '#00ff88'; // Bullish Trough (Low)
+            color = bullColor; // Bullish Trough (Low)
         }
 
         markers.push({
@@ -127,11 +132,16 @@ export function calculateSwingPoints(data: CandleData[], depth: number = 7): Ser
 /**
  * Calculates Dynamic Swing Points that identify "tentative" highs/lows at the chart's edge.
  */
-export function calculateDynamicSwingPoints(data: CandleData[], depth: number = 5): SeriesMarker<Time>[] {
+export function calculateDynamicSwingPoints(
+    data: CandleData[],
+    depth: number = 5,
+    bullColor: string = '#00ff88',
+    bearColor: string = '#ff3366'
+): SeriesMarker<Time>[] {
     if (data.length < depth * 2) return [];
 
     // 1. Get confirmed points using standard logic
-    const markers = calculateSwingPoints(data, depth);
+    const markers = calculateSwingPoints(data, depth, bullColor, bearColor);
 
     // 2. Identify the last confirmed high and low price to compare HH/LL
     let lastHighPrice = -Infinity;
@@ -172,7 +182,7 @@ export function calculateDynamicSwingPoints(data: CandleData[], depth: number = 
         markers.push({
             time: data[tentativeHighIdx].time,
             position: 'aboveBar',
-            color: '#ff3366',
+            color: bearColor,
             shape: 'circle',
             text: tentativeHigh.toString(),
             size: 0,
@@ -187,7 +197,7 @@ export function calculateDynamicSwingPoints(data: CandleData[], depth: number = 
         markers.push({
             time: data[tentativeLowIdx].time,
             position: 'belowBar',
-            color: '#00ff88',
+            color: bullColor,
             shape: 'circle',
             text: tentativeLow.toString(),
             size: 0,

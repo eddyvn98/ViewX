@@ -90,6 +90,14 @@ export async function broadcastChartCandles({ clients, mt5Prices }) {
     }
 }
 
+export function broadcastToAll(clients, payload) {
+    for (const [clientWs] of clients.entries()) {
+        if (clientWs.readyState === clientWs.OPEN) {
+            clientWs.send(payload);
+        }
+    }
+}
+
 function groupClientsByChart(clients) {
     const groups = {};
     for (const [ws, meta] of clients.entries()) {

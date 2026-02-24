@@ -45,7 +45,7 @@ export function ChartsToolbar() {
     };
 
     return (
-        <div className="flex items-center justify-between px-2 py-0 shrink-0 bg-primary/5 backdrop-blur-sm border-b border-primary/10 transition-colors duration-300">
+        <div className="flex items-center justify-between px-2 py-0 shrink-0 bg-primary/5 backdrop-blur-sm border-b border-primary/10 transition-colors duration-300 relative z-50">
             <div className="flex items-center gap-2 h-full">
                 {/* Timeframe Selector */}
                 <div className="flex items-center gap-0.5 pr-2 h-full">

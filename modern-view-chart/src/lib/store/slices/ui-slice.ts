@@ -53,7 +53,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     sidebarTopHeight: 40,
     rightSidebarTabOrder: ['strategy', 'layer', 'trade'],
     themeColor: 'green',
-    isDrawingToolbarVisible: true,
+    isDrawingToolbarVisible: false,
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),

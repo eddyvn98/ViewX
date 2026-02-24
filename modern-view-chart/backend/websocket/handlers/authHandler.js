@@ -22,4 +22,11 @@ export function handleAuth({ ws, clients, mt5Prices }, data) {
             positions: global.lastMt5State.positions
         }));
     }
+
+    if (global.mt5AvailableSymbols) {
+        ws.send(JSON.stringify({
+            topic: "mt5_available_symbols",
+            symbols: global.mt5AvailableSymbols
+        }));
+    }
 }

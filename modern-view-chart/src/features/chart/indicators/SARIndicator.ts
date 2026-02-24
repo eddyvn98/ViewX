@@ -1,9 +1,10 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
-import { calculateHullMA } from '../utils/indicator-math';
+import { calculateSAR } from '../utils/indicator-math';
+import { SARSeries } from '../logic/sar-series';
 
-export class HMAIndicator {
-    private series: ISeriesApi<"Line"> | null = null;
+export class SARIndicator {
+    private series: ISeriesApi<"Custom"> | null = null;
 
     constructor(
         private chart: IChartApi,
@@ -14,30 +15,34 @@ export class HMAIndicator {
         this.config = config;
 
         const styles = this.config.styles || {};
-        const lineColor = styles.line || this.config.color;
-        const lineWidth = styles.width || this.config.lineWidth || 2;
+        const color = styles.color || '#2196F3';
+        const dotSize = styles.width || 2;
 
         if (!this.series) {
-            this.series = this.chart.addSeries(LineSeries, {
-                color: lineColor,
-                lineWidth: lineWidth as any,
+            this.series = this.chart.addCustomSeries(new SARSeries(), {
+                color: color,
                 priceLineVisible: false,
                 lastValueVisible: false,
                 crosshairMarkerVisible: false,
                 visible: this.config.visible,
-            });
+                // Pass dotSize to our custom options
+                dotSize: dotSize,
+            } as any);
         } else {
             this.series.applyOptions({
-                color: lineColor,
-                lineWidth: lineWidth as any,
+                color: color,
                 visible: this.config.visible,
-                priceLineVisible: false,
-                lastValueVisible: false,
-                crosshairMarkerVisible: false,
-            });
+                dotSize: dotSize,
+            } as any);
         }
 
-        const hmaValues = calculatedValues || calculateHullMA(candles.map(c => c.close), this.config.params.period);
+        const params = this.config.params || {};
+        const sarValues = calculatedValues || calculateSAR(
+            candles,
+            params.startAF || 0.02,
+            params.incrementAF || 0.02,
+            params.maxAF || 0.20
+        );
 
         const data = candles
             .map((c, i) => {
@@ -45,7 +50,7 @@ export class HMAIndicator {
                 const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
                 return {
                     time: time as any,
-                    value: hmaValues[i]
+                    value: sarValues[i]
                 };
             })
             .filter(d => !isNaN(d.value));
@@ -54,38 +59,41 @@ export class HMAIndicator {
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
-        if (!this.series || !this.config.visible || candles.length < this.config.params.period) return;
+        if (!this.series || !this.config.visible) return;
 
-        const period = this.config.params.period;
-        const lastIdx = candles.length - 1;
+        const params = this.config.params || {};
+        const prices = [...candles];
+        prices[prices.length - 1] = candle;
 
-        // Use full history for 100% accuracy matching the chart
-        const prices = candles.map(c => c.close);
-        prices[prices.length - 1] = candle.close;
-
-        const hmaValues = calculateHullMA(prices, period);
-        const lastVal = hmaValues[hmaValues.length - 1];
+        const sarValues = calculateSAR(
+            prices,
+            params.startAF || 0.02,
+            params.incrementAF || 0.02,
+            params.maxAF || 0.20
+        );
+        const lastVal = sarValues[sarValues.length - 1];
 
         if (!isNaN(lastVal)) {
             const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
             const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+
+            if (!candleTime) return;
+
             try {
                 this.series.update({
                     time: candleTime as any,
                     value: lastVal
                 });
-            } catch (err) {
-                // Ignore "Cannot update oldest data" errors which happen during rapid updates/race conditions
-            }
+            } catch (err) { }
         }
     }
 
     destroy() {
         if (this.series && this.chart) {
             try {
-                this.chart.removeSeries(this.series);
+                this.chart.removeSeries(this.series as any);
             } catch (err) {
-                console.warn('[HMA] Failed to remove series:', err);
+                console.warn('[SAR] Failed to remove series:', err);
             }
             this.series = null;
         }

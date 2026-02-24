@@ -14,6 +14,28 @@ class MT5Service:
     def shutdown(self):
         mt5.shutdown()
 
+    def fetch_available_symbols(self):
+        symbols = mt5.symbols_get()
+        if symbols is None:
+            print("[ERROR] Failed to fetch symbols")
+            return []
+        
+        available = []
+        for s in symbols:
+            # Only include symbols that are enabled for trading
+            if s.trade_mode != mt5.SYMBOL_TRADE_MODE_DISABLED:
+                available.append({
+                    "symbol": s.name,
+                    "path": s.path,
+                    "description": s.description,
+                    "digits": s.digits,
+                    "trade_mode": s.trade_mode,
+                    # Determine type based on path
+                    "type": "forex" if "Forex" in s.path else "crypto" if "Crypto" in s.path else "other"
+                })
+        print(f"[OK] Found {len(available)} tradeable symbols")
+        return available
+
     def get_tick(self, symbol):
         return mt5.symbol_info_tick(symbol)
 

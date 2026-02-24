@@ -18,7 +18,7 @@ export interface MACDResult {
     histogram: number[];
 }
 
-export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR" | "SIGNALS" | "Signals";
+export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR" | "BollingerBands" | "Stochastic" | "SuperTrend" | "VWAP" | "Ichimoku" | "ADX" | "OrderBlock" | "FVG" | "SIGNALS" | "Signals";
 
 export interface Indicator {
     type: IndicatorType;

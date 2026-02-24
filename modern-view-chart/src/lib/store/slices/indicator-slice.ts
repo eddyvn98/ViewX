@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
 import { IndicatorConfig } from '../types';
+import { INDICATOR_REGISTRY } from '../../../features/chart/indicators/registry';
 
 export interface IndicatorSlice {
     chartIndicators: Record<string, IndicatorConfig[]>;
@@ -32,28 +33,39 @@ export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlic
         const id = Math.random().toString(36).substring(7);
         const currentIndicators = state.chartIndicators[chartId] || [];
 
-        // Smart Color Selection:
-        // 1. Find colors currently used by indicators on this chart
+        // Get Metadata for default styles
+        const metadata = INDICATOR_REGISTRY[indicator.type as keyof typeof INDICATOR_REGISTRY];
+        const defaultStyles: Record<string, any> = {};
+        if (metadata) {
+            Object.keys(metadata.styles).forEach(key => {
+                defaultStyles[key] = metadata.styles[key].default;
+            });
+        }
+
+        // Merge with provided styles if any
+        const styles = { ...defaultStyles, ...(indicator.styles || {}) };
+
+        // Smart Color Selection (Legacy support)
         const usedColors = currentIndicators.map(ind => ind.color.toLowerCase());
-
-        // 2. Find the first color in our palette that isn't used
         let assignedColor = indicator.color;
-
-        // If the indicator color is a "default" or "white" or not provided, we override it
         const isGenericColor = !indicator.color || indicator.color === '#ffffff' || indicator.color === 'white';
 
         if (isGenericColor) {
             const availableColor = INDICATOR_COLORS.find(c => !usedColors.includes(c.toLowerCase()));
-
-            if (availableColor) {
-                assignedColor = availableColor;
-            } else {
-                // If all colors are used, pick the one that appears least frequently, or just cycle
-                assignedColor = INDICATOR_COLORS[currentIndicators.length % INDICATOR_COLORS.length];
-            }
+            assignedColor = availableColor || INDICATOR_COLORS[currentIndicators.length % INDICATOR_COLORS.length];
         }
 
-        const newIndicator = { ...indicator, id, color: assignedColor } as IndicatorConfig;
+        // Apply primary color to main style if it's a simple indicator
+        if (styles.line && isGenericColor) {
+            styles.line = assignedColor;
+        }
+
+        const newIndicator: IndicatorConfig = {
+            ...indicator,
+            id,
+            color: assignedColor,
+            styles
+        };
 
         return {
             chartIndicators: {
@@ -68,22 +80,32 @@ export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlic
 
         const newIndicators = indicators.map(ind => {
             const id = Math.random().toString(36).substring(7);
-            const usedColors = currentIndicators.map(i => i.color.toLowerCase());
 
+            // Get Metadata for default styles
+            const metadata = INDICATOR_REGISTRY[ind.type as keyof typeof INDICATOR_REGISTRY];
+            const defaultStyles: Record<string, any> = {};
+            if (metadata) {
+                Object.keys(metadata.styles).forEach(key => {
+                    defaultStyles[key] = metadata.styles[key].default;
+                });
+            }
+            const styles = { ...defaultStyles, ...(ind.styles || {}) };
+
+            const usedColors = currentIndicators.map(i => i.color.toLowerCase());
             let assignedColor = ind.color;
             const isGenericColor = !ind.color || ind.color === '#ffffff' || ind.color === 'white';
 
             if (isGenericColor) {
                 const availableColor = INDICATOR_COLORS.find(c => !usedColors.includes(c.toLowerCase()));
-                if (availableColor) {
-                    assignedColor = availableColor;
-                } else {
-                    assignedColor = INDICATOR_COLORS[currentIndicators.length % INDICATOR_COLORS.length];
-                }
+                assignedColor = availableColor || INDICATOR_COLORS[currentIndicators.length % INDICATOR_COLORS.length];
             }
 
-            const newInd = { ...ind, id, color: assignedColor } as IndicatorConfig;
-            currentIndicators.push(newInd); // Push to track colors for the next one in the map loop
+            if (styles.line && isGenericColor) {
+                styles.line = assignedColor;
+            }
+
+            const newInd: IndicatorConfig = { ...ind, id, color: assignedColor, styles };
+            currentIndicators.push(newInd);
             return newInd;
         });
 

@@ -1,8 +1,8 @@
 import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
-import { calculateHullMA } from '../utils/indicator-math';
+import { calculateATR } from '../utils/indicator-math';
 
-export class HMAIndicator {
+export class ATRIndicator {
     private series: ISeriesApi<"Line"> | null = null;
 
     constructor(
@@ -14,57 +14,52 @@ export class HMAIndicator {
         this.config = config;
 
         const styles = this.config.styles || {};
-        const lineColor = styles.line || this.config.color;
+        const lineColor = styles.line || this.config.color || '#f06292';
         const lineWidth = styles.width || this.config.lineWidth || 2;
 
         if (!this.series) {
             this.series = this.chart.addSeries(LineSeries, {
                 color: lineColor,
                 lineWidth: lineWidth as any,
-                priceLineVisible: false,
-                lastValueVisible: false,
-                crosshairMarkerVisible: false,
+                priceScaleId: 'right',
                 visible: this.config.visible,
+                lastValueVisible: true,
+                priceLineVisible: false,
+                crosshairMarkerVisible: false,
             });
         } else {
             this.series.applyOptions({
                 color: lineColor,
                 lineWidth: lineWidth as any,
                 visible: this.config.visible,
-                priceLineVisible: false,
-                lastValueVisible: false,
-                crosshairMarkerVisible: false,
             });
         }
 
-        const hmaValues = calculatedValues || calculateHullMA(candles.map(c => c.close), this.config.params.period);
+        const atrValues = calculatedValues || calculateATR(candles, this.config.params.period || 14);
 
-        const data = candles
-            .map((c, i) => {
-                const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
-                const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
-                return {
-                    time: time as any,
-                    value: hmaValues[i]
-                };
-            })
-            .filter(d => !isNaN(d.value));
+        const data = candles.map((c, i) => {
+            const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
+            const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+            return {
+                time: time as any,
+                value: atrValues[i]
+            };
+        }).filter(d => !isNaN(d.value));
 
         this.series.setData(data as any);
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
-        if (!this.series || !this.config.visible || candles.length < this.config.params.period) return;
+        if (!this.series || !this.config.visible) return;
 
-        const period = this.config.params.period;
-        const lastIdx = candles.length - 1;
+        // Ensure we have enough data
+        if (candles.length < (this.config.params.period || 14)) return;
 
-        // Use full history for 100% accuracy matching the chart
-        const prices = candles.map(c => c.close);
-        prices[prices.length - 1] = candle.close;
+        const prices = [...candles];
+        prices[prices.length - 1] = candle;
 
-        const hmaValues = calculateHullMA(prices, period);
-        const lastVal = hmaValues[hmaValues.length - 1];
+        const atrValues = calculateATR(prices, this.config.params.period || 14);
+        const lastVal = atrValues[atrValues.length - 1];
 
         if (!isNaN(lastVal)) {
             const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
@@ -74,9 +69,7 @@ export class HMAIndicator {
                     time: candleTime as any,
                     value: lastVal
                 });
-            } catch (err) {
-                // Ignore "Cannot update oldest data" errors which happen during rapid updates/race conditions
-            }
+            } catch (err) { }
         }
     }
 
@@ -84,9 +77,7 @@ export class HMAIndicator {
         if (this.series && this.chart) {
             try {
                 this.chart.removeSeries(this.series);
-            } catch (err) {
-                console.warn('[HMA] Failed to remove series:', err);
-            }
+            } catch (err) { }
             this.series = null;
         }
     }

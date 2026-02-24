@@ -25,6 +25,22 @@ const CATEGORIES = [
                 pane: 'main' as const
             },
             {
+                type: 'SuperTrend' as const,
+                name: 'SuperTrend',
+                description: 'Xác định xu hướng chính dựa trên độ biến động ATR.',
+                defaultParams: { period: 10, multiplier: 3 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'VWAP' as const,
+                name: 'VWAP',
+                description: 'Giá trung bình gia quyền theo khối lượng giao dịch.',
+                defaultParams: {},
+                defaultColor: '#FFEB3B',
+                pane: 'main' as const
+            },
+            {
                 type: 'SMA' as const,
                 name: 'Simple Moving Average',
                 description: 'Đường trung bình động đơn giản, xác định xu hướng dài hạn.',
@@ -40,6 +56,22 @@ const CATEGORIES = [
                 defaultColor: '#ffffff', // Auto-color
                 pane: 'main' as const
             },
+            {
+                type: 'Ichimoku' as const,
+                name: 'Ichimoku Cloud',
+                description: 'Hệ thống cái nhìn thoáng qua toàn diện về biểu đồ.',
+                defaultParams: { tenkan: 9, kijun: 26, spanB: 52, displacement: 26 },
+                defaultColor: '#2196F3',
+                pane: 'main' as const
+            },
+            {
+                type: 'SAR' as const,
+                name: 'Parabolic SAR',
+                description: 'Chỉ báo dừng và đảo chiều Parabolic.',
+                defaultParams: { startAF: 0.02, incrementAF: 0.02, maxAF: 0.2 },
+                defaultColor: '#2196F3',
+                pane: 'main' as const
+            },
         ]
     },
     {
@@ -49,26 +81,65 @@ const CATEGORIES = [
         indicators: [
             {
                 type: 'RSI' as const,
-                name: 'Relative Strength Index',
+                name: 'Relative Strength Index (RSI)',
                 description: 'Chỉ số sức mạnh tương đối, đo lường quá mua/quá bán.',
                 defaultParams: { period: 14, overbought: 70, oversold: 30 },
                 defaultColor: '#ffffff', // Auto-color
-                pane: 'rsi' as const
+                pane: 'subchart' as const
             },
             {
-                type: 'RSI' as const,
-                name: 'RSI Subchart',
-                description: 'RSI hiển thị trong một khung riêng biệt bên dưới.',
-                defaultParams: { period: 14, overbought: 70, oversold: 30 },
+                type: 'Stochastic' as const,
+                name: 'Stochastic Oscillator',
+                description: 'Chỉ báo động lượng xác định vùng quá mua/quá bán.',
+                defaultParams: { periodK: 14, smoothK: 3, periodD: 3 },
                 defaultColor: '#ffffff', // Auto-color
+                pane: 'subchart' as const
+            },
+            {
+                type: 'ADX' as const,
+                name: 'Average Directional Index (ADX)',
+                description: 'Đo lường sức mạnh và cường độ của xu hướng.',
+                defaultParams: { period: 14 },
+                defaultColor: '#FFB74D',
+                pane: 'subchart' as const
+            },
+            {
+                type: 'MACD' as const,
+                name: 'MACD',
+                description: 'Đường trung bình động hội tụ phân kỳ.',
+                defaultParams: { fast: 12, slow: 26, signal: 9 },
+                defaultColor: '#2962FF',
                 pane: 'subchart' as const
             },
         ]
     },
     {
-        id: 'structure',
-        name: 'Price Action & Structure',
-        icon: LayoutTemplate,
+        id: 'volatility',
+        name: 'Volatility Indicators',
+        icon: Activity,
+        indicators: [
+            {
+                type: 'BollingerBands' as const,
+                name: 'Bollinger Bands',
+                description: 'Dải Bollinger xác định biến động giá.',
+                defaultParams: { period: 20, stdDev: 2 },
+                defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'ATR' as const,
+                name: 'Average True Range',
+                description: 'Đo lường độ biến động thực tế trung bình.',
+                defaultParams: { period: 14 },
+                defaultColor: '#f06292',
+                pane: 'subchart' as const
+            },
+        ]
+    },
+    {
+        id: 'smart-analysis',
+        name: 'Smart Analysis',
+        icon: Sparkles,
         indicators: [
             {
                 type: 'TrendLines' as const,
@@ -92,6 +163,22 @@ const CATEGORIES = [
                 description: 'Vẽ các đường ngang tại mức đỉnh/đáy đột phá.',
                 defaultParams: {},
                 defaultColor: '#ffffff', // Auto-color
+                pane: 'main' as const
+            },
+            {
+                type: 'OrderBlock' as const,
+                name: 'Order Blocks (OB)',
+                description: 'Xác định các vùng lệnh lớn của Smart Money.',
+                defaultParams: { depth: 5 },
+                defaultColor: 'rgba(0, 255, 136, 0.4)',
+                pane: 'main' as const
+            },
+            {
+                type: 'FVG' as const,
+                name: 'Fair Value Gaps (FVG)',
+                description: 'Tìm kiếm các khoảng trống giá mất cân bằng.',
+                defaultParams: {},
+                defaultColor: 'rgba(255, 51, 102, 0.4)',
                 pane: 'main' as const
             },
         ]
@@ -229,16 +316,15 @@ export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) 
                                         className="group relative flex items-center justify-between gap-3 p-2.5 rounded-xl glass-card border-white/5 hover:glow-primary-border transition-all duration-300 text-left overflow-hidden active:scale-[0.98] min-h-[42px]"
                                     >
                                         <div className="flex items-center gap-2.5 min-w-0 relative z-10">
-                                            {indicator.defaultColor === '#ffffff' ? (
-                                                <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-                                                    <Sparkles size={10} className="text-primary animate-pulse" />
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className="w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor] shrink-0"
-                                                    style={{ backgroundColor: indicator.defaultColor, color: indicator.defaultColor }}
-                                                />
-                                            )}
+                                            <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 relative group-hover:scale-110 transition-transform">
+                                                <Sparkles size={10} className="text-primary animate-pulse" />
+                                                {indicator.defaultColor !== '#ffffff' && (
+                                                    <div
+                                                        className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background shadow-sm"
+                                                        style={{ backgroundColor: indicator.defaultColor }}
+                                                    />
+                                                )}
+                                            </div>
                                             <div className="flex flex-col min-w-0">
                                                 <span className="text-[10px] font-bold text-foreground tracking-tight uppercase truncate">
                                                     {indicator.type === 'RSI' && indicator.pane === 'subchart' ? 'RSI (Sub)' : indicator.type}

@@ -106,9 +106,27 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                         <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={11} /></button>
-                        <a href={`/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`} target="_blank" rel="noopener noreferrer" onClick={(e) => {
-                            e.preventDefault(); window.open(`/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`, `chart_${chart.id}`, 'width=1000,height=600');
-                        }} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title="Pop out"><ExternalLink size={11} /></a>
+                        <a
+                            href={`/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                const width = 1200;
+                                const height = 800;
+                                const left = (window.screen.width - width) / 2;
+                                const top = (window.screen.height - height) / 2;
+                                window.open(
+                                    `/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`,
+                                    `chart_${chart.id}`,
+                                    `width=${width},height=${height},left=${left},top=${top},menubar=no,location=no,status=no,toolbar=no,scrollbars=no`
+                                );
+                            }}
+                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all"
+                            title="Pop out"
+                        >
+                            <ExternalLink size={11} />
+                        </a>
                         {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all" title="Close"><X size={11} /></button>}
                     </div>
                 </div>

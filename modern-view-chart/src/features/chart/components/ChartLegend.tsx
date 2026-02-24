@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
 import { useLegendDOMUpdater } from '../hooks/use-legend-dom-updater';
 import { useShallow } from 'zustand/react/shallow';
+import { SymbolIcon } from './SymbolIcon';
 
 interface ChartLegendProps {
     chartId: string;
@@ -42,11 +43,14 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
                 className="flex flex-col gap-1.5 p-1.5 md:backdrop-blur-xl md:border rounded-xl md:shadow-sm w-[114px] bg-transparent border-none md:bg-primary/5 md:border-primary/10 transition-colors duration-300"
             >
                 {/* Status Column */}
-                <div className="flex flex-col gap-0.5 pb-1 border-b border-border/10">
+                <div className="flex items-center justify-between pb-1 border-b border-border/10">
                     <div className="flex items-center gap-2 px-0.5">
                         <div data-status="dot" className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         <span data-status="text" className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Live</span>
                     </div>
+                    {symbol && (
+                        <SymbolIcon symbol={symbol} className="w-3.5 h-3.5" />
+                    )}
                 </div>
 
                 {/* Elegant OHLC Rows */}

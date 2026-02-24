@@ -2,40 +2,52 @@ import React, { useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { IndicatorLayer } from './IndicatorLayer';
 import { DrawingLayer } from './DrawingLayer';
-import { Layout, Pencil, Zap } from 'lucide-react';
+import { Activity, Pencil, Zap } from 'lucide-react';
+import { motion, LayoutGroup } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export function LayerManager() {
     const [activeTab, setActiveTab] = useState<'indicator' | 'draw'>('indicator');
 
     const tabs = [
-        { id: 'indicator' as const, label: 'Indicators', icon: Layout },
+        { id: 'indicator' as const, label: 'Indicators', icon: Activity },
         { id: 'draw' as const, label: 'Draw Tools', icon: Pencil },
     ];
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden">
-            {/* Sub-tab Header */}
-            <div className="flex p-2 gap-1 bg-secondary/5 border-b border-border shrink-0">
-                {tabs.map(tab => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={cn(
-                                "flex-1 flex items-center justify-center py-1.5 gap-2 rounded-lg transition-all border",
-                                isActive
-                                    ? "bg-primary/20 border-primary/30 text-primary shadow-[0_0_10px_rgba(var(--primary),0.1)]"
-                                    : "bg-secondary/20 border-transparent text-muted-foreground hover:bg-secondary/30"
-                            )}
-                        >
-                            <tab.icon size={12} className={cn("transition-transform", isActive && "scale-110")} />
-                            <span className="text-[10px] font-bold uppercase tracking-tight">{tab.label}</span>
-                        </button>
-                    );
-                })}
-            </div>
+        <div className="flex flex-col h-full bg-background overflow-hidden font-sans">
+            {/* Sub-tab Header (Synced with StrategyPanel) */}
+            <LayoutGroup id="layer-manager-tabs">
+                <div className="flex bg-secondary/30 dark:bg-white/[0.02] p-0.5 gap-1 mx-4 mt-2 mb-2 rounded-lg shrink-0 relative z-0">
+                    {tabs.map(tab => {
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-1.5 py-1 rounded-md transition-colors duration-300 text-[9.5px] font-bold uppercase border border-transparent relative outline-none",
+                                    isActive
+                                        ? "text-primary"
+                                        : "text-muted-foreground/40 hover:text-foreground/60"
+                                )}
+                            >
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="active-layer-tab"
+                                        className="absolute inset-0 bg-primary/10 rounded-md shadow-sm border border-primary/5"
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                    />
+                                )}
+                                <div className="relative z-10 flex items-center gap-1.5">
+                                    <tab.icon size={10} className={cn("transition-transform", isActive && "scale-110")} />
+                                    <span>{tab.label}</span>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </LayoutGroup>
 
             {/* Content Area */}
             <div className="flex-1 min-h-0 overflow-hidden relative">

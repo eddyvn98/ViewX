@@ -22,18 +22,18 @@ export function LayoutGridSelector() {
     };
 
     return (
-        <div className="relative group p-0.5">
+        <div className="relative group px-1">
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "p-2 rounded-md transition-all duration-200",
+                    "p-1.5 rounded-md transition-all duration-200 border",
                     isOpen
-                        ? "bg-blue-500/10 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
-                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                        ? "bg-primary/10 text-primary border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.1)]"
+                        : "text-muted-foreground border-transparent hover:bg-secondary/50 hover:text-foreground"
                 )}
                 title={isOpen ? "" : "Change Layout"}
             >
-                <Grid3X3 size={20} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
+                <Grid3X3 size={16} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
             </button>
 
             {isOpen && (
@@ -45,16 +45,16 @@ export function LayoutGridSelector() {
                     />
 
                     {/* Dropdown Grid */}
-                    <div className="absolute right-0 top-full mt-2 z-[70] p-4 bg-[#1e222d] border border-zinc-700/50 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                        <div className="mb-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-[#787b86]">
-                            <span>Select Layout</span>
-                            <span className="text-blue-400 font-mono text-xs">
-                                {hovered ? `${hovered.r} x ${hovered.c}` : `${activeTab?.rows || 1} x ${activeTab?.cols || 1}`}
+                    <div className="absolute left-0 top-full mt-1.5 z-[70] p-3 bg-popover border border-border rounded-lg shadow-xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 origin-top-left min-w-[160px]">
+                        <div className="mb-3 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                            <span>Grid Layout</span>
+                            <span className="text-primary font-mono text-[10px]">
+                                {hovered ? `${hovered.r}x${hovered.c}` : `${activeTab?.rows || 1}x${activeTab?.cols || 1}`}
                             </span>
                         </div>
 
                         <div
-                            className="grid gap-2"
+                            className="grid gap-1.5"
                             style={{ gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)` }}
                             onMouseLeave={() => setHovered(null)}
                         >
@@ -70,19 +70,19 @@ export function LayoutGridSelector() {
                                         onMouseEnter={() => setHovered({ r, c })}
                                         onClick={() => handleSelect(r, c)}
                                         className={cn(
-                                            "w-7 h-7 rounded-[4px] border transition-all cursor-pointer",
+                                            "w-5 h-5 rounded-[3px] border transition-all cursor-pointer",
                                             isHighlighted
-                                                ? "bg-blue-500/40 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] scale-110 z-10"
+                                                ? "bg-primary/40 border-primary shadow-[0_0_8px_rgba(var(--primary),0.3)] scale-110 z-10"
                                                 : isCurrent
-                                                    ? "bg-blue-500/20 border-blue-500/50"
-                                                    : "bg-zinc-800/40 border-zinc-700/30 hover:border-zinc-500 hover:bg-zinc-700/50"
+                                                    ? "bg-primary/20 border-primary/50"
+                                                    : "bg-secondary/40 border-border/50 hover:border-muted-foreground/50 hover:bg-secondary/80"
                                         )}
                                     />
                                 );
                             })}
                         </div>
 
-                        <div className="mt-5 flex flex-wrap gap-2 pt-4 border-t border-zinc-800/50">
+                        <div className="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-border/50">
                             {['1x1', '2x1', '2x2', '3x2'].map((m) => (
                                 <button
                                     key={m}
@@ -91,10 +91,10 @@ export function LayoutGridSelector() {
                                         handleSelect(r, c);
                                     }}
                                     className={cn(
-                                        "px-3 py-1.5 text-[10px] font-bold rounded-md border transition-all flex-1 text-center",
+                                        "px-2 py-1 text-[9px] font-bold rounded border transition-all flex-1 text-center whitespace-nowrap",
                                         activeTab?.layoutMode === m
-                                            ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]"
-                                            : "bg-zinc-800/50 border-zinc-700/50 text-zinc-500 hover:text-zinc-200 hover:border-zinc-500"
+                                            ? "bg-primary/20 border-primary/40 text-primary"
+                                            : "bg-secondary/30 border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80"
                                     )}
                                 >
                                     {m}

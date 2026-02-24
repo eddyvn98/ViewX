@@ -3,6 +3,7 @@
 import { useMarketStore } from '@/lib/store';
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync';
 import { cn } from '@/lib/utils';
+import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
 import { Trash2, Search, Star } from 'lucide-react';
 import React, { useMemo, useState, memo, useCallback, useRef, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -98,15 +99,17 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
             )}
 
             {/* Column 1: Symbol & Source */}
-            {/* Column 1: Symbol & Source */}
-            <div className="min-w-0 flex flex-col relative z-10">
-                <span className={cn(
-                    "text-[13px] font-bold tracking-tight transition-all duration-300 whitespace-nowrap",
-                    isActive && mode === 'watchlist' ? "text-foreground dark:text-white" : "text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-white"
-                )}>
-                    {symbol.replace('USDT', '').replace('USDTm', '')}
-                </span>
-                <span className="text-[9px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
+            <div className="min-w-0 flex items-center gap-2.5 relative z-10">
+                <SymbolIcon symbol={symbol} className="w-6 h-6 shrink-0" />
+                <div className="flex flex-col min-w-0">
+                    <span className={cn(
+                        "text-[13px] font-bold tracking-tight transition-all duration-300 whitespace-nowrap",
+                        isActive && mode === 'watchlist' ? "text-foreground dark:text-white" : "text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-white"
+                    )}>
+                        {symbol.replace('USDT', '').replace('USDTm', '')}
+                    </span>
+                    <span className="text-[9px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
+                </div>
             </div>
 
             {mode === 'watchlist' ? (
@@ -190,6 +193,8 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
         }
     }, [watchlist.length, addToWatchlist]);
 
+    const availableSymbols = useMarketStore((state) => state.availableSymbols);
+
     // Memoized symbol list - never includes ticker DATA, only names
     const symbolList = useMemo(() => {
         let symbols: { symbol: string; source: DataSource }[] = [];
@@ -200,11 +205,19 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                 return { symbol, source: (isMT5 ? 'MT5' : 'BINANCE') as DataSource };
             });
         } else {
-            // Discovery mode: get source from store without subscribing to price changes
-            symbols = allSymbols.map(symbol => {
-                const isMT5 = symbol.includes('USD') || symbol.endsWith('m') || !symbol.includes('USDT');
-                return { symbol, source: (isMT5 ? 'MT5' : 'BINANCE') as DataSource };
-            });
+            // Discovery mode: use dynamic available symbols from store
+            if (availableSymbols.length > 0) {
+                symbols = availableSymbols.map(s => ({
+                    symbol: s.symbol,
+                    source: 'MT5' as DataSource
+                }));
+            } else {
+                // Fallback to currently active tickers if availableSymbols is empty
+                symbols = allSymbols.map(symbol => {
+                    const isMT5 = symbol.includes('USD') || symbol.endsWith('m') || !symbol.includes('USDT');
+                    return { symbol, source: (isMT5 ? 'MT5' : 'BINANCE') as DataSource };
+                });
+            }
         }
 
         return symbols
@@ -215,7 +228,7 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                 return matchesSearch && matchesTab;
             })
             .sort((a, b) => a.symbol.localeCompare(b.symbol));
-    }, [allSymbols, search, sourceTab, watchlist, mode]);
+    }, [allSymbols, availableSymbols, search, sourceTab, watchlist, mode]);
 
     const handleSymbolSelect = useCallback((symbol: string, source: 'BINANCE' | 'MT5') => {
         if (activeChartId) {

@@ -45,6 +45,38 @@ export function useChartInit(
         }
     }, [theme, themeColor, isReady]);
 
+    // Handle Symbol Digits Update
+    const currentSymbol = useMarketStore(state => {
+        const activeTab = state.tabs[state.activeTabId];
+        return activeTab?.charts[chartId]?.symbol;
+    });
+    const symbolInfo = useMarketStore(state => state.symbolInfo[currentSymbol || '']);
+
+    useEffect(() => {
+        if (!isReady || !seriesRef.current || !symbolInfo) return;
+
+        const digits = symbolInfo.digits ?? 2;
+        const minMove = 1 / Math.pow(10, digits);
+
+        seriesRef.current.applyOptions({
+            priceFormat: {
+                type: 'price',
+                precision: digits,
+                minMove: minMove,
+            },
+        });
+
+        if (markerSeriesRef.current) {
+            markerSeriesRef.current.applyOptions({
+                priceFormat: {
+                    type: 'price',
+                    precision: digits,
+                    minMove: minMove,
+                },
+            });
+        }
+    }, [isReady, symbolInfo, chartId]);
+
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
 

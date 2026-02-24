@@ -114,11 +114,12 @@ export type RightSidebarTab = 'market' | 'layer' | 'strategy' | 'trade';
 
 export interface IndicatorConfig {
     id: string;
-    type: 'EMA' | 'HMA' | 'RSI' | 'Signals' | 'SIGNALS' | 'SMA' | 'WMA' | 'MACD' | 'MARKET_STRUCTURE' | 'MarketStructure' | 'BREAKOUT_RAYS' | 'BreakoutRays' | 'TREND_LINES' | 'TrendLines' | 'FIBONACCI' | 'Fibonacci' | 'FIBONACCI_EXTENSION' | 'FibonacciExtension';
+    type: string;
     params: Record<string, any>;
-    color: string;
+    styles?: Record<string, any>; // Flexible styling (e.g., macd: { color: 'red' })
+    color: string; // Primary/Legacy color
     visible: boolean;
-    lineWidth: number;
+    lineWidth: number; // Legacy, move to styles soon
     pane: 'main' | 'rsi' | 'subchart';
 }
 

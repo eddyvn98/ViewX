@@ -109,6 +109,10 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
     return useMemo(() => {
         if (!indicatorsWithRealtime.length) return [];
 
+        const symbolMeta = useMarketStore.getState().symbolInfo[candles[0]?.symbol || ''] ||
+            Object.values(useMarketStore.getState().symbolInfo).find(s => s.symbol.includes(candles[0]?.symbol || ''));
+        const digits = symbolMeta?.digits || 2;
+
         return indicatorsWithRealtime.map(({ config, results, period }) => {
             const isMACD = config.type === 'MACD';
             const len = isMACD ? (results.macd?.length || 0) : results.length;
@@ -129,9 +133,9 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
                     type: config.type,
                     name: `MACD`,
                     values: [
-                        { label: `${fast},${slow}`, value: isNaN(macdVal) ? '-' : macdVal.toFixed(2), color: config.color },
-                        { label: `${signal}`, value: isNaN(sigVal) ? '-' : sigVal.toFixed(2), color: '#FF6D00' },
-                        { label: 'H', value: isNaN(histVal) ? '-' : histVal.toFixed(2), color: histVal >= 0 ? '#26a69a' : '#ef5350' }
+                        { label: `${fast},${slow}`, value: isNaN(macdVal) ? '-' : macdVal.toFixed(digits), color: config.color },
+                        { label: `${signal}`, value: isNaN(sigVal) ? '-' : sigVal.toFixed(digits), color: '#FF6D00' },
+                        { label: 'H', value: isNaN(histVal) ? '-' : histVal.toFixed(digits), color: histVal >= 0 ? '#26a69a' : '#ef5350' }
                     ],
                     value: '',
                     color: config.color,
@@ -144,10 +148,10 @@ export function useChartIndicatorValues(chartId: string, candles: Candle[], acti
                 id: config.id,
                 type: config.type,
                 name: `${config.type} ${period}`,
-                value: isNaN(val) ? '···' : val.toFixed(2),
+                value: isNaN(val) ? '···' : val.toFixed(digits),
                 color: config.color,
                 pane: config.pane
             } as IndicatorValueItem;
         });
-    }, [indicatorsWithRealtime, activeIndex]);
+    }, [indicatorsWithRealtime, activeIndex, candles]);
 }

@@ -26,7 +26,16 @@ export class MarketStructureIndicator {
             time: toSec(c.time) as any
         }));
 
-        const markers = calculateDynamicSwingPoints(formattedData, this.config.params.depth || 7);
+        const styles = this.config.styles || {};
+        const bullColor = styles.bullColor || '#00ff88';
+        const bearColor = styles.bearColor || '#ff3366';
+
+        const markers = calculateDynamicSwingPoints(
+            formattedData,
+            this.config.params.depth || 7,
+            bullColor,
+            bearColor
+        );
 
         // Auto-initialize plugin if needed
         if (!this.markersPlugin && this.series) {

@@ -15,39 +15,45 @@ export class MACDIndicator {
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: any) {
         this.config = config;
 
+        const styles = this.config.styles || {};
+        const macdColor = styles.macdLine || '#2962FF';
+        const signalColor = styles.signalLine || '#FF6D00';
+
         // Initialize Series if not exists
         if (!this.macdSeries) {
             // Histogram (Background)
             this.histogramSeries = this.chart.addSeries(HistogramSeries, {
-                color: '#26a69a',
+                color: styles.histogramBull || '#26a69a',
                 priceScaleId: 'right',
-                priceFormat: { type: 'volume' }, // or custom
+                priceFormat: { type: 'volume' },
                 visible: this.config.visible,
             });
 
             // MACD Line (Fast)
             this.macdSeries = this.chart.addSeries(LineSeries, {
-                color: '#2962FF', // Default Blue
+                color: macdColor,
                 lineWidth: 2,
                 priceScaleId: 'right',
                 visible: this.config.visible,
-                crosshairMarkerVisible: false, // Disable for performance
+                crosshairMarkerVisible: false,
             });
 
             // Signal Line (Slow)
             this.signalSeries = this.chart.addSeries(LineSeries, {
-                color: '#FF6D00', // Default Orange
+                color: signalColor,
                 lineWidth: 2,
                 priceScaleId: 'right',
                 visible: this.config.visible,
-                crosshairMarkerVisible: false, // Disable for performance
+                crosshairMarkerVisible: false,
             });
         } else {
-            // Update visibility and generic options
-            const options = { visible: this.config.visible };
-            this.macdSeries.applyOptions(options);
-            this.signalSeries!.applyOptions(options);
-            this.histogramSeries!.applyOptions(options);
+            // Update visibility and styles
+            this.macdSeries.applyOptions({ visible: this.config.visible, color: macdColor });
+            this.signalSeries!.applyOptions({ visible: this.config.visible, color: signalColor });
+            this.histogramSeries!.applyOptions({
+                visible: this.config.visible,
+                color: styles.histogramBull || '#26a69a'
+            });
         }
 
         // Calculate Data

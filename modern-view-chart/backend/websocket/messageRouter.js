@@ -11,6 +11,7 @@ import { handleBinanceCommand } from "./handlers/binanceCommandHandler.js";
 import { handleAlertCommand } from "./handlers/alertCommandHandler.js";
 import { handleAlertTriggered } from "./handlers/alertTriggeredHandler.js";
 import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
+import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
 
 export function setupMessageRouter(clients, mt5Prices) {
     return async (ws, msg) => {
@@ -68,6 +69,9 @@ export function setupMessageRouter(clients, mt5Prices) {
                     break;
                 case "strategy_signal":
                     handleStrategySignal(context, data);
+                    break;
+                case "mt5_symbols_available":
+                    handleMt5SymbolsAvailable(context, data);
                     break;
                 default:
                     console.warn(`Unknown message topic: ${msgTopic}`);

@@ -28,15 +28,20 @@ export class FibonacciIndicator {
             time: toSec(c.time) as any
         }));
 
+        const styles = this.config.styles || {};
+        const globalLineColor = styles.lineColor || '#ffffff';
+        const globalLabelColor = styles.labelColor || '#ffffff';
+        const bgOpacity = styles.opacity ?? 0.1;
+
         // 1. Calculate Swing Points (consistent depth)
-        const markers = calculateDynamicSwingPoints(formattedData, this.config.params.depth || 7);
+        const markers = calculateDynamicSwingPoints(formattedData, this.config.params.depth || 7, '#00ff88', '#ff3366');
         if (markers.length < 2) {
             console.warn('[Fibonacci] Not enough swing points:', markers.length);
             this.clear();
             return;
         }
 
-        // 2. Find the most recent High and Low (they might not be the last 2 in array if tentative points overlap)
+        // 2. Find the most recent High and Low
         let lastHigh: any = null;
         let lastLow: any = null;
 
@@ -54,7 +59,6 @@ export class FibonacciIndicator {
         }
 
         // 3. Prepare Fibonacci Data
-        // Order: P1 is the EARLIER point, P2 is the RECENT point
         let p1, p2;
         if ((lastHigh as any).time < (lastLow as any).time) {
             p1 = lastHigh;
@@ -74,11 +78,11 @@ export class FibonacciIndicator {
 
         const allLevels = [
             { ratio: 0, label: '0%', color: '#ff3366' },
-            { ratio: 0.236, label: '23.6%', color: '#ff9800' },
-            { ratio: 0.382, label: '38.2%', color: '#4caf50' },
-            { ratio: 0.5, label: '50%', color: '#2196f3' },
-            { ratio: 0.618, label: '61.8%', color: '#4caf50' },
-            { ratio: 0.786, label: '78.6%', color: '#9c27b0' },
+            { ratio: 0.236, label: '23.6%', color: globalLineColor === '#ffffff' ? '#ff9800' : globalLineColor },
+            { ratio: 0.382, label: '38.2%', color: globalLineColor === '#ffffff' ? '#4caf50' : globalLineColor },
+            { ratio: 0.5, label: '50%', color: globalLineColor === '#ffffff' ? '#2196f3' : globalLineColor },
+            { ratio: 0.618, label: '61.8%', color: globalLineColor === '#ffffff' ? '#4caf50' : globalLineColor },
+            { ratio: 0.786, label: '78.6%', color: globalLineColor === '#ffffff' ? '#9c27b0' : globalLineColor },
             { ratio: 1.0, label: '100%', color: '#00ff88' },
         ];
 
@@ -87,6 +91,9 @@ export class FibonacciIndicator {
             endTime: p2.time,
             showPercent,
             showPrice,
+            lineColor: globalLineColor,
+            labelColor: globalLabelColor,
+            backgroundOpacity: bgOpacity,
             levels: allLevels
                 .filter(l => levelSettings[l.ratio.toString()] !== false)
                 .map(l => ({

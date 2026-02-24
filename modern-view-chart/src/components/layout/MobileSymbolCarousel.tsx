@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
 
 interface MobileSymbolCarouselProps {
     onSymbolTap?: () => void;
@@ -36,15 +37,12 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
             let closestSymbol = '';
             let minDistance = Infinity;
 
-            // 1. Handle Infinite Jumping (Invisible to user)
-            // Measure actual distance between two identical items across sets
             const firstSetItem = items[0] as HTMLElement;
             const secondSetItem = items[watchlist.length] as HTMLElement;
 
             if (firstSetItem && secondSetItem) {
                 const singleSetWidth = secondSetItem.offsetLeft - firstSetItem.offsetLeft;
 
-                // Jump thresholds: Near the very beginning or very end of the 3-set range
                 if (container.scrollLeft < 10) {
                     container.scrollLeft += singleSetWidth;
                 } else if (container.scrollLeft > container.scrollWidth - container.clientWidth - 10) {
@@ -52,17 +50,15 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                 }
             }
 
-            // 2. Update Scales and Find Center Symbol
             for (let i = 0; i < items.length; i++) {
                 const item = items[i] as HTMLElement;
                 const itemCenter = item.offsetLeft + item.clientWidth / 2;
                 const distance = Math.abs(itemCenter - center);
 
-                // Emphasis transformation: Center is 1.25, sides are 1.0
                 const normalizedDistance = Math.min(distance / 120, 1);
                 const scale = 1.25 - (normalizedDistance * 0.25);
 
-                item.style.opacity = `${1 - normalizedDistance * 0.5}`; // Fade out sides
+                item.style.opacity = `${1 - normalizedDistance * 0.5}`;
                 item.style.transform = `scale(${scale})`;
                 item.style.filter = 'none';
 
@@ -83,7 +79,6 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         return () => container.removeEventListener('scroll', onScroll);
     }, [centerSymbol, watchlist]);
 
-    // Emit symbol change when settling
     useEffect(() => {
         if (centerSymbol && centerSymbol !== lastEmittedSymbol.current && initialCentered.current) {
             const timer = setTimeout(() => {
@@ -94,7 +89,6 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         }
     }, [centerSymbol, activeChartId, setChartSymbol]);
 
-    // Initial sync - Center the MIDDLE section
     useEffect(() => {
         if (scrollRef.current && currentSymbol && !initialCentered.current && watchlist.length > 0) {
             const index = watchlist.indexOf(currentSymbol);
@@ -125,16 +119,6 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                 className="flex items-center gap-12 overflow-x-auto no-scrollbar snap-x snap-mandatory h-full touch-horizontal"
             >
                 {infiniteSymbols.map((symbol, idx) => {
-                    const isBinance = symbol.toUpperCase().includes('USDT') && !symbol.endsWith('m');
-                    const baseSymbol = symbol.endsWith('m') ? symbol.slice(0, -1) : symbol.replace('USDT', '');
-                    const isForex = symbol.length === 7 && symbol.endsWith('m');
-
-                    const logoUrl = isBinance
-                        ? `https://s3-symbol-logo.tradingview.com/crypto/XTVC${baseSymbol}.svg`
-                        : isForex
-                            ? `https://s3-symbol-logo.tradingview.com/country/${baseSymbol.slice(0, 2)}.svg`
-                            : `https://s3-symbol-logo.tradingview.com/indices/${baseSymbol.toLowerCase()}.svg`;
-
                     const isActive = centerSymbol === symbol;
 
                     return (
@@ -165,19 +149,10 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                                     : "bg-transparent border-transparent text-muted-foreground"
                             )}>
                                 <div className={cn(
-                                    "w-5 h-5 rounded-full overflow-hidden flex items-center justify-center shrink-0 bg-background/50",
+                                    "w-5 h-5 rounded-full overflow-hidden flex items-center justify-center shrink-0",
                                     isActive && "scale-110"
                                 )}>
-                                    <img
-                                        src={logoUrl}
-                                        alt=""
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                            const parent = (e.target as HTMLImageElement).parentElement;
-                                            if (parent) parent.innerHTML = `<span class="text-[8px] font-black">${symbol[0]}</span>`;
-                                        }}
-                                    />
+                                    <SymbolIcon symbol={symbol} className="w-full h-full" />
                                 </div>
                                 <span className={cn(
                                     "text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"

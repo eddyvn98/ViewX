@@ -28,6 +28,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
     const setOrders = useMarketStore((state) => state.setOrders);
     const appendHistory = useMarketStore((state) => state.appendHistory);
     const setSymbolInfo = useMarketStore((state) => state.setSymbolInfo);
+    const setAvailableSymbols = useMarketStore((state) => state.setAvailableSymbols);
     const isConnected = useMarketStore((state) => state.isConnected);
 
     useEffect(() => {
@@ -253,6 +254,11 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                         setSymbolInfo(msg.data);
                     }
 
+                    // 7b. Available Symbols
+                    if (msgType === 'mt5_available_symbols') {
+                        setAvailableSymbols(msg.symbols || []);
+                    }
+
                     // 8. Alert Triggered
                     if (msgType === 'alert_triggered') {
                         const { alert, message, direction } = msg as any;
@@ -291,7 +297,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
         };
 
         connect();
-    }, [setAccount, setBridgeOnline, setCandles, setConnected, setPositions, updateLastCandle, updateTicker, updateTickers, setOrders, appendHistory, setSymbolInfo]);
+    }, [setAccount, setBridgeOnline, setCandles, setConnected, setPositions, updateLastCandle, updateTicker, updateTickers, setOrders, appendHistory, setSymbolInfo, setAvailableSymbols]);
 
     // Secondary Effects: History Fetch & Tab Visibility
     useEffect(() => {

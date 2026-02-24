@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useMarketStore } from '@/lib/store';
-import { Eye, EyeOff, Settings, Trash2, ChevronDown, ChevronRight, Plus, Layout, ShoppingCart } from 'lucide-react';
+import { Eye, EyeOff, Settings2, Trash2, Plus, Layout } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { IndicatorSelector } from './IndicatorSelector';
 
@@ -29,7 +30,7 @@ export function IndicatorLayer() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background relative overflow-hidden glass-panel">
+        <div className="flex flex-col h-full bg-background relative overflow-y-auto custom-scrollbar">
             {/* Indicator Selector Overlay */}
             {isSelectorOpen && (
                 <IndicatorSelector
@@ -38,125 +39,236 @@ export function IndicatorLayer() {
                 />
             )}
 
-            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/5 backdrop-blur-xl shrink-0">
-                <div className="flex flex-col">
-                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary text-glow-primary">
-                        Layer Manager
-                    </h3>
-                    <span className="text-[9px] text-muted-foreground/40 font-medium">Quản lý và tùy chỉnh chỉ báo</span>
+            <div className="p-3 flex flex-col gap-4 flex-shrink-0">
+                {/* Header & Add Button */}
+                <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-black uppercase text-foreground/80 tracking-tight">Layers</h4>
+                    <button
+                        onClick={() => setIsSelectorOpen(true)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-95"
+                        title="Add Indicator"
+                    >
+                        <Plus size={10} strokeWidth={3} />
+                        <span className="text-[10px] font-bold">Add</span>
+                    </button>
                 </div>
+
+                {indicators.length === 0 && (
+                    <div className="text-center py-8 flex flex-col items-center gap-2 text-muted-foreground/40 bg-secondary/5 rounded-xl border border-dashed border-border/40">
+                        <Layout size={24} strokeWidth={1.5} className="opacity-50" />
+                        <span className="text-[10px] font-medium">No active layers</span>
+                    </div>
+                )}
+
+                {/* Smart Analysis Section */}
+                {indicators.some(i => ['MARKET_STRUCTURE', 'BREAKOUT_RAYS', 'TREND_LINES', 'FIBONACCI', 'FIBONACCI_EXTENSION', 'MarketStructure', 'BreakoutRays', 'TrendLines'].includes(i.type)) && (
+                    <div className="flex flex-col gap-1">
+                        <h5 className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest px-1 mb-1">Smart Analysis</h5>
+                        {indicators
+                            .filter(i => ['MARKET_STRUCTURE', 'BREAKOUT_RAYS', 'TREND_LINES', 'FIBONACCI', 'FIBONACCI_EXTENSION', 'MarketStructure', 'BreakoutRays', 'TrendLines'].includes(i.type))
+                            .map(indicator => (
+                                <IndicatorItem
+                                    key={indicator.id}
+                                    indicator={indicator}
+                                    chartId={chartId}
+                                    editingId={editingId}
+                                    setEditingId={setEditingId}
+                                    toggleVisibility={toggleVisibility}
+                                    updateIndicator={updateIndicator}
+                                    removeIndicator={removeIndicator}
+                                />
+                            ))}
+                    </div>
+                )}
+
+                {/* Standard Indicators Section */}
+                {indicators.some(i => !['MARKET_STRUCTURE', 'BREAKOUT_RAYS', 'TREND_LINES', 'FIBONACCI', 'FIBONACCI_EXTENSION', 'MarketStructure', 'BreakoutRays', 'TrendLines'].includes(i.type)) && (
+                    <div className="flex flex-col gap-1">
+                        {indicators.some(i => ['MARKET_STRUCTURE', 'BREAKOUT_RAYS', 'TREND_LINES', 'FIBONACCI', 'FIBONACCI_EXTENSION', 'MarketStructure', 'BreakoutRays', 'TrendLines'].includes(i.type)) && (
+                            <h5 className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest px-1 mb-1 mt-1">Indicators</h5>
+                        )}
+                        {indicators
+                            .filter(i => !['MARKET_STRUCTURE', 'BREAKOUT_RAYS', 'TREND_LINES', 'FIBONACCI', 'FIBONACCI_EXTENSION', 'MarketStructure', 'BreakoutRays', 'TrendLines'].includes(i.type))
+                            .map(indicator => (
+                                <IndicatorItem
+                                    key={indicator.id}
+                                    indicator={indicator}
+                                    chartId={chartId}
+                                    editingId={editingId}
+                                    setEditingId={setEditingId}
+                                    toggleVisibility={toggleVisibility}
+                                    updateIndicator={updateIndicator}
+                                    removeIndicator={removeIndicator}
+                                />
+                            ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+import { INDICATOR_REGISTRY } from '../indicators/registry';
+
+function IndicatorItem({ indicator, chartId, editingId, setEditingId, toggleVisibility, updateIndicator, removeIndicator }: any) {
+    const metadata = INDICATOR_REGISTRY[indicator.type as keyof typeof INDICATOR_REGISTRY];
+
+    return (
+        <div className="flex flex-col mb-0.5">
+            <div className={cn(
+                "flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-200 min-h-[36px] group border border-transparent",
+                editingId === indicator.id ? "bg-secondary/40 border-border/20" : "hover:bg-secondary/20 hover:border-border/10"
+            )}>
                 <button
-                    onClick={() => setIsSelectorOpen(true)}
-                    className="p-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-90"
-                    title="Thêm chỉ báo"
+                    onClick={() => toggleVisibility(chartId, indicator.id)}
+                    className={cn(
+                        "transition-colors flex-shrink-0 p-1 rounded-md hover:bg-secondary/40 active:scale-95",
+                        indicator.visible ? "text-primary" : "text-muted-foreground/40"
+                    )}
+                    title={indicator.visible ? "Hide" : "Show"}
                 >
-                    <Plus size={14} />
+                    {indicator.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                </button>
+
+                <div
+                    className="flex-1 flex items-center gap-2.5 overflow-hidden cursor-pointer select-none"
+                    onClick={() => setEditingId(editingId === indicator.id ? null : indicator.id)}
+                >
+                    <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0 transition-transform duration-300", editingId === indicator.id && "scale-125")} style={{ backgroundColor: indicator.color }} />
+                    <span className={cn("text-[10px] truncate transition-colors font-semibold", editingId === indicator.id ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+                        {indicator.type.replace(/_/g, ' ')}
+                    </span>
+                </div>
+
+                <button
+                    onClick={() => setEditingId(editingId === indicator.id ? null : indicator.id)}
+                    className={cn(
+                        "p-1.5 rounded-md transition-all active:scale-95",
+                        editingId === indicator.id ? "text-primary bg-primary/10" : "text-muted-foreground/30 hover:text-foreground hover:bg-secondary/40"
+                    )}
+                >
+                    <Settings2 size={12} />
+                </button>
+
+                <button
+                    onClick={() => removeIndicator(chartId, indicator.id)}
+                    className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-95"
+                >
+                    <Trash2 size={12} />
                 </button>
             </div>
 
-            {/* Scrollable Content Area */}
-            <div className="flex-1 relative min-h-0 bg-transparent overflow-hidden">
-                <div className="absolute inset-0 overflow-y-auto custom-scrollbar touch-scrolling p-3 pb-10 flex flex-col gap-2">
-                    {indicators.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-20">
-                            <Layout size={32} className="text-muted-foreground" />
-                            <div className="text-center text-muted-foreground text-[10px] font-medium uppercase tracking-widest">
-                                Chưa có chỉ báo nào
-                            </div>
-                        </div>
-                    )}
-
-                    {indicators.map(indicator => (
-                        <div key={indicator.id} className="flex flex-col gap-1">
-                            <div className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-xl glass-card border-white/5 transition-all duration-300 group min-h-[44px]",
-                                editingId === indicator.id ? "glow-primary-border bg-white/5" : "hover:bg-white/5"
-                            )}>
-                                <button
-                                    onClick={() => toggleVisibility(chartId, indicator.id)}
-                                    className={cn(
-                                        "transition-all flex-shrink-0 p-1.5 rounded-lg",
-                                        indicator.visible
-                                            ? "bg-primary/10 text-primary shadow-[0_0_10px_rgba(59,130,246,0.2)]"
-                                            : "bg-white/5 text-muted-foreground/30"
-                                    )}
-                                >
-                                    {indicator.visible ? <Eye size={12} /> : <EyeOff size={12} />}
-                                </button>
-
-                                <div className="flex-1 flex flex-col min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: indicator.color }} />
-                                        <span className="text-[11px] truncate text-foreground font-bold tracking-tight uppercase">
-                                            {indicator.type}
-                                        </span>
-                                    </div>
-                                    <span className="text-[9px] text-muted-foreground/40 font-medium truncate">
-                                        {Object.entries(indicator.params).map(([k, v]) => `${k}: ${v}`).join(', ')}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
-                                    <button
-                                        onClick={() => setEditingId(editingId === indicator.id ? null : indicator.id)}
-                                        className={cn(
-                                            "p-1.5 rounded-lg transition-colors",
-                                            editingId === indicator.id ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-white/5"
-                                        )}
-                                    >
-                                        <Settings size={12} />
-                                    </button>
-                                    <button
-                                        onClick={() => removeIndicator(chartId, indicator.id)}
-                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Inline Settings */}
-                            {editingId === indicator.id && (
-                                <div className="mx-2 mb-2 p-3 bg-white/5 backdrop-blur-xl rounded-xl flex flex-col gap-3 border border-white/5 animate-in slide-in-from-top-2 duration-200">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {Object.keys(indicator.params).map(key => (
-                                            <div key={key} className="flex flex-col gap-1">
-                                                <label className="text-[8px] uppercase text-muted-foreground/40 font-bold tracking-widest">{key}</label>
-                                                <input
-                                                    type="number"
-                                                    value={indicator.params[key]}
-                                                    onChange={(e) => updateIndicator(chartId, indicator.id, {
-                                                        params: { ...indicator.params, [key]: Number(e.target.value) }
-                                                    })}
-                                                    className="bg-black/20 border border-white/5 rounded-lg px-2 py-1.5 text-[10px] text-foreground focus:border-primary/50 outline-none w-full transition-all"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="flex flex-col gap-1 pt-2 border-t border-white/5">
-                                        <label className="text-[8px] uppercase text-muted-foreground/40 font-bold tracking-widest">Màu sắc</label>
-                                        <div className="flex gap-2 items-center">
+            {/* Inline Settings Control Panel */}
+            <AnimatePresence>
+                {editingId === indicator.id && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden bg-secondary/10 rounded-b-lg mx-2 border-x border-b border-border/20 -mt-1 pt-1"
+                    >
+                        <div className="p-3 flex flex-col gap-4">
+                            {/* Parameters Schema */}
+                            {metadata?.params && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {Object.entries(metadata.params).map(([key, schema]) => (
+                                        <div key={key} className="flex flex-col gap-1.5">
+                                            <label className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">{schema.name}</label>
                                             <input
-                                                type="color"
-                                                value={indicator.color}
-                                                onChange={(e) => updateIndicator(chartId, indicator.id, { color: e.target.value })}
-                                                className="w-full h-6 bg-transparent border-none cursor-pointer p-0"
+                                                type={schema.type === 'number' ? 'number' : 'text'}
+                                                value={indicator.params[key] ?? schema.default}
+                                                min={schema.min}
+                                                max={schema.max}
+                                                step={schema.step}
+                                                onChange={(e) => updateIndicator(chartId, indicator.id, {
+                                                    params: { ...indicator.params, [key]: schema.type === 'number' ? Number(e.target.value) : e.target.value }
+                                                })}
+                                                className="bg-background/50 border border-border/20 rounded-md px-2 py-1.5 text-[10px] text-foreground focus:border-primary/50 focus:bg-background outline-none w-full transition-all"
                                             />
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
                             )}
-                        </div>
-                    ))}
-                </div>
-            </div>
 
-            <div className="p-2 px-4 border-t border-white/5 bg-white/5 backdrop-blur-xl flex-shrink-0">
-                <div className="flex items-center gap-2 text-primary opacity-40">
-                    <Layout size={10} />
-                    <span className="text-[8px] font-bold uppercase tracking-[0.15em]">Analytics Context</span>
-                </div>
-            </div>
+                            {/* Fallback for indicators not in registry */}
+                            {!metadata && indicator.params && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {Object.keys(indicator.params).map(key => (
+                                        <div key={key} className="flex flex-col gap-1.5">
+                                            <label className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">{key}</label>
+                                            <input
+                                                type="number"
+                                                value={indicator.params[key]}
+                                                onChange={(e) => updateIndicator(chartId, indicator.id, {
+                                                    params: { ...indicator.params, [key]: Number(e.target.value) }
+                                                })}
+                                                className="bg-background/50 border border-border/20 rounded-md px-2 py-1.5 text-[10px] text-foreground focus:border-primary/50 focus:bg-background outline-none w-full transition-all"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Styles Schema */}
+                            <div className="flex flex-col gap-2.5 pt-3 border-t border-border/10">
+                                <label className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">Appearance</label>
+                                <div className="flex flex-col gap-3">
+                                    {metadata?.styles ? (
+                                        Object.entries(metadata.styles).map(([key, schema]) => (
+                                            <div key={key} className="flex items-center justify-between gap-4">
+                                                <span className="text-[10px] text-muted-foreground font-medium">{schema.label}</span>
+                                                {schema.type === 'color' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-10 h-6 rounded border border-border/20 overflow-hidden relative">
+                                                            <input
+                                                                type="color"
+                                                                value={indicator.styles?.[key] ?? schema.default}
+                                                                onChange={(e) => updateIndicator(chartId, indicator.id, {
+                                                                    styles: { ...indicator.styles, [key]: e.target.value }
+                                                                })}
+                                                                className="absolute -top-2 -left-2 w-[150%] h-[200%] cursor-pointer p-0"
+                                                            />
+                                                        </div>
+                                                        <span className="text-[9px] font-mono opacity-40 uppercase">{(indicator.styles?.[key] ?? schema.default).slice(1)}</span>
+                                                    </div>
+                                                ) : schema.type === 'number' ? (
+                                                    <input
+                                                        type="number"
+                                                        value={indicator.styles?.[key] ?? schema.default}
+                                                        min={schema.min}
+                                                        max={schema.max}
+                                                        step={schema.step}
+                                                        onChange={(e) => updateIndicator(chartId, indicator.id, {
+                                                            styles: { ...indicator.styles, [key]: Number(e.target.value) }
+                                                        })}
+                                                        className="w-12 bg-background/30 border border-border/10 rounded px-1.5 py-0.5 text-[10px] text-right"
+                                                    />
+                                                ) : null}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        // Fallback Legacy Color Picker
+                                        <div className="flex items-center justify-between gap-4">
+                                            <span className="text-[10px] text-muted-foreground font-medium">Main Color</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-10 h-6 rounded border border-border/20 overflow-hidden relative">
+                                                    <input
+                                                        type="color"
+                                                        value={indicator.color}
+                                                        onChange={(e) => updateIndicator(chartId, indicator.id, { color: e.target.value })}
+                                                        className="absolute -top-2 -left-2 w-[150%] h-[200%] cursor-pointer p-0"
+                                                    />
+                                                </div>
+                                                <span className="text-[9px] font-mono opacity-40 uppercase">{indicator.color.slice(1)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
