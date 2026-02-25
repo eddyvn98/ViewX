@@ -30,6 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 logs/
+.tmp/
 mobile_link.txt
 public/mobile-access.json
 tunnel_backend.txt
