@@ -49,4 +49,6 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
 - [x] Move WS auth to short-lived JWT via header/subprotocol
 - [x] Add roles (`viewer`, `trader`, `admin`) and session revocation
 - [x] Add structured JSON logs and `/api/metrics`
+  Implemented runtime monitor in `backend/services/runtimeAlertMonitor.js` for:
+  `bridge_offline`, `db_disconnected`, `ws_drop_spike` (with optional `ALERT_WEBHOOK_URL`).
 - [x] Prepare migration to named Cloudflare tunnel with fixed domain
