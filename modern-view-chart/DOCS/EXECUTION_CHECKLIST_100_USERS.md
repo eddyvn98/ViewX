@@ -64,4 +64,6 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
   - `npm run build` pass
   - `npm audit --omit=dev`: 0 high/critical (remaining: `qs` low)
 - Evidence commit: `d2bcd70`
-- [ ] Rotate `ACCESS_TOKEN` and regenerate `access_ticket` immediately before public launch
+- [x] Rotate `ACCESS_TOKEN` and regenerate `access_ticket` immediately before public launch
+  Verified at `2026-02-25 13:05:30` in `logs/token-rotate.log` with:
+  `Success: service healthy and mobile-access.json updated with access_ticket (no raw token leak).`
