@@ -12,12 +12,13 @@ import { handleAlertCommand } from "./handlers/alertCommandHandler.js";
 import { handleAlertTriggered } from "./handlers/alertTriggeredHandler.js";
 import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
 import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
+import { safeSend } from "./wsSend.js";
 
-export function setupMessageRouter(clients, mt5Prices) {
+export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
     return async (ws, msg) => {
         try {
             const data = JSON.parse(msg.toString());
-            const context = { ws, clients, mt5Prices };
+            const context = { ws, clients, mt5Prices, subscriptionIndex };
             const msgTopic = data.topic || data.event || data.type;
 
             switch (msgTopic) {
@@ -48,7 +49,7 @@ export function setupMessageRouter(clients, mt5Prices) {
                     // Simple broadcast to all clients (Engine will pick it up)
                     const payload = JSON.stringify(data);
                     for (const [clientWs] of clients.entries()) {
-                        if (clientWs.readyState === clientWs.OPEN) clientWs.send(payload);
+                        if (clientWs.readyState === clientWs.OPEN) safeSend(clientWs, payload);
                     }
                     break;
                 case "mt5_candles":

@@ -24,12 +24,15 @@ PORT=8091
 ACCESS_TOKEN=<strong-random-token>
 URL_MONGOOSE=mongodb://127.0.0.1:27027/viewx?directConnection=true
 ALLOWED_ORIGINS=https://*.trycloudflare.com,http://localhost:3000,http://127.0.0.1:3000
-MAX_WS_CLIENTS=80
+MAX_WS_CLIENTS=150
 WS_MSG_RATE_PER_10S=60
 BRIDGE_WS_MSG_RATE_PER_10S=15000
 BRIDGE_SYMBOL_REFRESH_SEC=2
+WS_HEARTBEAT_INTERVAL_MS=30000
+WS_BACKPRESSURE_SKIP_BYTES=262144
 CORE_SYMBOLS=XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm
 TOKEN_ROTATE_CRON_TIME=03:00
+MOBILE_ACCESS_TTL_SEC=43200
 ```
 
 ## MongoDB (Docker per project)
@@ -75,7 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\server\stop-all.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\server\run-all.ps1
 ```
 
-`run-all.ps1` automatically attempts to start MongoDB container first.
+`run-all.ps1` automatically attempts to start MongoDB container first and fails fast if `.next/BUILD_ID` is missing (no fallback to `next dev`).
 
 ## Health Checks
 Liveness:
@@ -87,6 +90,18 @@ Readiness:
 ```powershell
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8091/api/health/ready?access_token=<ACCESS_TOKEN>"
 ```
+
+## WS Soak Test (100 users / 15 minutes)
+Run:
+```powershell
+npm run soak:ws -- --clients 100 --duration-sec 900 --ramp-sec 60 --health-poll-sec 10
+```
+
+Output:
+- JSON report is written to `logs/ws-soak-report-<timestamp>.json`
+- Gate summary includes:
+  - disconnect rate
+  - max observed `broadcast_p95_ms`
 
 ## Public Link
 Quick read:
@@ -100,8 +115,8 @@ Get-Content .\public\mobile-access.json
 ```
 
 `mobile_link.txt` includes:
-- `access_token=<ACCESS_TOKEN>`
-- `ws_url=wss://.../?access_token=<ACCESS_TOKEN>`
+- `access_ticket=<short-lived-signed-ticket>`
+- `ws_url=wss://.../?access_ticket=<short-lived-signed-ticket>`
 
 ## Token Rotation
 Manual forced rotation:

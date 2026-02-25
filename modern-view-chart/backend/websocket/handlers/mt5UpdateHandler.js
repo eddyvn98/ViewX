@@ -1,9 +1,10 @@
 import { broadcastCandleForSymbol } from "../services/broadcastService.js";
 import { setBridgeOnline } from "../../runtime-state.js";
+import { safeSend } from "../wsSend.js";
 
 const dailyOpens = new Map();
 
-export function handleMt5Update({ ws, clients, mt5Prices }, data) {
+export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex }, data) {
     const normalizedSymbol = (data.symbol || "").replace(/[mM]$/, "m");
 
     let openPrice = data.daily_open;
@@ -45,18 +46,18 @@ export function handleMt5Update({ ws, clients, mt5Prices }, data) {
     const payload = JSON.stringify({ topic: "priceUpdate", data: [mt5Prices.get(normalizedSymbol)] });
     for (const [clientWs] of clients.entries()) {
         if (!clientWs.isBridge && clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
+            safeSend(clientWs, payload, { nonCritical: true });
         }
     }
 
-    broadcastCandleForSymbol({ clients, mt5Prices }, normalizedSymbol, data.price);
+    broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, normalizedSymbol, data.price);
 }
 
 function broadcastBridgeStatus(clients, online) {
     const payload = JSON.stringify({ topic: "bridgeStatus", online });
     for (const [clientWs] of clients.entries()) {
         if (!clientWs.isBridge && clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
+            safeSend(clientWs, payload);
         }
     }
 }

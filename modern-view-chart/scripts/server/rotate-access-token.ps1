@@ -114,17 +114,19 @@ catch {
 }
 
 $mobileAccessPath = Join-Path $RepoRoot "public/mobile-access.json"
-$containsToken = $false
+$hasAccessTicket = $false
+$leaksRawToken = $false
 if (Test-Path $mobileAccessPath) {
     $json = Get-Content $mobileAccessPath -Raw
-    $containsToken = $json -like "*$newToken*"
+    $hasAccessTicket = ($json -like "*access_ticket=*") -or ($json -like "*access_ticket%3D*")
+    $leaksRawToken = $json -like "*$newToken*"
 }
 
-if ($ok -and $containsToken) {
+if ($ok -and $hasAccessTicket -and -not $leaksRawToken) {
     Set-Content -Path $StatePath -Value (Get-Date -Format "yyyy-MM-dd") -Encoding ASCII
-    Write-RotateLog "[rotate-token] Success: service healthy and mobile-access.json updated."
+    Write-RotateLog "[rotate-token] Success: service healthy and mobile-access.json updated with access_ticket (no raw token leak)."
     exit 0
 }
 
-Write-RotateLog "[rotate-token] Warning: post-rotate verification failed (health=$ok, linkUpdated=$containsToken)."
+Write-RotateLog "[rotate-token] Warning: post-rotate verification failed (health=$ok, hasAccessTicket=$hasAccessTicket, leaksRawToken=$leaksRawToken)."
 exit 1

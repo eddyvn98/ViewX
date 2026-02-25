@@ -7,7 +7,7 @@ import { calcBollingerBands, calcRSI } from "../../services/indicators.js";
 const router = new Router();
 
 //Get all users
-router.route("/").getcheckLogin, User.getListUsers;
+router.route("/").get(checkLogin, User.getListUsers);
 
 //Register
 router.route("/register").post(User.createUser);

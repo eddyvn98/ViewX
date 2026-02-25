@@ -1,7 +1,9 @@
 import firebaseAdmin from "firebase-admin";
 import multer from "multer";
 import path from "path";
+import { createRequire } from "module";
 
+const require = createRequire(import.meta.url);
 const serviceAccount = require("../serviceAccountKey.json");
 
 firebaseAdmin.initializeApp({

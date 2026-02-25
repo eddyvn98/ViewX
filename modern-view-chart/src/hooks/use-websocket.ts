@@ -38,12 +38,16 @@ function buildSocketUrl(): string {
     const params = new URLSearchParams(window.location.search);
     const wsOverride = params.get("ws_url");
     const token = params.get("access_token");
+    const ticket = params.get("access_ticket");
     const base = wsOverride || SOCKET_URL;
 
     try {
         const u = new URL(base);
         if (token && !u.searchParams.get("access_token")) {
             u.searchParams.set("access_token", token);
+        }
+        if (ticket && !u.searchParams.get("access_ticket")) {
+            u.searchParams.set("access_ticket", ticket);
         }
         return u.toString();
     } catch {

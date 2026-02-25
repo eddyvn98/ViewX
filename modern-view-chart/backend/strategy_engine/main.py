@@ -2,6 +2,7 @@ import asyncio
 import websockets
 import json
 import os
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from strategy_manager import StrategyManager
 
 from analyzer_service import AnalyzerService
@@ -14,6 +15,24 @@ def build_ws_url():
         return base_url
     sep = "&" if "?" in base_url else "?"
     return f"{base_url}{sep}access_token={access_token}"
+
+
+def mask_url_for_log(url):
+    if not url:
+        return url
+    try:
+        parts = urlsplit(url)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        masked_query = []
+        for key, value in query:
+            if key in {"access_token", "access_ticket"} and value:
+                suffix = value[-4:] if len(value) >= 4 else "****"
+                masked_query.append((key, f"***{suffix}"))
+            else:
+                masked_query.append((key, value))
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(masked_query), parts.fragment))
+    except Exception:
+        return url
 
 
 WS_URL = build_ws_url()
@@ -33,7 +52,7 @@ async def main():
 
     while True:
         try:
-            print(f"🔌 Connecting to {WS_URL}...")
+            print(f"🔌 Connecting to {mask_url_for_log(WS_URL)}...")
             async with websockets.connect(WS_URL) as ws:
                 print("✅ Strategy Engine Connected to Hub")
                 

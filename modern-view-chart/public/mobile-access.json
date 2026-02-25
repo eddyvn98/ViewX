@@ -1,6 +1,9 @@
 {
-  "frontend": "https://listed-recipient-bob-depot.trycloudflare.com",
-  "backend": "https://kent-charging-instance-marc.trycloudflare.com",
-  "mobile_link": "https://listed-recipient-bob-depot.trycloudflare.com?mobile=1&ws_url=wss://kent-charging-instance-marc.trycloudflare.com",
-  "updated_at": 1771922114.3861816
+  "frontend": "https://hotel-sprint-sells-ahead.trycloudflare.com",
+  "backend": "https://neighborhood-nightlife-entertainment-abstract.trycloudflare.com",
+  "mobile_link": "https://hotel-sprint-sells-ahead.trycloudflare.com?mobile=1&ws_url=wss%3A%2F%2Fneighborhood-nightlife-entertainment-abstract.trycloudflare.com%3Faccess_ticket%3DeyJleHAiOjE3NzIwMzUxODcsImlhdCI6MTc3MTk5MTk4Nywibm9uY2UiOiIyMDAwOWJiOGVjNzRjYmFlIiwidHlwIjoibW9iaWxlX2FjY2VzcyJ9.zGSjG93Zs960M7iiPqvAA1YuCKFAvEocKmaWcJjEtI4&access_ticket=eyJleHAiOjE3NzIwMzUxODcsImlhdCI6MTc3MTk5MTk4Nywibm9uY2UiOiIyMDAwOWJiOGVjNzRjYmFlIiwidHlwIjoibW9iaWxlX2FjY2VzcyJ9.zGSjG93Zs960M7iiPqvAA1YuCKFAvEocKmaWcJjEtI4",
+  "ws_url": "wss://neighborhood-nightlife-entertainment-abstract.trycloudflare.com?access_ticket=eyJleHAiOjE3NzIwMzUxODcsImlhdCI6MTc3MTk5MTk4Nywibm9uY2UiOiIyMDAwOWJiOGVjNzRjYmFlIiwidHlwIjoibW9iaWxlX2FjY2VzcyJ9.zGSjG93Zs960M7iiPqvAA1YuCKFAvEocKmaWcJjEtI4",
+  "access_ticket_expires_in_sec": 43200,
+  "access_token_configured": true,
+  "updated_at": 1771991987.0199497
 }

@@ -4,7 +4,12 @@ import re
 import subprocess
 import threading
 import time
+import hmac
+import hashlib
+import base64
+import secrets
 from urllib.parse import urlencode
+from urllib.parse import urlsplit, parse_qsl, urlencode as _urlencode, urlunsplit
 
 frontend_url = None
 backend_url = None
@@ -35,6 +40,47 @@ def load_access_token():
 
 
 ACCESS_TOKEN = load_access_token()
+MOBILE_ACCESS_TTL_SEC = int((os.getenv("MOBILE_ACCESS_TTL_SEC") or "43200").strip() or "43200")
+
+
+def _base64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+
+
+def create_access_ticket() -> str:
+    if not ACCESS_TOKEN:
+        return ""
+
+    now = int(time.time())
+    payload = {
+        "typ": "mobile_access",
+        "iat": now,
+        "exp": now + max(60, MOBILE_ACCESS_TTL_SEC),
+        "nonce": secrets.token_hex(8),
+    }
+    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    payload_part = _base64url(payload_bytes)
+    signature = hmac.new(ACCESS_TOKEN.encode("utf-8"), payload_part.encode("utf-8"), hashlib.sha256).digest()
+    signature_part = _base64url(signature)
+    return f"{payload_part}.{signature_part}"
+
+
+def mask_url_for_log(url: str) -> str:
+    if not url:
+        return url
+    try:
+        parts = urlsplit(url)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        masked_query = []
+        for key, value in query:
+            if key in {"access_token", "access_ticket"} and value:
+                suffix = value[-4:] if len(value) >= 4 else "****"
+                masked_query.append((key, f"***{suffix}"))
+            else:
+                masked_query.append((key, value))
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, _urlencode(masked_query), parts.fragment))
+    except Exception:
+        return url
 
 
 def run_tunnel(port, type_name):
@@ -85,13 +131,14 @@ def run_tunnel(port, type_name):
 def save_access_info():
     time.sleep(1)
 
+    access_ticket = create_access_ticket()
     ws_url = backend_url.replace("https://", "wss://")
-    if ACCESS_TOKEN:
-        ws_url = f"{ws_url}?{urlencode({'access_token': ACCESS_TOKEN})}"
+    if access_ticket:
+        ws_url = f"{ws_url}?{urlencode({'access_ticket': access_ticket})}"
 
     params = {"mobile": "1", "ws_url": ws_url}
-    if ACCESS_TOKEN:
-        params["access_token"] = ACCESS_TOKEN
+    if access_ticket:
+        params["access_ticket"] = access_ticket
     final_link = f"{frontend_url}?{urlencode(params)}"
 
     data = {
@@ -99,6 +146,7 @@ def save_access_info():
         "backend": backend_url,
         "mobile_link": final_link,
         "ws_url": ws_url,
+        "access_ticket_expires_in_sec": max(60, MOBILE_ACCESS_TTL_SEC) if access_ticket else 0,
         "access_token_configured": bool(ACCESS_TOKEN),
         "updated_at": time.time(),
     }
@@ -120,7 +168,7 @@ def save_access_info():
 
     print("\n" + "=" * 60)
     print("MOBILE TRADING ACCESS READY")
-    print(f"Link: {final_link}")
+    print(f"Link: {mask_url_for_log(final_link)}")
     print("=" * 60 + "\n")
 
 

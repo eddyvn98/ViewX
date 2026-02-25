@@ -5,7 +5,7 @@ import json
 import time
 import sys
 import os
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 # Configuration
 def build_node_ws_url():
@@ -15,6 +15,24 @@ def build_node_ws_url():
         return base_url
     sep = "&" if "?" in base_url else "?"
     return f"{base_url}{sep}{urlencode({'access_token': access_token})}"
+
+
+def mask_url_for_log(url):
+    if not url:
+        return url
+    try:
+        parts = urlsplit(url)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        masked = []
+        for key, value in query:
+            if key in {"access_token", "access_ticket"} and value:
+                suffix = value[-4:] if len(value) >= 4 else "****"
+                masked.append((key, f"***{suffix}"))
+            else:
+                masked.append((key, value))
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(masked), parts.fragment))
+    except Exception:
+        return url
 
 
 NODE_WS_URL = build_node_ws_url()
@@ -257,7 +275,7 @@ async def bridge_loop():
         return
 
     async with websockets.connect(NODE_WS_URL) as websocket:
-        print(f"[OK] Bridge connected to {NODE_WS_URL}")
+        print(f"[OK] Bridge connected to {mask_url_for_log(NODE_WS_URL)}")
         
         # 1. Send initial available symbols
         available_symbols = fetch_available_symbols()

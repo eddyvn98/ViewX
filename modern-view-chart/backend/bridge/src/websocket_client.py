@@ -1,6 +1,25 @@
 import asyncio
 import json
 import websockets
+from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit
+
+
+def mask_url_for_log(url):
+    if not url:
+        return url
+    try:
+        parts = urlsplit(url)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        masked = []
+        for key, value in query:
+            if key in {"access_token", "access_ticket"} and value:
+                suffix = value[-4:] if len(value) >= 4 else "****"
+                masked.append((key, f"***{suffix}"))
+            else:
+                masked.append((key, value))
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(masked), parts.fragment))
+    except Exception:
+        return url
 
 
 class BridgeClient:
@@ -14,7 +33,7 @@ class BridgeClient:
 
     async def connect(self):
         self.websocket = await websockets.connect(self.ws_url, max_size=10 * 1024 * 1024)
-        print(f"[OK] Bridge connected to {self.ws_url}")
+        print(f"[OK] Bridge connected to {mask_url_for_log(self.ws_url)}")
         return self.websocket
 
     async def send_json(self, data):

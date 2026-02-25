@@ -3,16 +3,17 @@ import { calcBollingerBands } from "../../services/indicators.js";
 import { fetchLatestCandle, fetchPrices } from "./dataService.js";
 import { getBinancePrices } from "./binanceTickerService.js";
 import { candleBuffers } from "../handlers/subscribeHandler.js";
+import { safeSend } from "../wsSend.js";
+import { normalizeSymbol } from "../subscriptionIndex.js";
 
-const CORE_SYMBOLS = (process.env.CORE_SYMBOLS || "XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbolTarget) {
+    const normalizedTarget = normalizeSymbol(symbolTarget);
+    if (!normalizedTarget) return;
 
-export async function broadcastCandleForSymbol({ clients, mt5Prices }, symbolTarget) {
-    const normalizedTarget = (symbolTarget || "").replace(/[mM]$/, "m");
-    const groups = groupClientsByChart(clients);
-    const keys = Object.keys(groups).filter((k) => k.startsWith(`${normalizedTarget}|`));
+    const keys = [];
+    for (const key of subscriptionIndex.chartSubscribers.keys()) {
+        if (String(key).startsWith(`${normalizedTarget}|`)) keys.push(key);
+    }
 
     for (const key of keys) {
         const [symbol, interval] = key.split("|");
@@ -54,86 +55,98 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices }, symbolTar
             },
         });
 
-        for (const ws of groups[key]) {
+        const subscribers = subscriptionIndex.chartSubscribers.get(key);
+        if (!subscribers || subscribers.size === 0) continue;
+
+        for (const ws of subscribers) {
+            if (!clients.has(ws)) continue;
             if (ws.readyState === ws.OPEN) {
-                ws.send(payload);
+                safeSend(ws, payload, { nonCritical: true });
             }
         }
     }
 }
 
-function collectClientSymbols(meta) {
-    const wanted = new Set();
-    for (const chartKey of meta?.charts || []) {
-        const [symbol] = chartKey.split("|");
-        if (symbol) wanted.add(symbol);
-    }
-    for (const symbol of meta?.symbols || []) {
-        if (symbol) wanted.add(symbol);
-    }
-    return wanted;
-}
-
-export async function broadcastPricesToSubscribers({ clients, mt5Prices }) {
+export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }) {
     try {
         const allPrices = getBinancePrices();
         const tickers = allPrices.length > 0 ? allPrices : await fetchPrices();
         const mt5Data = Array.from(mt5Prices.values());
+        const latestBySymbol = new Map();
+        for (const item of [...tickers, ...mt5Data]) {
+            const symbol = normalizeSymbol(item?.symbol);
+            if (symbol) latestBySymbol.set(symbol, { ...item, symbol });
+        }
 
-        for (const [ws, meta] of clients.entries()) {
+        const perWsSymbolMap = new Map();
+        for (const [symbol, item] of latestBySymbol.entries()) {
+            const subscribers = subscriptionIndex.symbolSubscribers.get(symbol);
+            if (!subscribers) continue;
+
+            for (const ws of subscribers) {
+                if (!clients.has(ws)) continue;
+                let mapForWs = perWsSymbolMap.get(ws);
+                if (!mapForWs) {
+                    mapForWs = new Map();
+                    perWsSymbolMap.set(ws, mapForWs);
+                }
+                mapForWs.set(symbol, item);
+            }
+        }
+
+        const payloadCache = new Map();
+        for (const [ws, symbolMap] of perWsSymbolMap.entries()) {
             if (ws.readyState !== ws.OPEN) continue;
+            const meta = clients.get(ws);
+            if (!meta || meta.isBridgeLike) continue;
 
-            const wantedSymbols = collectClientSymbols(meta);
-            let combinedPrices;
+            const orderedSymbols = Array.isArray(meta.symbols) ? meta.symbols : [];
+            const data = orderedSymbols.map((s) => symbolMap.get(normalizeSymbol(s))).filter(Boolean);
+            if (data.length === 0) continue;
 
-            if (wantedSymbols.size === 0) {
-                const coreSet = new Set(CORE_SYMBOLS);
-                combinedPrices = [
-                    ...tickers.filter((item) => coreSet.has(item.symbol)),
-                    ...mt5Data.filter((item) => coreSet.has(item.symbol)),
-                ];
-            } else {
-                combinedPrices = [
-                    ...tickers.filter((item) => wantedSymbols.has(item.symbol)),
-                    ...mt5Data.filter((item) => wantedSymbols.has(item.symbol)),
-                ];
+            const cacheKey = `explicit:${orderedSymbols.join("|")}`;
+            let payload = payloadCache.get(cacheKey);
+            if (!payload) {
+                payload = JSON.stringify({ topic: "priceUpdate", data });
+                payloadCache.set(cacheKey, payload);
             }
+            safeSend(ws, payload, { nonCritical: true });
+        }
 
-            if (combinedPrices.length > 0) {
-                ws.send(JSON.stringify({ topic: "priceUpdate", data: combinedPrices }));
+        const coreSymbols = subscriptionIndex.coreSymbols || [];
+        for (const ws of subscriptionIndex.defaultPriceClients) {
+            if (ws.readyState !== ws.OPEN) continue;
+            const meta = clients.get(ws);
+            if (!meta || meta.isBridgeLike) continue;
+
+            const data = coreSymbols.map((s) => latestBySymbol.get(s)).filter(Boolean);
+            if (data.length === 0) continue;
+
+            const cacheKey = `core:${coreSymbols.join("|")}`;
+            let payload = payloadCache.get(cacheKey);
+            if (!payload) {
+                payload = JSON.stringify({ topic: "priceUpdate", data });
+                payloadCache.set(cacheKey, payload);
             }
+            safeSend(ws, payload, { nonCritical: true });
         }
     } catch (err) {
         console.error("[WS] Error broadcasting prices:", err.message);
     }
 }
 
-export async function broadcastChartCandles({ clients, mt5Prices }) {
-    const groups = groupClientsByChart(clients);
-    const uniqueSymbols = new Set(Object.keys(groups).map((k) => k.split("|")[0]));
+export async function broadcastChartCandles({ clients, mt5Prices, subscriptionIndex }) {
+    const uniqueSymbols = new Set(Array.from(subscriptionIndex.chartSubscribers.keys()).map((k) => String(k).split("|")[0]));
 
     for (const symbol of uniqueSymbols) {
-        await broadcastCandleForSymbol({ clients, mt5Prices }, symbol);
+        await broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbol);
     }
 }
 
 export function broadcastToAll(clients, payload) {
     for (const [clientWs] of clients.entries()) {
         if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
+            safeSend(clientWs, payload);
         }
     }
-}
-
-function groupClientsByChart(clients) {
-    const groups = {};
-    for (const [ws, meta] of clients.entries()) {
-        if (!meta.charts || meta.charts.size === 0) continue;
-
-        for (const key of meta.charts) {
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(ws);
-        }
-    }
-    return groups;
 }

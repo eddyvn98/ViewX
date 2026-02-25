@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
-import useRoutes from "./routers/index.js";
+import applyRoutes from "./routers/index.js";
 import requireAccessToken from "./middlewares/requireAccessToken.js";
 import { getDatabaseHealth } from "./services/database.js";
 import { runtimeState } from "./runtime-state.js";
@@ -72,8 +72,26 @@ export function createApp() {
         legacyHeaders: false,
     });
 
+    const aiTaskLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        limit: 12,
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+
+    const marketLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        limit: 120,
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+
     app.use("/api", apiLimiter);
     app.use("/api/ai/bridge", aiLimiter);
+    app.use("/api/ai/bridge/task", aiTaskLimiter);
+    app.use("/api/user/data", marketLimiter);
+    app.use("/api/user/prices", marketLimiter);
+    app.use("/api/user/symbols", marketLimiter);
 
     app.use((req, res, next) => {
         res.setHeader(
@@ -97,6 +115,12 @@ export function createApp() {
             db,
             bridge_online: runtimeState.bridgeOnline,
             ws_clients: runtimeState.wsClients,
+            ws_connected: runtimeState.wsClients,
+            ws_dropped_rate_limit: runtimeState.wsDroppedRateLimit,
+            ws_dropped_backpressure: runtimeState.wsDroppedBackpressure,
+            ws_buffer_pressure: runtimeState.wsBufferPressure,
+            broadcast_p95_ms: runtimeState.broadcastLoopMsP95,
+            bridge_rtt_ms: null,
             version: process.env.npm_package_version || "0.1.0",
         });
     });
@@ -119,7 +143,7 @@ export function createApp() {
         return requireAccessToken(req, res, next);
     });
 
-    useRoutes(app);
+    applyRoutes(app);
 
     const tradingviewPath = path.join(__dirname, "../../tradingview");
     app.use("/tradingview", Express.static(tradingviewPath));

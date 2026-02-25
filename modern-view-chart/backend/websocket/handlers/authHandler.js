@@ -1,12 +1,15 @@
 import { getBinancePrices } from "../services/binanceTickerService.js";
+import { safeSend } from "../wsSend.js";
+import { normalizeSymbol, setClientSymbolSubscriptions } from "../subscriptionIndex.js";
 
-export function handleAuth({ ws, clients, mt5Prices }, data) {
+export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) {
     const clientData = clients.get(ws);
     let requestedSymbols = [];
     if (clientData) {
         clientData.userId = data.userId || null;
         if (Array.isArray(data.symbols)) {
-            clientData.symbols = data.symbols.filter(Boolean).slice(0, 300);
+            const normalized = data.symbols.map((s) => normalizeSymbol(s)).filter(Boolean).slice(0, 300);
+            clientData.symbols = setClientSymbolSubscriptions(subscriptionIndex, ws, normalized);
             requestedSymbols = clientData.symbols;
         }
     }
@@ -22,11 +25,11 @@ export function handleAuth({ ws, clients, mt5Prices }, data) {
     }
 
     if (combined.length > 0) {
-        ws.send(JSON.stringify({ topic: "priceUpdate", data: combined }));
+        safeSend(ws, JSON.stringify({ topic: "priceUpdate", data: combined }), { nonCritical: true });
     }
 
     if (global.lastMt5State) {
-        ws.send(JSON.stringify({
+        safeSend(ws, JSON.stringify({
             topic: "mt5_positions_update",
             account: global.lastMt5State.account,
             positions: global.lastMt5State.positions
@@ -34,7 +37,7 @@ export function handleAuth({ ws, clients, mt5Prices }, data) {
     }
 
     if (global.mt5AvailableSymbols) {
-        ws.send(JSON.stringify({
+        safeSend(ws, JSON.stringify({
             topic: "mt5_available_symbols",
             symbols: global.mt5AvailableSymbols
         }));

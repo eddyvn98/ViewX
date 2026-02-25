@@ -1,9 +1,4 @@
-function extractBearerToken(authHeader) {
-    if (!authHeader) return "";
-    const [scheme, token] = authHeader.split(" ");
-    if (!scheme || !token) return "";
-    return scheme.toLowerCase() === "bearer" ? token.trim() : "";
-}
+import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
 
 export default function requireAccessToken(req, res, next) {
     const expected = (process.env.ACCESS_TOKEN || "").trim();
@@ -12,10 +7,17 @@ export default function requireAccessToken(req, res, next) {
     }
 
     const queryToken = typeof req.query.access_token === "string" ? req.query.access_token.trim() : "";
-    const bearerToken = extractBearerToken(req.headers.authorization);
-    const provided = queryToken || bearerToken;
+    const queryTicket = typeof req.query.access_ticket === "string" ? req.query.access_ticket.trim() : "";
+    const bearerCredential = extractBearerCredential(req.headers.authorization);
 
-    if (!provided || provided !== expected) {
+    const authorized = isAuthorizedWithCredential({
+        expectedToken: expected,
+        bearerCredential,
+        queryAccessToken: queryToken,
+        queryAccessTicket: queryTicket,
+    });
+
+    if (!authorized) {
         return res.status(401).json({ error: "Unauthorized" });
     }
 

@@ -3,63 +3,56 @@ import { setupMessageRouter } from "./messageRouter.js";
 import { broadcastPricesToSubscribers, broadcastChartCandles } from "./services/broadcastService.js";
 import { startBinanceTickerStream } from "./services/binanceTickerService.js";
 import { binanceSimulator } from "../services/binanceSimulator.js";
-import { setBridgeOnline, setWsClients } from "../runtime-state.js";
+import {
+    incrementWsDroppedRateLimit,
+    recordBroadcastLoopDuration,
+    setBridgeOnline,
+    setWsClients,
+} from "../runtime-state.js";
+import { safeSend } from "./wsSend.js";
+import {
+    addDefaultPriceClient,
+    collectInterestSymbolsFromIndex,
+    createSubscriptionIndex,
+    removeClientFromIndexes,
+} from "./subscriptionIndex.js";
+import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
 
-function parseCoreSymbols() {
-    const fromEnv = (process.env.CORE_SYMBOLS || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    if (fromEnv.length > 0) return fromEnv;
-    return ["XAUUSDm", "BTCUSDm", "ETHUSDm", "EURUSDm", "GBPUSDm"];
-}
-
-const CORE_SYMBOLS = parseCoreSymbols();
-
-function normalizeSymbol(symbol) {
-    if (typeof symbol !== "string") return "";
-    const trimmed = symbol.trim();
-    if (!trimmed) return "";
-    if (trimmed.toUpperCase().includes("USDT")) return trimmed.toUpperCase();
-    if (/[mM]$/.test(trimmed)) return trimmed.replace(/[mM]$/, "m");
-    return trimmed;
-}
-
 function isAuthorizedRequest(request) {
     const expectedToken = (process.env.ACCESS_TOKEN || "").trim();
     if (!expectedToken) return false;
+
+    const bearerCredential = extractBearerCredential(request.headers?.authorization || "");
+
+    const protocolHeader = request.headers?.["sec-websocket-protocol"] || "";
+    const protocolTokens = String(protocolHeader)
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+    for (const protocolToken of protocolTokens) {
+        if (protocolToken.startsWith("bearer.")) {
+            const protocolValue = protocolToken.slice("bearer.".length);
+            if (
+                isAuthorizedWithCredential({
+                    expectedToken,
+                    bearerCredential: protocolValue,
+                })
+            ) {
+                return true;
+            }
+        }
+    }
+
     const parsed = new URL(request.url || "/", "http://localhost");
-    const incoming = (parsed.searchParams.get("access_token") || "").trim();
-    return incoming === expectedToken;
-}
-
-function collectClientInterestSymbols() {
-    const collected = new Set();
-
-    for (const [ws, meta] of clients.entries()) {
-        if (meta?.isBridgeLike) continue;
-        if (ws.readyState !== ws.OPEN) continue;
-
-        for (const symbol of meta?.symbols || []) {
-            const normalized = normalizeSymbol(symbol);
-            if (normalized) collected.add(normalized);
-        }
-
-        for (const chartKey of meta?.charts || []) {
-            const [symbol] = String(chartKey).split("|");
-            const normalized = normalizeSymbol(symbol);
-            if (normalized) collected.add(normalized);
-        }
-    }
-
-    if (collected.size === 0) {
-        return CORE_SYMBOLS.map((s) => normalizeSymbol(s)).filter(Boolean);
-    }
-
-    return Array.from(collected);
+    return isAuthorizedWithCredential({
+        expectedToken,
+        bearerCredential,
+        queryAccessToken: (parsed.searchParams.get("access_token") || "").trim(),
+        queryAccessTicket: (parsed.searchParams.get("access_ticket") || "").trim(),
+    });
 }
 
 const BRIDGE_TOPICS = new Set([
@@ -74,21 +67,37 @@ const BRIDGE_TOPICS = new Set([
 ]);
 
 export default function initWebSocket(server) {
-    const maxClients = Number.parseInt(process.env.MAX_WS_CLIENTS || "80", 10);
+    const maxClients = Number.parseInt(process.env.MAX_WS_CLIENTS || "150", 10);
     const msgRate = Number.parseInt(process.env.WS_MSG_RATE_PER_10S || "60", 10);
     const bridgeMsgRate = Number.parseInt(process.env.BRIDGE_WS_MSG_RATE_PER_10S || "15000", 10);
     const bridgeSymbolsRefreshSec = Number.parseInt(process.env.BRIDGE_SYMBOL_REFRESH_SEC || "2", 10);
+    const heartbeatIntervalMs = Number.parseInt(process.env.WS_HEARTBEAT_INTERVAL_MS || "30000", 10);
     const windowMs = 10_000;
 
     const wss = new WebSocketServer({
         server,
         maxPayload: 10 * 1024 * 1024,
     });
+    const subscriptionIndex = createSubscriptionIndex();
 
     startBinanceTickerStream();
 
-    setInterval(() => broadcastPricesToSubscribers({ clients, mt5Prices }), 1000);
-    setInterval(() => broadcastChartCandles({ clients, mt5Prices }), 1000);
+    let broadcastTickRunning = false;
+    setInterval(() => {
+        if (broadcastTickRunning) return;
+        broadcastTickRunning = true;
+        const startAt = Date.now();
+
+        Promise.resolve()
+            .then(async () => {
+                await broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex });
+                await broadcastChartCandles({ clients, mt5Prices, subscriptionIndex });
+            })
+            .finally(() => {
+                recordBroadcastLoopDuration(Date.now() - startAt);
+                broadcastTickRunning = false;
+            });
+    }, 1000);
 
     setInterval(() => {
         binanceSimulator.updatePnL();
@@ -103,7 +112,7 @@ export default function initWebSocket(server) {
         }
         if (bridgeSockets.length === 0) return;
 
-        const symbols = collectClientInterestSymbols();
+        const symbols = collectInterestSymbolsFromIndex(subscriptionIndex);
         const hash = symbols.join("|");
         if (hash === lastInterestHash) return;
         lastInterestHash = hash;
@@ -116,11 +125,27 @@ export default function initWebSocket(server) {
         });
 
         for (const bridgeWs of bridgeSockets) {
-            bridgeWs.send(payload);
+            safeSend(bridgeWs, payload);
         }
     }, Math.max(1, bridgeSymbolsRefreshSec) * 1000);
 
-    const router = setupMessageRouter(clients, mt5Prices);
+    const heartbeatInterval = setInterval(() => {
+        for (const [ws] of clients.entries()) {
+            if (ws.readyState !== ws.OPEN) continue;
+            if (ws.isAlive === false) {
+                ws.terminate();
+                continue;
+            }
+            ws.isAlive = false;
+            try {
+                ws.ping();
+            } catch {
+                ws.terminate();
+            }
+        }
+    }, Math.max(5000, heartbeatIntervalMs));
+
+    const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex);
 
     wss.on("connection", (ws, request) => {
         if (!isAuthorizedRequest(request)) {
@@ -141,7 +166,13 @@ export default function initWebSocket(server) {
             msgWindowStart: Date.now(),
             isBridgeLike: false,
         });
+        ws.isAlive = true;
+        addDefaultPriceClient(subscriptionIndex, ws);
         setWsClients(clients.size);
+
+        ws.on("pong", () => {
+            ws.isAlive = true;
+        });
 
         ws.on("message", (msg) => {
             const meta = clients.get(ws);
@@ -153,6 +184,7 @@ export default function initWebSocket(server) {
                 if (typeof topic === "string" && BRIDGE_TOPICS.has(topic)) {
                     meta.isBridgeLike = true;
                     ws.isBridge = true;
+                    removeClientFromIndexes(subscriptionIndex, ws);
                 }
             } catch {
                 // Non-JSON frames are ignored for role detection.
@@ -169,6 +201,7 @@ export default function initWebSocket(server) {
             if (meta.msgCount > allowedRate) {
                 const role = meta.isBridgeLike ? "bridge-like" : "client";
                 console.warn(`[WS] Rate limit exceeded for ${role} socket (${meta.msgCount}/${allowedRate} in ${windowMs}ms)`);
+                incrementWsDroppedRateLimit();
                 ws.close(1008, "Rate limit exceeded");
                 return;
             }
@@ -184,8 +217,13 @@ export default function initWebSocket(server) {
                 broadcastBridgeStatus(false);
             }
             clients.delete(ws);
+            removeClientFromIndexes(subscriptionIndex, ws);
             setWsClients(clients.size);
         });
+    });
+
+    wss.on("close", () => {
+        clearInterval(heartbeatInterval);
     });
 
     return wss;
@@ -196,7 +234,7 @@ function broadcastBridgeStatus(online) {
     for (const [clientWs, meta] of clients.entries()) {
         if (meta?.isBridgeLike) continue;
         if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
+            safeSend(clientWs, payload);
         }
     }
 }
@@ -212,7 +250,7 @@ function broadcastBinanceState() {
     for (const [clientWs, meta] of clients.entries()) {
         if (meta?.isBridgeLike) continue;
         if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
+            safeSend(clientWs, payload, { nonCritical: true });
         }
     }
 }

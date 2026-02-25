@@ -53,14 +53,12 @@ $TunnelLog = Join-Path $LogsDir "tunnel.log"
 $TunnelErrLog = Join-Path $LogsDir "tunnel.err.log"
 $BuildIdPath = Join-Path $RepoRoot ".next\BUILD_ID"
 
-if (Test-Path $BuildIdPath) {
-    $frontendArgs = 'run start -- --hostname 0.0.0.0 --port 3000'
-    Write-Host "[run-all] Found production build. Starting frontend (next start) on :3000"
+if (-not (Test-Path $BuildIdPath)) {
+    throw "[run-all] Missing .next/BUILD_ID. Run scripts/server/bootstrap.ps1 (or npm run build) before run-all.ps1."
 }
-else {
-    $frontendArgs = 'run dev -- --hostname 0.0.0.0 --port 3000'
-    Write-Host "[run-all] No production build found. Starting frontend fallback (next dev) on :3000"
-}
+
+$frontendArgs = 'run start -- --hostname 0.0.0.0 --port 3000'
+Write-Host "[run-all] Found production build. Starting frontend (next start) on :3000"
 
 $frontend = Start-Process -FilePath $NpmCmd `
     -ArgumentList $frontendArgs `
