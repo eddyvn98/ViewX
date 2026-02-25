@@ -8,14 +8,25 @@ import { useMarketStore } from "@/lib/store";
 interface HistoryTableProps {
     history: HistoryDeal[];
     onSymbolClick: (symbol: string) => void;
-    onAnalyze: (deal: HistoryDeal) => void;
+    onAnalyze?: (deal: HistoryDeal) => void;
+    analyzeEnabled?: boolean;
 }
 
 type SortField = 'time' | 'ticket' | 'symbol' | 'type' | 'volume' | 'price' | 'profit' | 'magic';
 type SortDirection = 'asc' | 'desc';
 
 // Row component đơn giản, không dùng ảo hóa để cực kỳ ổn định
-const HistoryRow = memo(({ deal, onSymbolClick, onAnalyze }: { deal: HistoryDeal, onSymbolClick: (s: string) => void, onAnalyze: (deal: HistoryDeal) => void }) => {
+const HistoryRow = memo(({
+    deal,
+    onSymbolClick,
+    onAnalyze,
+    analyzeEnabled,
+}: {
+    deal: HistoryDeal,
+    onSymbolClick: (s: string) => void,
+    onAnalyze?: (deal: HistoryDeal) => void,
+    analyzeEnabled?: boolean,
+}) => {
     // Get analysis result from Global Store
     const analysisResult = useMarketStore((state) => state.analysisResults[deal.ticket]);
 
@@ -55,11 +66,19 @@ const HistoryRow = memo(({ deal, onSymbolClick, onAnalyze }: { deal: HistoryDeal
                         <Bot size={14} />
                         {/* Optional: Show verdict text if space allows */}
                     </div>
-                ) : (
+                ) : analyzeEnabled ? (
                     <button
-                        onClick={() => onAnalyze(deal)}
+                        onClick={() => onAnalyze?.(deal)}
                         className="p-1 rounded hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 transition-colors"
                         title="AI Analysis"
+                    >
+                        <Bot size={14} />
+                    </button>
+                ) : (
+                    <button
+                        disabled
+                        className="p-1 rounded text-muted-foreground/40 cursor-not-allowed"
+                        title="Disabled in this release"
                     >
                         <Bot size={14} />
                     </button>
@@ -70,7 +89,7 @@ const HistoryRow = memo(({ deal, onSymbolClick, onAnalyze }: { deal: HistoryDeal
 });
 HistoryRow.displayName = 'HistoryRow';
 
-export function HistoryTable({ history, onSymbolClick, onAnalyze }: HistoryTableProps) {
+export function HistoryTable({ history, onSymbolClick, onAnalyze, analyzeEnabled = true }: HistoryTableProps) {
     const [sortField, setSortField] = useState<SortField>('time');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -142,6 +161,7 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze }: HistoryTable
                                 deal={deal}
                                 onSymbolClick={onSymbolClick}
                                 onAnalyze={onAnalyze}
+                                analyzeEnabled={analyzeEnabled}
                             />
                         ))}
                     </div>

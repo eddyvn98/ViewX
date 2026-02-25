@@ -30,6 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 logs/
+mobile_link.txt
+public/mobile-access.json
+tunnel_backend.txt
+tunnel_frontend.txt
 
 # env files (can opt-in for committing if needed)
 .env*

@@ -16,7 +16,8 @@
 - Rotate token: `scripts/server/rotate-access-token.ps1`
 - DB scripts: `scripts/server/db-up.ps1`, `scripts/server/db-down.ps1`, `scripts/server/db-status.ps1`
 - Logs: `logs\frontend.log`, `logs\backend.log`, `logs\bridge.log`, `logs\tunnel.log`, `logs\token-rotate.log`
-- Public link artifacts: `mobile_link.txt`, `public/mobile-access.json`
+- Public link runtime artifacts (git-ignored): `mobile_link.txt`, `public/mobile-access.json`
+- Safe templates (tracked): `mobile_link.example.txt`, `public/mobile-access.example.json`
 
 ## Required `.env`
 ```env
@@ -33,6 +34,8 @@ WS_BACKPRESSURE_SKIP_BYTES=262144
 CORE_SYMBOLS=XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm
 TOKEN_ROTATE_CRON_TIME=03:00
 MOBILE_ACCESS_TTL_SEC=43200
+STRATEGY_ENGINE_ENABLED=0
+NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED=false
 ```
 
 ## MongoDB (Docker per project)
@@ -80,6 +83,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\server\run-all.ps1
 
 `run-all.ps1` automatically attempts to start MongoDB container first and fails fast if `.next/BUILD_ID` is missing (no fallback to `next dev`).
 
+## Strategy Engine (Deferred For Public Endpoint Release)
+- `backend/strategy_engine/*` is intentionally excluded from this public endpoint release.
+- Keep:
+  - `STRATEGY_ENGINE_ENABLED=0`
+  - `NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED=false`
+- Effects:
+  - `request_analysis`, `request_optimization`, `strategy_signal` WS topics are ignored.
+  - Terminal "AI Analyze" action is disabled.
+
 ## Health Checks
 Liveness:
 ```powershell
@@ -104,12 +116,12 @@ Output:
   - max observed `broadcast_p95_ms`
 
 ## Public Link
-Quick read:
+Quick read (runtime-generated):
 ```powershell
 Get-Content .\mobile_link.txt
 ```
 
-JSON detail:
+JSON detail (runtime-generated):
 ```powershell
 Get-Content .\public\mobile-access.json
 ```

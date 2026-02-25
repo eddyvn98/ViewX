@@ -6,6 +6,7 @@ let SOCKET_URL = "ws://127.0.0.1:8091";
 let globalSocket: WebSocket | null = null;
 let historyFetched = false;
 let reconnectAttempts = 0;
+const STRATEGY_ENGINE_ENABLED = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === "true";
 
 let tickerUpdateBuffer: Record<string, any> = {};
 let tickerUpdateTimer: NodeJS.Timeout | null = null;
@@ -290,6 +291,9 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                     }
 
                     if (msgType === "strategy_alert") {
+                        if (!STRATEGY_ENGINE_ENABLED) {
+                            // Strategy engine is intentionally disabled in public endpoint release.
+                        } else {
                         const { signal } = msg;
                         const direction = signal.signal === "BUY" ? "bullish" : "bearish";
                         useMarketStore.getState().addNotification(
@@ -297,6 +301,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                             direction === "bullish" ? "success" : "warning",
                         );
                         soundService.playAlert();
+                        }
                     }
                 } catch {
                     // Ignore malformed WS frames.

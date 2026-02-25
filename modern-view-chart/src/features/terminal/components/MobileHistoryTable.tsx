@@ -9,10 +9,11 @@ import { cn } from "@/lib/utils";
 interface MobileHistoryTableProps {
     history: HistoryDeal[];
     onSymbolClick: (symbol: string) => void;
-    onAnalyze: (deal: HistoryDeal) => void;
+    onAnalyze?: (deal: HistoryDeal) => void;
+    analyzeEnabled?: boolean;
 }
 
-export function MobileHistoryTable({ history, onSymbolClick, onAnalyze }: MobileHistoryTableProps) {
+export function MobileHistoryTable({ history, onSymbolClick, onAnalyze, analyzeEnabled = true }: MobileHistoryTableProps) {
     if (!history || history.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
@@ -29,16 +30,18 @@ export function MobileHistoryTable({ history, onSymbolClick, onAnalyze }: Mobile
                     deal={deal}
                     onSymbolClick={onSymbolClick}
                     onAnalyze={onAnalyze}
+                    analyzeEnabled={analyzeEnabled}
                 />
             ))}
         </div>
     );
 }
 
-function HistoryCard({ deal, onSymbolClick, onAnalyze }: {
+function HistoryCard({ deal, onSymbolClick, onAnalyze, analyzeEnabled = true }: {
     deal: HistoryDeal;
     onSymbolClick: (s: string) => void;
-    onAnalyze: (deal: HistoryDeal) => void;
+    onAnalyze?: (deal: HistoryDeal) => void;
+    analyzeEnabled?: boolean;
 }) {
     const analysisResult = useMarketStore((state) => state.analysisResults[deal.ticket]);
     const isProfitable = deal.profit >= 0;
@@ -106,14 +109,20 @@ function HistoryCard({ deal, onSymbolClick, onAnalyze }: {
                     View Chart
                 </button>
                 <button
-                    onClick={() => onAnalyze(deal)}
+                    onClick={() => onAnalyze?.(deal)}
+                    disabled={!analyzeEnabled}
                     className={cn(
                         "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-tighter flex items-center justify-center gap-1",
-                        analysisResult ? "text-blue-400 bg-blue-500/5" : "text-muted-foreground hover:text-blue-400"
+                        analysisResult
+                            ? "text-blue-400 bg-blue-500/5"
+                            : analyzeEnabled
+                                ? "text-muted-foreground hover:text-blue-400"
+                                : "text-muted-foreground/40 cursor-not-allowed"
                     )}
+                    title={analyzeEnabled ? "AI Analyze" : "Disabled in this release"}
                 >
                     <Bot size={12} />
-                    {analysisResult ? "Analyzed" : "AI Analyze"}
+                    {analysisResult ? "Analyzed" : analyzeEnabled ? "AI Analyze" : "Disabled"}
                 </button>
             </div>
         </div>

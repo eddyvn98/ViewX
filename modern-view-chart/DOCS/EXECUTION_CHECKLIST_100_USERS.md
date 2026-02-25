@@ -52,3 +52,15 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
   Implemented runtime monitor in `backend/services/runtimeAlertMonitor.js` for:
   `bridge_offline`, `db_disconnected`, `ws_drop_spike` (with optional `ALERT_WEBHOOK_URL`).
 - [x] Prepare migration to named Cloudflare tunnel with fixed domain
+
+## Pre-Public Hardening
+
+- [x] Separate strategy engine from public endpoint release via runtime gates
+- [x] Remove runtime access artifacts from tracked files and provide safe templates
+- [x] Fix high/critical dependency advisories (`npm audit --omit=dev`)
+- [x] Validate regression: `lint:critical` + `build` + smoke checks
+  Local validation:
+  - `npm run lint:critical` pass
+  - `npm run build` pass
+  - `npm audit --omit=dev`: 0 high/critical (remaining: `qs` low)
+- [ ] Rotate `ACCESS_TOKEN` and regenerate `access_ticket` immediately before public launch

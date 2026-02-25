@@ -13,6 +13,9 @@ import { handleAlertTriggered } from "./handlers/alertTriggeredHandler.js";
 import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
 import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
 import { safeSend } from "./wsSend.js";
+import { logInfo } from "../logger.js";
+
+const STRATEGY_ENGINE_ENABLED = ((process.env.STRATEGY_ENGINE_ENABLED || "0").trim() === "1");
 
 export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
     return async (ws, msg) => {
@@ -45,6 +48,10 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     break;
                 case "request_analysis": // Forward analysis request to Strategy Engine
                 case "request_optimization": // Forward optimization request to Strategy Engine
+                    if (!STRATEGY_ENGINE_ENABLED) {
+                        logInfo("strategy_engine.disabled_topic_ignored", { topic: msgTopic });
+                        break;
+                    }
                     // Re-use Mt5Command broadcaster or simple broadcast
                     // Simple broadcast to all clients (Engine will pick it up)
                     const payload = JSON.stringify(data);
@@ -72,6 +79,10 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     handleBinanceCommand(context.ws, data);
                     break;
                 case "strategy_signal":
+                    if (!STRATEGY_ENGINE_ENABLED) {
+                        logInfo("strategy_engine.disabled_topic_ignored", { topic: msgTopic });
+                        break;
+                    }
                     handleStrategySignal(context, data);
                     break;
                 case "mt5_symbols_available":

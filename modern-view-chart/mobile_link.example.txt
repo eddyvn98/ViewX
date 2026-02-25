@@ -1,0 +1,1 @@
+https://your-frontend-domain.example.com?mobile=1&ws_url=wss%3A%2F%2Fyour-backend-domain.example.com%3Faccess_ticket%3D<ticket>&access_ticket=<ticket>

@@ -16,6 +16,7 @@ import { OrdersTable } from './components/OrdersTable';
 import { HistoryTable } from './components/HistoryTable';
 
 export const Terminal = memo(function Terminal({ forceExpanded = false }: { forceExpanded?: boolean }) {
+    const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
 
@@ -316,13 +317,15 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                     <MobileHistoryTable
                                         history={history}
                                         onSymbolClick={handleSymbolClick}
-                                        onAnalyze={handleAnalyze}
+                                        onAnalyze={strategyEngineEnabled ? handleAnalyze : undefined}
+                                        analyzeEnabled={strategyEngineEnabled}
                                     />
                                 ) : (
                                     <HistoryTable
                                         history={history}
                                         onSymbolClick={handleSymbolClick}
-                                        onAnalyze={handleAnalyze}
+                                        onAnalyze={strategyEngineEnabled ? handleAnalyze : undefined}
+                                        analyzeEnabled={strategyEngineEnabled}
                                     />
                                 )}
                             </div>

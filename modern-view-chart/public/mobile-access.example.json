@@ -1,0 +1,9 @@
+{
+  "frontend": "https://your-frontend-domain.example.com",
+  "backend": "https://your-backend-domain.example.com",
+  "mobile_link": "https://your-frontend-domain.example.com?mobile=1&ws_url=wss%3A%2F%2Fyour-backend-domain.example.com%3Faccess_ticket%3D<ticket>&access_ticket=<ticket>",
+  "ws_url": "wss://your-backend-domain.example.com?access_ticket=<ticket>",
+  "access_ticket_expires_in_sec": 43200,
+  "access_token_configured": true,
+  "updated_at": 0
+}
