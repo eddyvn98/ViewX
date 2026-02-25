@@ -63,4 +63,5 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
   - `npm run lint:critical` pass
   - `npm run build` pass
   - `npm audit --omit=dev`: 0 high/critical (remaining: `qs` low)
+- Evidence commit: `d2bcd70`
 - [ ] Rotate `ACCESS_TOKEN` and regenerate `access_ticket` immediately before public launch
