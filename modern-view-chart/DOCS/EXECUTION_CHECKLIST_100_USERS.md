@@ -32,7 +32,7 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
 - [x] Add `lint:critical`
 - [x] Keep `lint:full` for gradual cleanup
 - [x] Ensure `build` passes after hardening changes
-- [ ] Add CI gate rule to require `lint:critical + build` before merge
+- [x] Add CI gate rule to require `lint:critical + build` before merge
 
 ## Phase 1 - Validation gate
 
