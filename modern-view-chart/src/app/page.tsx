@@ -3,6 +3,7 @@
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { useUserSetupSync } from "@/hooks/use-user-setup-sync";
 import { useMarketStore, RootState } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
 import { MarketList } from "@/features/market/MarketList";
@@ -26,6 +27,7 @@ import React from "react";
 
 export default function Home() {
   useWebSocket();
+  useUserSetupSync();
   useStrategyRunner();
   const {
     isTerminalVisible,

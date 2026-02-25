@@ -20,6 +20,7 @@ router.route("/").delete(checkAdmin, User.deleteUser);
 
 //Đổi mật khẩu
 router.route("/:id/update-password").put(checkLogin, User.updatePassword);
+router.route("/state").get(User.getUserSetupState).put(User.upsertUserSetupState);
 
 router.route("/data").post(async (req, res) => {
   const { symbol, interval } = req.body;
