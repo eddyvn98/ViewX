@@ -67,3 +67,11 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
 - [x] Rotate `ACCESS_TOKEN` and regenerate `access_ticket` immediately before public launch
   Verified at `2026-02-25 13:05:30` in `logs/token-rotate.log` with:
   `Success: service healthy and mobile-access.json updated with access_ticket (no raw token leak).`
+
+## Post-Hardening Runtime Check (Tunnel kept running)
+
+- [x] Public frontend reachable (`200`)
+- [x] Public backend `/api/health` reachable (`200`)
+- [x] Public backend `/api/health/ready` reachable (`200`)
+- [x] Public backend `/api/metrics` reachable with bearer auth (`200`)
+- [x] Public WebSocket reachable and receiving realtime frame (`priceUpdate`)
