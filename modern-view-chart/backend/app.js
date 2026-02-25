@@ -3,12 +3,15 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
+import os from "os";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 import applyRoutes from "./routers/index.js";
 import requireAuth from "./middlewares/requireAuth.js";
 import { getDatabaseHealth } from "./services/database.js";
 import { runtimeState } from "./runtime-state.js";
+import { normalizeUserRole } from "./auth/roles.js";
+import { getActiveRefreshTokenCount } from "./auth/userJwt.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -138,9 +141,53 @@ export function createApp() {
         return res.status(200).json({ status: "ready" });
     });
 
+    app.get("/api/metrics", (req, res, next) => requireAuth(req, res, next), (req, res) => {
+        const authType = req.auth?.type;
+        const role = normalizeUserRole(req.auth?.role);
+        if (authType !== "service" && role !== "admin") {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        const memory = process.memoryUsage();
+        const cpu = process.cpuUsage();
+        const loadAverage = os.loadavg();
+
+        return res.status(200).json({
+            ts: new Date().toISOString(),
+            process: {
+                pid: process.pid,
+                uptime_sec: Math.round(process.uptime()),
+                rss_bytes: memory.rss,
+                heap_used_bytes: memory.heapUsed,
+                heap_total_bytes: memory.heapTotal,
+                external_bytes: memory.external,
+                cpu_user_micros: cpu.user,
+                cpu_system_micros: cpu.system,
+                loadavg_1m: loadAverage[0] || 0,
+                loadavg_5m: loadAverage[1] || 0,
+                loadavg_15m: loadAverage[2] || 0,
+            },
+            websocket: {
+                connected: runtimeState.wsClients,
+                dropped_rate_limit: runtimeState.wsDroppedRateLimit,
+                dropped_backpressure: runtimeState.wsDroppedBackpressure,
+                buffer_pressure: runtimeState.wsBufferPressure,
+                broadcast_loop_p95_ms: runtimeState.broadcastLoopMsP95,
+            },
+            bridge: {
+                online: runtimeState.bridgeOnline,
+            },
+            auth: {
+                active_refresh_tokens: getActiveRefreshTokenCount(),
+            },
+            db: getDatabaseHealth(),
+        });
+    });
+
     app.use("/api", (req, res, next) => {
         if (req.path === "/health" || req.path === "/health/ready") return next();
-        if (req.path.startsWith("/auth/")) return next();
+        const publicAuthPaths = new Set(["/auth/login", "/auth/refresh", "/auth/logout"]);
+        if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);
     });
 

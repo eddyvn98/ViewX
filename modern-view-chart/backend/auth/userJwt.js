@@ -1,5 +1,7 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { normalizeUserRole } from "./roles.js";
+import { userModel } from "../model/user.js";
 
 const activeRefreshJtis = new Map();
 
@@ -55,16 +57,18 @@ function revokeRefreshJti(jti) {
     activeRefreshJtis.delete(jti);
 }
 
-export function issueAuthTokens({ userId, role }) {
+export function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
     const { accessSecret, refreshSecret } = requireSecrets();
     const subject = String(userId || "");
-    const userRole = role || "user";
+    const userRole = normalizeUserRole(role);
+    const userSessionVersion = Number.isFinite(Number(sessionVersion)) ? Number(sessionVersion) : 1;
     const refreshJti = crypto.randomUUID();
 
     const accessToken = jwt.sign(
         {
             sub: subject,
             role: userRole,
+            sv: userSessionVersion,
             type: "access",
         },
         accessSecret,
@@ -77,6 +81,7 @@ export function issueAuthTokens({ userId, role }) {
         {
             sub: subject,
             role: userRole,
+            sv: userSessionVersion,
             type: "refresh",
             jti: refreshJti,
         },
@@ -110,7 +115,7 @@ export function verifyAccessToken(token) {
     }
 }
 
-export function rotateRefreshToken(refreshToken) {
+export async function rotateRefreshToken(refreshToken) {
     const { refreshSecret } = requireSecrets();
     const payload = jwt.verify(refreshToken, refreshSecret);
     if (!payload || payload.type !== "refresh" || !payload.jti || !payload.sub) {
@@ -120,10 +125,23 @@ export function rotateRefreshToken(refreshToken) {
         throw new Error("Refresh token revoked");
     }
 
+    const user = await userModel.findById(payload.sub).select("_id role sessionVersion");
+    if (!user?._id) {
+        throw new Error("User not found");
+    }
+    const currentSessionVersion = Number.isFinite(Number(user.sessionVersion))
+        ? Number(user.sessionVersion)
+        : 1;
+    const tokenSessionVersion = Number.isFinite(Number(payload.sv)) ? Number(payload.sv) : 1;
+    if (currentSessionVersion !== tokenSessionVersion) {
+        throw new Error("Session revoked");
+    }
+
     revokeRefreshJti(payload.jti);
     return issueAuthTokens({
-        userId: payload.sub,
-        role: payload.role || "user",
+        userId: user._id,
+        role: normalizeUserRole(user.role),
+        sessionVersion: currentSessionVersion,
     });
 }
 
@@ -138,4 +156,9 @@ export function revokeRefreshToken(refreshToken) {
     } catch {
         return false;
     }
+}
+
+export function getActiveRefreshTokenCount() {
+    purgeExpiredRefreshJtis();
+    return activeRefreshJtis.size;
 }

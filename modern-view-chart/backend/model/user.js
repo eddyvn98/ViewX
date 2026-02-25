@@ -14,8 +14,13 @@ const schema = new Schema(
     role: {
       type: String,
       required: true,
-      enum: ["user", "admin", "owner"],
-      default: "user",
+      enum: ["viewer", "trader", "admin", "user", "owner"],
+      default: "viewer",
+    },
+    sessionVersion: {
+      type: Number,
+      required: true,
+      default: 1,
     },
   },
   { timestamps: true }
@@ -31,6 +36,8 @@ const create = (data) => {
       const newDocument = new model({
         username: data.username,
         password: data.encryptedPassword,
+        role: data.role || "viewer",
+        sessionVersion: 1,
       });
       newDocument
         .save()

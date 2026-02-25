@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { logError, logInfo, logWarn } from "../logger.js";
 
 let initialized = false;
 const dbState = {
@@ -28,16 +29,16 @@ function registerConnectionListeners() {
     mongoose.connection.on("connected", () => {
         dbState.lastConnectedAt = new Date().toISOString();
         dbState.lastError = null;
-        console.log("[DB] Connected.");
+        logInfo("db.connected");
     });
 
     mongoose.connection.on("error", (error) => {
         dbState.lastError = error?.message || String(error);
-        console.error("[DB] Connection error:", dbState.lastError);
+        logError("db.connection.error", { error: dbState.lastError });
     });
 
     mongoose.connection.on("disconnected", () => {
-        console.warn("[DB] Disconnected.");
+        logWarn("db.disconnected");
     });
 }
 
@@ -55,7 +56,7 @@ const useDatabase = async () => {
         });
     } catch (error) {
         dbState.lastError = error?.message || String(error);
-        console.error("[DB] Initial connect failed:", dbState.lastError);
+        logError("db.connect.initial_failed", { error: dbState.lastError });
     }
 };
 

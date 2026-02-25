@@ -1,10 +1,14 @@
 import CryptoJS from "crypto-js";
 import Users from "../../model/user.js";
+import { userModel } from "../../model/user.js";
 import {
     issueAuthTokens,
     revokeRefreshToken,
     rotateRefreshToken,
 } from "../../auth/userJwt.js";
+import { normalizeUserRole } from "../../auth/roles.js";
+import { revokeSessionsByUserId } from "../../auth/userSession.js";
+import { logError, logInfo } from "../../logger.js";
 
 function getRefreshTokenFromRequest(req) {
     if (typeof req.body?.refresh_token === "string" && req.body.refresh_token.trim()) {
@@ -48,11 +52,17 @@ export async function login(req, res) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
 
+        const sessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
+        const normalizedRole = normalizeUserRole(user.role);
         const tokens = issueAuthTokens({
             userId: user._id,
-            role: user.role,
+            role: normalizedRole,
+            sessionVersion,
         });
         setRefreshCookie(res, tokens.refreshToken);
+        if (normalizedRole !== user.role) {
+            await userModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
+        }
 
         return res.status(200).json({
             token_type: "Bearer",
@@ -62,11 +72,11 @@ export async function login(req, res) {
             user: {
                 _id: user._id,
                 username: user.username,
-                role: user.role,
+                role: normalizedRole,
             },
         });
     } catch (error) {
-        console.error("[AUTH] login failed:", error?.message || error);
+        logError("auth.login.failed", { error: error?.message || error });
         return res.status(500).json({ error: "Internal server error" });
     }
 }
@@ -76,7 +86,7 @@ export async function refresh(req, res) {
     if (!refreshToken) return res.status(401).json({ error: "refresh_token is required" });
 
     try {
-        const tokens = rotateRefreshToken(refreshToken);
+        const tokens = await rotateRefreshToken(refreshToken);
         setRefreshCookie(res, tokens.refreshToken);
         return res.status(200).json({
             token_type: "Bearer",
@@ -95,4 +105,41 @@ export async function logout(req, res) {
     revokeRefreshToken(refreshToken);
     clearRefreshCookie(res);
     return res.status(200).json({ message: "Logged out" });
+}
+
+export async function revokeSessions(req, res) {
+    if (req.auth?.type !== "user" || !req.auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const requestedUserId = typeof req.body?.user_id === "string" ? req.body.user_id.trim() : "";
+    const targetUserId = requestedUserId || req.auth.userId;
+    const isSelfRequest = targetUserId === req.auth.userId;
+    const isAdmin = normalizeUserRole(req.auth.role) === "admin";
+    if (!isSelfRequest && !isAdmin) {
+        return res.status(403).json({ error: "Forbidden" });
+    }
+
+    try {
+        const revoked = await revokeSessionsByUserId(targetUserId);
+        if (!revoked?.userId) return res.status(404).json({ error: "User not found" });
+
+        // Also revoke current refresh token if provided in this call.
+        const refreshToken = getRefreshTokenFromRequest(req);
+        revokeRefreshToken(refreshToken);
+        clearRefreshCookie(res);
+        logInfo("auth.sessions.revoked", {
+            actor_user_id: req.auth.userId,
+            target_user_id: revoked.userId,
+            session_version: revoked.sessionVersion,
+        });
+        return res.status(200).json({
+            message: "Sessions revoked",
+            user_id: revoked.userId,
+            session_version: revoked.sessionVersion,
+        });
+    } catch (error) {
+        logError("auth.sessions.revoke_failed", { error: error?.message || error });
+        return res.status(500).json({ error: "Internal server error" });
+    }
 }

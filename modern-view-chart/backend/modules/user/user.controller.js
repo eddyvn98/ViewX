@@ -1,6 +1,7 @@
 import Users, { userModel } from "../../model/user.js";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
+import { normalizeUserRole } from "../../auth/roles.js";
 
 /**
  * Lấy ra danh sách user
@@ -97,8 +98,10 @@ export const login = async (req, res) => {
       );
       const password = HashPassword.toString(CryptoJS.enc.Utf8);
       if (inputPassword === password) {
+        const role = normalizeUserRole(user.role);
+        const sessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
         const token = jwt.sign(
-          { _id: user._id, role: user.role },
+          { _id: user._id, role, sv: sessionVersion },
           process.env.JWT
         );
         res.cookie("token", token, { httpOnly: true });
@@ -108,7 +111,7 @@ export const login = async (req, res) => {
           user: {
             _id: user._id,
             username: user.username,
-            role: user.role,
+            role,
           },
         });
       } else {

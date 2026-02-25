@@ -17,20 +17,21 @@ import {
     removeClientFromIndexes,
 } from "./subscriptionIndex.js";
 import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
-import { verifyAccessToken } from "../auth/userJwt.js";
+import { resolveUserAuthFromAccessToken } from "../auth/userSession.js";
+import { logInfo, logWarn } from "../logger.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
 
-function resolveAuthContext(request) {
+async function resolveAuthContext(request) {
     const expectedToken = (process.env.ACCESS_TOKEN || "").trim();
     const bearerCredential = extractBearerCredential(request.headers?.authorization || "");
-    const bearerUserPayload = verifyAccessToken(bearerCredential);
-    if (bearerUserPayload?.sub) {
+    const bearerUserAuth = await resolveUserAuthFromAccessToken(bearerCredential);
+    if (bearerUserAuth?.userId) {
         return {
             type: "user",
-            userId: String(bearerUserPayload.sub),
-            role: bearerUserPayload.role || "user",
+            userId: bearerUserAuth.userId,
+            role: bearerUserAuth.role,
         };
     }
 
@@ -45,12 +46,12 @@ function resolveAuthContext(request) {
         if (protocolToken.startsWith("bearer.")) {
             const protocolValue = protocolToken.slice("bearer.".length);
             protocolBearerCredentials.push(protocolValue);
-            const protocolUserPayload = verifyAccessToken(protocolValue);
-            if (protocolUserPayload?.sub) {
+            const protocolUserAuth = await resolveUserAuthFromAccessToken(protocolValue);
+            if (protocolUserAuth?.userId) {
                 return {
                     type: "user",
-                    userId: String(protocolUserPayload.sub),
-                    role: protocolUserPayload.role || "user",
+                    userId: protocolUserAuth.userId,
+                    role: protocolUserAuth.role,
                 };
             }
         }
@@ -177,8 +178,8 @@ export default function initWebSocket(server) {
 
     const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex);
 
-    wss.on("connection", (ws, request) => {
-        const authContext = resolveAuthContext(request);
+    wss.on("connection", async (ws, request) => {
+        const authContext = await resolveAuthContext(request);
         if (!authContext) {
             ws.close(1008, "Unauthorized");
             return;
@@ -232,7 +233,12 @@ export default function initWebSocket(server) {
             const allowedRate = meta.isBridgeLike ? bridgeMsgRate : msgRate;
             if (meta.msgCount > allowedRate) {
                 const role = meta.isBridgeLike ? "bridge-like" : "client";
-                console.warn(`[WS] Rate limit exceeded for ${role} socket (${meta.msgCount}/${allowedRate} in ${windowMs}ms)`);
+                logWarn("ws.rate_limit.exceeded", {
+                    role,
+                    msg_count: meta.msgCount,
+                    allowed_rate: allowedRate,
+                    window_ms: windowMs,
+                });
                 incrementWsDroppedRateLimit();
                 ws.close(1008, "Rate limit exceeded");
                 return;
@@ -244,7 +250,7 @@ export default function initWebSocket(server) {
         ws.on("close", (code, reason) => {
             if (ws.isBridge) {
                 const reasonText = typeof reason === "string" ? reason : Buffer.from(reason || []).toString();
-                console.log(`[WS] MT5 Bridge disconnected. code=${code} reason=${reasonText || "n/a"}`);
+                logInfo("ws.bridge.disconnected", { code, reason: reasonText || "n/a" });
                 setBridgeOnline(false);
                 broadcastBridgeStatus(false);
             }

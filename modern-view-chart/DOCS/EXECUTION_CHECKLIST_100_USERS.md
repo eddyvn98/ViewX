@@ -47,6 +47,6 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
 
 - [x] Replace shared token with per-user auth (`/api/auth/login`, `/refresh`, `/logout`)
 - [x] Move WS auth to short-lived JWT via header/subprotocol
-- [ ] Add roles (`viewer`, `trader`, `admin`) and session revocation
-- [ ] Add structured JSON logs and `/api/metrics`
-- [ ] Prepare migration to named Cloudflare tunnel with fixed domain
+- [x] Add roles (`viewer`, `trader`, `admin`) and session revocation
+- [x] Add structured JSON logs and `/api/metrics`
+- [x] Prepare migration to named Cloudflare tunnel with fixed domain

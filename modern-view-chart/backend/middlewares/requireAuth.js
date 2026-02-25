@@ -1,14 +1,15 @@
 import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
-import { verifyAccessToken } from "../auth/userJwt.js";
+import { resolveUserAuthFromAccessToken } from "../auth/userSession.js";
 
-export default function requireAuth(req, res, next) {
+export default async function requireAuth(req, res, next) {
     const bearerCredential = extractBearerCredential(req.headers.authorization);
-    const userPayload = verifyAccessToken(bearerCredential);
-    if (userPayload?.sub) {
+    const userAuth = await resolveUserAuthFromAccessToken(bearerCredential);
+    if (userAuth?.userId) {
         req.auth = {
             type: "user",
-            userId: userPayload.sub,
-            role: userPayload.role || "user",
+            userId: userAuth.userId,
+            role: userAuth.role,
+            sessionVersion: userAuth.sessionVersion,
             tokenType: "access",
         };
         return next();
