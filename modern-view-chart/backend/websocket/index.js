@@ -17,42 +17,72 @@ import {
     removeClientFromIndexes,
 } from "./subscriptionIndex.js";
 import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
+import { verifyAccessToken } from "../auth/userJwt.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
 
-function isAuthorizedRequest(request) {
+function resolveAuthContext(request) {
     const expectedToken = (process.env.ACCESS_TOKEN || "").trim();
-    if (!expectedToken) return false;
-
     const bearerCredential = extractBearerCredential(request.headers?.authorization || "");
+    const bearerUserPayload = verifyAccessToken(bearerCredential);
+    if (bearerUserPayload?.sub) {
+        return {
+            type: "user",
+            userId: String(bearerUserPayload.sub),
+            role: bearerUserPayload.role || "user",
+        };
+    }
 
     const protocolHeader = request.headers?.["sec-websocket-protocol"] || "";
     const protocolTokens = String(protocolHeader)
         .split(",")
         .map((entry) => entry.trim())
         .filter(Boolean);
+
+    const protocolBearerCredentials = [];
     for (const protocolToken of protocolTokens) {
         if (protocolToken.startsWith("bearer.")) {
             const protocolValue = protocolToken.slice("bearer.".length);
-            if (
-                isAuthorizedWithCredential({
-                    expectedToken,
-                    bearerCredential: protocolValue,
-                })
-            ) {
-                return true;
+            protocolBearerCredentials.push(protocolValue);
+            const protocolUserPayload = verifyAccessToken(protocolValue);
+            if (protocolUserPayload?.sub) {
+                return {
+                    type: "user",
+                    userId: String(protocolUserPayload.sub),
+                    role: protocolUserPayload.role || "user",
+                };
             }
         }
     }
 
+    if (!expectedToken) return null;
+
     const parsed = new URL(request.url || "/", "http://localhost");
-    return isAuthorizedWithCredential({
+    const queryAccessToken = (parsed.searchParams.get("access_token") || "").trim();
+    const queryAccessTicket = (parsed.searchParams.get("access_ticket") || "").trim();
+
+    if (isAuthorizedWithCredential({
         expectedToken,
         bearerCredential,
-        queryAccessToken: (parsed.searchParams.get("access_token") || "").trim(),
-        queryAccessTicket: (parsed.searchParams.get("access_ticket") || "").trim(),
-    });
+        queryAccessToken,
+        queryAccessTicket,
+    })) {
+        return { type: "service" };
+    }
+
+    for (const credential of protocolBearerCredentials) {
+        if (
+            isAuthorizedWithCredential({
+                expectedToken,
+                bearerCredential: credential,
+            })
+        ) {
+            return { type: "service" };
+        }
+    }
+
+    return null;
 }
 
 const BRIDGE_TOPICS = new Set([
@@ -148,7 +178,8 @@ export default function initWebSocket(server) {
     const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex);
 
     wss.on("connection", (ws, request) => {
-        if (!isAuthorizedRequest(request)) {
+        const authContext = resolveAuthContext(request);
+        if (!authContext) {
             ws.close(1008, "Unauthorized");
             return;
         }
@@ -159,7 +190,8 @@ export default function initWebSocket(server) {
         }
 
         clients.set(ws, {
-            userId: null,
+            userId: authContext.type === "user" ? authContext.userId : null,
+            role: authContext.type === "user" ? authContext.role : null,
             symbols: [],
             charts: new Set(),
             msgCount: 0,

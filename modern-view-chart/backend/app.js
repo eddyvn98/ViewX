@@ -6,7 +6,7 @@ import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 import applyRoutes from "./routers/index.js";
-import requireAccessToken from "./middlewares/requireAccessToken.js";
+import requireAuth from "./middlewares/requireAuth.js";
 import { getDatabaseHealth } from "./services/database.js";
 import { runtimeState } from "./runtime-state.js";
 
@@ -140,7 +140,8 @@ export function createApp() {
 
     app.use("/api", (req, res, next) => {
         if (req.path === "/health" || req.path === "/health/ready") return next();
-        return requireAccessToken(req, res, next);
+        if (req.path.startsWith("/auth/")) return next();
+        return requireAuth(req, res, next);
     });
 
     applyRoutes(app);
