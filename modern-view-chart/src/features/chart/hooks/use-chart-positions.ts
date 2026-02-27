@@ -64,6 +64,7 @@ export function useChartPositions(
             // 🛡️ Web-First Priority for Positions
             const dragging = useMarketStore.getState().draggingPosition;
             const isDraggingThis = dragging && dragging.ticket === p.ticket;
+            const shouldShowRiskLines = isFoc || isDraggingThis;
 
             // Entry Line
             const finalEntry = (isDraggingThis && dragging.type === 'entry') ? dragging.price : p.open_price;
@@ -80,7 +81,7 @@ export function useChartPositions(
 
             // SL Line
             const finalSL = (isDraggingThis && dragging.type === 'sl') ? dragging.price : p.sl;
-            if (finalSL > 0) {
+            if (finalSL > 0 && shouldShowRiskLines) {
                 const slOptions = {
                     price: finalSL,
                     color: '#ef5350',
@@ -98,7 +99,7 @@ export function useChartPositions(
 
             // TP Line
             const finalTP = (isDraggingThis && dragging.type === 'tp') ? dragging.price : p.tp;
-            if (finalTP > 0) {
+            if (finalTP > 0 && shouldShowRiskLines) {
                 const tpOptions = {
                     price: finalTP,
                     color: '#26a69a',

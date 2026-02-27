@@ -41,13 +41,6 @@ export function useStrategyRunner() {
     }, [lastResetTime]);
 
     useEffect(() => {
-        strategies.forEach((strategy) => {
-            if (strategy.active && !backtestRunRef.current[strategy.id]) {
-            }
-        });
-    }, [strategies]);
-
-    useEffect(() => {
         strategies.forEach((strategy: Strategy) => {
             const patch = getLegacyStrategyPatch(strategy);
             if (patch) updateStrategy(strategy.id, patch);
@@ -124,8 +117,7 @@ export function useStrategyRunner() {
                             if (isNewBar) lastBarTimeRef.current[processKey] = lastTime;
 
                             const store = useStrategyStore.getState();
-                            const currentVirtualPositions = store.virtualPositions;
-                            const strategyPositions = currentVirtualPositions.filter(
+                            const strategyPositions = store.virtualPositions.filter(
                                 (p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed'
                             );
 
@@ -133,13 +125,16 @@ export function useStrategyRunner() {
                                 managePositionOnTick(strategy, position, symbol, candles, lastCandle, isNewBar, store, sendMessage);
                             });
 
+                            const latestStore = useStrategyStore.getState();
+                            const latestVirtualPositions = latestStore.virtualPositions;
+
                             if (!isNewBar) {
-                                capturePostExitContexts(strategy, symbol, candles, currentVirtualPositions, store.updateVirtualPosition);
+                                capturePostExitContexts(strategy, symbol, candles, latestVirtualPositions, latestStore.updateVirtualPosition);
                                 continue;
                             }
 
                             const engineCtx: EngineContext = {
-                                activePositions: [...positions, ...currentVirtualPositions],
+                                activePositions: [...positions, ...latestVirtualPositions],
                                 currentPrice: lastCandle.close,
                                 symbol,
                                 lastSignalTime: strategy.lastSignalTime
@@ -154,8 +149,8 @@ export function useStrategyRunner() {
                                 symbol,
                                 candles,
                                 lastCandle,
-                                currentVirtualPositions,
-                                store,
+                                latestVirtualPositions,
+                                latestStore,
                                 sendMessage,
                                 lastTime
                             );

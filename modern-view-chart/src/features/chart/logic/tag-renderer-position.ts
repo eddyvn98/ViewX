@@ -18,6 +18,7 @@ export function resolveTagAnchorTime(tag: TagData | undefined, liveAnchorTime?: 
 
     const rawTime =
         (isLiveEntry ? liveAnchorTime : undefined) ??
+        tag.anchorTime ??
         original.time ??
         original.timestamp ??
         original.createdAt;
@@ -67,6 +68,7 @@ export function updateTagPosition(
 ) {
     const y = series.priceToCoordinate(price);
     if (y === null) return;
+    (elements.el as HTMLElement).dataset.yCoord = `${Math.round(y)}`;
 
     const yOffset = elements.priceBox?.classList.contains('dot-marker') ? 6 : 12;
     elements.el.style.transform = `translateY(${y - yOffset}px)`;
@@ -89,4 +91,3 @@ export function updateTagPosition(
 
     applyTagFallbackPosition(elements);
 }
-

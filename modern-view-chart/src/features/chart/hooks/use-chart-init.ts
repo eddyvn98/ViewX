@@ -3,14 +3,36 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import {
     createChart,
+    BusinessDay,
     IChartApi,
     ISeriesApi,
+    Time,
     CandlestickSeries,
     LineSeries,
 } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { getPriceChartOptions, getSubChartOptions, getTimescaleOptions, initialMinW } from '../config/chart-options';
 import { createSyncLine, syncVerticalLines, autoSyncLayout } from '../logic/chart-sync';
+
+function normalizeCrosshairTime(value: Time | null | undefined): number | null {
+    if (value == null) return null;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+
+    const candidate = value as Partial<BusinessDay & { timestamp?: unknown }>;
+    if (typeof candidate.timestamp === 'number' && Number.isFinite(candidate.timestamp)) {
+        return candidate.timestamp > 10000000000 ? Math.floor(candidate.timestamp / 1000) : candidate.timestamp;
+    }
+
+    if (
+        typeof candidate.year === 'number' &&
+        typeof candidate.month === 'number' &&
+        typeof candidate.day === 'number'
+    ) {
+        return Math.floor(Date.UTC(candidate.year, candidate.month - 1, candidate.day) / 1000);
+    }
+
+    return null;
+}
 
 export function useChartInit(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
@@ -139,10 +161,11 @@ export function useChartInit(
 
         const handleCrosshairMove = (sourceChart: IChartApi, param: any, hasY: boolean) => {
             const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
-            syncVerticalLines(sourceChart, charts, elements, series as any, param.point?.x ?? null, Number(param.time ?? 0), Number(logical ?? 0));
+            const normalizedTime = normalizeCrosshairTime(param.time);
+            syncVerticalLines(sourceChart, charts, elements, series as any, param.point?.x ?? null, normalizedTime, Number(logical ?? 0));
 
-            if (param.time && param.point) {
-                const curTime = Number(param.time);
+            if (normalizedTime !== null && param.point) {
+                const curTime = normalizedTime;
                 const curX = param.point.x;
                 const curY = hasY ? param.point.y : 0;
                 const now = Date.now();

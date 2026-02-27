@@ -289,6 +289,7 @@ export function useChartInteraction(
             } else {
                 if (type === 'alert') {
                     handleUpdateAlert(String(ticket), currentPrice);
+                    setDraggingPosition(null);
                 } else if (ticket && ticket !== 'draft') {
                     const mappedType = type === 'entry' ? 'price' : type;
                     const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: currentPrice };
@@ -346,3 +347,4 @@ export function useChartInteraction(
         };
     }, [symbol, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage]);
 }
+

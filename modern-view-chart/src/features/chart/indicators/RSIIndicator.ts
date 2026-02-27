@@ -6,6 +6,30 @@ export class RSIIndicator {
     private series: ISeriesApi<"Line"> | null = null;
     private upperLine: any = null;
     private lowerLine: any = null;
+    private latestRsiValue = 50;
+
+    private getDynamicRange() {
+        const center = Number.isFinite(this.latestRsiValue) ? this.latestRsiValue : 50;
+        const minValue = Math.max(0, center - 20);
+        const maxValue = Math.min(100, center + 20);
+        return { minValue, maxValue };
+    }
+
+    private applyDynamicScale() {
+        const { minValue, maxValue } = this.getDynamicRange();
+        const scale = this.chart.priceScale('right') as any;
+        try {
+            scale.applyOptions?.({
+                visible: true,
+                autoScale: false,
+                scaleMargins: { top: 0.1, bottom: 0.1 },
+                borderVisible: true,
+            });
+            scale.setVisibleRange?.({ from: minValue, to: maxValue });
+        } catch {
+            // Ignore transient price scale errors while chart is reconfiguring.
+        }
+    }
 
     constructor(
         private chart: IChartApi,
@@ -28,17 +52,12 @@ export class RSIIndicator {
                     type: 'custom',
                     formatter: (v: number) => v.toFixed(0),
                 },
-                autoscaleInfoProvider: () => ({
-                    priceRange: {
-                        minValue: 0,
-                        maxValue: 100,
-                    },
-                }),
+                autoscaleInfoProvider: () => ({ priceRange: this.getDynamicRange() }),
             });
 
             this.chart.priceScale('right').applyOptions({
                 visible: true,
-                autoScale: true, // 🔴 PHẢI true
+                autoScale: false,
                 scaleMargins: { top: 0.1, bottom: 0.1 },
                 borderVisible: true,
             });
@@ -89,7 +108,11 @@ export class RSIIndicator {
             };
         }).filter(d => !isNaN(d.value));
 
+        if (data.length > 0) {
+            this.latestRsiValue = Number(data[data.length - 1].value);
+        }
         this.series.setData(data as any);
+        this.applyDynamicScale();
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
@@ -105,6 +128,7 @@ export class RSIIndicator {
         const lastVal = rsiValues[rsiValues.length - 1];
 
         if (!isNaN(lastVal)) {
+            this.latestRsiValue = Number(lastVal);
             const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
             const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             try {
@@ -112,6 +136,7 @@ export class RSIIndicator {
                     time: candleTime as any,
                     value: lastVal
                 });
+                this.applyDynamicScale();
             } catch (err) { }
         }
     }
@@ -120,6 +145,7 @@ export class RSIIndicator {
         if (this.series && this.chart) {
             try {
                 this.chart.removeSeries(this.series);
+                this.chart.priceScale('right').applyOptions({ autoScale: true });
             } catch (err) {
                 console.warn('[RSI] Failed to remove series:', err);
             }
@@ -127,3 +153,4 @@ export class RSIIndicator {
         }
     }
 }
+

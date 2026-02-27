@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Position, Order, Alert } from '@/lib/store';
 import { VirtualPosition } from '@/features/strategy/types';
 
@@ -7,6 +8,7 @@ export interface TagData {
     type: string;      // 'entry', 'sl', 'tp', 'alert', 'draft_entry', etc.
     ticket: string | number; // Ticket ID or 'draft'
     price: number;     // Current price level
+    anchorTime?: number; // Optional per-tag anchor timestamp (sec or ms)
     label: string;     // Text label (e.g., 'SL', 'TP', 'ORD', 'POS')
     color: string;     // Background color (Tailwind-compatible hex)
     pOriginal?: Position | Order | Alert | VirtualPosition | any; // Original object reference for PnL
@@ -17,9 +19,29 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 // Helper to normalize symbol names
 export const norm = (sym: string | undefined): string => normalizeSymbol(sym);
 
+function resolveEntryColor(opts: { isBuy: boolean; isPending?: boolean; isWeb?: boolean; isExternal?: boolean }): string {
+    const { isBuy, isPending, isWeb, isExternal } = opts;
+    if (isWeb) {
+        if (isPending) return isBuy ? '#f59e0b' : '#f97316';
+        return isBuy ? '#22c55e' : '#ef4444';
+    }
+    if (isExternal) {
+        if (isPending) return isBuy ? '#fbbf24' : '#fb7185';
+        return isBuy ? '#3b82f6' : '#ec4899';
+    }
+    if (isPending) return isBuy ? '#f59e0b' : '#fb923c';
+    return isBuy ? '#16a34a' : '#dc2626';
+}
+
+function resolveLevelColor(level: 'sl' | 'tp', opts: { isWeb?: boolean; isExternal?: boolean }): string {
+    const { isWeb, isExternal } = opts;
+    if (isWeb) return level === 'sl' ? '#ef4444' : '#22c55e';
+    if (isExternal) return level === 'sl' ? '#f43f5e' : '#38bdf8';
+    return level === 'sl' ? '#ef4444' : '#22c55e';
+}
+
 // Generates TagData from Positions
 export function getPositionTags(positions: Position[], symbol: string, draggingState: any): TagData[] {
-    const targetSymbol = norm(symbol).replace('M', ''); // Ensure correct normalization
     const result: TagData[] = [];
 
     // Helper to check symbol match more loosely (ignore suffixes like 'm')
@@ -34,11 +56,7 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
 
         const isBuy = pos.type.toString().toLowerCase().includes('buy');
         const isExternalBot = Number((pos as any).magic || 0) > 0;
-        const entryColor = isExternalBot
-            ? (isBuy ? '#f59e0b' : '#fb7185')
-            : (isBuy ? '#3b82f6' : '#ea580c');
-        const slColor = isExternalBot ? '#ef4444' : '#ef4444';
-        const tpColor = isExternalBot ? '#facc15' : '#22c55e';
+        const entryColor = resolveEntryColor({ isBuy, isExternal: isExternalBot });
 
         // Entry Tag - Differentiate Buy/Sell
         result.push({
@@ -46,6 +64,7 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
             type: 'entry',
             ticket: pos.ticket,
             price: entryPrice,
+            anchorTime: pos.entry_time ?? pos.time,
             label: isExternalBot
                 ? (isBuy ? 'EXT BOT BUY' : 'EXT BOT SELL')
                 : (isBuy ? 'BUY POS' : 'SELL POS'),
@@ -64,8 +83,9 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
                 type: 'sl',
                 ticket: pos.ticket,
                 price: slPrice,
+                anchorTime: pos.sl_time ?? pos.entry_time ?? pos.time,
                 label: 'SL',
-                color: slColor,
+                color: resolveLevelColor('sl', { isExternal: isExternalBot }),
                 pOriginal: pos
             });
         }
@@ -81,8 +101,9 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
                 type: 'tp',
                 ticket: pos.ticket,
                 price: tpPrice,
+                anchorTime: pos.tp_time ?? pos.entry_time ?? pos.time,
                 label: 'TP',
-                color: tpColor,
+                color: resolveLevelColor('tp', { isExternal: isExternalBot }),
                 pOriginal: pos
             });
         }
@@ -107,17 +128,14 @@ export function getOrderTags(orders: Order[], symbol: string, draggingState: any
         const isBuy = ord.type.toLowerCase().includes('buy');
         const typeLabel = ord.type.toUpperCase().replace(' LIMIT', ' LMT').replace(' STOP', ' STP');
         const isExternalBot = Number((ord as any).magic || 0) > 0;
-        const entryColor = isExternalBot
-            ? (isBuy ? '#fbbf24' : '#f472b6')
-            : (isBuy ? '#60a5fa' : '#fb923c');
-        const slColor = isExternalBot ? '#ef4444' : '#ef4444';
-        const tpColor = isExternalBot ? '#facc15' : '#22c55e';
+        const entryColor = resolveEntryColor({ isBuy, isPending: true, isExternal: isExternalBot });
 
         result.push({
             id: `${ord.ticket}-entry`,
             type: 'entry',
             ticket: ord.ticket,
             price: entryPrice,
+            anchorTime: ord.entry_time ?? ord.time,
             label: isExternalBot ? `EXT BOT ${typeLabel}` : typeLabel,
             color: entryColor,
             pOriginal: ord
@@ -134,8 +152,9 @@ export function getOrderTags(orders: Order[], symbol: string, draggingState: any
                 type: 'sl',
                 ticket: ord.ticket,
                 price: slPrice,
+                anchorTime: ord.sl_time ?? ord.entry_time ?? ord.time,
                 label: 'SL',
-                color: slColor,
+                color: resolveLevelColor('sl', { isExternal: isExternalBot }),
                 pOriginal: ord
             });
         }
@@ -149,8 +168,9 @@ export function getOrderTags(orders: Order[], symbol: string, draggingState: any
                 type: 'tp',
                 ticket: ord.ticket,
                 price: tpPrice,
+                anchorTime: ord.tp_time ?? ord.entry_time ?? ord.time,
                 label: 'TP',
-                color: tpColor,
+                color: resolveLevelColor('tp', { isExternal: isExternalBot }),
                 pOriginal: ord
             });
         }
@@ -174,13 +194,14 @@ export function getVirtualPositionTags(virtualPositions: VirtualPosition[], symb
 
             const isBuy = pos.type === 'BUY';
             const isPending = pos.status === 'pending';
-            const entryColor = isPending ? '#f59e0b' : (isBuy ? '#14b8a6' : '#f97316');
+            const entryColor = resolveEntryColor({ isBuy, isPending, isWeb: true });
 
             result.push({
                 id: `web-${pos.id}-entry`,
                 type: 'entry',
                 ticket: `web:${pos.id}`,
                 price: entryPrice,
+                anchorTime: pos.entry_time ?? pos.timestamp,
                 label: isPending ? `WEB PEND ${pos.type}` : `WEB ${pos.type}`,
                 color: entryColor,
                 pOriginal: pos as any
@@ -196,8 +217,9 @@ export function getVirtualPositionTags(virtualPositions: VirtualPosition[], symb
                     type: 'sl',
                     ticket: `web:${pos.id}`,
                     price: slPrice,
+                    anchorTime: pos.sl_time ?? pos.entry_time ?? pos.timestamp,
                     label: 'WEB SL',
-                    color: '#ef4444',
+                    color: resolveLevelColor('sl', { isWeb: true }),
                     pOriginal: pos as any
                 });
             }
@@ -212,8 +234,9 @@ export function getVirtualPositionTags(virtualPositions: VirtualPosition[], symb
                     type: 'tp',
                     ticket: `web:${pos.id}`,
                     price: tpPrice,
+                    anchorTime: pos.tp_time ?? pos.entry_time ?? pos.timestamp,
                     label: 'WEB TP',
-                    color: '#22c55e',
+                    color: resolveLevelColor('tp', { isWeb: true }),
                     pOriginal: pos as any
                 });
             }

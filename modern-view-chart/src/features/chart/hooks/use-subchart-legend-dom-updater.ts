@@ -16,6 +16,22 @@ interface SubchartLegendDOMUpdaterProps {
     candles: Candle[];
 }
 
+function buildIndicatorSeeds(indicators: any[]): IndicatorCache[] {
+    return indicators
+        .filter((config: any) => config.visible)
+        .map((config: any) => ({
+            type: config.type,
+            id: config.id,
+            period: Number(config.params?.period || 14),
+            color: config.color,
+            pane: config.pane,
+            results: config.type === 'MACD'
+                ? { macd: [], signal: [], histogram: [] }
+                : [],
+            params: config.params
+        }));
+}
+
 export function useSubchartLegendDOMUpdater(
     containerRef: React.RefObject<HTMLDivElement | null>,
     { chartId, symbol, interval, source, candles }: SubchartLegendDOMUpdaterProps
@@ -40,9 +56,15 @@ export function useSubchartLegendDOMUpdater(
         if (candles.length !== lastCalcLengthRef.current) {
             const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
             indicatorCacheRef.current = calculateIndicators(candles, indicators);
+            if (containerRef.current) {
+                const refSource = indicatorCacheRef.current.length
+                    ? indicatorCacheRef.current
+                    : buildIndicatorSeeds(indicators);
+                indicatorRefsRef.current = getIndicatorRefs(containerRef.current, refSource);
+            }
             lastCalcLengthRef.current = candles.length;
         }
-    }, [candles.length, chartId]); // Depend on length, not the array reference
+    }, [candles.length, chartId, containerRef]); // Depend on length, not the array reference
 
     // ⚡ Helper to get FRESH candles from store (avoids stale closure)
     const getFreshCandles = () => {
@@ -59,8 +81,12 @@ export function useSubchartLegendDOMUpdater(
 
         // Initial setup of indicator refs
         const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
-        // We need a way to refresh these refs if indicators change
-        indicatorRefsRef.current = getIndicatorRefs(container, indicatorCacheRef.current);
+        const initialCandles = getFreshCandles();
+        indicatorCacheRef.current = calculateIndicators(initialCandles, indicators);
+        const initialRefSource = indicatorCacheRef.current.length
+            ? indicatorCacheRef.current
+            : buildIndicatorSeeds(indicators);
+        indicatorRefsRef.current = getIndicatorRefs(container, initialRefSource);
 
         const updateLegend = (
             activeIndex: number,
@@ -236,7 +262,10 @@ export function useSubchartLegendDOMUpdater(
                 // Refresh cache and refs when config changes
                 const fresh = getFreshCandles();
                 indicatorCacheRef.current = calculateIndicators(fresh, newIndicators || []);
-                indicatorRefsRef.current = getIndicatorRefs(container, indicatorCacheRef.current);
+                const refSource = indicatorCacheRef.current.length
+                    ? indicatorCacheRef.current
+                    : buildIndicatorSeeds(newIndicators || []);
+                indicatorRefsRef.current = getIndicatorRefs(container, refSource);
 
                 updateLegend(
                     fresh.length - 1,
@@ -258,3 +287,4 @@ export function useSubchartLegendDOMUpdater(
     }, [chartId, symbol, interval, source, containerRef]);
 
 }
+

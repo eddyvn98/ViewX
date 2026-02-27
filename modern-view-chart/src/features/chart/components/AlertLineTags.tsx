@@ -125,7 +125,8 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
                 const series = seriesRef.current;
                 if (!series) return;
 
-                const elements = tagElementsMap.current.get(drag.ticket as string);
+                const dragKey = String(drag.ticket);
+                const elements = tagElementsMap.current.get(dragKey) || tagElementsMap.current.get(`alert-${dragKey}`);
                 if (elements) {
                     updateTagPosition(elements, series, drag.price);
                     // Also update label if needed
@@ -287,3 +288,4 @@ const EditOverlay = memo(function EditOverlay({ state, series, isDeletingRef, on
         </div>
     );
 });
+

@@ -162,17 +162,21 @@ class DiamondRenderer implements ICustomSeriesPaneRenderer {
                         const isHigh = barData.markerPosition === 'aboveBar';
                         const padding = 12 * verticalPixelRatio;
                         const textY = isHigh ? high - padding : low + padding;
+                        const normalizedText = String(barData.markerText).trim();
+                        const normalizedColor = String(markerColor).toLowerCase();
+                        const isArrowMarker = ['↑', '↓', '▲', '▼'].includes(normalizedText);
+                        const isYellowMarker = normalizedColor.includes('f59e0b') || normalizedColor.includes('fbbf24') || normalizedColor.includes('ffcc00');
+                        const shouldBlink = isArrowMarker && isYellowMarker;
 
                         ctx.save();
                         if (barData.isTentative) ctx.globalAlpha = 0.5;
+                        if (shouldBlink) {
+                            const pulse = 0.35 + (Math.sin(Date.now() / 220) + 1) * 0.325;
+                            ctx.globalAlpha = pulse;
+                        }
 
                         ctx.fillStyle = markerColor;
                         ctx.fillText(barData.markerText, x, textY);
-
-                        // Small dot indicator
-                        ctx.beginPath();
-                        ctx.arc(x, isHigh ? high - (4 * verticalPixelRatio) : low + (4 * verticalPixelRatio), 2 * verticalPixelRatio, 0, Math.PI * 2);
-                        ctx.fill();
                         ctx.restore();
                     }
                 }

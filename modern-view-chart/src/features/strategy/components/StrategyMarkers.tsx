@@ -1,23 +1,57 @@
 import { useEffect, useRef, memo } from 'react';
-import { IChartApi, ISeriesApi, createSeriesMarkers, ISeriesMarkersPluginApi, Time, SeriesMarker } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, createSeriesMarkers, ISeriesMarkersPluginApi, Time, SeriesMarker, IPriceLine } from 'lightweight-charts';
 import { useStrategyStore } from '../store/strategy-store';
 import { normalizeTF } from '../utils/time-utils';
 import { isSameSymbol } from '@/lib/utils/symbol';
+import { useMarketStore } from '@/lib/store';
 
 interface StrategyMarkersProps {
     chart: IChartApi;
-    mainSeries: ISeriesApi<any>;
+    mainSeries: ISeriesApi<'Candlestick'>;
     symbol: string;
     interval?: string;
 }
 
-export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: StrategyMarkersProps) => {
+interface ChartFocusDetail {
+    symbol?: string;
+    timestamp: number;
+    exitTimestamp?: number;
+}
+
+function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMarkersProps) {
     const showHistoryMarkers = useStrategyStore(state => state.showHistoryMarkers);
     const virtualPositions = useStrategyStore(state => state.virtualPositions);
     const strategies = useStrategyStore(state => state.strategies);
+    const signals = useStrategyStore(state => state.signals);
+    const terminalPositions = useMarketStore(state => state.positions);
+    const terminalOrders = useMarketStore(state => state.orders);
 
     const currentInterval = normalizeTF(interval);
     const markersPluginRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+
+    const toEpochSec = (value: unknown): number | null => {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) return null;
+        return n > 100000000000 ? Math.floor(n / 1000) : Math.floor(n);
+    };
+
+    const intervalToSec = (tf: string): number | null => {
+        if (!tf) return null;
+        const m = tf.match(/^(\d+)([mhd])$/i);
+        if (!m) return null;
+        const value = Number(m[1]);
+        const unit = m[2].toLowerCase();
+        if (!Number.isFinite(value) || value <= 0) return null;
+        if (unit === 'm') return value * 60;
+        if (unit === 'h') return value * 3600;
+        if (unit === 'd') return value * 86400;
+        return null;
+    };
+
+    const snapToInterval = (timestampSec: number, stepSec: number | null): number => {
+        if (!stepSec || stepSec <= 1) return timestampSec;
+        return Math.floor(timestampSec / stepSec) * stepSec;
+    };
 
     // 1. Initialize & Cleanup Markers Plugin
     useEffect(() => {
@@ -63,8 +97,88 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
         });
 
         const markers: SeriesMarker<Time>[] = [];
+        const markerStepSec = intervalToSec(currentInterval);
+        const markerDedupe = new Set<string>();
+
+        const pushEntryMarker = (
+            markerKey: string,
+            timestampSec: number | null,
+            isBuy: boolean,
+            color: string
+        ) => {
+            if (!timestampSec) return;
+            const markerTime = snapToInterval(timestampSec, markerStepSec);
+            const dedupeKey = `${markerKey}-${markerTime}`;
+            if (markerDedupe.has(dedupeKey)) return;
+            markerDedupe.add(dedupeKey);
+
+            markers.push({
+                time: markerTime as Time,
+                position: isBuy ? 'belowBar' : 'aboveBar',
+                color,
+                shape: isBuy ? 'arrowUp' : 'arrowDown',
+                text: '',
+            });
+        };
+
+        virtualPositions.forEach((pos) => {
+            if (!isSameSymbol(pos.symbol, symbol)) return;
+            if (!(pos.status === 'open' || pos.status === 'pending')) return;
+
+            if (currentInterval) {
+                const strat = strategies.find((s) => s.id === pos.strategyId);
+                const stratTF = normalizeTF(strat?.timeframe);
+                if (stratTF && stratTF !== currentInterval) return;
+            }
+
+            const isBuy = pos.type === 'BUY';
+            const isPending = pos.status === 'pending';
+            const color = isPending
+                ? (isBuy ? '#f59e0b' : '#f97316')
+                : (isBuy ? '#22c55e' : '#ef4444');
+
+            pushEntryMarker(
+                `web-${pos.id}-entry`,
+                toEpochSec(pos.entry_time) ?? toEpochSec(pos.timestamp),
+                isBuy,
+                color
+            );
+        });
+
+        terminalPositions.forEach((pos) => {
+            if (!isSameSymbol(pos.symbol, symbol)) return;
+            if (Number(pos.magic || 0) <= 0) return;
+
+            const isBuy = String(pos.type).toLowerCase().includes('buy');
+            const color = isBuy ? '#3b82f6' : '#ec4899';
+
+            pushEntryMarker(
+                `ext-pos-${pos.ticket}-entry`,
+                toEpochSec(pos.entry_time) ?? toEpochSec(pos.time),
+                isBuy,
+                color
+            );
+        });
+
+        terminalOrders.forEach((ord) => {
+            if (!isSameSymbol(ord.symbol, symbol)) return;
+            if (Number(ord.magic || 0) <= 0) return;
+
+            const isBuy = String(ord.type).toLowerCase().includes('buy');
+            const color = isBuy ? '#fbbf24' : '#fb7185';
+
+            pushEntryMarker(
+                `ext-ord-${ord.ticket}-entry`,
+                toEpochSec(ord.entry_time) ?? toEpochSec(ord.time),
+                isBuy,
+                color
+            );
+        });
+
         closedPositions.forEach(pos => {
-            const entryTime = Math.floor(pos.timestamp / 1000) as Time;
+            const entryTimeRaw = toEpochSec(pos.entry_time) ?? toEpochSec(pos.timestamp);
+            if (!entryTimeRaw) return;
+            const entryTime = snapToInterval(entryTimeRaw, markerStepSec) as Time;
 
             // Entry Marker
             markers.push({
@@ -77,9 +191,8 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
 
             // Exit Marker
             if (pos.exitPrice) {
-                const exitTime = (pos.exitTimestamp
-                    ? Math.floor(pos.exitTimestamp / 1000)
-                    : (Math.floor(pos.timestamp / 1000) + 60)) as Time;
+                const exitTimeRaw = toEpochSec(pos.exitTimestamp) ?? (entryTimeRaw + 60);
+                const exitTime = snapToInterval(exitTimeRaw, markerStepSec) as Time;
 
                 markers.push({
                     time: exitTime,
@@ -91,10 +204,47 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
             }
         });
 
+        signals
+            .filter((sig) => isSameSymbol(sig.symbol, symbol))
+            .forEach((sig) => {
+                if (currentInterval) {
+                    const strat = strategies.find((s) => s.id === sig.strategyId);
+                    const stratTF = normalizeTF(strat?.timeframe);
+                    if (stratTF && stratTF !== currentInterval) return;
+                }
+
+                const rawTime = toEpochSec(sig.timestamp);
+                if (!rawTime) return;
+                const markerTime = snapToInterval(rawTime, markerStepSec);
+
+                const sideKey = `${markerTime}-${sig.type}`;
+                if (markerDedupe.has(sideKey)) return;
+                markerDedupe.add(sideKey);
+
+                const markerMap: Record<string, { position: 'aboveBar' | 'belowBar'; color: string }> = {
+                    BUY: { position: 'belowBar', color: '#22c55e' },
+                    SELL: { position: 'aboveBar', color: '#ef4444' },
+                    EXIT: { position: 'aboveBar', color: '#f59e0b' },
+                    CANCEL: { position: 'belowBar', color: '#71717a' },
+                };
+
+                const visual = markerMap[sig.type];
+                if (!visual) return;
+
+                markers.push({
+                    time: markerTime as Time,
+                    position: visual.position,
+                    color: visual.color,
+                    shape: 'circle',
+                    size: 1,
+                    text: '',
+                });
+            });
+
         markers.sort((a, b) => (a.time as number) - (b.time as number));
         plugin.setMarkers(markers);
 
-    }, [virtualPositions, symbol, showHistoryMarkers, mainSeries, strategies, currentInterval]);
+    }, [virtualPositions, terminalPositions, terminalOrders, signals, symbol, showHistoryMarkers, mainSeries, strategies, currentInterval]);
 
     // 3. Handle Active/Pending Lines (Price Lines)
     useEffect(() => {
@@ -115,7 +265,7 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
             return true;
         });
 
-        const lines: any[] = [];
+        const lines: IPriceLine[] = [];
         activePositions.forEach(pos => {
             const isPending = pos.status === 'pending';
             const baseColor = pos.type === 'BUY' ? '#26a69a' : '#ef5350';
@@ -155,7 +305,7 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
                     });
                     lines.push(tpLine);
                 }
-            } catch (err) {
+            } catch {
                 // Silently handle error to avoid crashing
             }
         });
@@ -164,7 +314,7 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
             lines.forEach(line => {
                 try {
                     mainSeries.removePriceLine(line);
-                } catch (e) { }
+                } catch { }
             });
         };
     }, [virtualPositions, symbol, currentInterval, showHistoryMarkers, mainSeries, strategies]);
@@ -173,8 +323,11 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
     useEffect(() => {
         if (!chart || !symbol) return;
 
-        const handleFocus = (e: any) => {
-            const { symbol: targetSymbol, timestamp, exitTimestamp } = e.detail;
+        const handleFocus = (e: Event) => {
+            const customEvent = e as CustomEvent<ChartFocusDetail>;
+            if (!customEvent.detail) return;
+            const { symbol: targetSymbol, timestamp, exitTimestamp } = customEvent.detail;
+            if (!Number.isFinite(timestamp)) return;
             const normTarget = targetSymbol?.replace('USDM', '').replace('USDT', '');
             const normCurrent = symbol?.replace('USDM', '').replace('USDT', '');
 
@@ -191,9 +344,12 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
             }
         };
 
-        window.addEventListener('chart_focus_request' as any, handleFocus);
-        return () => window.removeEventListener('chart_focus_request' as any, handleFocus);
+        window.addEventListener('chart_focus_request', handleFocus);
+        return () => window.removeEventListener('chart_focus_request', handleFocus);
     }, [chart, symbol]);
 
     return null;
-});
+}
+
+export const StrategyMarkers = memo(StrategyMarkersView);
+StrategyMarkers.displayName = 'StrategyMarkers';

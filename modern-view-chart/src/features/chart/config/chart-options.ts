@@ -119,7 +119,8 @@ export const getSubChartOptions = (width: number, height: number, theme: string,
             borderColor: 'transparent',
             minimumWidth: initialMinW,
         },
-        handleScale: { mouseWheel: false, axisPressedMouseMove: { price: true, time: true } as any },
+        // Lock price-axis manual scaling on subchart so RSI/MACD panes don't get flattened by drag.
+        handleScale: { mouseWheel: false, axisPressedMouseMove: { price: false, time: true } as any },
         handleScroll: true,
     };
 };

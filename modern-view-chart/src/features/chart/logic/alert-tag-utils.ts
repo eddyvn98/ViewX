@@ -9,7 +9,7 @@ export function getAlertTags(alerts: Alert[], symbol: string, draggingState: any
         let price = alert.price;
 
         // Apply dragging override
-        if (draggingState && draggingState.id === alert.id && draggingState.type === 'alert') {
+        if (draggingState && (String(draggingState.ticket ?? draggingState.id) === String(alert.id)) && draggingState.type === 'alert') {
             price = draggingState.price;
         }
 
@@ -26,3 +26,4 @@ export function getAlertTags(alerts: Alert[], symbol: string, draggingState: any
 
     return result;
 }
+

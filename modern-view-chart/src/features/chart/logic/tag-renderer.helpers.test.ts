@@ -5,7 +5,7 @@ import { resolveTagAnchorTime, resolveTagXCoordinate, updatePnlVisuals, TagEleme
 import { TagData } from './order-tag-utils';
 
 describe('resolveTagAnchorTime', () => {
-    it('uses live anchor for live entry tags', () => {
+    it('uses original timestamp for live entry tags', () => {
         const tag = {
             id: '1-entry',
             type: 'entry',
@@ -16,7 +16,7 @@ describe('resolveTagAnchorTime', () => {
             pOriginal: { status: 'open', timestamp: 1700000000 }
         } as TagData;
 
-        assert.equal(resolveTagAnchorTime(tag, 1700001000), 1700001000);
+        assert.equal(resolveTagAnchorTime(tag, 1700001000), 1700000000);
     });
 
     it('uses original timestamp for pending/history', () => {

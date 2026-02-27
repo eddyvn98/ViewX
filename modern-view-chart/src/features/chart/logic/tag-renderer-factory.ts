@@ -64,11 +64,22 @@ function createAlertTagElement(tag: TagData): TagElements {
             </div>`);
 }
 
+function getEntryArrowSymbol(tag: TagData): string {
+    const typeText = String((tag.pOriginal as any)?.type || '').toLowerCase();
+    return typeText.includes('sell') ? '↓' : '↑';
+}
+
 function createDotTagElement(tag: TagData): TagElements {
     const isReadOnlyWebTag = typeof tag.ticket === 'string' && tag.ticket.startsWith('web:');
     const draggableAttr = isReadOnlyWebTag
         ? ''
         : `data-draggable="true" data-type="${tag.type}" data-ticket="${tag.ticket}"`;
+    const isEntry = tag.type === 'entry';
+    const markerClass = isEntry ? 'dot-marker arrow-marker' : 'dot-marker';
+    const markerShapeClass = isEntry
+        ? 'h-4 w-4 min-w-[16px] rounded-none border-0 bg-transparent ring-0'
+        : 'h-3 w-3 min-w-[12px] rounded-full border-2 border-white/40 bg-secondary/70 ring-1 ring-black/30';
+    const arrowSymbol = isEntry ? getEntryArrowSymbol(tag) : '';
     const isDraft = tag.ticket === 'draft';
     const cancelClass = isReadOnlyWebTag
         ? 'hidden'
@@ -79,8 +90,9 @@ function createDotTagElement(tag: TagData): TagElements {
                 <div class="cancel-btn ${cancelClass}" title="${isDraft ? 'Remove' : 'Close/Cancel'}" data-no-drag="true">
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
-                <div class="price-box dot-marker h-3 w-3 min-w-[12px] p-0 rounded-full border-2 border-white/40 bg-secondary/70 justify-center items-center cursor-row-resize ring-1 ring-black/30 transition-transform duration-150 group-hover:scale-110" ${draggableAttr}>
+                <div class="price-box ${markerClass} ${markerShapeClass} p-0 justify-center items-center cursor-row-resize transition-transform duration-150 group-hover:scale-110" ${draggableAttr}>
                     <span class="price-text hidden"></span>
+                    <span class="arrow-glyph text-[12px] font-black leading-none select-none">${arrowSymbol}</span>
                 </div>
                 <span class="dot-caption text-[9px] font-semibold leading-none text-foreground/75 tracking-tight"></span>
                 <span class="tag-label hidden"></span>
@@ -93,4 +105,3 @@ export function createTagElement(tag: TagData): TagElements {
     if (tag.type === 'alert') return createAlertTagElement(tag);
     return createDotTagElement(tag);
 }
-

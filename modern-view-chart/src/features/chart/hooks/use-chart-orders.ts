@@ -8,6 +8,8 @@ export function useChartOrders(
     orders: Order[]
 ) {
     const draftOrder = useMarketStore((state) => state.draftOrder);
+    const focusedTicket = useMarketStore((state) => state.focusedTicket);
+    const hoveredTicket = useMarketStore((state) => state.hoveredTicket);
     const priceLinesRef = useRef<Record<string, { entry?: IPriceLine, sl?: IPriceLine, tp?: IPriceLine }>>({});
 
     const sharedRef = useRef({
@@ -45,6 +47,8 @@ export function useChartOrders(
             // 🛡️ Web-First Priority: If dragging, use drag price, not store price
             const dragging = useMarketStore.getState().draggingPosition;
             const isDraggingThis = dragging && dragging.ticket === o.ticket;
+            const isFoc = focusedTicket === Number(o.ticket) || hoveredTicket === Number(o.ticket);
+            const shouldShowRiskLines = isFoc || isDraggingThis;
 
             // Entry Line
             const finalEntry = (isDraggingThis && dragging.type === 'entry') ? dragging.price : o.price_open;
@@ -61,7 +65,7 @@ export function useChartOrders(
 
             // SL Line
             const finalSL = (isDraggingThis && dragging.type === 'sl') ? dragging.price : o.sl;
-            if (finalSL > 0) {
+            if (finalSL > 0 && shouldShowRiskLines) {
                 const slOptions = {
                     price: finalSL,
                     color: '#ef5350',
@@ -79,7 +83,7 @@ export function useChartOrders(
 
             // TP Line
             const finalTP = (isDraggingThis && dragging.type === 'tp') ? dragging.price : o.tp;
-            if (finalTP > 0) {
+            if (finalTP > 0 && shouldShowRiskLines) {
                 const tpOptions = {
                     price: finalTP,
                     color: '#26a69a',
@@ -105,7 +109,7 @@ export function useChartOrders(
                 delete priceLinesRef.current[ticket];
             }
         });
-    }, [orders, symbol, draftOrder]);
+    }, [orders, symbol, draftOrder, focusedTicket, hoveredTicket]);
 
     // EFFECT 2: Fast Drag Sync for Orders
     useEffect(() => {
