@@ -37,6 +37,9 @@ export interface Position {
     tp: number;
     profit: number;
     time: number;
+    entry_time?: number;
+    sl_time?: number;
+    tp_time?: number;
     magic: number;
     source?: string;
 }
@@ -51,6 +54,9 @@ export interface Order {
     sl: number;
     tp: number;
     time: number;
+    entry_time?: number;
+    sl_time?: number;
+    tp_time?: number;
     magic: number;
     source?: string;
 }

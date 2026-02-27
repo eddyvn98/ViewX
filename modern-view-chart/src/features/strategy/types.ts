@@ -210,6 +210,9 @@ export interface VirtualPosition {
     lotSize: number;
     quantity?: number; // Backend alias for lotSize
     timestamp: number;
+    entry_time?: number;
+    sl_time?: number;
+    tp_time?: number;
     status: 'open' | 'closed' | 'pending';
     exitPrice?: number;
     exitTimestamp?: number;
