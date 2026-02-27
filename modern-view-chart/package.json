@@ -13,6 +13,8 @@
     "logos:check": "node scripts/check-symbol-logo-coverage.mjs",
     "logos:equity-sync": "node scripts/symbol-logos/fetch-equity-logos.mjs mt5_symbols_live.txt",
     "soak:ws": "node scripts/server/ws-soak-test.mjs",
+    "smoke:ws-auth": "node scripts/server/ws-auth-smoke.mjs",
+    "smoke:api-auth": "node scripts/server/api-auth-smoke.mjs",
     "soak:chaos": "powershell -ExecutionPolicy Bypass -File .\\scripts\\server\\soak-chaos.ps1",
     "server:dev": "nodemon backend/index.js",
     "server:start": "node backend/index.js",
