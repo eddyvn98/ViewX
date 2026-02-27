@@ -1,0 +1,4 @@
+[GET] http://127.0.0.1:3000/_next/static/chunks/3a8bed954d27a48a.js => [500] Internal Server Error
+[GET] http://127.0.0.1:3000/_next/static/chunks/595b20946efea440.js => [500] Internal Server Error
+[GET] http://127.0.0.1:3000/_next/static/chunks/3a8bed954d27a48a.js => [500] Internal Server Error
+[GET] http://127.0.0.1:3000/_next/static/chunks/595b20946efea440.js => [500] Internal Server Error

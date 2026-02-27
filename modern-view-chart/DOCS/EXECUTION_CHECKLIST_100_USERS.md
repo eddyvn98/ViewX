@@ -75,3 +75,35 @@ Source plan: `DOCS/PLAN_2026-02-24_100-users.md`
 - [x] Public backend `/api/health/ready` reachable (`200`)
 - [x] Public backend `/api/metrics` reachable with bearer auth (`200`)
 - [x] Public WebSocket reachable and receiving realtime frame (`priceUpdate`)
+
+## Public Hardening Patch - 2026-02-25
+
+- [x] Enforce WS bridge trust boundary:
+  only service-authenticated sockets can publish bridge topics.
+- [x] Add WS role guard for trading commands:
+  `mt5_command`, `binance_command`, `alert_command` require `trader` or higher.
+- [x] Standardize WS error payload:
+  `topic=error`, `code=forbidden|unauthorized`, optional `detail`.
+- [x] Start WS auth migration:
+  header/subprotocol preferred, query auth compatibility guarded by
+  `WS_ALLOW_QUERY_AUTH` + `WS_QUERY_AUTH_DEPRECATED_UNTIL`.
+- [x] Remove hardcoded public frontend WS fallback (`ws://127.0.0.1:8091`) by deriving from runtime host or `NEXT_PUBLIC_WS_URL`.
+- [x] WS auth smoke matrix passed (`4/4`) via `npm run smoke:ws-auth`
+  Evidence: `logs/ws-auth-smoke-2026-02-25T06-42-00-504Z.json`
+- [x] Post-patch WS soak gate passed (`100 clients / 15 minutes`)
+  Evidence: `logs/ws-soak-report-2026-02-25T07-00-16-213Z.json`
+  Summary: `disconnect_rate=0%`, `max_broadcast_p95_ms=8`
+
+## Runtime Cost Optimization - 2026-02-26
+
+- [x] Add bridge idle mode when no active client subscriptions
+  Server now sends empty `bridge_symbols_interest` so bridge can reduce MT5 polling load.
+- [x] Add configurable bridge poll intervals via env:
+  `BRIDGE_ACTIVE_LOOP_SLEEP_SEC`, `BRIDGE_IDLE_LOOP_SLEEP_SEC`,
+  `BRIDGE_ACTIVE_POSITIONS_INTERVAL_SEC`, `BRIDGE_IDLE_POSITIONS_INTERVAL_SEC`,
+  `BRIDGE_DAILY_OPEN_REFRESH_SEC`.
+- [x] Keep full active behavior unchanged when subscriptions exist.
+- [x] Add cloud-DB-aware server scripts:
+  `run-all.ps1` and `watchdog.ps1` now skip local Docker Mongo when `URL_MONGOOSE` points to external Mongo (Atlas-ready).
+- [x] Add emergency defense mode (`EMERGENCY_MODE`) for DDoS response:
+  tighten HTTP/WS limits, block heavy HTTP routes, and disable trading mutating WS commands.

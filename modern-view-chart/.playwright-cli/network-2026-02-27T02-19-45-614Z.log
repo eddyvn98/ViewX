@@ -1,0 +1,4 @@
+[GET] http://localhost:3000/api/auth/ws-ticket => [200] OK
+[GET] http://localhost:3000/api/user/state?client_id=8599b545-f6b7-40db-94cc-cfabfe39527f => [200] OK
+[PUT] http://localhost:3000/api/user/state?client_id=8599b545-f6b7-40db-94cc-cfabfe39527f => [200] OK
+[PUT] http://localhost:3000/api/user/state?client_id=8599b545-f6b7-40db-94cc-cfabfe39527f => [200] OK

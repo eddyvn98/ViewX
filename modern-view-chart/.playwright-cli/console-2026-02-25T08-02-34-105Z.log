@@ -1,0 +1,2 @@
+[     901ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/_next/static/chunks/65d5281b225139ca.js:0
+[  301998ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/_next/static/chunks/65d5281b225139ca.js:0

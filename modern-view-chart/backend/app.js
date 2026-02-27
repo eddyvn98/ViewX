@@ -12,6 +12,7 @@ import { getDatabaseHealth } from "./services/database.js";
 import { runtimeState } from "./runtime-state.js";
 import { normalizeUserRole } from "./auth/roles.js";
 import { getActiveRefreshTokenCount } from "./auth/userJwt.js";
+import { emergencyConfig } from "./config/emergency.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,16 @@ function isHealthyState(state) {
     return state === "connected" || state === "connecting";
 }
 
+const EMERGENCY_BLOCKED_HTTP_PREFIXES = [
+    "/api/ai/bridge/task",
+    "/api/ai/bridge/execute",
+    "/api/user/data",
+    "/api/user/prices",
+    "/api/user/symbols",
+    "/api/user/bollinger",
+    "/api/user/rsi",
+];
+
 export function createApp() {
     const app = new Express();
     const allowedOrigins = getAllowedOrigins();
@@ -63,28 +74,28 @@ export function createApp() {
 
     const apiLimiter = rateLimit({
         windowMs: 60 * 1000,
-        limit: 300,
+        limit: emergencyConfig.limits.apiPerMin,
         standardHeaders: true,
         legacyHeaders: false,
     });
 
     const aiLimiter = rateLimit({
         windowMs: 60 * 1000,
-        limit: 30,
+        limit: emergencyConfig.limits.aiPerMin,
         standardHeaders: true,
         legacyHeaders: false,
     });
 
     const aiTaskLimiter = rateLimit({
         windowMs: 60 * 1000,
-        limit: 12,
+        limit: emergencyConfig.limits.aiTaskPerMin,
         standardHeaders: true,
         legacyHeaders: false,
     });
 
     const marketLimiter = rateLimit({
         windowMs: 60 * 1000,
-        limit: 120,
+        limit: emergencyConfig.limits.marketPerMin,
         standardHeaders: true,
         legacyHeaders: false,
     });
@@ -97,10 +108,25 @@ export function createApp() {
     app.use("/api/user/symbols", marketLimiter);
 
     app.use((req, res, next) => {
+        if (!emergencyConfig.enabled || !emergencyConfig.blockHeavyHttp) return next();
+        if (req.path === "/api/health" || req.path === "/api/health/ready" || req.path === "/api/metrics") return next();
+
+        const blocked = EMERGENCY_BLOCKED_HTTP_PREFIXES.some((prefix) => req.path.startsWith(prefix));
+        if (!blocked) return next();
+
+        res.setHeader("Retry-After", "60");
+        res.setHeader("x-emergency-mode", "1");
+        return res.status(503).json({
+            error: "Service temporarily restricted",
+            code: "emergency_mode_restriction",
+        });
+    });
+
+    app.use((req, res, next) => {
         res.setHeader(
             "Content-Security-Policy",
             "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "img-src 'self' data: https:; " +
                 "connect-src 'self' ws: wss: https://stream.binance.com:9443 https://api.binance.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;",
@@ -125,6 +151,7 @@ export function createApp() {
             broadcast_p95_ms: runtimeState.broadcastLoopMsP95,
             bridge_rtt_ms: null,
             version: process.env.npm_package_version || "0.1.0",
+            emergency_mode: emergencyConfig.enabled,
         });
     });
 
@@ -181,6 +208,7 @@ export function createApp() {
                 active_refresh_tokens: getActiveRefreshTokenCount(),
             },
             db: getDatabaseHealth(),
+            emergency_mode: emergencyConfig.enabled,
         });
     });
 

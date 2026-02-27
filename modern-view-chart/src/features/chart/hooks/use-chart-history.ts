@@ -47,6 +47,20 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
 
     useEffect(() => {
+        if (!isReady || !symbol || !interval || !isConnected) return;
+        if (candlesCount >= MIN_CANDLES_THRESHOLD) return;
+
+        const requestHistory = () => {
+            sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
+            sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
+        };
+
+        requestHistory();
+        const timer = setInterval(requestHistory, 2500);
+        return () => clearInterval(timer);
+    }, [isReady, symbol, interval, isConnected, candlesCount, sendMessage]);
+
+    useEffect(() => {
         if (!isReady || !symbol || !interval || !seriesRef.current) return;
 
         const currentCandles = getCandles();
@@ -88,6 +102,11 @@ export function useChartHistory(props: UseChartHistoryProps) {
             if (formatted.length > 0) {
                 onHistoryLoaded(currentCandles[currentCandles.length - 1]);
                 updateSyncData(formatted, subSyncRef, timescaleSyncRef);
+
+                // Ensure first paint is focused on available bars after symbol/timeframe switch.
+                if (isContextChange || isInitialMount.current) {
+                    handleAutoFit();
+                }
 
                 // Only mark as ready once we have enough data to fit properly
                 // OR if it's been loading for a while and we only have a few bars (new symbol)

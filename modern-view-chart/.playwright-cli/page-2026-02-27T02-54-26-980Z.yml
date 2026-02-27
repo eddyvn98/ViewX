@@ -1,0 +1,48 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - img [ref=e9]
+          - text: Workspace 1
+        - button "Add Workspace" [ref=e11]:
+          - img [ref=e12]
+      - generic [ref=e13]:
+        - button "Toggle Market List" [ref=e14]:
+          - img [ref=e15]
+        - generic [ref=e16]:
+          - button "Mobile Access" [ref=e18]:
+            - img [ref=e19]
+          - button "Change Theme Color" [ref=e22]:
+            - img [ref=e23]
+          - button [active] [ref=e29]:
+            - img [ref=e30]
+          - button [ref=e33]:
+            - img [ref=e34]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - text: Alex
+            - generic [ref=e39]: PRO
+          - button [ref=e40]:
+            - img [ref=e41]
+    - generic [ref=e44]:
+      - button [ref=e45]:
+        - img [ref=e46]
+      - generic [ref=e47]:
+        - button "SC" [ref=e48]:
+          - img [ref=e49]
+          - text: SC
+        - button "Fx" [ref=e50]:
+          - img [ref=e51]
+          - text: Fx
+      - button "Change Theme Color" [ref=e56]:
+        - img [ref=e57]
+    - generic [ref=e63]:
+      - generic [ref=e67]: V
+      - generic [ref=e68]:
+        - generic [ref=e71]:
+          - text: Market Selection
+          - button [ref=e72]:
+            - img [ref=e73]
+        - main [ref=e76]
+  - region "Notifications alt+T"

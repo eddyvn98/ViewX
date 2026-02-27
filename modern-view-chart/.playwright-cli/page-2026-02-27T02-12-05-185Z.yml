@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - button "Toggle Market List" [ref=e6]:
+          - img [ref=e7]
+        - generic [ref=e8]:
+          - button "Mobile Access" [ref=e10]:
+            - img [ref=e11]
+          - button "Switch to Light Mode" [ref=e13]:
+            - img [ref=e14]
+          - button "Change Theme Color" [ref=e21]:
+            - img [ref=e22]
+          - button [ref=e28]:
+            - img [ref=e29]
+          - button [ref=e33]:
+            - img [ref=e34]
+        - generic [ref=e37] [cursor=pointer]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: Alex
+            - generic [ref=e42]: PRO
+          - button [ref=e45]:
+            - img [ref=e46]
+    - generic [ref=e49]:
+      - generic [ref=e52] [cursor=pointer]: V
+      - generic [ref=e53]:
+        - generic:
+          - generic:
+            - generic:
+              - generic: Market Selection
+              - button:
+                - img
+        - main [ref=e54]
+  - region "Notifications alt+T"
+  - alert [ref=e60]

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import dns from "dns";
 import { logError, logInfo, logWarn } from "../logger.js";
 
 let initialized = false;
@@ -6,6 +7,24 @@ const dbState = {
     lastError: null,
     lastConnectedAt: null,
 };
+
+function maybeConfigureMongoDns(mongoUri) {
+    const uri = String(mongoUri || "").trim().toLowerCase();
+    if (!uri.startsWith("mongodb+srv://")) return;
+
+    const configured = (process.env.MONGODB_DNS_SERVERS || "1.1.1.1,8.8.8.8")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
+    if (configured.length === 0) return;
+    try {
+        dns.setServers(configured);
+        logInfo("db.dns.override", { servers: configured });
+    } catch (error) {
+        logWarn("db.dns.override_failed", { error: error?.message || String(error) });
+    }
+}
 
 function mapReadyState(readyState) {
     switch (readyState) {
@@ -49,6 +68,7 @@ const useDatabase = async () => {
     }
 
     registerConnectionListeners();
+    maybeConfigureMongoDns(mongoUri);
 
     try {
         await mongoose.connect(mongoUri, {

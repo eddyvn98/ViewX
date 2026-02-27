@@ -1,5 +1,5 @@
 import { Position, Order, Alert } from '@/lib/store';
-import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
+import { VirtualPosition } from '@/features/strategy/types';
 
 // Interface for standardized Tag Data
 export interface TagData {
@@ -9,7 +9,7 @@ export interface TagData {
     price: number;     // Current price level
     label: string;     // Text label (e.g., 'SL', 'TP', 'ORD', 'POS')
     color: string;     // Background color (Tailwind-compatible hex)
-    pOriginal?: Position | Order | Alert; // Original object reference for PnL
+    pOriginal?: Position | Order | Alert | VirtualPosition | any; // Original object reference for PnL
 }
 
 import { normalizeSymbol } from '@/lib/utils/symbol';
@@ -33,6 +33,12 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
         }
 
         const isBuy = pos.type.toString().toLowerCase().includes('buy');
+        const isExternalBot = Number((pos as any).magic || 0) > 0;
+        const entryColor = isExternalBot
+            ? (isBuy ? '#f59e0b' : '#fb7185')
+            : (isBuy ? '#3b82f6' : '#ea580c');
+        const slColor = isExternalBot ? '#ef4444' : '#ef4444';
+        const tpColor = isExternalBot ? '#facc15' : '#22c55e';
 
         // Entry Tag - Differentiate Buy/Sell
         result.push({
@@ -40,8 +46,10 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
             type: 'entry',
             ticket: pos.ticket,
             price: entryPrice,
-            label: isBuy ? 'BUY POS' : 'SELL POS',
-            color: isBuy ? '#3b82f6' : '#ea580c', // Blue for Buy, Orange for Sell
+            label: isExternalBot
+                ? (isBuy ? 'EXT BOT BUY' : 'EXT BOT SELL')
+                : (isBuy ? 'BUY POS' : 'SELL POS'),
+            color: entryColor,
             pOriginal: pos
         });
 
@@ -57,7 +65,7 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
                 ticket: pos.ticket,
                 price: slPrice,
                 label: 'SL',
-                color: '#ef4444',
+                color: slColor,
                 pOriginal: pos
             });
         }
@@ -74,7 +82,7 @@ export function getPositionTags(positions: Position[], symbol: string, draggingS
                 ticket: pos.ticket,
                 price: tpPrice,
                 label: 'TP',
-                color: '#22c55e',
+                color: tpColor,
                 pOriginal: pos
             });
         }
@@ -98,14 +106,20 @@ export function getOrderTags(orders: Order[], symbol: string, draggingState: any
 
         const isBuy = ord.type.toLowerCase().includes('buy');
         const typeLabel = ord.type.toUpperCase().replace(' LIMIT', ' LMT').replace(' STOP', ' STP');
+        const isExternalBot = Number((ord as any).magic || 0) > 0;
+        const entryColor = isExternalBot
+            ? (isBuy ? '#fbbf24' : '#f472b6')
+            : (isBuy ? '#60a5fa' : '#fb923c');
+        const slColor = isExternalBot ? '#ef4444' : '#ef4444';
+        const tpColor = isExternalBot ? '#facc15' : '#22c55e';
 
         result.push({
             id: `${ord.ticket}-entry`,
             type: 'entry',
             ticket: ord.ticket,
             price: entryPrice,
-            label: typeLabel,
-            color: isBuy ? '#60a5fa' : '#fb923c', // Lighter Blue/Orange for Pending
+            label: isExternalBot ? `EXT BOT ${typeLabel}` : typeLabel,
+            color: entryColor,
             pOriginal: ord
         });
 
@@ -121,7 +135,7 @@ export function getOrderTags(orders: Order[], symbol: string, draggingState: any
                 ticket: ord.ticket,
                 price: slPrice,
                 label: 'SL',
-                color: '#ef4444',
+                color: slColor,
                 pOriginal: ord
             });
         }
@@ -136,11 +150,74 @@ export function getOrderTags(orders: Order[], symbol: string, draggingState: any
                 ticket: ord.ticket,
                 price: tpPrice,
                 label: 'TP',
-                color: '#22c55e',
+                color: tpColor,
                 pOriginal: ord
             });
         }
     });
+
+    return result;
+}
+
+// Generates TagData from Web Strategy Virtual Positions (live only)
+export function getVirtualPositionTags(virtualPositions: VirtualPosition[], symbol: string, draggingState: any): TagData[] {
+    const matches = (s1: string, s2: string) => norm(s1) === norm(s2);
+    const result: TagData[] = [];
+
+    virtualPositions
+        .filter(v => matches(v.symbol, symbol) && (v.status === 'open' || v.status === 'pending'))
+        .forEach(pos => {
+            let entryPrice = pos.entryPrice;
+            if (draggingState && draggingState.ticket === `web:${pos.id}` && draggingState.type === 'entry') {
+                entryPrice = draggingState.price;
+            }
+
+            const isBuy = pos.type === 'BUY';
+            const isPending = pos.status === 'pending';
+            const entryColor = isPending ? '#f59e0b' : (isBuy ? '#14b8a6' : '#f97316');
+
+            result.push({
+                id: `web-${pos.id}-entry`,
+                type: 'entry',
+                ticket: `web:${pos.id}`,
+                price: entryPrice,
+                label: isPending ? `WEB PEND ${pos.type}` : `WEB ${pos.type}`,
+                color: entryColor,
+                pOriginal: pos as any
+            });
+
+            if (pos.sl > 0) {
+                let slPrice = pos.sl;
+                if (draggingState && draggingState.ticket === `web:${pos.id}` && draggingState.type === 'sl') {
+                    slPrice = draggingState.price;
+                }
+                result.push({
+                    id: `web-${pos.id}-sl`,
+                    type: 'sl',
+                    ticket: `web:${pos.id}`,
+                    price: slPrice,
+                    label: 'WEB SL',
+                    color: '#ef4444',
+                    pOriginal: pos as any
+                });
+            }
+
+            if (pos.tp > 0) {
+                let tpPrice = pos.tp;
+                if (draggingState && draggingState.ticket === `web:${pos.id}` && draggingState.type === 'tp') {
+                    tpPrice = draggingState.price;
+                }
+                result.push({
+                    id: `web-${pos.id}-tp`,
+                    type: 'tp',
+                    ticket: `web:${pos.id}`,
+                    price: tpPrice,
+                    label: 'WEB TP',
+                    color: '#22c55e',
+                    pOriginal: pos as any
+                });
+            }
+        });
 
     return result;
 }

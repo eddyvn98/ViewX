@@ -45,7 +45,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
             className={cn(
                 "group relative rounded-xl border flex flex-col bg-background transition-all duration-300 overflow-hidden",
                 isActive
-                    ? "border-primary/40 ring-2 ring-primary/5 shadow-2xl shadow-primary/10 scale-[1.002] z-10"
+                    ? "border-primary/40 ring-2 ring-primary/5 shadow-2xl shadow-primary/10 z-10"
                     : "border-border/30 hover:border-border/50"
             )}
         >

@@ -1,0 +1,310 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+          - generic [ref=e11]: Workspace 1
+        - button "Add Workspace" [ref=e13]:
+          - img [ref=e14]
+      - generic [ref=e15]:
+        - button "Toggle Market List" [ref=e16]:
+          - img [ref=e17]
+        - generic [ref=e18]:
+          - button "Mobile Access" [ref=e20]:
+            - img [ref=e21]
+          - button "Switch to Light Mode" [ref=e64]:
+            - img [ref=e65]
+          - button "Change Theme Color" [ref=e25]:
+            - img [ref=e26]
+          - button [ref=e32]:
+            - img [ref=e33]
+          - button [ref=e37]:
+            - img [ref=e38]
+        - generic [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: Alex
+            - generic [ref=e46]: PRO
+          - button [ref=e49]:
+            - img [ref=e50]
+    - generic [ref=e53]:
+      - generic [ref=e56] [cursor=pointer]: V
+      - generic [ref=e57]:
+        - generic:
+          - generic:
+            - generic:
+              - generic: Market Selection
+              - button:
+                - img
+        - main [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e72]:
+                - generic [ref=e73]:
+                  - generic [ref=e75]:
+                    - generic [ref=e76]:
+                      - button "1m" [ref=e77]
+                      - button "5m" [ref=e78]
+                      - button "15m" [ref=e79]
+                      - button "1h" [ref=e80]
+                      - button "4h" [ref=e81]
+                    - button [ref=e83]:
+                      - img [ref=e84]
+                  - generic [ref=e87]:
+                    - 'button "Symbol Link: A" [ref=e88]':
+                      - img [ref=e89]
+                    - button "SC" [ref=e92]
+                    - button "Change Layout" [ref=e94]:
+                      - img [ref=e95]
+                  - generic [ref=e98]:
+                    - button "Toggle Drawing Toolbar" [ref=e99]:
+                      - img [ref=e100]
+                    - button "Crosshair Sync" [ref=e103]:
+                      - img [ref=e104]
+                    - button "Toggle Strategy Markers" [ref=e106]:
+                      - img [ref=e107]
+                    - button "Add Chart" [ref=e111]:
+                      - img [ref=e112]
+                      - text: Add Chart
+                - button "16:26:18 UTC+7" [ref=e115]:
+                  - img [ref=e116]
+                  - generic [ref=e119]: 16:26:18
+                  - generic [ref=e120]: UTC+7
+              - generic [ref=e122]:
+                - generic [ref=e124]:
+                  - generic [ref=e125]:
+                    - 'button "Symbol Link: A" [ref=e126]':
+                      - img [ref=e127]
+                    - generic [ref=e130]:
+                      - generic [ref=e131]: XAUUSDm
+                      - generic [ref=e132]: 1 • MT5
+                    - button "Quick Alert" [ref=e133]:
+                      - img [ref=e134]
+                  - generic [ref=e137]:
+                    - button "Maximize" [ref=e138]:
+                      - img [ref=e139]
+                    - link "Pop out" [ref=e144] [cursor=pointer]:
+                      - /url: /chart/default?symbol=XAUUSDm&interval=1&source=MT5
+                      - img [ref=e145]
+                - generic [ref=e150]:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Live
+                        - generic:
+                          - img
+                      - generic:
+                        - generic:
+                          - generic: O
+                          - generic: "5178.393"
+                        - generic:
+                          - generic: H
+                          - generic: "5179.167"
+                        - generic:
+                          - generic: L
+                          - generic: "5178.283"
+                      - generic:
+                        - generic: "5178.913"
+                        - generic:
+                          - generic: "+0.520"
+                          - generic: (+0.01%)
+                    - generic:
+                      - generic:
+                        - generic: EMA 25
+                        - generic:
+                          - generic: "5177.83"
+                      - generic:
+                        - generic: HMA 25
+                        - generic:
+                          - generic: "5176.47"
+                      - generic:
+                        - generic: MARKET_STRUCTURE 14
+                        - generic:
+                          - generic: "-"
+                      - generic:
+                        - generic: BREAKOUT_RAYS 14
+                        - generic:
+                          - generic: "-"
+                      - generic:
+                        - generic: TREND_LINES 14
+                        - generic:
+                          - generic: "-"
+                  - generic [ref=e151]:
+                    - table [ref=e154]:
+                      - row [ref=e155]:
+                        - cell
+                        - cell [ref=e156]
+                        - cell [ref=e160]
+                    - generic:
+                      - generic: "5178.913"
+                      - generic: 00:42
+                    - generic [ref=e165]:
+                      - button "BUY" [ref=e166]:
+                        - generic [ref=e167]: BUY
+                      - button "SELL" [ref=e169]:
+                        - generic [ref=e170]: SELL
+                    - generic [ref=e171]:
+                      - generic [ref=e172]:
+                        - button "Trend Line" [ref=e173]:
+                          - img [ref=e174]
+                          - generic: Trend Line
+                        - button "Horizontal Line" [ref=e177]:
+                          - img [ref=e178]
+                          - generic: Horizontal Line
+                        - button "Vertical Line" [ref=e179]:
+                          - img [ref=e180]
+                          - generic: Vertical Line
+                        - button "Crosshair" [ref=e183]:
+                          - img [ref=e184]
+                          - generic: Crosshair
+                        - button "Rectangle" [ref=e186]:
+                          - img [ref=e187]
+                          - generic: Rectangle
+                        - button "F Fib Retracement" [ref=e189]:
+                          - generic [ref=e190]: F
+                          - generic: Fib Retracement
+                        - button "FE Fib Extension" [ref=e191]:
+                          - generic [ref=e192]: FE
+                          - generic: Fib Extension
+                        - button "Magnet Mode" [ref=e194]:
+                          - img [ref=e195]
+                          - generic: Magnet Mode
+                      - button [ref=e200]:
+                        - img [ref=e201]
+                    - generic [ref=e203]:
+                      - generic [ref=e204]:
+                        - button "RSI" [ref=e205]: RSI
+                        - button "MACD" [ref=e207]
+                      - button "Hide" [ref=e208]:
+                        - generic [ref=e209]: Hide
+                        - img [ref=e210]
+                    - generic [ref=e212]:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: RSI 14
+                              - generic:
+                                - generic: ···
+                      - table [ref=e216]:
+                        - row [ref=e217]:
+                          - cell
+                          - cell [ref=e218]
+                          - cell [ref=e222]
+                  - table [ref=e230]:
+                    - row [ref=e231]:
+                      - cell
+                      - cell [ref=e232]
+                      - cell [ref=e236]
+                    - row [ref=e240]:
+                      - cell
+                      - cell [ref=e241]
+                      - cell [ref=e245]
+            - generic [ref=e251] [cursor=pointer]:
+              - generic [ref=e252]:
+                - generic [ref=e253]: Trading Terminal
+                - generic "Bridge Disconnected" [ref=e254]
+              - button [ref=e256]:
+                - img [ref=e257]
+        - complementary [ref=e259]:
+          - generic [ref=e262]:
+            - generic [ref=e263]:
+              - generic [ref=e264]:
+                - img [ref=e265]
+                - textbox "Quick search..." [ref=e268]
+              - generic [ref=e269]:
+                - button "ALL" [ref=e270]
+                - button "CRYPTO" [ref=e271]
+                - button "FOREX" [ref=e272]
+            - generic [ref=e273]:
+              - generic [ref=e274]: Symbol
+              - generic [ref=e275]: Live price
+              - generic [ref=e276]: Change
+            - list [ref=e279]:
+              - generic [ref=e281] [cursor=pointer]:
+                - generic [ref=e282]:
+                  - img [ref=e284]
+                  - generic [ref=e286]:
+                    - generic [ref=e287]: BTCUSDm
+                    - generic [ref=e288]: MT5
+                - generic [ref=e289]: "68185.3"
+                - generic [ref=e291]:
+                  - generic [ref=e292]: "+195.86"
+                  - generic [ref=e293]: (+0.29%)
+                - button [ref=e294]:
+                  - img [ref=e295]
+              - generic [ref=e299] [cursor=pointer]:
+                - generic [ref=e300]:
+                  - generic [ref=e301]:
+                    - generic [ref=e303]: USD
+                    - generic [ref=e305]: EUR
+                  - generic [ref=e306]:
+                    - generic [ref=e307]: EURUSDm
+                    - generic [ref=e308]: MT5
+                - generic [ref=e309]: "1.18"
+                - generic [ref=e311]:
+                  - generic [ref=e312]: "-0.0013"
+                  - generic [ref=e313]: (-0.11%)
+                - button [ref=e314]:
+                  - img [ref=e315]
+              - generic [ref=e319] [cursor=pointer]:
+                - generic [ref=e321]:
+                  - img [ref=e323]
+                  - generic [ref=e325]:
+                    - generic [ref=e326]: XAUUSDm
+                    - generic [ref=e327]: MT5
+                - generic [ref=e328]: "5179.1"
+                - generic [ref=e330]:
+                  - generic [ref=e331]: "+15.91"
+                  - generic [ref=e332]: (+0.31%)
+                - button [ref=e333]:
+                  - img [ref=e334]
+          - generic [ref=e340]:
+            - generic [ref=e341]:
+              - button "Strategy" [ref=e342] [cursor=pointer]:
+                - generic [ref=e344]:
+                  - img [ref=e345]
+                  - generic [ref=e353]: Strategy
+              - button "Layer" [ref=e354] [cursor=pointer]:
+                - generic [ref=e355]:
+                  - img [ref=e356]
+                  - generic [ref=e358]: Layer
+              - button "Trade" [ref=e359] [cursor=pointer]:
+                - generic [ref=e360]:
+                  - img [ref=e361]
+                  - generic [ref=e365]: Trade
+            - generic [ref=e368]:
+              - generic [ref=e369]:
+                - button "Signals" [ref=e370]:
+                  - generic [ref=e372]:
+                    - img [ref=e373]
+                    - text: Signals
+                - button "My bot" [ref=e375]:
+                  - generic [ref=e376]:
+                    - img [ref=e377]
+                    - text: My bot
+                - button "Ai chat" [ref=e380]:
+                  - generic [ref=e381]:
+                    - img [ref=e382]
+                    - text: Ai chat
+              - generic [ref=e386]:
+                - generic [ref=e387]:
+                  - generic [ref=e390]:
+                    - generic [ref=e392]: LIVE VIRTUAL
+                    - generic [ref=e393]:
+                      - generic [ref=e394]: $10,000.00
+                      - generic [ref=e395]: +0.00%
+                  - generic [ref=e396]:
+                    - button "INFO" [ref=e397]
+                    - button [ref=e398]:
+                      - img [ref=e399]
+                - generic [ref=e402]:
+                  - generic [ref=e404]:
+                    - img [ref=e405]
+                    - text: Recent signals
+                  - generic [ref=e410]:
+                    - img [ref=e411]
+                    - generic [ref=e413]: Scanning
+  - region "Notifications alt+T"
+  - alert [ref=e414]

@@ -1,11 +1,8 @@
 'use client';
+/* eslint-disable react-hooks/refs */
 
-import React, { useRef, memo, useState } from 'react';
+import React, { memo, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
-import { cn } from '@/lib/utils';
-import { useChartInit } from './hooks/use-chart-init';
-import { useChartData } from './hooks/use-chart-data';
-// import { useChartCrosshair } from './hooks/use-chart-crosshair';
 import { useChartPositions } from './hooks/use-chart-positions';
 import { useChartOrders } from './hooks/use-chart-orders';
 import { useChartDraftOrder } from './hooks/use-chart-draft-order';
@@ -13,92 +10,58 @@ import { useChartIndicators } from './hooks/use-chart-indicators';
 import { useChartAlerts } from './hooks/use-chart-alerts';
 import { useChartInteraction } from './hooks/use-chart-interaction';
 import { useChartScaleReset } from './hooks/use-chart-scale-reset';
-import { useChartContextMenu } from './hooks/use-chart-context-menu';
 import { useSubchartSwitcher } from './hooks/use-subchart-switcher';
 import { useChartLayoutEffects } from './hooks/use-chart-layout-effects';
 import { useChartShortcuts } from './hooks/use-chart-shortcuts';
 import { useChartDrawings } from './hooks/use-chart-drawings';
-import { useTheme } from 'next-themes';
-import { useWebSocket } from '@/hooks/use-websocket';
-import { getNearElement } from './logic/chart-hit-test';
-import { normalizeSymbol } from '@/lib/utils/symbol';
+import { useChartRuntime } from './hooks/use-chart-runtime';
+import { useChartContextActions } from './hooks/use-chart-context-actions';
 
 import { CandleCountdown } from './components/CandleCountdown';
 import { ChartOverlay } from './components/ChartOverlay';
-import { SubchartLegend } from './components/SubchartLegend';
-import { SubchartIndicatorsTabs } from './components/SubchartIndicatorsTabs';
 import { ChartLegend } from './components/ChartLegend';
 import { ChartContextMenu } from './components/ChartContextMenu';
 import { OrderLineTags } from './components/OrderLineTags';
 import { AlertLineTags } from './components/AlertLineTags';
 import { ChartTradingOverlay } from './components/ChartTradingOverlay';
 import { PositionModifier } from '../terminal/components/PositionModifier';
-import { ChevronUp, ChevronDown } from 'lucide-react';
 import { StrategyMarkers } from '../strategy/components/StrategyMarkers';
 import { DrawingToolbar } from './components/DrawingToolbar';
-
-const EMPTY_CANDLES: any[] = [];
+import { ChartPanels } from './components/ChartPanels';
 
 export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }: { chartId: string, isNarrow?: boolean }) {
-    const { theme = 'dark' } = useTheme();
-    const positions = useMarketStore((state) => state.positions);
-    const orders = useMarketStore((state) => state.orders);
+    void isNarrow;
 
-    const chartInstance = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            if (tab.charts[chartId]) return tab.charts[chartId];
-        }
-        return null;
-    });
+    const {
+        chartInstance,
+        symbol,
+        interval,
+        source,
+        timezone,
+        chartType,
+        candles,
+        mainContainerRef,
+        priceContainerRef,
+        subchartContainerRef,
+        timescaleContainerRef,
+        isReady,
+        priceChartRef,
+        subchartChartRef,
+        timescaleChartRef,
+        seriesRef,
+        markerSeriesRef,
+        syncRange,
+        isAutoScrollEnabledRef,
+        sendMessage,
+        realTimeCandleRef,
+        filteredPositions,
+        filteredOrders
+    } = useChartRuntime(chartId);
 
-    const symbol = chartInstance?.symbol;
-    const interval = chartInstance?.interval;
-    const source = chartInstance?.source;
-    const timezone = chartInstance?.timezone || 'Asia/Ho_Chi_Minh';
-
-    const normSymbol = normalizeSymbol(symbol);
-
-    const key = `${source}:${normSymbol}:${interval}`;
-    // ⚡ CPU OPTIMIZATION: Only re-render if the COUNT of candles changes (new candle finalized)
-    // For per-tick updates, components use internal subscriptions or DOM-based updates
-    const candlesCount = useMarketStore(state => (state.candleData[key] || EMPTY_CANDLES).length);
-    const candles = useMarketStore.getState().candleData[key] || EMPTY_CANDLES;
-
-    /* ================= REFS ================= */
-    const mainContainerRef = useRef<HTMLDivElement>(null);
-    const priceContainerRef = useRef<HTMLDivElement>(null);
-    const subchartContainerRef = useRef<HTMLDivElement>(null);
-    const timescaleContainerRef = useRef<HTMLDivElement>(null);
-
-    const { isReady, priceChartRef, subchartChartRef, timescaleChartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, syncRange, isAutoScrollEnabledRef } =
-        useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme);
-
-    /* ================= DATA ================= */
-    const chartType = chartInstance?.chartType || 'candles';
-
-    /* ================= DATA ================= */
-    const { sendMessage } = useWebSocket();
-    const { realTimeCandleRef } = useChartData(chartId, symbol, interval, source, chartType, priceChartRef, subchartChartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, isAutoScrollEnabledRef);
-
-    /* ================= OVERLAYS ================= */
-    const filteredPositions = React.useMemo(() => {
-        const result = positions.filter(p => !source || ((p as any).source || 'MT5') === source);
-        // console.log(`[DEBUG] Chart ${source} filtered ${result.length}/${positions.length} positions`);
-        return result;
-    }, [positions, source]);
-
-    const filteredOrders = React.useMemo(() => {
-        const result = orders.filter(o => !source || ((o as any).source || 'MT5') === source);
-        // console.log(`[DEBUG] Chart ${source} filtered ${result.length}/${orders.length} orders`);
-        return result;
-    }, [orders, source]);
-
-    // useChartCrosshair(chartId, priceChartRef, seriesRef);
     useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef);
     useChartOrders(symbol, seriesRef, filteredOrders);
     useChartDraftOrder(symbol, seriesRef, isReady);
 
-    /* ================= INDICATORS ================= */
     useChartIndicators(
         chartId,
         priceChartRef,
@@ -111,21 +74,28 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         source,
         timezone,
         syncRange,
-        undefined, // Removed currentPrice from props (hook now handles it if needed)
+        undefined,
         isReady
     );
 
-    /* ================= DRAWINGS ================= */
-    useChartDrawings(chartId, priceChartRef.current, seriesRef.current, isReady, priceContainerRef, symbol, interval, source, candles);
+    useChartDrawings(
+        chartId,
+        priceChartRef.current,
+        seriesRef.current,
+        isReady,
+        priceContainerRef,
+        symbol,
+        interval,
+        source,
+        candles
+    );
 
-    /* ================= ALERTS ================= */
-    const {
-        alerts,
-        handleAddAlertAtPrice,
-        handleRemoveAlert,
-        handleUpdateAlertPrice,
-
-    } = useChartAlerts(chartId, priceChartRef, seriesRef, symbol);
+    const { alerts, handleAddAlertAtPrice, handleRemoveAlert, handleUpdateAlertPrice } = useChartAlerts(
+        chartId,
+        priceChartRef,
+        seriesRef,
+        symbol
+    );
 
     useChartInteraction(
         priceChartRef,
@@ -138,47 +108,41 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         sendMessage
     );
 
-
     useChartScaleReset(
         priceChartRef,
         subchartChartRef,
         timescaleChartRef,
-        mainContainerRef, // Updated to use parent container
+        mainContainerRef,
         subchartContainerRef,
         timescaleContainerRef,
         isAutoScrollEnabledRef
     );
 
-    /* ================= CONTEXT MENU ================= */
-    const contextMenuHitTest = (y: number, x: number) => {
-        const store = useMarketStore.getState();
-        const state = {
-            positions: store.positions,
-            orders: store.orders,
-            draftOrder: store.draftOrder,
-            symbolInfo: symbol ? store.symbolInfo[symbol] : undefined,
-            alerts: alerts, // From useChartAlerts hook
-            currentPrice: symbol ? (store.tickers[`${source}:${symbol}`]?.price || store.tickers[symbol]?.price || 0) : 0
-        };
-
-        return getNearElement(
-            y, x, seriesRef.current, mainContainerRef.current, symbol, state
-        );
-    };
-
-    const { contextMenu, handleContextMenu, closeContextMenu } = useChartContextMenu(
+    const {
+        contextMenu,
+        handleContextMenu,
+        closeContextMenu,
+        onAddAlert,
+        onRemoveAlert,
+        onCancelOrder,
+        onClosePosition,
+        onCancelDraft
+    } = useChartContextActions({
+        symbol,
+        source,
         priceChartRef,
         priceContainerRef,
         seriesRef,
-        undefined, // getAlertNearPrice removed
-        contextMenuHitTest
-    );
+        mainContainerRef,
+        alerts,
+        handleAddAlertAtPrice,
+        handleRemoveAlert,
+        sendMessage
+    });
 
-    /* ================= SUBCHART LOGIC ================= */
     const [isSubchartVisible, setIsSubchartVisible] = useState(true);
     useSubchartSwitcher(chartId, subchartContainerRef, subchartChartRef);
 
-    /* ================= LAYOUT EFFECTS ================= */
     useChartLayoutEffects(
         priceChartRef,
         subchartChartRef,
@@ -188,9 +152,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     );
     useChartShortcuts(chartId);
 
-    /* ================= CROSSHAIR STATE (Removed - now handled via DOM) ================= */
-
-    /* ================= MOBILE VIEW OPTIMIZATION ================= */
     const isMinimized = useMarketStore(state => state.activeMobileTab === 'positions');
 
     return (
@@ -219,12 +180,20 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 series={seriesRef.current}
             />
 
-            {/* MAIN CHART AREA WITH OVERLAY */}
-            <div ref={mainContainerRef} className="flex-1 relative min-h-0">
-                {/* PRICE CHART (Main) - Always background */}
-                <div ref={priceContainerRef} className="w-full h-full" />
-
-                {/* CANDLE COUNTDOWN OVERLAY */}
+            <ChartPanels
+                chartId={chartId}
+                symbol={chartInstance?.symbol}
+                interval={chartInstance?.interval}
+                source={chartInstance?.source}
+                candles={candles}
+                isSubchartVisible={isSubchartVisible}
+                setIsSubchartVisible={setIsSubchartVisible}
+                isMinimized={isMinimized}
+                mainContainerRef={mainContainerRef}
+                priceContainerRef={priceContainerRef}
+                subchartContainerRef={subchartContainerRef}
+                timescaleContainerRef={timescaleContainerRef}
+            >
                 <CandleCountdown
                     chart={priceChartRef.current}
                     series={seriesRef.current}
@@ -232,7 +201,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     realTimeRef={realTimeCandleRef}
                 />
 
-                {/* ORDER LINE TAGS (Draggable Handles) */}
                 <OrderLineTags
                     symbol={symbol}
                     seriesRef={seriesRef}
@@ -240,9 +208,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     isReady={isReady}
                     sendMessage={sendMessage}
                     source={source}
+                    interval={interval}
                 />
 
-                {/* ALERT LINE TAGS (Draggable Alerts) */}
                 <AlertLineTags
                     symbol={symbol}
                     seriesRef={seriesRef}
@@ -250,13 +218,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     isReady={isReady}
                 />
 
-                {/* ON-CHART TRADING BUTTONS & CONFIRMATION */}
                 <ChartTradingOverlay symbol={symbol} source={source} />
-
-                {/* LEFT-SIDE DRAWING TOOLBAR */}
                 <DrawingToolbar chartId={chartId} />
 
-                {/* STRATEGY VISUAL MARKERS (Virtual Trades) */}
                 {isReady && priceChartRef.current && seriesRef.current && symbol && (
                     <StrategyMarkers
                         chart={priceChartRef.current}
@@ -265,73 +229,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                         interval={interval}
                     />
                 )}
+            </ChartPanels>
 
-                {/* SUBCHART CONTROL PANEL (ASSEMBLY) */}
-                <div
-                    className={cn(
-                        "absolute right-[50px] md:right-[62px] z-30 flex items-end transition-all duration-300",
-                        isMinimized && isSubchartVisible ? "bottom-[32px]" : (isSubchartVisible ? "bottom-[25%]" : "bottom-0")
-                    )}
-                >
-                    <SubchartIndicatorsTabs
-                        chartId={chartId}
-                        isSubchartVisible={isSubchartVisible}
-                    />
-
-                    <button
-                        onClick={() => setIsSubchartVisible(!isSubchartVisible)}
-                        className={cn(
-                            "px-3 md:px-4 py-1 rounded-tr-md border border-border border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md",
-                            isSubchartVisible
-                                ? "bg-secondary/80 text-muted-foreground hover:text-primary"
-                                : "bg-primary/20 text-primary font-bold"
-                        )}
-                        style={{ marginLeft: '-1px' }}
-                    >
-                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight md:tracking-widest whitespace-nowrap">
-                            {isSubchartVisible ? 'Hide' : (
-                                <>
-                                    <span className="md:inline hidden">Show Indicator</span>
-                                    <span className="md:hidden inline">Show</span>
-                                </>
-                            )}
-                        </span>
-                        {isSubchartVisible ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-                    </button>
-                </div>
-
-                {/* RSI SUBCHART (Overlay) - Floating at bottom */}
-                <div
-                    className={cn(
-                        "absolute bottom-0 left-0 right-0 z-10 border-t border-primary/20 transition-all duration-300 transform overflow-hidden",
-                        isSubchartVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-                        isMinimized && isSubchartVisible ? "h-[80px] bg-background" : "h-[25%] min-h-[100px] bg-background/50 backdrop-blur-md"
-                    )}
-                >
-                    {/* Visual Border Highlight */}
-                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_8px_var(--glow-primary)]" />
-                    {/* RSI/MACD LEGEND */}
-                    <div className="absolute left-3 top-[5%] z-10 pointer-events-none select-none">
-                        <SubchartLegend
-                            chartId={chartId}
-                            symbol={chartInstance?.symbol}
-                            interval={chartInstance?.interval}
-                            source={chartInstance?.source}
-                            candles={candles}
-                        />
-                    </div>
-                    <div ref={subchartContainerRef} className="w-full h-full" />
-                </div>
-            </div>
-
-            <div className="h-[1px] bg-border" />
-
-            {/* TIMESCALE FOOTER */}
-            <div className="h-[38px] relative overflow-hidden shrink-0 bg-background/95 backdrop-blur-sm border-t border-border">
-                <div ref={timescaleContainerRef} className="w-full h-full" />
-            </div>
-
-            {/* CONTEXT MENU */}
             {contextMenu && (
                 <ChartContextMenu
                     visible={contextMenu.visible}
@@ -340,17 +239,11 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     price={contextMenu.price}
                     nearAlertId={contextMenu.nearAlertId}
                     hitItem={contextMenu.hitItem}
-                    onAddAlert={handleAddAlertAtPrice}
-                    onRemoveAlert={handleRemoveAlert}
-                    onCancelOrder={(ticket) => {
-                        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket), target: source || 'MT5' });
-                    }}
-                    onClosePosition={(ticket) => {
-                        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5' });
-                    }}
-                    onCancelDraft={() => {
-                        useMarketStore.getState().setDraftOrder(null);
-                    }}
+                    onAddAlert={onAddAlert}
+                    onRemoveAlert={onRemoveAlert}
+                    onCancelOrder={onCancelOrder}
+                    onClosePosition={onClosePosition}
+                    onCancelDraft={onCancelDraft}
                     onClose={closeContextMenu}
                 />
             )}

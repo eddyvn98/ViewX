@@ -1,20 +1,28 @@
 import asyncio
-import websockets
 import json
 import os
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from strategy_manager import StrategyManager
 
+import websockets
+
+from strategy_manager import StrategyManager
 from analyzer_service import AnalyzerService
 from optimizer_service import OptimizerService
 
+
+def parse_bool(value, fallback=False):
+    if value is None:
+        return fallback
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return fallback
+
+
 def build_ws_url():
-    base_url = os.getenv("NODE_WS_URL", "ws://127.0.0.1:8091").strip()
-    access_token = os.getenv("ACCESS_TOKEN", "").strip()
-    if not access_token:
-        return base_url
-    sep = "&" if "?" in base_url else "?"
-    return f"{base_url}{sep}access_token={access_token}"
+    return os.getenv("NODE_WS_URL", "ws://127.0.0.1:8091").strip()
 
 
 def mask_url_for_log(url):
@@ -36,137 +44,108 @@ def mask_url_for_log(url):
 
 
 WS_URL = build_ws_url()
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN", "").strip()
 SYMBOL = "XAUUSDm"
-TIMEFRAME = "1m" # Default M1 for Bot
+TIMEFRAME = "1m"
+STRATEGY_ENGINE_ENABLED = parse_bool(os.getenv("STRATEGY_ENGINE_ENABLED", "0"), False)
+
+
+async def process_message(ws, manager, analyzer, optimizer, data):
+    topic = data.get("topic") or data.get("type")
+
+    if topic == "request_analysis":
+        print(f"[StrategyEngine] AI analysis requested for deal {data.get('deal', {}).get('ticket')}")
+        cmd = analyzer.request_analysis(data.get("deal", {}))
+        if cmd:
+            await ws.send(json.dumps(cmd))
+        return
+
+    if topic == "mt5_candles_at":
+        result = analyzer.handle_response(data)
+        if result:
+            await ws.send(json.dumps({"topic": "analysis_result", "data": result}))
+        return
+
+    if topic == "request_optimization":
+        print(f"[StrategyEngine] Optimization requested for {data.get('symbol')}")
+        cmd = optimizer.request_optimization(data.get("symbol", SYMBOL), data.get("timeframe", TIMEFRAME))
+        if cmd:
+            await ws.send(json.dumps(cmd))
+        return
+
+    if topic in {"binance_positions_update", "mt5_account_update", "account_update"}:
+        account = data.get("account", {})
+        positions = data.get("positions", [])
+        risk_data = {
+            "balance": float(account.get("balance", 0) or 0),
+            "equity": float(account.get("equity", 0) or 0),
+            "positions": positions,
+        }
+        manager.on_account_update(risk_data)
+        return
+
+    if topic == "mt5_candles" and data.get("request_id"):
+        result = optimizer.handle_candles_response(data)
+        if result:
+            await ws.send(json.dumps({"topic": "optimization_result", "data": result}))
+        return
+
+    if topic in {"mt5_candles", "candleUpdate"}:
+        msg_symbol = data.get("symbol")
+        if msg_symbol != SYMBOL:
+            return
+
+        candles = []
+        if topic == "mt5_candles":
+            candles = data.get("candles", [])
+
+        if candles:
+            signal_msg = manager.on_market_data(SYMBOL, candles)
+            if signal_msg:
+                print(f"[StrategyEngine] Signal generated: {signal_msg}")
+                await ws.send(json.dumps({"topic": "strategy_signal", "data": signal_msg}))
+
 
 async def main():
-    print("🚀 Strategy Engine Starting...")
-    
+    if not STRATEGY_ENGINE_ENABLED:
+        print("[StrategyEngine] Disabled by STRATEGY_ENGINE_ENABLED=0. Exiting safely.")
+        return
+
+    print("[StrategyEngine] Starting...")
+
     manager = StrategyManager()
     analyzer = AnalyzerService()
     optimizer = OptimizerService()
-    
-    # Load Default Strategy
-    # In future, this could be dynamic via API/Config
-    manager.add_strategy(SYMBOL, TIMEFRAME, {'rsi_buy': 60, 'rsi_sell': 40})
+
+    manager.add_strategy(SYMBOL, TIMEFRAME, {"rsi_buy": 60, "rsi_sell": 40})
 
     while True:
         try:
-            print(f"🔌 Connecting to {mask_url_for_log(WS_URL)}...")
-            async with websockets.connect(WS_URL) as ws:
-                print("✅ Strategy Engine Connected to Hub")
-                
-                # Identify as Strategy Engine
+            print(f"[StrategyEngine] Connecting to {mask_url_for_log(WS_URL)}")
+            connect_kwargs = {}
+            if ACCESS_TOKEN:
+                connect_kwargs["subprotocols"] = [f"bearer.{ACCESS_TOKEN}"]
+            async with websockets.connect(WS_URL, **connect_kwargs) as ws:
+                print("[StrategyEngine] Connected")
                 await ws.send(json.dumps({"topic": "auth", "client": "strategy_engine"}))
-
-                # Subscribe to Market Data
-                print(f"📡 Subscribing to {SYMBOL} {TIMEFRAME}...")
-                await ws.send(json.dumps({
-                    "topic": "subscribeCandle",
-                    "symbol": SYMBOL,
-                    "interval": TIMEFRAME
-                }))
+                await ws.send(json.dumps({"topic": "subscribeCandle", "symbol": SYMBOL, "interval": TIMEFRAME}))
 
                 async for message in ws:
                     try:
                         data = json.loads(message)
-                        topic = data.get("topic") or data.get("type")
-
-                        # AI ANALYSIS HANDLER
-                        if topic == "request_analysis":
-                            print(f"🧠 AI Analysis Requested for Deal {data.get('deal', {}).get('ticket')}")
-                            # 1. Generate MT5 Command to fetch context
-                            cmd = analyzer.request_analysis(data.get('deal', {}))
-                            if cmd:
-                                await ws.send(json.dumps(cmd))
-                        
-                        elif topic == "mt5_candles_at":
-                            # 2. Process Data and Evaluate
-                            result = analyzer.handle_response(data)
-                            if result:
-                                print(f"📝 Analysis Result: {result['verdict']}")
-                                await ws.send(json.dumps({
-                                    "topic": "analysis_result",
-                                    "data": result
-                                }))
-
-                        # AI OPTIMIZER HANDLER
-                        elif topic == "request_optimization":
-                            print(f"🧪 Optimization Requested for {data.get('symbol')}")
-                            cmd = optimizer.request_optimization(data.get('symbol', SYMBOL), data.get('timeframe', TIMEFRAME))
-                            if cmd:
-                                await ws.send(json.dumps(cmd))
-                                
-                        elif topic == "mt5_candles":
-                            # Check if it has request_id (Optimization Response)
-                            if data.get('request_id'):
-                                result = optimizer.handle_candles_response(data)
-                                if result:
-                                    print(f"🧪 Optimization Result: Best Winrate {result['metrics']['winrate']}%")
-                                    await ws.send(json.dumps({
-                                        "topic": "optimization_result",
-                                        "data": result
-                                    }))
-                            else:
-                                # Standard Process (Market Data update)
-                                # Check if symbol matches
-                                msg_symbol = data.get("symbol")
-                                if msg_symbol == SYMBOL:
-                        if topic == "binance_positions_update" or topic == "mt5_account_update" or topic == "account_update":
-                             # Normalizing data structure for Risk Manager
-                             # Standard format expected: { balance, equity, positions: [] }
-                             
-                             account = data.get('account', {})
-                             positions = data.get('positions', [])
-                             
-                             risk_data = {
-                                 'balance': float(account.get('balance', 0)),
-                                 'equity': float(account.get('equity', 0)),
-                                 'positions': positions
-                             }
-                             
-                             manager.on_account_update(risk_data)
-                             
-                        # We listen for candle updates
-                        if topic == "mt5_candles" or topic == "candleUpdate":
-                             # Check if symbol matches
-                             msg_symbol = data.get("symbol")
-                             if msg_symbol == SYMBOL:
-                                 # Standardize data format
-                                 # mt5_candles sends 'candles' array
-                                 # candleUpdate sends single 'data' object (realtime)
-                                 
-                                 candles = []
-                                 if topic == "mt5_candles":
-                                     candles = data.get("candles", [])
-                                 # Realtime updates might be single ticks or partial candles. 
-                                 # For this strategy we need HISTORY. 
-                                 # Ideally, Node broadcasts 200 candles periodically.
-                                 
-                                 if candles:
-                                     # Run Strategy
-                                     signal_msg = manager.on_market_data(SYMBOL, candles)
-                                     
-                                     if signal_msg:
-                                         print(f"💎 SIGNAL: {signal_msg}")
-                                         # Send Signal back to Node Hub
-                                         # Node Hub can then alert user or forward to Bridge if Auto-Trade is ON
-                                         await ws.send(json.dumps({
-                                             "topic": "strategy_signal",
-                                             "data": signal_msg
-                                         }))
-                                         
+                        await process_message(ws, manager, analyzer, optimizer, data)
                     except json.JSONDecodeError:
-                        pass
-                    except Exception as e:
-                        print(f"❌ Error processing message: {e}")
+                        continue
+                    except Exception as error:
+                        print(f"[StrategyEngine] Message processing error: {error}")
 
-        except Exception as e:
-             print(f"⚠️ Connection Lost: {e}. Retrying in 5s...")
-             await asyncio.sleep(5)
+        except Exception as error:
+            print(f"[StrategyEngine] Connection lost: {error}. Retrying in 5s...")
+            await asyncio.sleep(5)
+
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("🛑 Strategy Engine Stopped")
+        print("[StrategyEngine] Stopped")

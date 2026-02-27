@@ -1,0 +1,4 @@
+[GET] http://127.0.0.1:3000/api/auth/ws-ticket => [200] OK
+[GET] http://127.0.0.1:3000/api/user/state?client_id=8109e46d-fadd-46ee-b8dc-6c7a7c7e4d69 => [200] OK
+[GET] http://127.0.0.1:3000/api/auth/ws-ticket => [200] OK
+[GET] http://127.0.0.1:3000/api/user/state?client_id=e2e-ui-sync => [200] OK

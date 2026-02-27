@@ -2,7 +2,8 @@
 import { useMemo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { normalizeSymbol } from '@/lib/utils/symbol';
-import { TagData, getPositionTags, getOrderTags, getDraftTags, norm } from '../logic/order-tag-utils';
+import { useStrategyStore } from '@/features/strategy/store/strategy-store';
+import { TagData, getPositionTags, getOrderTags, getDraftTags, getVirtualPositionTags, norm } from '../logic/order-tag-utils';
 
 export function useOrderTags(symbol: string | undefined) {
     // Determine target symbol once
@@ -14,6 +15,7 @@ export function useOrderTags(symbol: string | undefined) {
     const draftOrder = useMarketStore(state => state.draftOrder); // Keep global, filtering inside useMemo is safer for now if we want to avoid deep equality check on selectors
     const focusedTicket = useMarketStore(state => state.focusedTicket);
     const draggingPosition = useMarketStore(state => state.draggingPosition);
+    const virtualPositions = useStrategyStore(state => state.virtualPositions);
 
     // Subscribe to symbol-specific data
     const currentPrice = useMarketStore(state => {
@@ -49,9 +51,10 @@ export function useOrderTags(symbol: string | undefined) {
 
         result.push(...getPositionTags(finalPos, symbol, draggingPosition));
         result.push(...getOrderTags(finalOrd, symbol, draggingPosition));
+        result.push(...getVirtualPositionTags(virtualPositions, symbol, draggingPosition));
 
         return result;
-    }, [symbol, targetSymbol, positions, orders, draftOrder, focusedTicket, draggingPosition, currentPrice]);
+    }, [symbol, targetSymbol, positions, orders, draftOrder, focusedTicket, draggingPosition, currentPrice, virtualPositions]);
 
 
     return {

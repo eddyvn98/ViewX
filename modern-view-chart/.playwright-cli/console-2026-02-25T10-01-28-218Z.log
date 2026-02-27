@@ -1,0 +1,184 @@
+[    4400ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?select=*&strategy_id=eq.hull-ha-gold-buy&pnl=not.is.null&order=timestamp.desc:0
+[    4548ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?columns=%22strategy_id%22%2C%22symbol%22%2C%22type%22%2C%22entry_price%22%2C%22lot_size%22%2C%22volatility%22%2C%22session%22%2C%22indicators%22%2C%22timestamp%22&select=*:0
+[    4548ms] [ERROR] [TradeLogger] Error logging entry: {
+  "message": "TypeError: Failed to fetch",
+  "details": "TypeError: Failed to fetch\n    at fetch.s (http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48403)\n    at http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48618\n    at async rI.logEntry (http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:163405)\n    at async http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:178322",
+  "hint": "",
+  "code": ""
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[    4548ms] [ERROR] Signal Data: {
+  "type": "BUY",
+  "symbol": "XAUUSDm",
+  "strategyId": "hull-ha-gold-buy",
+  "timestamp": 1772013692158,
+  "price": 5194.907,
+  "risk": {
+    "sl": {
+      "mode": "candle",
+      "candleField": "low",
+      "candleOffset": 1,
+      "offset": 0
+    },
+    "trailing": true,
+    "slSource": "HA_Low",
+    "trailingSource": "HA_Low",
+    "lotSize": 0.1
+  },
+  "context": {
+    "session": "London",
+    "volatility_atr": 2.0427857142858556,
+    "spread_at_entry": 0,
+    "indicators_snapshot": {
+      "RSI[14]": 63.26838882536929
+    },
+    "mtf": {
+      "h1_trend": "SIDEWAYS",
+      "h1_rsi": 50
+    },
+    "volume_analysis": {
+      "value": 45,
+      "relative_to_avg": 0.45112781954887216,
+      "is_climax": false
+    }
+  },
+  "confidence": 60,
+  "aiAnalysis": null
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[  453299ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?select=*&strategy_id=eq.hull-ha-gold-sell&pnl=not.is.null&order=timestamp.desc:0
+[  453397ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?columns=%22strategy_id%22%2C%22symbol%22%2C%22type%22%2C%22entry_price%22%2C%22lot_size%22%2C%22volatility%22%2C%22session%22%2C%22indicators%22%2C%22timestamp%22&select=*:0
+[  453397ms] [ERROR] [TradeLogger] Error logging entry: {
+  "message": "TypeError: Failed to fetch",
+  "details": "TypeError: Failed to fetch\n    at fetch.s (http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48403)\n    at http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48618\n    at async rI.logEntry (http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:163405)\n    at async http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:178322",
+  "hint": "",
+  "code": ""
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[  453397ms] [ERROR] Signal Data: {
+  "type": "SELL",
+  "symbol": "XAUUSDm",
+  "strategyId": "hull-ha-gold-sell",
+  "timestamp": 1772014141290,
+  "price": 5186.058,
+  "risk": {
+    "sl": {
+      "mode": "candle",
+      "candleField": "high",
+      "candleOffset": 1,
+      "offset": 0
+    },
+    "trailing": true,
+    "slSource": "HA_High",
+    "trailingSource": "HA_High",
+    "lotSize": 0.1
+  },
+  "context": {
+    "session": "London",
+    "volatility_atr": 1.9773571428571424,
+    "spread_at_entry": 0,
+    "indicators_snapshot": {
+      "RSI[14]": 38.37998426131138
+    },
+    "mtf": {
+      "h1_trend": "SIDEWAYS",
+      "h1_rsi": 50
+    },
+    "volume_analysis": {
+      "value": 0,
+      "relative_to_avg": 0,
+      "is_climax": false
+    }
+  },
+  "confidence": 60,
+  "aiAnalysis": null
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[ 1233609ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?select=*&strategy_id=eq.hull-ha-gold-sell&pnl=not.is.null&order=timestamp.desc:0
+[ 1233956ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?columns=%22strategy_id%22%2C%22symbol%22%2C%22type%22%2C%22entry_price%22%2C%22lot_size%22%2C%22volatility%22%2C%22session%22%2C%22indicators%22%2C%22timestamp%22&select=*:0
+[ 1233957ms] [ERROR] [TradeLogger] Error logging entry: {
+  "message": "TypeError: Failed to fetch",
+  "details": "TypeError: Failed to fetch\n    at fetch.s (http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48403)\n    at http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48618\n    at async rI.logEntry (http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:163405)\n    at async http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:178322",
+  "hint": "",
+  "code": ""
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[ 1233957ms] [ERROR] Signal Data: {
+  "type": "SELL",
+  "symbol": "XAUUSDm",
+  "strategyId": "hull-ha-gold-sell",
+  "timestamp": 1772014921033,
+  "price": 5179.646,
+  "risk": {
+    "sl": {
+      "mode": "candle",
+      "candleField": "high",
+      "candleOffset": 1,
+      "offset": 0
+    },
+    "trailing": true,
+    "slSource": "HA_High",
+    "trailingSource": "HA_High",
+    "lotSize": 0.1
+  },
+  "context": {
+    "session": "London",
+    "volatility_atr": 2.573357142857276,
+    "spread_at_entry": 0,
+    "indicators_snapshot": {
+      "RSI[14]": 33.116031670841394
+    },
+    "mtf": {
+      "h1_trend": "SIDEWAYS",
+      "h1_rsi": 50
+    },
+    "volume_analysis": {
+      "value": 0,
+      "relative_to_avg": 0,
+      "is_climax": false
+    }
+  },
+  "confidence": 60,
+  "aiAnalysis": null
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[ 1541152ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?select=*&strategy_id=eq.hull-ha-gold-sell&pnl=not.is.null&order=timestamp.desc:0
+[ 1543019ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://example.supabase.co/rest/v1/trade_logs?columns=%22strategy_id%22%2C%22symbol%22%2C%22type%22%2C%22entry_price%22%2C%22lot_size%22%2C%22volatility%22%2C%22session%22%2C%22indicators%22%2C%22timestamp%22&select=*:0
+[ 1543019ms] [ERROR] [TradeLogger] Error logging entry: {
+  "message": "TypeError: Failed to fetch",
+  "details": "TypeError: Failed to fetch\n    at fetch.s (http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48403)\n    at http://127.0.0.1:3000/_next/static/chunks/534dc9c6f961310a.js:109:48618\n    at async rI.logEntry (http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:163405)\n    at async http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:13:178322",
+  "hint": "",
+  "code": ""
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[ 1543019ms] [ERROR] Signal Data: {
+  "type": "SELL",
+  "symbol": "XAUUSDm",
+  "strategyId": "hull-ha-gold-sell",
+  "timestamp": 1772015220697,
+  "price": 5177,
+  "risk": {
+    "sl": {
+      "mode": "candle",
+      "candleField": "high",
+      "candleOffset": 1,
+      "offset": 0
+    },
+    "trailing": true,
+    "slSource": "HA_High",
+    "trailingSource": "HA_High",
+    "lotSize": 0.1
+  },
+  "context": {
+    "session": "London",
+    "volatility_atr": 3.1269285714285098,
+    "spread_at_entry": 0,
+    "indicators_snapshot": {
+      "RSI[14]": 38.29967482140473
+    },
+    "mtf": {
+      "h1_trend": "SIDEWAYS",
+      "h1_rsi": 50
+    },
+    "volume_analysis": {
+      "value": 0,
+      "relative_to_avg": 0,
+      "is_climax": false
+    }
+  },
+  "confidence": 60,
+  "aiAnalysis": null
+} @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12

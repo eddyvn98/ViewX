@@ -1,0 +1,2 @@
+[ 1726994ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/api/auth/ws-ticket:0
+[ 1729034ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:8091/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/dff7688df7489fdd.js:8

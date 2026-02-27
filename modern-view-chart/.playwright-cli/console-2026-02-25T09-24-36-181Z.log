@@ -1,0 +1,4 @@
+[ 1906736ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/api/auth/ws-ticket:0
+[ 1908757ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:8091/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/d508775e76f7121e.js:4
+[ 1909732ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/api/auth/ws-ticket:0
+[ 1911761ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:8091/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/d508775e76f7121e.js:4

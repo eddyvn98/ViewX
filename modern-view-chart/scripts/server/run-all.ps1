@@ -27,8 +27,28 @@ if (-not (Test-Path $PythonCmd)) {
 Set-Location $RepoRoot
 New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null
 
+function Get-EnvValue([string]$key) {
+    $envPath = Join-Path $RepoRoot ".env"
+    if (-not (Test-Path $envPath)) { return "" }
+
+    $line = Get-Content $envPath | Where-Object { $_ -match "^\s*$key\s*=" } | Select-Object -First 1
+    if (-not $line) { return "" }
+    $value = $line.Split("=", 2)[1].Trim()
+    return $value.Trim("'`"")
+}
+
+function Test-UseLocalMongo {
+    $forceLocal = (Get-EnvValue "FORCE_LOCAL_DOCKER_DB").ToLowerInvariant()
+    if ($forceLocal -in @("1", "true", "yes", "on")) { return $true }
+
+    $mongoUri = (Get-EnvValue "URL_MONGOOSE").ToLowerInvariant()
+    if (-not $mongoUri) { return $false }
+
+    return $mongoUri -match "mongodb(\+srv)?://(localhost|127\.0\.0\.1|viewx-mongo)(:|/)"
+}
+
 $dbUpScript = Join-Path $PSScriptRoot "db-up.ps1"
-if (Test-Path $dbUpScript) {
+if ((Test-UseLocalMongo) -and (Test-Path $dbUpScript)) {
     try {
         Write-Host "[run-all] Ensuring MongoDB container is running..."
         & $dbUpScript
@@ -36,6 +56,8 @@ if (Test-Path $dbUpScript) {
     catch {
         Write-Warning ("[run-all] MongoDB startup skipped: " + $_.Exception.Message)
     }
+} else {
+    Write-Host "[run-all] Using external MongoDB URI. Skipping local Docker Mongo startup."
 }
 
 $stopScript = Join-Path $PSScriptRoot "stop-all.ps1"

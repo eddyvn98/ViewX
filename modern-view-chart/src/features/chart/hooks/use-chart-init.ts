@@ -234,23 +234,38 @@ export function useChartInit(
 
         setTimeout(handleAutoSync, 50);
 
-        const resizeObserver = new ResizeObserver((entries) => {
-            // Mobile: Ensure we resize ALL charts
+        const syncChartSizes = () => {
+            // Force full raster refresh for crisp canvas text on DPR/viewport changes.
             if (priceContainerRef.current && priceContainerRef.current.clientWidth > 0 && priceContainerRef.current.clientHeight > 0) {
-                priceChart.applyOptions({ width: priceContainerRef.current.clientWidth, height: priceContainerRef.current.clientHeight });
+                const w = Math.max(1, Math.round(priceContainerRef.current.clientWidth));
+                const h = Math.max(1, Math.round(priceContainerRef.current.clientHeight));
+                priceChart.resize(w, h, true);
             }
             if (subchartContainerRef.current && subchartContainerRef.current.clientWidth > 0 && subchartContainerRef.current.clientHeight > 0) {
-                subchartChart.applyOptions({ width: subchartContainerRef.current.clientWidth, height: subchartContainerRef.current.clientHeight });
+                const w = Math.max(1, Math.round(subchartContainerRef.current.clientWidth));
+                const h = Math.max(1, Math.round(subchartContainerRef.current.clientHeight));
+                subchartChart.resize(w, h, true);
             }
             if (timescaleContainerRef.current && timescaleContainerRef.current.clientWidth > 0 && timescaleContainerRef.current.clientHeight > 0) {
-                timescaleChart.applyOptions({ width: timescaleContainerRef.current.clientWidth, height: timescaleContainerRef.current.clientHeight });
+                const w = Math.max(1, Math.round(timescaleContainerRef.current.clientWidth));
+                const h = Math.max(1, Math.round(timescaleContainerRef.current.clientHeight));
+                timescaleChart.resize(w, h, true);
             }
             handleAutoSync();
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            syncChartSizes();
         });
 
         if (priceContainerRef.current) resizeObserver.observe(priceContainerRef.current);
         // Also observe subchart container in case it changes independently
         if (subchartContainerRef.current) resizeObserver.observe(subchartContainerRef.current);
+        if (timescaleContainerRef.current) resizeObserver.observe(timescaleContainerRef.current);
+
+        // Capture DPR changes (browser zoom / mobile viewport scale updates)
+        window.addEventListener('resize', syncChartSizes);
+        window.visualViewport?.addEventListener('resize', syncChartSizes);
 
         priceChartRef.current = priceChart;
         subchartChartRef.current = subchartChart;
@@ -266,6 +281,8 @@ export function useChartInit(
             setIsReady(false);
             if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
             resizeObserver.disconnect();
+            window.removeEventListener('resize', syncChartSizes);
+            window.visualViewport?.removeEventListener('resize', syncChartSizes);
             if (priceLineEl?.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
             if (subLineEl?.parentNode) subLineEl.parentNode.removeChild(subLineEl);
             if (footLineEl?.parentNode) footLineEl.parentNode.removeChild(footLineEl);

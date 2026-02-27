@@ -1,0 +1,17 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - button [ref=e4]:
+        - img [ref=e5]
+      - generic [ref=e6]:
+        - button "SC" [ref=e7]:
+          - img [ref=e8]
+          - generic [ref=e9]: SC
+        - button "Fx" [ref=e10]:
+          - img [ref=e11]
+          - generic [ref=e13]: Fx
+      - button "Change Theme Color" [ref=e17]:
+        - img [ref=e18]
+    - main [ref=e28]
+  - region "Notifications alt+T"
+  - alert [ref=e32]

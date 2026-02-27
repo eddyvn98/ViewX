@@ -14,15 +14,74 @@ import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
 import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
 import { safeSend } from "./wsSend.js";
 import { logInfo } from "../logger.js";
+import { hasRequiredRole } from "../auth/roles.js";
+import { emergencyConfig } from "../config/emergency.js";
 
 const STRATEGY_ENGINE_ENABLED = ((process.env.STRATEGY_ENGINE_ENABLED || "0").trim() === "1");
+const REQUIRED_TRADE_ROLE = (process.env.WS_REQUIRE_ROLE_FOR_TRADING || "trader").trim().toLowerCase();
+const BRIDGE_TOPICS = new Set([
+    "mt5_update",
+    "mt5_positions_update",
+    "mt5_symbols_available",
+    "mt5_candles",
+    "mt5_candles_at",
+    "mt5_history_deals",
+    "mt5_symbol_info",
+    "mt5_order_result",
+    "alert_triggered",
+]);
+
+function emitWsError(ws, code, detail) {
+    safeSend(ws, JSON.stringify({ topic: "error", code, ...(detail ? { detail } : {}) }));
+}
+
+function isTradingCommandAllowed(meta) {
+    if (!meta) return false;
+    if (meta.authType === "service") return true;
+    return hasRequiredRole(meta.role || "viewer", REQUIRED_TRADE_ROLE);
+}
+
+const MT5_READ_ONLY_COMMANDS = new Set([
+    "get_candles",
+    "get_candles_at",
+    "get_history",
+    "get_symbol_info",
+    "get_positions",
+    "get_orders",
+    "get_account",
+]);
+
+const BINANCE_READ_ONLY_COMMANDS = new Set(["get_account"]);
+
+function normalizeCommandName(command) {
+    return String(command || "")
+        .trim()
+        .toLowerCase();
+}
+
+function isReadOnlyMt5Command(command) {
+    return MT5_READ_ONLY_COMMANDS.has(normalizeCommandName(command));
+}
+
+function isReadOnlyBinanceCommand(command) {
+    return BINANCE_READ_ONLY_COMMANDS.has(normalizeCommandName(command));
+}
 
 export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
     return async (ws, msg) => {
         try {
             const data = JSON.parse(msg.toString());
+            const senderMeta = clients.get(ws);
+            if (!senderMeta) return;
+
             const context = { ws, clients, mt5Prices, subscriptionIndex };
             const msgTopic = data.topic || data.event || data.type;
+            if (typeof msgTopic !== "string" || !msgTopic) return;
+
+            if (BRIDGE_TOPICS.has(msgTopic) && !senderMeta.isBridgeAuthenticated) {
+                emitWsError(ws, "forbidden", "bridge_topic_requires_authenticated_bridge");
+                return;
+            }
 
             switch (msgTopic) {
                 case "auth":
@@ -46,27 +105,42 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                 case "mt5_symbol_info":
                     handleMt5SymbolInfo(context, data);
                     break;
-                case "request_analysis": // Forward analysis request to Strategy Engine
-                case "request_optimization": // Forward optimization request to Strategy Engine
+                case "request_analysis":
+                case "request_optimization": {
                     if (!STRATEGY_ENGINE_ENABLED) {
                         logInfo("strategy_engine.disabled_topic_ignored", { topic: msgTopic });
                         break;
                     }
-                    // Re-use Mt5Command broadcaster or simple broadcast
-                    // Simple broadcast to all clients (Engine will pick it up)
                     const payload = JSON.stringify(data);
                     for (const [clientWs] of clients.entries()) {
                         if (clientWs.readyState === clientWs.OPEN) safeSend(clientWs, payload);
                     }
                     break;
+                }
                 case "mt5_candles":
-                case "mt5_candles_at": // Reuse handler for historical request
+                case "mt5_candles_at":
                     handleMt5Candles(context, data);
                     break;
                 case "mt5_command":
+                    if (emergencyConfig.enabled && emergencyConfig.blockTrading && !isReadOnlyMt5Command(data.command)) {
+                        emitWsError(ws, "service_unavailable", "emergency_mode_trading_blocked");
+                        return;
+                    }
+                    if (!isReadOnlyMt5Command(data.command) && !isTradingCommandAllowed(senderMeta)) {
+                        emitWsError(ws, "forbidden", "trading_role_required");
+                        return;
+                    }
                     handleMt5Command(context, data);
                     break;
                 case "alert_command":
+                    if (emergencyConfig.enabled && emergencyConfig.blockTrading) {
+                        emitWsError(ws, "service_unavailable", "emergency_mode_trading_blocked");
+                        return;
+                    }
+                    if (!isTradingCommandAllowed(senderMeta)) {
+                        emitWsError(ws, "forbidden", "trading_role_required");
+                        return;
+                    }
                     handleAlertCommand(context, data);
                     break;
                 case "alert_triggered":
@@ -76,6 +150,14 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     handleBinanceHistory(context, data);
                     break;
                 case "binance_command":
+                    if (emergencyConfig.enabled && emergencyConfig.blockTrading && !isReadOnlyBinanceCommand(data.command)) {
+                        emitWsError(ws, "service_unavailable", "emergency_mode_trading_blocked");
+                        return;
+                    }
+                    if (!isReadOnlyBinanceCommand(data.command) && !isTradingCommandAllowed(senderMeta)) {
+                        emitWsError(ws, "forbidden", "trading_role_required");
+                        return;
+                    }
                     handleBinanceCommand(context.ws, data);
                     break;
                 case "strategy_signal":
@@ -89,10 +171,10 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     handleMt5SymbolsAvailable(context, data);
                     break;
                 default:
-                    console.warn(`Unknown message topic: ${msgTopic}`);
+                    logInfo("ws.topic.unknown", { topic: msgTopic });
             }
-        } catch (err) {
-            console.error("❌ WS message error:", err.message);
+        } catch (error) {
+            logInfo("ws.message.error", { error: error?.message || String(error) });
         }
     };
 }

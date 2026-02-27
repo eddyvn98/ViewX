@@ -5,9 +5,9 @@ export function handleAlertTriggered({ clients }, data) {
     const payload = JSON.stringify(data);
     let sentCount = 0;
 
-    for (const [clientWs] of clients.entries()) {
-        // Don't send back to bridge
-        if (!clientWs.isBridge && clientWs.readyState === clientWs.OPEN) {
+    for (const [clientWs, meta] of clients.entries()) {
+        if (meta?.isBridgeAuthenticated) continue;
+        if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
             sentCount++;
         }

@@ -10,15 +10,6 @@ import {
     customSeriesDefaultOptions,
 } from 'lightweight-charts';
 
-function darkenColor(hex: string, percent: number): string {
-    const num = parseInt(hex.replace('#', ''), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = (num >> 16) - amt;
-    const G = (num >> 8 & 0x00FF) - amt;
-    const B = (num & 0x0000FF) - amt;
-    return '#' + (0x1000000 + (R < 255 ? R < 0 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 0 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 0 ? 0 : B : 255)).toString(16).slice(1);
-}
-
 interface DiamondData extends CustomData<Time> {
     open: number;
     high: number;
@@ -163,53 +154,7 @@ class DiamondRenderer implements ICustomSeriesPaneRenderer {
                     ctx.fill();
                     ctx.stroke();
 
-                    // Faceted Rib Structure (Fading Gradients & Sparkle)
-                    ctx.save();
-
-                    const darkColor = darkenColor(color, 40);
-
-                    // 1. Vertical Spine Gradient (High -> Close <- Low)
-                    const vGradient = ctx.createLinearGradient(x, high, x, low);
-                    vGradient.addColorStop(0, darkColor + '00'); // Transparent
-                    let vRatio = 0.5;
-                    if (low !== high) {
-                        vRatio = (close - high) / (low - high);
-                        vRatio = Math.max(0.01, Math.min(0.99, vRatio));
-                    }
-                    vGradient.addColorStop(vRatio, darkColor); // 100% opaque spine center
-                    vGradient.addColorStop(1, darkColor + '00'); // Transparent
-
-                    ctx.beginPath();
-                    ctx.strokeStyle = vGradient;
-                    ctx.lineWidth = Math.max(1, 0.5 * verticalPixelRatio);
-                    ctx.moveTo(x, high);
-                    ctx.lineTo(x, low);
-                    ctx.stroke();
-
-                    // 2. Horizontal Cross-beam Gradient (Left -> Center <- Right)
-                    const hGradient = ctx.createLinearGradient(x - halfWidth, close, x + halfWidth, close);
-                    hGradient.addColorStop(0, darkColor + '00'); // Transparent Left
-                    hGradient.addColorStop(0.5, darkColor); // 100% opaque Center
-                    hGradient.addColorStop(1, darkColor + '00'); // Transparent Right
-
-                    ctx.beginPath();
-                    ctx.strokeStyle = hGradient;
-                    ctx.lineWidth = Math.max(1, 0.5 * verticalPixelRatio);
-                    ctx.moveTo(x - halfWidth, close);
-                    ctx.lineTo(x + halfWidth, close);
-                    ctx.stroke();
-
-                    // 3. Central Sparkle (Diamond Flare)
-                    const flareRadius = Math.max(1.5, 1.5 * verticalPixelRatio);
-                    const flareGradient = ctx.createRadialGradient(x, close, 0, x, close, flareRadius);
-                    flareGradient.addColorStop(0, darkColor);
-                    flareGradient.addColorStop(1, darkColor + '00');
-                    ctx.fillStyle = flareGradient;
-                    ctx.beginPath();
-                    ctx.arc(x, close, flareRadius, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.restore();
+                    // Keep candles crisp: skip extra faceted overlays that stack alpha and cause haze.
 
                     // Draw Marker Text (HH, HL, LL, LH)
                     if (barData.markerText) {

@@ -86,6 +86,11 @@ export function collectInterestSymbolsFromIndex(index) {
         if (normalized) collected.add(normalized);
     }
 
-    if (collected.size === 0) return [...index.coreSymbols];
+    if (collected.size === 0) {
+        // No explicit subscriptions and no default viewer clients:
+        // tell bridge it can enter idle mode to reduce MT5 polling load.
+        if ((index.defaultPriceClients?.size || 0) === 0) return [];
+        return [...index.coreSymbols];
+    }
     return Array.from(collected);
 }

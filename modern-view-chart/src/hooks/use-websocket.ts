@@ -2,7 +2,8 @@ import { useEffect, useCallback } from "react";
 import { useMarketStore } from "@/lib/store";
 import { soundService } from "@/features/strategy/logic/SoundService";
 
-let SOCKET_URL = "ws://127.0.0.1:8091";
+const WS_URL_FROM_ENV = process.env.NEXT_PUBLIC_WS_URL || "";
+let SOCKET_URL = WS_URL_FROM_ENV || "";
 let globalSocket: WebSocket | null = null;
 let historyFetched = false;
 let reconnectAttempts = 0;
@@ -15,6 +16,24 @@ let candleUpdateTimer: NodeJS.Timeout | null = null;
 let positionUpdateTimer: NodeJS.Timeout | null = null;
 let positionUpdateBuffer: any = null;
 let subscribeSymbolsTimer: NodeJS.Timeout | null = null;
+let wsTicketCache = "";
+let wsTicketExpiresAt = 0;
+let wsTicketPromise: Promise<string> | null = null;
+
+function parseIntervalSeconds(interval: string): number {
+    const text = String(interval || "").trim();
+    if (!text) return 60;
+    if (/^\d+$/.test(text)) return Number(text) * 60;
+
+    const m = text.match(/^(\d+)\s*([mhd])$/i);
+    if (!m) return 60;
+    const value = Number(m[1]);
+    const unit = m[2].toLowerCase();
+    if (unit === "m") return value * 60;
+    if (unit === "h") return value * 3600;
+    if (unit === "d") return value * 86400;
+    return 60;
+}
 
 function normalizeSymbol(symbol: string): string {
     if (!symbol) return "";
@@ -34,26 +53,81 @@ function collectActiveSymbolsFromStore(): string[] {
     return Array.from(new Set(all)).slice(0, 300);
 }
 
-function buildSocketUrl(): string {
-    if (typeof window === "undefined") return SOCKET_URL;
+function deriveDefaultSocketUrl(): string {
+    if (typeof window === "undefined") return SOCKET_URL || "ws://127.0.0.1:8091";
+    if (SOCKET_URL) return SOCKET_URL;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.host;
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        return "ws://127.0.0.1:8091";
+    }
+    return `${protocol}//${host}`;
+}
+
+function extractCredentialFromUrl(url: URL): string {
+    const token = url.searchParams.get("access_token");
+    const ticket = url.searchParams.get("access_ticket");
+    const credential = (token || ticket || "").trim();
+    if (!credential) return "";
+    url.searchParams.delete("access_token");
+    url.searchParams.delete("access_ticket");
+    return credential;
+}
+
+function buildSocketConfig(): { url: string; protocols: string[] } {
+    const baseFallback = deriveDefaultSocketUrl();
+    if (typeof window === "undefined") return { url: baseFallback, protocols: [] };
+
     const params = new URLSearchParams(window.location.search);
     const wsOverride = params.get("ws_url");
-    const token = params.get("access_token");
-    const ticket = params.get("access_ticket");
-    const base = wsOverride || SOCKET_URL;
+    const base = wsOverride || baseFallback;
 
     try {
         const u = new URL(base);
-        if (token && !u.searchParams.get("access_token")) {
-            u.searchParams.set("access_token", token);
+        let credential = extractCredentialFromUrl(u);
+        if (!credential) {
+            credential = (params.get("access_token") || params.get("access_ticket") || "").trim();
         }
-        if (ticket && !u.searchParams.get("access_ticket")) {
-            u.searchParams.set("access_ticket", ticket);
-        }
-        return u.toString();
+
+        const protocols = credential ? [`bearer.${credential}`] : [];
+        return { url: u.toString(), protocols };
     } catch {
-        return base;
+        const credential = (params.get("access_token") || params.get("access_ticket") || "").trim();
+        const protocols = credential ? [`bearer.${credential}`] : [];
+        return { url: base, protocols };
     }
+}
+
+async function fetchWsTicketFromApi(): Promise<string> {
+    if (typeof window === "undefined") return "";
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (wsTicketCache && wsTicketExpiresAt > nowSec + 10) {
+        return wsTicketCache;
+    }
+    if (wsTicketPromise) return wsTicketPromise;
+
+    wsTicketPromise = fetch("/api/auth/ws-ticket", {
+        method: "GET",
+        credentials: "include",
+    })
+        .then(async (response) => {
+            if (!response.ok) return "";
+            const data = await response.json().catch(() => null);
+            const ticket = typeof data?.access_ticket === "string" ? data.access_ticket.trim() : "";
+            const expiresAt = Number.parseInt(String(data?.expires_at || "0"), 10);
+            if (!ticket) return "";
+            wsTicketCache = ticket;
+            wsTicketExpiresAt = Number.isFinite(expiresAt) ? expiresAt : Math.floor(Date.now() / 1000) + 300;
+            return wsTicketCache;
+        })
+        .catch(() => "")
+        .finally(() => {
+            wsTicketPromise = null;
+        });
+
+    return wsTicketPromise;
 }
 
 function sendSymbolsInterestNow() {
@@ -91,20 +165,30 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
         if (typeof window === "undefined") return;
         if (globalSocket) return;
 
-        const connect = () => {
-            SOCKET_URL = buildSocketUrl();
-            globalSocket = new WebSocket(SOCKET_URL);
+        const connect = async () => {
+            const socketConfig = buildSocketConfig();
+            if (socketConfig.protocols.length === 0) {
+                const fetchedTicket = await fetchWsTicketFromApi();
+                if (fetchedTicket) {
+                    socketConfig.protocols = [`bearer.${fetchedTicket}`];
+                }
+            }
+            SOCKET_URL = socketConfig.url;
+            const socket = socketConfig.protocols.length > 0
+                ? new WebSocket(socketConfig.url, socketConfig.protocols)
+                : new WebSocket(socketConfig.url);
+            globalSocket = socket;
 
-            globalSocket.onopen = () => {
+            socket.onopen = () => {
                 reconnectAttempts = 0;
                 setConnected(true);
                 const userId = "user_123";
                 const symbols = collectActiveSymbolsFromStore();
-                globalSocket?.send(JSON.stringify({ topic: "auth", userId, symbols }));
-                globalSocket?.send(JSON.stringify({ topic: "subscribeSymbols", symbols }));
+                socket.send(JSON.stringify({ topic: "auth", userId, symbols }));
+                socket.send(JSON.stringify({ topic: "subscribeSymbols", symbols }));
             };
 
-            globalSocket.onmessage = (event) => {
+            socket.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
                     const msgType = msg.topic || msg.event || msg.type;
@@ -308,23 +392,27 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                 }
             };
 
-            globalSocket.onclose = () => {
+            socket.onclose = () => {
                 setConnected(false);
                 setBridgeOnline(false);
-                globalSocket = null;
+                if (globalSocket === socket) {
+                    globalSocket = null;
+                }
                 historyFetched = false;
 
                 reconnectAttempts += 1;
                 const delay = Math.min(3000 * Math.pow(2, reconnectAttempts - 1), 30000);
-                setTimeout(connect, delay);
+                setTimeout(() => {
+                    void connect();
+                }, delay);
             };
 
-            globalSocket.onerror = () => {
-                globalSocket?.close();
+            socket.onerror = () => {
+                socket.close();
             };
         };
 
-        connect();
+        void connect();
     }, [
         appendHistory,
         setAccount,
@@ -392,8 +480,52 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
             }
         };
 
+        handleVisibility();
         document.addEventListener("visibilitychange", handleVisibility);
         return () => document.removeEventListener("visibilitychange", handleVisibility);
+    }, [isConnected]);
+
+    useEffect(() => {
+        if (!isConnected || globalSocket?.readyState !== WebSocket.OPEN) return;
+
+        const handleBackfillRequest = (event: Event) => {
+            const detail = (event as CustomEvent)?.detail || {};
+            const source = String(detail.source || "").toUpperCase();
+            const symbol = String(detail.symbol || "").trim();
+            const interval = String(detail.interval || "").trim();
+            const count = Number.isFinite(Number(detail.count)) ? Number(detail.count) : 300;
+            if (!symbol || !interval) return;
+
+            if (source === "MT5") {
+                globalSocket?.send(
+                    JSON.stringify({
+                        topic: "mt5_command",
+                        command: "get_candles",
+                        symbol,
+                        interval,
+                        count,
+                    }),
+                );
+                return;
+            }
+
+            if (source === "BINANCE") {
+                const nowSec = Math.floor(Date.now() / 1000);
+                const secondsPerBar = parseIntervalSeconds(interval);
+                globalSocket?.send(
+                    JSON.stringify({
+                        topic: "get_binance_candles",
+                        symbol,
+                        interval,
+                        fromTimestamp: nowSec - secondsPerBar * count,
+                        toTimestamp: nowSec,
+                    }),
+                );
+            }
+        };
+
+        window.addEventListener("chart-backfill-request", handleBackfillRequest as EventListener);
+        return () => window.removeEventListener("chart-backfill-request", handleBackfillRequest as EventListener);
     }, [isConnected]);
 
     useEffect(() => {

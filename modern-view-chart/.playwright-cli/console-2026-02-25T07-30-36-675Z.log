@@ -1,0 +1,18 @@
+[     979ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[     999ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1017ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1036ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1050ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1065ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1082ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1099ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+[    1114ms] InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)

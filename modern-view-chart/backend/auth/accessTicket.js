@@ -7,6 +7,27 @@ function decodeBase64Url(value) {
     return Buffer.from(withPad, "base64");
 }
 
+function encodeBase64Url(value) {
+    return Buffer.from(value).toString("base64url");
+}
+
+export function createAccessTicket(secret, ttlSec = 300, type = "mobile_access") {
+    const normalizedSecret = (secret || "").trim();
+    if (!normalizedSecret) return "";
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const safeTtl = Math.max(30, Number.parseInt(String(ttlSec || "300"), 10) || 300);
+    const payload = {
+        typ: type,
+        iat: nowSec,
+        exp: nowSec + safeTtl,
+        nonce: crypto.randomBytes(8).toString("hex"),
+    };
+    const payloadPart = encodeBase64Url(JSON.stringify(payload));
+    const signature = crypto.createHmac("sha256", normalizedSecret).update(payloadPart).digest("base64url");
+    return `${payloadPart}.${signature}`;
+}
+
 export function verifyAccessTicket(ticket, secret, nowMs = Date.now()) {
     if (!ticket || !secret) return false;
     const parts = String(ticket).split(".");
@@ -23,7 +44,7 @@ export function verifyAccessTicket(ticket, secret, nowMs = Date.now()) {
     try {
         const payloadRaw = decodeBase64Url(payloadPart).toString("utf-8");
         const payload = JSON.parse(payloadRaw);
-        if (payload?.typ !== "mobile_access") return false;
+        if (payload?.typ !== "mobile_access" && payload?.typ !== "ws_auth") return false;
 
         const exp = Number(payload?.exp);
         if (!Number.isFinite(exp)) return false;

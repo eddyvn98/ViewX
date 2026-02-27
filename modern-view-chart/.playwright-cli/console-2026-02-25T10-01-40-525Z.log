@@ -1,0 +1,185 @@
+Total messages: 183 (Errors: 0, Warnings: 0)
+
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Backtest Complete. Total Positions: 20 (New: 7) | PnL: -29.435918894450886 @ http://127.0.0.1:3000/_next/static/chunks/6dfe27697d8a6497.js:0
+[LOG] [Store] Backtest Complete. Total Positions: 20 (New: 11) | PnL: -118.02132757022264 @ http://127.0.0.1:3000/_next/static/chunks/6dfe27697d8a6497.js:0
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Indicators] Updated stable candles: 300 candles @ http://127.0.0.1:3000/_next/static/chunks/03a4b1e357066b98.js:4
+[LOG] [Indicators] Batch calculating 6 items in worker... @ http://127.0.0.1:3000/_next/static/chunks/03a4b1e357066b98.js:4
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Transition] Strategy Hull HA Gold Scalper (BUY) taking over historical position bt-1772013600000-298 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12
+[LOG] [💓] Runner: Hull HA Gold Scalper (BUY) | XAUUSDm | Active:3 | Bar:false @ http://127.0.0.1:3000/_next/static/chunks/830055ebf1954c6d.js:12

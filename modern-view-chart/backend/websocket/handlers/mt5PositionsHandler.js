@@ -15,8 +15,9 @@ export function handleMt5Positions({ clients }, data) {
         orders: data.orders || []
     });
 
-    for (const [clientWs] of clients.entries()) {
-        if (!clientWs.isBridge && clientWs.readyState === clientWs.OPEN) {
+    for (const [clientWs, meta] of clients.entries()) {
+        if (meta?.isBridgeAuthenticated) continue;
+        if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
         }
     }

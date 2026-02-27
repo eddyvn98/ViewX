@@ -41,6 +41,16 @@ function Test-HttpOk([string]$url) {
     }
 }
 
+function Test-UseLocalMongo {
+    $forceLocal = (Get-EnvValue "FORCE_LOCAL_DOCKER_DB").ToLowerInvariant()
+    if ($forceLocal -in @("1", "true", "yes", "on")) { return $true }
+
+    $mongoUri = (Get-EnvValue "URL_MONGOOSE").ToLowerInvariant()
+    if (-not $mongoUri) { return $false }
+
+    return $mongoUri -match "mongodb(\+srv)?://(localhost|127\.0\.0\.1|viewx-mongo)(:|/)"
+}
+
 function Get-HealthJson {
     $token = Get-EnvValue "ACCESS_TOKEN"
     if (-not $token) { return $null }
@@ -61,6 +71,7 @@ function Find-ProcessByPattern([string]$pattern) {
 
 function Ensure-Database {
     if (-not (Test-Path $DbUpScript)) { return }
+    if (-not (Test-UseLocalMongo)) { return }
 
     $health = Get-HealthJson
     $dbState = $null

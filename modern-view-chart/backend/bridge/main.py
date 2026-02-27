@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import sys
-from urllib.parse import urlencode
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -77,18 +76,31 @@ def load_env_file():
 
 
 def build_node_ws_url():
-    base_url = os.getenv("NODE_WS_URL", "ws://127.0.0.1:8091").strip()
-    access_token = os.getenv("ACCESS_TOKEN", "").strip()
-    if not access_token:
-        print("[BRIDGE] WARNING: ACCESS_TOKEN is missing; WS auth may fail.")
-        return base_url
+    return os.getenv("NODE_WS_URL", "ws://127.0.0.1:8091").strip()
 
-    sep = "&" if "?" in base_url else "?"
-    return f"{base_url}{sep}{urlencode({'access_token': access_token})}"
+
+def env_float(name, fallback):
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return fallback
+    try:
+        value = float(raw)
+        return value if value > 0 else fallback
+    except Exception:
+        return fallback
 
 
 load_env_file()
 NODE_WS_URL = build_node_ws_url()
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN", "").strip()
+if not ACCESS_TOKEN:
+    print("[BRIDGE] WARNING: ACCESS_TOKEN is missing; WS auth may fail.")
+
+ACTIVE_LOOP_SLEEP_SEC = env_float("BRIDGE_ACTIVE_LOOP_SLEEP_SEC", 0.5)
+IDLE_LOOP_SLEEP_SEC = env_float("BRIDGE_IDLE_LOOP_SLEEP_SEC", 1.5)
+ACTIVE_POSITIONS_INTERVAL_SEC = env_float("BRIDGE_ACTIVE_POSITIONS_INTERVAL_SEC", 2.0)
+IDLE_POSITIONS_INTERVAL_SEC = env_float("BRIDGE_IDLE_POSITIONS_INTERVAL_SEC", 8.0)
+DAILY_OPEN_REFRESH_INTERVAL_SEC = env_float("BRIDGE_DAILY_OPEN_REFRESH_SEC", 300.0)
 
 
 async def main():
@@ -131,14 +143,15 @@ async def main():
                 mapped.append(actual)
 
         deduped = list(dict.fromkeys(mapped))
-        if not deduped:
-            deduped = list(core_symbols_actual)
 
         async with symbols_lock:
             symbols_to_track.clear()
             symbols_to_track.update(deduped)
 
-        print(f"[BRIDGE] Updated interest symbols ({len(deduped)}): {', '.join(deduped[:10])}")
+        if deduped:
+            print(f"[BRIDGE] Updated interest symbols ({len(deduped)}): {', '.join(deduped[:10])}")
+        else:
+            print("[BRIDGE] No active symbol interest from clients. Entering idle mode.")
 
     try:
         client = BridgeClient(
@@ -147,17 +160,17 @@ async def main():
             alert_service,
             memory_service,
             symbols_interest_callback=update_symbols_interest,
+            auth_credential=ACCESS_TOKEN,
         )
         await client.connect()
 
         await client.send_json({"topic": "mt5_symbols_available", "symbols": available_symbols})
         last_positions_hash = None
         last_positions_time = 0
-        position_update_interval = 2.0
+        position_update_interval = ACTIVE_POSITIONS_INTERVAL_SEC
 
         daily_opens = {}
         last_daily_open_refresh = 0
-        daily_open_refresh_interval = 300
 
         while True:
             import time
@@ -167,10 +180,13 @@ async def main():
 
             async with symbols_lock:
                 symbols_snapshot = list(symbols_to_track)
-            if not symbols_snapshot:
-                symbols_snapshot = list(core_symbols_actual)
+            is_idle = len(symbols_snapshot) == 0
+            if not is_idle:
+                position_update_interval = ACTIVE_POSITIONS_INTERVAL_SEC
+            else:
+                position_update_interval = IDLE_POSITIONS_INTERVAL_SEC
 
-            if current_time - last_daily_open_refresh > daily_open_refresh_interval:
+            if (not is_idle) and (current_time - last_daily_open_refresh > DAILY_OPEN_REFRESH_INTERVAL_SEC):
                 for symbol in symbols_snapshot:
                     d_open = await asyncio.to_thread(service.get_daily_open, symbol)
                     if d_open:
@@ -178,20 +194,21 @@ async def main():
                 last_daily_open_refresh = current_time
                 print(f"[REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
 
-            for symbol in symbols_snapshot:
-                tick = await asyncio.to_thread(service.get_tick, symbol)
-                if tick:
-                    await alert_service.check_alerts(symbol, tick.bid, client.send_json)
-                    await client.send_json(
-                        {
-                            "topic": "mt5_update",
-                            "symbol": symbol,
-                            "price": tick.bid,
-                            "ask": tick.ask,
-                            "daily_open": daily_opens.get(symbol),
-                            "time": int(tick.time * 1000),
-                        }
-                    )
+            if not is_idle:
+                for symbol in symbols_snapshot:
+                    tick = await asyncio.to_thread(service.get_tick, symbol)
+                    if tick:
+                        await alert_service.check_alerts(symbol, tick.bid, client.send_json)
+                        await client.send_json(
+                            {
+                                "topic": "mt5_update",
+                                "symbol": symbol,
+                                "price": tick.bid,
+                                "ask": tick.ask,
+                                "daily_open": daily_opens.get(symbol),
+                                "time": int(tick.time * 1000),
+                            }
+                        )
 
             acc_data = await asyncio.to_thread(service.get_account_info)
             pos_list = await asyncio.to_thread(service.get_positions)
@@ -222,7 +239,7 @@ async def main():
                 last_positions_hash = positions_hash
                 last_positions_time = current_time
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(IDLE_LOOP_SLEEP_SEC if is_idle else ACTIVE_LOOP_SLEEP_SEC)
 
     except Exception as e:
         print(f"[CRITICAL] Bridge loop error: {e}")

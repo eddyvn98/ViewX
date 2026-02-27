@@ -1,0 +1,10 @@
+[GET] http://127.0.0.1:3000/api/auth/ws-ticket => [200] OK
+[GET] http://127.0.0.1:3000/api/user/state?client_id=de6540a7-e0b8-4b4d-a79f-87575ab89073 => [200] OK
+[GET] https://example.supabase.co/rest/v1/trade_logs?select=*&strategy_id=eq.hull-ha-gold-sell&pnl=not.is.null&order=timestamp.desc => [FAILED] net::ERR_NAME_NOT_RESOLVED
+[GET] https://example.supabase.co/rest/v1/trade_logs?select=*&strategy_id=eq.hull-ha-gold-sell&pnl=not.is.null&order=timestamp.desc => [FAILED] net::ERR_NAME_NOT_RESOLVED
+[POST] https://example.supabase.co/rest/v1/trade_logs?columns=%22strategy_id%22%2C%22symbol%22%2C%22type%22%2C%22entry_price%22%2C%22lot_size%22%2C%22volatility%22%2C%22session%22%2C%22indicators%22%2C%22timestamp%22&select=* => [FAILED] net::ERR_NAME_NOT_RESOLVED
+[POST] https://example.supabase.co/rest/v1/trade_logs?columns=%22strategy_id%22%2C%22symbol%22%2C%22type%22%2C%22entry_price%22%2C%22lot_size%22%2C%22volatility%22%2C%22session%22%2C%22indicators%22%2C%22timestamp%22&select=* => [FAILED] net::ERR_NAME_NOT_RESOLVED
+[GET] http://127.0.0.1:3000/api/auth/ws-ticket => [200] OK
+[GET] http://127.0.0.1:3000/api/user/state?client_id=e2e-ui-sync => [200] OK
+[PUT] http://127.0.0.1:3000/api/user/state?client_id=e2e-ui-sync => [200] OK
+[PUT] http://127.0.0.1:3000/api/user/state?client_id=e2e-ui-sync => [200] OK

@@ -6,29 +6,62 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useUserSetupSync } from "@/hooks/use-user-setup-sync";
 import { useMarketStore, RootState } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
-import { MarketList } from "@/features/market/MarketList";
-import { Terminal } from "@/features/terminal/Terminal";
-import { NotificationManager } from "@/features/notifications/NotificationManager";
-import { TabContainer } from "@/components/layout/TabContainer";
-import { ChartsToolbarMemo } from "@/features/chart/components/ChartsToolbar";
-import { ChartGrid } from "@/features/chart/components/ChartGrid";
-import { OrderForm } from "@/features/terminal/components/OrderForm";
-import { RightSidebar } from "@/features/chart/components/RightSidebar";
 import { X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
-import { useStrategyRunner } from "@/features/strategy/hooks/use-strategy-runner";
-import { StrategyPanel } from "@/features/chart/components/StrategyPanel";
-import { LayerManager } from "@/features/chart/components/LayerManager";
 import React from "react";
+import dynamic from "next/dynamic";
+
+const NotificationManager = dynamic(
+  () => import("@/features/notifications/NotificationManager").then((m) => m.NotificationManager),
+  { ssr: false }
+);
+const ChartsToolbarMemo = dynamic(
+  () => import("@/features/chart/components/ChartsToolbar").then((m) => m.ChartsToolbarMemo),
+  { ssr: false }
+);
+const ChartGrid = dynamic(
+  () => import("@/features/chart/components/ChartGrid").then((m) => m.ChartGrid),
+  { ssr: false }
+);
+const MarketList = dynamic(
+  () => import("@/features/market/MarketList").then((m) => m.MarketList),
+  { ssr: false }
+);
+const Terminal = dynamic(
+  () => import("@/features/terminal/Terminal").then((m) => m.Terminal),
+  { ssr: false }
+);
+const RightSidebar = dynamic(
+  () => import("@/features/chart/components/RightSidebar").then((m) => m.RightSidebar),
+  { ssr: false }
+);
+const StrategyPanel = dynamic(
+  () => import("@/features/chart/components/StrategyPanel").then((m) => m.StrategyPanel),
+  { ssr: false }
+);
+const LayerManager = dynamic(
+  () => import("@/features/chart/components/LayerManager").then((m) => m.LayerManager),
+  { ssr: false }
+);
+const MobileBottomNav = dynamic(
+  () => import("@/components/layout/MobileBottomNav").then((m) => m.MobileBottomNav),
+  { ssr: false }
+);
+const StrategyRunnerBootstrap = dynamic(
+  () => import("@/features/strategy/components/StrategyRunnerBootstrap").then((m) => m.StrategyRunnerBootstrap),
+  { ssr: false }
+);
+
+function PanelFallback({ className = "" }: { className?: string }) {
+  return <div className={cn("h-full w-full animate-pulse bg-secondary/20", className)} />;
+}
 
 export default function Home() {
   useWebSocket();
   useUserSetupSync();
-  useStrategyRunner();
+  const strategyEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === "true";
   const {
     isTerminalVisible,
     isTerminalCollapsed,
@@ -106,6 +139,7 @@ export default function Home() {
 
   return (
     <div className="app-root bg-background text-foreground font-sans select-none relative transition-colors duration-300">
+      {strategyEnabled && <StrategyRunnerBootstrap />}
       <NotificationManager />
       <div className="hidden md:block">
         <Header />
@@ -141,7 +175,7 @@ export default function Home() {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                <MarketList mode="discovery" />
+                {isLeftSidebarOpen ? <MarketList mode="discovery" /> : null}
               </div>
             </div>
           </div>
@@ -157,10 +191,14 @@ export default function Home() {
             )}>
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0">
                 <div className="hidden md:block">
-                  <ChartsToolbarMemo />
+                  <React.Suspense fallback={<PanelFallback className="h-11" />}>
+                    <ChartsToolbarMemo />
+                  </React.Suspense>
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                  <ChartGrid />
+                  <React.Suspense fallback={<PanelFallback />}>
+                    <ChartGrid />
+                  </React.Suspense>
                 </div>
               </div>
 
@@ -208,7 +246,9 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex-1 min-h-0 bg-background flex flex-col">
-                  <MarketList mode={isMobileWatchlistAddMode ? 'discovery' : 'watchlist'} />
+                  <React.Suspense fallback={<PanelFallback />}>
+                    <MarketList mode={isMobileWatchlistAddMode ? 'discovery' : 'watchlist'} />
+                  </React.Suspense>
                 </div>
               </div>
             )}
@@ -261,7 +301,9 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <StrategyPanel />
+                  <React.Suspense fallback={<PanelFallback />}>
+                    <StrategyPanel />
+                  </React.Suspense>
                 </div>
               </div>
             )}
@@ -285,7 +327,9 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <LayerManager />
+                  <React.Suspense fallback={<PanelFallback />}>
+                    <LayerManager />
+                  </React.Suspense>
                 </div>
               </div>
             )}
@@ -298,7 +342,7 @@ export default function Home() {
               isRightSidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           >
-            <RightSidebar />
+            {isRightSidebarOpen ? <RightSidebar /> : null}
           </div>
         </div>
       </div>

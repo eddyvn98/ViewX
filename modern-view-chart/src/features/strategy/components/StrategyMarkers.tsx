@@ -127,8 +127,8 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
                     color: isPending ? pendingColor : baseColor,
                     lineWidth: 2,
                     lineStyle: isPending ? 2 : 1,
-                    axisLabelVisible: true,
-                    title: `${isPending ? 'STP' : ''} ${pos.type === 'BUY' ? '↑' : '↓'}`,
+                    axisLabelVisible: false,
+                    title: '',
                 });
                 lines.push(entryLine);
 
@@ -138,8 +138,8 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
                         color: '#ff5252',
                         lineWidth: 1,
                         lineStyle: 3,
-                        axisLabelVisible: true,
-                        title: `SL`,
+                        axisLabelVisible: false,
+                        title: '',
                     });
                     lines.push(slLine);
                 }
@@ -150,8 +150,8 @@ export const StrategyMarkers = memo(({ chart, mainSeries, symbol, interval }: St
                         color: '#2196f3',
                         lineWidth: 1,
                         lineStyle: 3,
-                        axisLabelVisible: true,
-                        title: `TP`,
+                        axisLabelVisible: false,
+                        title: '',
                     });
                     lines.push(tpLine);
                 }

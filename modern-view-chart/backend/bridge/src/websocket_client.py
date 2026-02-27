@@ -23,16 +23,30 @@ def mask_url_for_log(url):
 
 
 class BridgeClient:
-    def __init__(self, ws_url, mt5_service, alert_service=None, memory_service=None, symbols_interest_callback=None):
+    def __init__(
+        self,
+        ws_url,
+        mt5_service,
+        alert_service=None,
+        memory_service=None,
+        symbols_interest_callback=None,
+        auth_credential=None,
+    ):
         self.ws_url = ws_url
         self.mt5 = mt5_service
         self.alert_service = alert_service
         self.memory_service = memory_service
         self.symbols_interest_callback = symbols_interest_callback
+        self.auth_credential = (auth_credential or "").strip()
         self.websocket = None
 
     async def connect(self):
-        self.websocket = await websockets.connect(self.ws_url, max_size=10 * 1024 * 1024)
+        connect_kwargs = {
+            "max_size": 10 * 1024 * 1024,
+        }
+        if self.auth_credential:
+            connect_kwargs["subprotocols"] = [f"bearer.{self.auth_credential}"]
+        self.websocket = await websockets.connect(self.ws_url, **connect_kwargs)
         print(f"[OK] Bridge connected to {mask_url_for_log(self.ws_url)}")
         return self.websocket
 

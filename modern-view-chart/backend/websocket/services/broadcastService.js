@@ -98,7 +98,7 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
         for (const [ws, symbolMap] of perWsSymbolMap.entries()) {
             if (ws.readyState !== ws.OPEN) continue;
             const meta = clients.get(ws);
-            if (!meta || meta.isBridgeLike) continue;
+            if (!meta || meta.isBridgeAuthenticated) continue;
 
             const orderedSymbols = Array.isArray(meta.symbols) ? meta.symbols : [];
             const data = orderedSymbols.map((s) => symbolMap.get(normalizeSymbol(s))).filter(Boolean);
@@ -117,7 +117,7 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
         for (const ws of subscriptionIndex.defaultPriceClients) {
             if (ws.readyState !== ws.OPEN) continue;
             const meta = clients.get(ws);
-            if (!meta || meta.isBridgeLike) continue;
+            if (!meta || meta.isBridgeAuthenticated) continue;
 
             const data = coreSymbols.map((s) => latestBySymbol.get(s)).filter(Boolean);
             if (data.length === 0) continue;

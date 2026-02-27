@@ -1,0 +1,369 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - img [ref=e9]
+          - text: Workspace 1
+        - button "Add Workspace" [ref=e11]:
+          - img [ref=e12]
+      - generic [ref=e13]:
+        - button "Toggle Market List" [ref=e14]:
+          - img [ref=e15]
+        - generic [ref=e16]:
+          - button "Mobile Access" [ref=e18]:
+            - img [ref=e19]
+          - button "Change Theme Color" [ref=e22]:
+            - img [ref=e23]
+          - button [ref=e29]:
+            - img [ref=e30]
+          - button [ref=e33]:
+            - img [ref=e34]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - text: Alex
+            - generic [ref=e39]: PRO
+          - button [ref=e40]:
+            - img [ref=e41]
+    - generic [ref=e44]:
+      - button [ref=e45]:
+        - img [ref=e46]
+      - generic [ref=e47]:
+        - button "SC" [ref=e48]:
+          - img [ref=e49]
+          - text: SC
+        - button "Fx" [ref=e50]:
+          - img [ref=e51]
+          - text: Fx
+      - button "Change Theme Color" [ref=e56]:
+        - img [ref=e57]
+    - generic [ref=e63]:
+      - generic [ref=e67]: V
+      - generic [ref=e68]:
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - text: Market Selection
+            - button [ref=e72]:
+              - img [ref=e73]
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - img [ref=e80]
+                - textbox "Quick search..." [ref=e83]
+              - generic [ref=e84]:
+                - button "ALL" [ref=e85]
+                - button "CRYPTO" [ref=e86]
+                - button "FOREX" [ref=e87]
+            - generic [ref=e89]: No tickers found
+        - main [ref=e90]:
+          - generic [ref=e92]:
+            - generic [ref=e94]:
+              - generic [ref=e95]:
+                - generic [ref=e97]:
+                  - generic [ref=e98]:
+                    - button "1m" [ref=e99]
+                    - button "5m" [ref=e100]
+                    - button "15m" [ref=e101]
+                    - button "1h" [ref=e102]
+                    - button "4h" [ref=e103]
+                  - button [ref=e105]:
+                    - img [ref=e106]
+                - generic [ref=e108]:
+                  - 'button "Symbol Link: A" [ref=e109]':
+                    - img [ref=e110]
+                  - button "SC" [ref=e113]
+                  - button "Change Layout" [ref=e115]:
+                    - img [ref=e116]
+                - generic [ref=e118]:
+                  - button "Toggle Drawing Toolbar" [ref=e119]:
+                    - img [ref=e120]
+                  - button "Crosshair Sync" [ref=e123]:
+                    - img [ref=e124]
+                  - button "Toggle Strategy Markers" [ref=e126]:
+                    - img [ref=e127]
+                  - button "Add Chart" [ref=e131]:
+                    - img [ref=e132]
+                    - text: Add Chart
+              - button "--:--:--UTC+7" [ref=e135]:
+                - img [ref=e136]
+                - text: "--:--:--UTC+7"
+            - generic [ref=e141]:
+              - generic [ref=e143]:
+                - generic [ref=e144]:
+                  - 'button "Symbol Link: A" [ref=e145]':
+                    - img [ref=e146]
+                  - generic [ref=e149]:
+                    - text: XAUUSDm
+                    - generic [ref=e150]: 1 • MT5
+                  - button "Quick Alert" [ref=e151]:
+                    - img [ref=e152]
+                - generic [ref=e155]:
+                  - button "Maximize" [ref=e156]:
+                    - img [ref=e157]
+                  - link "Pop out" [ref=e162] [cursor=pointer]:
+                    - /url: /chart/default?symbol=XAUUSDm&interval=1&source=MT5
+                    - img [ref=e163]
+              - generic [ref=e168]:
+                - generic [ref=e170]:
+                  - generic [ref=e171]:
+                    - generic [ref=e172]: Live
+                    - img [ref=e174]
+                  - generic [ref=e176]:
+                    - generic [ref=e177]: O---
+                    - generic [ref=e178]: H---
+                    - generic [ref=e179]: L---
+                  - generic [ref=e180]:
+                    - text: ···
+                    - generic [ref=e181]: ······
+                - generic [ref=e182]:
+                  - generic [ref=e183]:
+                    - generic [ref=e184]: "--"
+                    - generic [ref=e185]: "--:--"
+                  - generic [ref=e187]:
+                    - button "BUY" [ref=e188]
+                    - button "SELL" [ref=e189]
+                  - generic [ref=e191]:
+                    - generic [ref=e192]:
+                      - button "Trend Line" [ref=e193]:
+                        - img [ref=e194]
+                        - generic [ref=e197]: Trend Line
+                      - button "Horizontal Line" [ref=e198]:
+                        - img [ref=e199]
+                        - generic [ref=e200]: Horizontal Line
+                      - button "Vertical Line" [ref=e201]:
+                        - img [ref=e202]
+                        - generic [ref=e205]: Vertical Line
+                      - button "Crosshair" [ref=e206]:
+                        - img [ref=e207]
+                        - generic [ref=e209]: Crosshair
+                      - button "Rectangle" [ref=e210]:
+                        - img [ref=e211]
+                        - generic [ref=e213]: Rectangle
+                      - button "F Fib Retracement" [ref=e214]:
+                        - text: F
+                        - generic [ref=e215]: Fib Retracement
+                      - button "FE Fib Extension" [ref=e216]:
+                        - text: FE
+                        - generic [ref=e217]: Fib Extension
+                      - button "Magnet Mode" [ref=e218]:
+                        - img [ref=e219]
+                        - generic [ref=e223]: Magnet Mode
+                    - button [ref=e225]:
+                      - img [ref=e226]
+                  - button "Hide" [ref=e229]:
+                    - text: Hide
+                    - img [ref=e230]
+        - complementary [ref=e234]:
+          - generic [ref=e237]:
+            - generic [ref=e238]:
+              - generic [ref=e239]:
+                - img [ref=e240]
+                - textbox "Quick search..." [ref=e243]
+              - generic [ref=e244]:
+                - button "ALL" [ref=e245]
+                - button "CRYPTO" [ref=e246]
+                - button "FOREX" [ref=e247]
+            - generic [ref=e248]: SymbolLive priceChange
+            - generic:
+              - generic:
+                - list:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                        - generic: BTCUSDmMT5
+                      - generic: ···
+                      - generic:
+                        - generic: "--"
+                      - button [ref=e250]:
+                        - img [ref=e251]
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: USD
+                          - generic: EUR
+                        - generic: EURUSDmMT5
+                      - generic: ···
+                      - generic:
+                        - generic: "--"
+                      - button [ref=e254]:
+                        - img [ref=e255]
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                        - generic: XAUUSDmMT5
+                      - generic: ···
+                      - generic:
+                        - generic: "--"
+                      - button [ref=e259]:
+                        - img [ref=e260]
+          - generic [ref=e263]:
+            - generic [ref=e264]:
+              - button "Strategy" [ref=e265]:
+                - generic [ref=e266]:
+                  - img [ref=e267]
+                  - text: Strategy
+              - button "Layer" [ref=e275]:
+                - generic [ref=e276]:
+                  - img [ref=e277]
+                  - text: Layer
+              - button "Trade" [ref=e279]:
+                - generic [ref=e280]:
+                  - img [ref=e281]
+                  - text: Trade
+            - generic [ref=e285]:
+              - generic [ref=e287]:
+                - generic [ref=e288]:
+                  - button "Signals" [ref=e289]:
+                    - generic [ref=e290]:
+                      - img [ref=e291]
+                      - text: Signals
+                  - button "My bot" [ref=e293]:
+                    - generic [ref=e294]:
+                      - img [ref=e295]
+                      - text: My bot
+                  - button "Ai chat" [ref=e298]:
+                    - generic [ref=e299]:
+                      - img [ref=e300]
+                      - text: Ai chat
+                - generic [ref=e304]:
+                  - generic [ref=e305]:
+                    - generic [ref=e307]:
+                      - generic [ref=e308]: LIVE VIRTUAL
+                      - generic [ref=e309]:
+                        - text: $10000.00
+                        - generic [ref=e310]: +0.00%
+                    - generic [ref=e311]:
+                      - button "INFO" [ref=e312]
+                      - button [ref=e313]:
+                        - img [ref=e314]
+                  - generic [ref=e317]:
+                    - generic [ref=e319]:
+                      - img [ref=e320]
+                      - text: Recent signals
+                    - generic [ref=e325]:
+                      - img [ref=e326]
+                      - text: Scanning
+              - generic [ref=e329]:
+                - generic [ref=e330]:
+                  - button "Indicators" [ref=e331]:
+                    - generic [ref=e332]:
+                      - img [ref=e333]
+                      - text: Indicators
+                  - button "Draw Tools" [ref=e335]:
+                    - generic [ref=e336]:
+                      - img [ref=e337]
+                      - text: Draw Tools
+                - generic [ref=e340]:
+                  - generic [ref=e343]:
+                    - generic [ref=e344]:
+                      - heading "Layers" [level=4] [ref=e345]
+                      - button "Add" [ref=e346]:
+                        - img [ref=e347]
+                        - text: Add
+                    - generic [ref=e348]:
+                      - img [ref=e349]
+                      - text: No active layers
+                  - generic [ref=e353]:
+                    - heading "Applied Objects" [level=4] [ref=e355]
+                    - generic [ref=e356]: No manual drawings
+                - generic [ref=e358]:
+                  - img [ref=e359]
+                  - text: Manual Drawing Mode Enabled
+              - generic [ref=e363]:
+                - generic [ref=e365]: XAUUSDMT5
+                - generic [ref=e366]:
+                  - button "Thị trường" [ref=e367]
+                  - button "Đang chờ" [ref=e368]
+                - generic [ref=e369]:
+                  - button "Bán 0.00" [ref=e370]:
+                    - text: Bán
+                    - generic [ref=e371]: "0.00"
+                  - button "Mua 0.00" [ref=e372]:
+                    - text: Mua
+                    - generic [ref=e373]: "0.00"
+                  - generic [ref=e374]: "0.00"
+                - generic [ref=e376]: 64%36%
+                - generic [ref=e377]:
+                  - generic [ref=e378]:
+                    - text: Khối lượng
+                    - generic [ref=e379]:
+                      - generic [ref=e380]:
+                        - textbox [ref=e381]: "0.1"
+                        - text: Lô
+                      - generic [ref=e382]:
+                        - button [ref=e383]:
+                          - img [ref=e384]
+                        - button [ref=e385]:
+                          - img [ref=e386]
+                  - generic [ref=e387]:
+                    - generic [ref=e388]:
+                      - generic [ref=e389]: Cắt lỗ (SL)
+                      - generic [ref=e390]:
+                        - textbox "Giá SL" [ref=e391]
+                        - generic [ref=e392]:
+                          - button [ref=e393]:
+                            - img [ref=e394]
+                          - button [ref=e395]:
+                            - img [ref=e396]
+                    - generic [ref=e397]:
+                      - generic [ref=e398]: Chốt lời (TP)
+                      - generic [ref=e399]:
+                        - textbox "Giá TP" [ref=e400]
+                        - generic [ref=e401]:
+                          - button [ref=e402]:
+                            - img [ref=e403]
+                          - button [ref=e404]:
+                            - img [ref=e405]
+                - generic [ref=e406]:
+                  - button "BUY 0.1 LOTS" [ref=e407]
+                  - button "Thoát" [ref=e408]
+                - button "Xem chi tiết" [ref=e410]:
+                  - text: Xem chi tiết
+                  - img [ref=e411]
+    - generic [ref=e416]:
+      - generic [ref=e418]:
+        - img [ref=e419]
+        - text: Actions
+      - generic [ref=e425]:
+        - generic [ref=e427]:
+          - img [ref=e430]
+          - text: XAUUSDm
+        - generic [ref=e433]:
+          - img [ref=e436]
+          - text: BTCUSDm
+        - generic [ref=e439]:
+          - generic [ref=e441]:
+            - generic [ref=e442]: USD
+            - generic [ref=e443]: EUR
+          - text: EURUSDm
+        - generic [ref=e445]:
+          - img [ref=e448]
+          - text: XAUUSDm
+        - generic [ref=e451]:
+          - img [ref=e454]
+          - text: BTCUSDm
+        - generic [ref=e457]:
+          - generic [ref=e459]:
+            - generic [ref=e460]: USD
+            - generic [ref=e461]: EUR
+          - text: EURUSDm
+        - generic [ref=e463]:
+          - img [ref=e466]
+          - text: XAUUSDm
+        - generic [ref=e469]:
+          - img [ref=e472]
+          - text: BTCUSDm
+        - generic [ref=e475]:
+          - generic [ref=e477]:
+            - generic [ref=e478]: USD
+            - generic [ref=e479]: EUR
+          - text: EURUSDm
+      - generic [ref=e481]:
+        - img [ref=e482]
+        - text: Drawings
+  - region "Notifications alt+T"

@@ -1,0 +1,30 @@
+Total messages: 19 (Errors: 9, Warnings: 0)
+
+[LOG] 🕯️ [Runner] Resetting backtest tracking due to account reset or strategy change @ http://127.0.0.1:3000/_next/static/chunks/3443648ea045669d.js:12
+[LOG] [Store] Total Strategies: 3 @ http://127.0.0.1:3000/_next/static/chunks/3443648ea045669d.js:12
+[LOG]   > Hull HA Gold Scalper (BUY) (hull-ha-gold-buy) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/3443648ea045669d.js:12
+[LOG]   > Hull HA Gold Scalper (SELL) (hull-ha-gold-sell) | Active: true | Sym: XAUUSDm @ http://127.0.0.1:3000/_next/static/chunks/3443648ea045669d.js:12
+[LOG]   > Test Fast Trigger (RSI > 20) (test-trigger-rsi) | Active: false | Sym:  @ http://127.0.0.1:3000/_next/static/chunks/3443648ea045669d.js:12
+[LOG] 💓 [SoundService] Silent Heartbeat Enabled @ http://127.0.0.1:3000/_next/static/chunks/d0e75d720db35f72.js:0
+[LOG] [SeriesSwitcher] Switching to Diamond Series @ http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:4
+[LOG] [Indicators] Context change detected: MT5:XAUUSDm:1 @ http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:4
+[LOG] [Indicators] Waiting for candles... @ http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:4
+[LOG] 🔒 [BackgroundService] Wake Lock Active @ http://127.0.0.1:3000/_next/static/chunks/3443648ea045669d.js:12
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)
+InvalidStateError: Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.
+    at WebSocket.onopen (http://127.0.0.1:3000/_next/static/chunks/abbb21e5d4996a8b.js:1:145223)

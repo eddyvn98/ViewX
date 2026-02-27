@@ -20,6 +20,7 @@ export function useChartTicker({
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<any>(null);
+    const lastBackfillRequestAtRef = useRef<Record<string, number>>({});
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
@@ -94,11 +95,36 @@ export function useChartTicker({
 
             const nextBarTime = lastCandleTime + intervalSec;
             const now = serverTimeMs ? Math.floor(serverTimeMs / 1000) : Math.floor(Date.now() / 1000);
+            const lagBars = Math.floor((now - lastCandleTime) / Math.max(1, intervalSec));
 
             const isHA = chartType === 'heikin_ashi';
             const isSmart = chartType === 'smart_candles';
 
-            // 3. Client-side New Bar Generation
+            // TradingView-style guard:
+            // If tab/background causes a large gap, do not synthesize missed bars from sparse ticks.
+            // Request historical backfill and wait for real candles.
+            if (lagBars >= 2) {
+                const backfillKey = `${source}:${normSymbol}:${interval}`;
+                const nowMs = Date.now();
+                const lastRequestedAt = lastBackfillRequestAtRef.current[backfillKey] || 0;
+                if (nowMs - lastRequestedAt > 5000) {
+                    lastBackfillRequestAtRef.current[backfillKey] = nowMs;
+                    window.dispatchEvent(
+                        new CustomEvent('chart-backfill-request', {
+                            detail: {
+                                source,
+                                symbol,
+                                interval,
+                                count: 300,
+                                reason: 'gap_detected',
+                            },
+                        }),
+                    );
+                }
+                return;
+            }
+
+            // 3. Client-side New Bar Generation (single-bar step only)
             if (now >= nextBarTime) {
                 const haOpen = isHA ? (base.open + base.close) / 2 : base.close;
                 const newCandle = {

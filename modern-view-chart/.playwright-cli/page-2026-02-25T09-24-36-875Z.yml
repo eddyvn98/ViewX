@@ -1,0 +1,125 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e6]: XAUUSDm
+          - generic [ref=e8]: 1m
+        - generic [ref=e9]: MT5 Engine
+      - generic [ref=e10]:
+        - generic [ref=e13]: Live Sync Active
+        - generic [ref=e14]: "CHART_ID: test..."
+    - generic [ref=e17]:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic: Live
+            - generic:
+              - img
+          - generic:
+            - generic:
+              - generic: O
+              - generic: "---"
+            - generic:
+              - generic: H
+              - generic: "---"
+            - generic:
+              - generic: L
+              - generic: "---"
+          - generic:
+            - generic: ···
+            - generic:
+              - generic: ···
+              - generic: ···
+        - generic:
+          - generic:
+            - generic: EMA 25
+            - generic:
+              - generic: ···
+          - generic:
+            - generic: HMA 25
+            - generic:
+              - generic: ···
+          - generic:
+            - generic: MARKET_STRUCTURE 14
+            - generic:
+              - generic: ···
+          - generic:
+            - generic: BREAKOUT_RAYS 14
+            - generic:
+              - generic: ···
+          - generic:
+            - generic: TREND_LINES 14
+            - generic:
+              - generic: ···
+      - generic [ref=e18]:
+        - table [ref=e21]:
+          - row [ref=e22]:
+            - cell
+            - cell [ref=e23]
+            - cell [ref=e27]
+        - generic [ref=e32]:
+          - button "BUY" [ref=e33]:
+            - generic [ref=e34]: BUY
+          - button "SELL" [ref=e36]:
+            - generic [ref=e37]: SELL
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - button "Trend Line" [ref=e40]:
+              - img [ref=e41]
+              - generic: Trend Line
+            - button "Horizontal Line" [ref=e44]:
+              - img [ref=e45]
+              - generic: Horizontal Line
+            - button "Vertical Line" [ref=e46]:
+              - img [ref=e47]
+              - generic: Vertical Line
+            - button "Crosshair" [ref=e50]:
+              - img [ref=e51]
+              - generic: Crosshair
+            - button "Rectangle" [ref=e53]:
+              - img [ref=e54]
+              - generic: Rectangle
+            - button "F Fib Retracement" [ref=e56]:
+              - generic [ref=e57]: F
+              - generic: Fib Retracement
+            - button "FE Fib Extension" [ref=e58]:
+              - generic [ref=e59]: FE
+              - generic: Fib Extension
+            - button "Magnet Mode" [ref=e61]:
+              - img [ref=e62]
+              - generic: Magnet Mode
+          - button [ref=e67]:
+            - img [ref=e68]
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - button "RSI" [ref=e72]: RSI
+            - button "MACD" [ref=e74]
+          - button "Hide" [ref=e75]:
+            - generic [ref=e76]: Hide
+            - img [ref=e77]
+        - generic [ref=e79]:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: RSI 14
+                  - generic:
+                    - generic: ···
+          - table [ref=e83]:
+            - row [ref=e84]:
+              - cell
+              - cell [ref=e85]
+              - cell [ref=e89]
+      - table [ref=e97]:
+        - row [ref=e98]:
+          - cell
+          - cell [ref=e99]
+          - cell [ref=e103]
+        - row [ref=e107]:
+          - cell
+          - cell [ref=e108]
+          - cell [ref=e112]
+  - region "Notifications alt+T"
+  - alert [ref=e115]
