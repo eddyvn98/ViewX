@@ -43,7 +43,6 @@ export function useStrategyRunner() {
     useEffect(() => {
         strategies.forEach((strategy) => {
             if (strategy.active && !backtestRunRef.current[strategy.id]) {
-                // Preserve old behavior: keep empty slot for first trigger.
             }
         });
     }, [strategies]);
