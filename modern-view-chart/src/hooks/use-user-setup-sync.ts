@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { RootState, useMarketStore } from '@/lib/store';
 import { RightSidebarTab } from '@/lib/store/types';
+import { useTheme } from 'next-themes';
 
 const USER_STATE_SCHEMA_VERSION = 1;
 const SAVE_DEBOUNCE_MS = 1500;
@@ -18,6 +19,7 @@ type PersistedUiState = {
     rightSidebarTabOrder: string[];
     isDrawingToolbarVisible: boolean;
     snapToCandle: boolean;
+    themeMode?: 'light' | 'dark' | 'system';
 };
 
 type PersistedTerminalState = {
@@ -41,6 +43,88 @@ type PersistedSetupState = {
 type UserStateApiResponse = {
     state?: Partial<PersistedSetupState>;
 };
+
+function createFallbackTabs(): RootState['tabs'] {
+    return {
+        'default-tab': {
+            id: 'default-tab',
+            name: 'Workspace 1',
+            charts: {
+                default: {
+                    id: 'default',
+                    symbol: 'XAUUSDm',
+                    interval: '1',
+                    source: 'MT5',
+                    group: 'A',
+                    chartType: 'smart_candles',
+                    timezone: 'Asia/Ho_Chi_Minh',
+                },
+            },
+            activeChartId: 'default',
+            maximizedChartId: null,
+            layoutMode: '1x1',
+            rows: 1,
+            cols: 1,
+        },
+    };
+}
+
+function sanitizeTabsInput(input: unknown): RootState['tabs'] | null {
+    if (!isPlainObject(input)) return null;
+
+    const tabEntries = Object.entries(input).filter(([, tab]) => isPlainObject(tab));
+    if (tabEntries.length === 0) return null;
+
+    const safeTabs: RootState['tabs'] = {};
+
+    for (const [tabId, rawTab] of tabEntries) {
+        const tab = rawTab as Record<string, unknown>;
+        const rawCharts = isPlainObject(tab.charts) ? tab.charts : {};
+        const chartEntries = Object.entries(rawCharts).filter(([, chart]) => isPlainObject(chart));
+        if (chartEntries.length === 0) continue;
+
+        const safeCharts: Record<string, any> = {};
+        for (const [chartId, rawChart] of chartEntries) {
+            const chart = rawChart as Record<string, unknown>;
+            const symbol = typeof chart.symbol === 'string' && chart.symbol.trim() ? chart.symbol : 'XAUUSDm';
+            const interval = typeof chart.interval === 'string' && chart.interval.trim() ? chart.interval : '1';
+            const source = typeof chart.source === 'string' && chart.source.trim() ? chart.source : 'MT5';
+            safeCharts[chartId] = {
+                ...chart,
+                id: typeof chart.id === 'string' && chart.id.trim() ? chart.id : chartId,
+                symbol,
+                interval,
+                source,
+                chartType: typeof chart.chartType === 'string' ? chart.chartType : 'smart_candles',
+                timezone: typeof chart.timezone === 'string' ? chart.timezone : 'Asia/Ho_Chi_Minh',
+            };
+        }
+
+        const safeChartIds = Object.keys(safeCharts);
+        if (safeChartIds.length === 0) continue;
+
+        const rawActiveChartId = typeof tab.activeChartId === 'string' ? tab.activeChartId : '';
+        const activeChartId = safeCharts[rawActiveChartId] ? rawActiveChartId : safeChartIds[0];
+        const rawRows = Number(tab.rows);
+        const rawCols = Number(tab.cols);
+        const rows = Number.isFinite(rawRows) && rawRows > 0 ? Math.floor(rawRows) : 1;
+        const cols = Number.isFinite(rawCols) && rawCols > 0 ? Math.floor(rawCols) : 1;
+
+        safeTabs[tabId] = {
+            ...(tab as any),
+            id: typeof tab.id === 'string' && tab.id.trim() ? tab.id : tabId,
+            name: typeof tab.name === 'string' && tab.name.trim() ? tab.name : `Workspace ${Object.keys(safeTabs).length + 1}`,
+            charts: safeCharts,
+            activeChartId,
+            maximizedChartId: typeof tab.maximizedChartId === 'string' && safeCharts[tab.maximizedChartId] ? tab.maximizedChartId : null,
+            layoutMode: typeof tab.layoutMode === 'string' && tab.layoutMode.trim() ? tab.layoutMode : `${rows}x${cols}`,
+            rows,
+            cols,
+        } as any;
+    }
+
+    return Object.keys(safeTabs).length > 0 ? safeTabs : null;
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
     return Object.prototype.toString.call(value) === '[object Object]';
@@ -73,7 +157,7 @@ function buildApiUrl(clientId: string): string {
     return query ? `/api/user/state?${query}` : '/api/user/state';
 }
 
-function pickPersistedSetupState(state: RootState): PersistedSetupState {
+function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' | 'system'): PersistedSetupState {
     return {
         watchlist: state.watchlist,
         tabs: state.tabs,
@@ -92,6 +176,7 @@ function pickPersistedSetupState(state: RootState): PersistedSetupState {
             rightSidebarTabOrder: state.rightSidebarTabOrder,
             isDrawingToolbarVisible: state.isDrawingToolbarVisible,
             snapToCandle: state.snapToCandle,
+            themeMode,
         },
         terminal: {
             isTerminalVisible: state.isTerminalVisible,
@@ -113,8 +198,20 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
         }
         if (Array.isArray(persisted.alerts)) next.alerts = persisted.alerts;
 
-        if (isPlainObject(persisted.tabs)) next.tabs = persisted.tabs as RootState['tabs'];
-        if (typeof persisted.activeTabId === 'string' && (next.tabs || prev.tabs)[persisted.activeTabId]) {
+        const sanitizedTabs = sanitizeTabsInput(persisted.tabs);
+        if (sanitizedTabs) {
+            next.tabs = sanitizedTabs;
+            if (typeof persisted.activeTabId === 'string' && sanitizedTabs[persisted.activeTabId]) {
+                next.activeTabId = persisted.activeTabId;
+            } else {
+                next.activeTabId = Object.keys(sanitizedTabs)[0];
+            }
+        } else if (isPlainObject(persisted.tabs)) {
+            // Persisted tabs payload exists but is invalid/empty; keep app usable.
+            const fallbackTabs = createFallbackTabs();
+            next.tabs = fallbackTabs;
+            next.activeTabId = 'default-tab';
+        } else if (typeof persisted.activeTabId === 'string' && (next.tabs || prev.tabs)[persisted.activeTabId]) {
             next.activeTabId = persisted.activeTabId;
         }
 
@@ -156,15 +253,30 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
 }
 
 export function useUserSetupSync() {
+    const { theme, setTheme } = useTheme();
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
     const apiUrl = useMemo(() => (typeof window === 'undefined' ? '/api/user/state' : buildApiUrl(clientId)), [clientId]);
 
     const isReadyRef = useRef(false);
+    const hasInitializedRef = useRef(false);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const lastSavedRef = useRef('');
+    const themeRef = useRef<'light' | 'dark' | 'system' | undefined>(undefined);
+    const setThemeRef = useRef(setTheme);
 
     useEffect(() => {
+        themeRef.current = (theme === 'light' || theme === 'dark' || theme === 'system') ? theme : undefined;
+    }, [theme]);
+
+    useEffect(() => {
+        setThemeRef.current = setTheme;
+    }, [setTheme]);
+
+    useEffect(() => {
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
+
         let isDisposed = false;
 
         const loadInitialState = async () => {
@@ -180,13 +292,18 @@ export function useUserSetupSync() {
 
                 const data = (await response.json()) as UserStateApiResponse;
                 if (!isDisposed && isPlainObject(data.state)) {
+                    const persistedUi = isPlainObject((data.state as any).ui) ? (data.state as any).ui : null;
+                    const persistedThemeMode = persistedUi?.themeMode;
+                    if (persistedThemeMode === 'light' || persistedThemeMode === 'dark' || persistedThemeMode === 'system') {
+                        setThemeRef.current(persistedThemeMode);
+                    }
                     applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
                 }
             } catch {
                 // Ignore initial sync errors to avoid blocking UI.
             } finally {
                 if (isDisposed) return;
-                const initialSnapshot = pickPersistedSetupState(useMarketStore.getState());
+                const initialSnapshot = pickPersistedSetupState(useMarketStore.getState(), themeRef.current);
                 lastSavedRef.current = JSON.stringify(initialSnapshot);
                 isReadyRef.current = true;
             }
@@ -218,7 +335,9 @@ export function useUserSetupSync() {
         loadInitialState();
 
         const unsubscribe = useMarketStore.subscribe(
-            (state) => pickPersistedSetupState(state),
+            (state) => {
+                return pickPersistedSetupState(state, themeRef.current);
+            },
             (snapshot) => {
                 if (!isReadyRef.current) return;
             const serialized = JSON.stringify(snapshot);
@@ -238,7 +357,7 @@ export function useUserSetupSync() {
         // due middleware signature differences.
         saveIntervalRef.current = setInterval(() => {
             if (!isReadyRef.current) return;
-            const snapshot = pickPersistedSetupState(useMarketStore.getState());
+            const snapshot = pickPersistedSetupState(useMarketStore.getState(), themeRef.current);
             const serialized = JSON.stringify(snapshot);
             if (serialized === lastSavedRef.current) return;
             saveState(snapshot, serialized);
