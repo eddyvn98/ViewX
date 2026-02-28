@@ -1,0 +1,113 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMarketStore } from '@/lib/store';
+import { dispatchTagRemoveAction } from '../../logic/tag-command-dispatcher';
+import { TagData } from '../../logic/order-tag-utils';
+import { TagElements } from '../../logic/tag-renderer';
+
+function setupDraftGroupInteractions(elements: TagElements) {
+    elements.el.querySelector('.cancel-btn')?.addEventListener('pointerdown', (e) => {
+        (e as PointerEvent).stopPropagation();
+        (e as PointerEvent).preventDefault();
+        useMarketStore.getState().setDraftOrder(null);
+    });
+
+    elements.el.querySelector('.lot-minus')?.addEventListener('pointerdown', (e) => {
+        (e as PointerEvent).stopPropagation();
+        const { draftOrder, setDraftOrder } = useMarketStore.getState();
+        if (draftOrder) {
+            const newVal = Math.max(0.01, (draftOrder.volume || 0.01) - 0.01);
+            setDraftOrder({ ...draftOrder, volume: newVal });
+        }
+    });
+
+    elements.el.querySelector('.lot-plus')?.addEventListener('pointerdown', (e) => {
+        (e as PointerEvent).stopPropagation();
+        const { draftOrder, setDraftOrder } = useMarketStore.getState();
+        if (draftOrder) {
+            const newVal = (draftOrder.volume || 0.01) + 0.01;
+            setDraftOrder({ ...draftOrder, volume: newVal });
+        }
+    });
+
+    const lotBox = elements.el.querySelector('.lot-container') as HTMLElement;
+    if (lotBox) {
+        lotBox.setAttribute('data-draggable', 'true');
+        lotBox.setAttribute('data-type', 'volume');
+        lotBox.setAttribute('data-ticket', 'draft');
+    }
+
+    const tpBtn = elements.el.querySelector('.tp-btn') as HTMLElement;
+    if (tpBtn) {
+        tpBtn.setAttribute('data-draggable', 'true');
+        tpBtn.setAttribute('data-type', 'tp');
+        tpBtn.setAttribute('data-ticket', 'draft');
+    }
+
+    const slBtn = elements.el.querySelector('.sl-btn') as HTMLElement;
+    if (slBtn) {
+        slBtn.setAttribute('data-draggable', 'true');
+        slBtn.setAttribute('data-type', 'sl');
+        slBtn.setAttribute('data-ticket', 'draft');
+    }
+
+    const priceBox = elements.el.querySelector('.price-box') as HTMLElement;
+    if (priceBox) {
+        priceBox.setAttribute('data-draggable', 'true');
+        priceBox.setAttribute('data-type', 'entry');
+        priceBox.setAttribute('data-ticket', 'draft');
+    }
+
+    const tagBody = elements.el.querySelector('.tag-body') as HTMLElement;
+    if (tagBody) {
+        tagBody.setAttribute('data-draggable', 'true');
+        tagBody.setAttribute('data-type', 'entry');
+        tagBody.setAttribute('data-ticket', 'draft');
+    }
+}
+
+function setupDraftTagInteractions(elements: TagElements, tag: TagData) {
+    elements.el.querySelector('.cancel-btn')?.addEventListener('pointerdown', (e) => {
+        (e as PointerEvent).stopPropagation();
+        (e as PointerEvent).preventDefault();
+        const { draftOrder, setDraftOrder } = useMarketStore.getState();
+        if (!draftOrder) return;
+
+        const field = tag.type.includes('sl') ? 'sl' : 'tp';
+        setDraftOrder({ ...draftOrder, [field]: 0, [`${field}Touched`]: false });
+    });
+
+    if (elements.priceBox) {
+        elements.priceBox.setAttribute('data-draggable', 'true');
+        elements.priceBox.setAttribute('data-type', tag.type);
+        elements.priceBox.setAttribute('data-ticket', 'draft');
+    }
+
+    const tagBody = elements.el.querySelector('.tag-body') as HTMLElement;
+    if (tagBody) {
+        tagBody.setAttribute('data-draggable', 'true');
+        tagBody.setAttribute('data-type', tag.type);
+        tagBody.setAttribute('data-ticket', 'draft');
+    }
+}
+
+function setupRealTagInteractions(elements: TagElements, tag: TagData, sendMessage?: (data: any) => void) {
+    elements.el.querySelector('.cancel-btn')?.addEventListener('pointerdown', (e) => {
+        dispatchTagRemoveAction({ ticket: tag.ticket, type: tag.type }, sendMessage);
+        (e as PointerEvent).stopPropagation();
+        (e as PointerEvent).preventDefault();
+    });
+}
+
+export function setupTagInteractions(elements: TagElements, tag: TagData, sendMessage?: (data: any) => void) {
+    if (tag.type === 'draft_group') {
+        setupDraftGroupInteractions(elements);
+        return;
+    }
+
+    if (tag.ticket === 'draft') {
+        setupDraftTagInteractions(elements, tag);
+        return;
+    }
+
+    setupRealTagInteractions(elements, tag, sendMessage);
+}

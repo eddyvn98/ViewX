@@ -13,6 +13,7 @@ export interface ChartSlice {
     toggleMaximizeChart: (id: string | null) => void;
     setChartTimezone: (id: string, timezone: string) => void;
     setChartType: (id: string, type: ChartInstance['chartType']) => void;
+    toggleSubchartVisibility: (id: string, visible?: boolean) => void;
     favoriteTimeframes: string[];
     toggleFavoriteTimeframe: (timeframe: string) => void;
 }
@@ -164,6 +165,24 @@ export const createChartSlice: StateCreator<
             charts: {
                 ...activeTab.charts,
                 [id]: { ...activeTab.charts[id], chartType: type }
+            }
+        };
+
+        return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
+    }),
+
+    toggleSubchartVisibility: (id, visible) => set((state) => {
+        const activeTab = state.tabs[state.activeTabId];
+        if (!activeTab || !activeTab.charts[id]) return state;
+
+        const currentVisible = activeTab.charts[id].isSubchartVisible ?? false;
+        const newVisible = visible !== undefined ? visible : !currentVisible;
+
+        const updatedTab = {
+            ...activeTab,
+            charts: {
+                ...activeTab.charts,
+                [id]: { ...activeTab.charts[id], isSubchartVisible: newVisible }
             }
         };
 

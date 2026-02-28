@@ -1,5 +1,5 @@
 import { Time } from 'lightweight-charts';
-import { calculateHeikinAshi, calculateRSI, calculateEMA } from './indicator-math';
+import { calculateHeikinAshi } from './indicator-math';
 import { toSec } from './time-utils';
 
 export interface FormattedCandle {
@@ -9,11 +9,13 @@ export interface FormattedCandle {
     low: number;
     close: number;
     candleColor?: string;
+    theme?: 'light' | 'dark';
 }
 
 export function formatCandleData(
     candles: any[],
-    chartType: 'candles' | 'heikin_ashi' | 'smart_candles'
+    chartType: 'candles' | 'heikin_ashi' | 'smart_candles',
+    theme: string = 'dark'
 ): FormattedCandle[] {
     if (!candles || candles.length === 0) return [];
 
@@ -45,9 +47,16 @@ export function formatCandleData(
             high: Number(c.high),
             low: Number(c.low),
             close: Number(c.close),
-            candleColor: (c as any).candleColor || (c as any).color
+            candleColor: (c as any).candleColor || (c as any).color,
+            theme: theme as 'light' | 'dark'
         }))
+        .filter(c =>
+            Number.isFinite(Number(c.time)) &&
+            Number.isFinite(c.open) &&
+            Number.isFinite(c.high) &&
+            Number.isFinite(c.low) &&
+            Number.isFinite(c.close)
+        )
         .sort((a, b) => (Number(a.time) - Number(b.time)))
         .filter((item, index, array) => !index || item.time !== array[index - 1].time);
 }
-

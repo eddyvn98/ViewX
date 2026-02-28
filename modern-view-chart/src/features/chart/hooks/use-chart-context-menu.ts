@@ -43,6 +43,13 @@ export function useChartContextMenu(
             const nearAlert = getAlertNearPrice ? getAlertNearPrice(y, x) : undefined;
             const hitItem = getHitItem ? getHitItem(y, x) : null;
 
+            // 📱 On mobile, don't show the menu for "Add Alert" (empty space)
+            // Long-press often triggers this accidentally. Only show if hitting a position/order/alert.
+            const isMobile = window.innerWidth < 768;
+            if (isMobile && !nearAlert && !hitItem) {
+                return;
+            }
+
             setContextMenu({
                 visible: true,
                 x: e.clientX,

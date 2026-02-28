@@ -3,43 +3,22 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import {
     createChart,
-    BusinessDay,
     IChartApi,
     ISeriesApi,
-    Time,
     CandlestickSeries,
     LineSeries,
 } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { getPriceChartOptions, getSubChartOptions, getTimescaleOptions, initialMinW } from '../config/chart-options';
-import { createSyncLine, syncVerticalLines, autoSyncLayout } from '../logic/chart-sync';
-
-function normalizeCrosshairTime(value: Time | null | undefined): number | null {
-    if (value == null) return null;
-    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-
-    const candidate = value as Partial<BusinessDay & { timestamp?: unknown }>;
-    if (typeof candidate.timestamp === 'number' && Number.isFinite(candidate.timestamp)) {
-        return candidate.timestamp > 10000000000 ? Math.floor(candidate.timestamp / 1000) : candidate.timestamp;
-    }
-
-    if (
-        typeof candidate.year === 'number' &&
-        typeof candidate.month === 'number' &&
-        typeof candidate.day === 'number'
-    ) {
-        return Math.floor(Date.UTC(candidate.year, candidate.month - 1, candidate.day) / 1000);
-    }
-
-    return null;
-}
+import { createSyncLine, autoSyncLayout } from '../logic/chart-sync';
+import { setupCrosshairListeners } from './init/setup-crosshair-listeners';
 
 export function useChartInit(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
     subchartContainerRef: React.RefObject<HTMLDivElement | null>,
     timescaleContainerRef: React.RefObject<HTMLDivElement | null>,
     chartId: string,
-    theme: string = 'dark'
+    theme: string = 'dark',
 ) {
     const [isReady, setIsReady] = useState(false);
     const priceChartRef = useRef<IChartApi | null>(null);
@@ -52,10 +31,8 @@ export function useChartInit(
     const isAutoScrollEnabledRef = useRef(true);
     const themeColor = useMarketStore(state => state.themeColor);
 
-    // Dynamic Theme Update
     useEffect(() => {
         if (!isReady) return;
-
         if (priceChartRef.current && priceContainerRef.current) {
             priceChartRef.current.applyOptions(getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor));
         }
@@ -67,7 +44,6 @@ export function useChartInit(
         }
     }, [theme, themeColor, isReady]);
 
-    // Handle Symbol Digits Update
     const currentSymbol = useMarketStore(state => {
         const activeTab = state.tabs[state.activeTabId];
         return activeTab?.charts[chartId]?.symbol;
@@ -81,45 +57,29 @@ export function useChartInit(
         const minMove = 1 / Math.pow(10, digits);
 
         seriesRef.current.applyOptions({
-            priceFormat: {
-                type: 'price',
-                precision: digits,
-                minMove: minMove,
-            },
+            priceFormat: { type: 'price', precision: digits, minMove },
         });
 
         if (markerSeriesRef.current) {
             markerSeriesRef.current.applyOptions({
-                priceFormat: {
-                    type: 'price',
-                    precision: digits,
-                    minMove: minMove,
-                },
+                priceFormat: { type: 'price', precision: digits, minMove },
             });
         }
     }, [isReady, symbolInfo, chartId]);
 
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
+        let isDisposed = false;
+        const priceWidth = Math.max(1, Math.round(priceContainerRef.current.clientWidth || 1));
+        const priceHeight = Math.max(1, Math.round(priceContainerRef.current.clientHeight || 1));
+        const subWidth = Math.max(1, Math.round(subchartContainerRef.current.clientWidth || 1));
+        const subHeight = Math.max(1, Math.round(subchartContainerRef.current.clientHeight || 1));
+        const timeWidth = Math.max(1, Math.round(timescaleContainerRef.current.clientWidth || 1));
+        const timeHeight = Math.max(1, Math.round(timescaleContainerRef.current.clientHeight || 1));
 
-        // 1. Wait for container to have dimensions (Mobile Fix)
-        if (priceContainerRef.current.clientWidth === 0 || priceContainerRef.current.clientHeight === 0) {
-            // console.log("[ChartInit] Waiting for dimensions...");
-            const timer = setTimeout(() => {
-                // Force a re-render to check again
-                setIsReady(prev => !prev);
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-
-        /* ================= PRICE CHART ================= */
-        const priceChart = createChart(priceContainerRef.current, getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor));
-
-        /* ================= RSI SUBCHART ================= */
-        const subchartChart = createChart(subchartContainerRef.current, getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, themeColor));
-
-        /* ================= TIMESCALE FOOTER ================= */
-        const timescaleChart = createChart(timescaleContainerRef.current, getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, themeColor));
+        const priceChart = createChart(priceContainerRef.current, getPriceChartOptions(priceWidth, priceHeight, theme, themeColor));
+        const subchartChart = createChart(subchartContainerRef.current, getSubChartOptions(subWidth, subHeight, theme, themeColor));
+        const timescaleChart = createChart(timescaleContainerRef.current, getTimescaleOptions(timeWidth, timeHeight, theme, themeColor));
 
         const candleSeries = priceChart.addSeries(CandlestickSeries, {
             upColor: '#22c55e',
@@ -129,7 +89,7 @@ export function useChartInit(
             wickDownColor: '#ef4444',
             priceLineVisible: true,
             priceLineWidth: 1,
-            priceLineStyle: 2, // Dashed
+            priceLineStyle: 2,
         });
 
         const subSyncSeries = subchartChart.addSeries(LineSeries as any, { visible: false });
@@ -144,68 +104,25 @@ export function useChartInit(
             lastValueVisible: false,
         });
 
-        /* ================= DOM-BASED CROSSHAIR SYNC ================= */
         const priceLineEl = createSyncLine(priceContainerRef.current);
         const subLineEl = createSyncLine(subchartContainerRef.current);
         const footLineEl = createSyncLine(timescaleContainerRef.current);
 
-        const charts = { priceChart, subchartChart, timescaleChart };
-        const elements = { priceLineEl, subLineEl, footLineEl };
-        const series = { candleSeries, subSyncSeries, footSyncSeries, markerSeries };
+        const cleanupCrosshair = setupCrosshairListeners({
+            priceChart,
+            subchartChart,
+            timescaleChart,
+            chartId,
+            candleSeries,
+            subSyncSeries,
+            footSyncSeries,
+            markerSeries,
+            priceLineEl,
+            subLineEl,
+            footLineEl,
+            seriesRef,
+        });
 
-        // Cache last sync values
-        let lastSyncTime: number | null = null;
-        let lastSyncX: number | null = null;
-        let lastSyncY: number | null = null;
-        let lastSideEffectsAt = 0;
-
-        const handleCrosshairMove = (sourceChart: IChartApi, param: any, hasY: boolean) => {
-            const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
-            const normalizedTime = normalizeCrosshairTime(param.time);
-            syncVerticalLines(sourceChart, charts, elements, series as any, param.point?.x ?? null, normalizedTime, Number(logical ?? 0));
-
-            if (normalizedTime !== null && param.point) {
-                const curTime = normalizedTime;
-                const curX = param.point.x;
-                const curY = hasY ? param.point.y : 0;
-                const now = Date.now();
-
-                // THROTTLED SIDE EFFECTS
-                if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSideEffectsAt > 32)) {
-                    lastSyncTime = curTime;
-                    lastSyncX = curX;
-                    lastSyncY = curY;
-                    lastSideEffectsAt = now;
-
-                    const store = useMarketStore.getState();
-                    const logical = sourceChart.timeScale().coordinateToLogical(curX);
-
-                    const payload = {
-                        time: curTime,
-                        price: hasY ? Number(seriesRef.current?.coordinateToPrice(curY) ?? 0) : null,
-                        sourceId: chartId,
-                        point: { x: curX, y: curY },
-                        logical: logical !== null ? Number(logical) : null
-                    };
-
-                    store.syncCrosshair(payload);
-                    window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { ...payload, point: { x: curX, y: curY } } }));
-                }
-            } else if (!param.point && lastSyncTime !== null) {
-                lastSyncTime = null;
-                lastSyncX = null;
-                lastSyncY = null;
-                lastSideEffectsAt = 0;
-                useMarketStore.getState().syncCrosshair(null);
-                window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { time: null, sourceId: chartId } }));
-            }
-        };
-
-        priceChart.subscribeCrosshairMove((p) => handleCrosshairMove(priceChart, p, true));
-        subchartChart.subscribeCrosshairMove((p) => handleCrosshairMove(subchartChart, p, true));
-        timescaleChart.subscribeCrosshairMove((p) => handleCrosshairMove(timescaleChart, p, false));
-
-        /* ================= SYNC TIME RANGE ================= */
         const priceTS = priceChart.timeScale();
         const subTS = subchartChart.timeScale();
         const footTS = timescaleChart.timeScale();
@@ -224,41 +141,38 @@ export function useChartInit(
         subTS.subscribeVisibleLogicalRangeChange(syncTime);
         footTS.subscribeVisibleLogicalRangeChange(syncTime);
 
-        // Auto-scroll management: Disable if user scrolls left, re-enable if user scrolls back to right edge
         const handleScrollPosition = (range: any) => {
             if (!range) return;
             const dataCount = seriesRef.current?.data().length || 0;
             if (dataCount === 0) return;
-
-            // If the right edge of visibility is close to or beyond the last data point
-            // We use a small buffer (e.g., 2 bars) to ensure it triggers correctly
-            const isAtRightEdge = range.to >= dataCount - 2;
-            isAutoScrollEnabledRef.current = isAtRightEdge;
+            isAutoScrollEnabledRef.current = range.to >= dataCount - 2;
         };
-
         priceTS.subscribeVisibleLogicalRangeChange(handleScrollPosition);
 
-        /* ================= SYNC LAYOUT WIDTH ================= */
         let syncRequestId: number | null = null;
         let lastMaxW = initialMinW;
-
         const handleAutoSync = () => {
+            if (isDisposed) return;
             autoSyncLayout(
-                priceChart, subchartChart, timescaleChart,
-                priceContainerRef.current, subchartContainerRef.current,
-                initialMinW, lastMaxW, syncRequestId,
+                priceChart,
+                subchartChart,
+                timescaleChart,
+                priceContainerRef.current,
+                subchartContainerRef.current,
+                initialMinW,
+                lastMaxW,
+                syncRequestId,
                 (id) => { syncRequestId = id; },
-                (w) => { lastMaxW = w; }
+                (w) => { lastMaxW = w; },
             );
         };
 
         priceTS.subscribeVisibleLogicalRangeChange(handleAutoSync);
         subTS.subscribeVisibleLogicalRangeChange(handleAutoSync);
-
         setTimeout(handleAutoSync, 50);
 
         const syncChartSizes = () => {
-            // Force full raster refresh for crisp canvas text on DPR/viewport changes.
+            if (isDisposed) return;
             if (priceContainerRef.current && priceContainerRef.current.clientWidth > 0 && priceContainerRef.current.clientHeight > 0) {
                 const w = Math.max(1, Math.round(priceContainerRef.current.clientWidth));
                 const h = Math.max(1, Math.round(priceContainerRef.current.clientHeight));
@@ -277,18 +191,19 @@ export function useChartInit(
             handleAutoSync();
         };
 
-        const resizeObserver = new ResizeObserver(() => {
-            syncChartSizes();
-        });
-
+        const resizeObserver = new ResizeObserver(() => syncChartSizes());
         if (priceContainerRef.current) resizeObserver.observe(priceContainerRef.current);
-        // Also observe subchart container in case it changes independently
         if (subchartContainerRef.current) resizeObserver.observe(subchartContainerRef.current);
         if (timescaleContainerRef.current) resizeObserver.observe(timescaleContainerRef.current);
 
-        // Capture DPR changes (browser zoom / mobile viewport scale updates)
         window.addEventListener('resize', syncChartSizes);
         window.visualViewport?.addEventListener('resize', syncChartSizes);
+
+        // Force an initial size sync because ResizeObserver can miss the first paint
+        // when the container is absolutely positioned during mount.
+        syncChartSizes();
+        const initRafId = requestAnimationFrame(syncChartSizes);
+        const initTimeoutId = setTimeout(syncChartSizes, 80);
 
         priceChartRef.current = priceChart;
         subchartChartRef.current = subchartChart;
@@ -301,7 +216,11 @@ export function useChartInit(
         setIsReady(true);
 
         return () => {
+            isDisposed = true;
             setIsReady(false);
+            cleanupCrosshair();
+            clearTimeout(initTimeoutId);
+            cancelAnimationFrame(initRafId);
             if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
             resizeObserver.disconnect();
             window.removeEventListener('resize', syncChartSizes);
@@ -312,6 +231,13 @@ export function useChartInit(
             priceChart.remove();
             subchartChart.remove();
             timescaleChart.remove();
+            priceChartRef.current = null;
+            subchartChartRef.current = null;
+            timescaleChartRef.current = null;
+            seriesRef.current = null;
+            markerSeriesRef.current = null;
+            subSyncRef.current = null;
+            timescaleSyncRef.current = null;
         };
     }, [chartId]);
 
@@ -333,6 +259,6 @@ export function useChartInit(
         subSyncRef,
         timescaleSyncRef,
         syncRange,
-        isAutoScrollEnabledRef
+        isAutoScrollEnabledRef,
     }), [isReady, syncRange]);
 }

@@ -80,7 +80,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 ctx.save();
                 ctx.beginPath();
                 ctx.strokeStyle = globalLineColor || level.color;
-                ctx.lineWidth = Math.max(1, 1 * verticalPixelRatio);
+                ctx.lineWidth = Math.max(1, ((this._source._data as any)?.selected ? 2 : 1) * verticalPixelRatio);
 
                 // Solid for 0 and 1, dashed for others
                 if (level.ratio !== 0 && level.ratio !== 1) {
@@ -129,6 +129,55 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
 
                 ctx.restore();
             });
+
+            // Draw handles and delete button if selected
+            const selected = (this._source._data as any)?.selected;
+            if (selected) {
+                const p1Price = levels.find(l => l.ratio === 0)?.price ?? levels[0].price;
+                const p2Price = levels.find(l => l.ratio === 1)?.price ?? levels[levels.length - 1].price;
+
+                const y1 = series.priceToCoordinate(p1Price);
+                const y2 = series.priceToCoordinate(p2Price);
+
+                if (xStart !== null && y1 !== null && xEnd !== null && y2 !== null) {
+                    const midX = ((xStart + xEnd) / 2) * horizontalPixelRatio;
+                    const midY = ((y1 + y2) / 2) * verticalPixelRatio;
+
+                    // Delete button
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.arc(midX, midY, 10 * horizontalPixelRatio, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.lineWidth = 1 * horizontalPixelRatio;
+                    ctx.strokeStyle = globalLineColor || '#2962FF';
+                    ctx.stroke();
+
+                    const r = 3 * horizontalPixelRatio;
+                    ctx.beginPath();
+                    ctx.strokeStyle = globalLineColor || '#2962FF';
+                    ctx.lineWidth = 2 * horizontalPixelRatio;
+                    ctx.moveTo(midX - r, midY - r);
+                    ctx.lineTo(midX + r, midY + r);
+                    ctx.moveTo(midX + r, midY - r);
+                    ctx.lineTo(midX - r, midY + r);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Handles
+                    [{ x: xStart, y: y1 }, { x: xEnd, y: y2 }].forEach(p => {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.fillStyle = globalLineColor || '#2962FF';
+                        ctx.arc(p.x * horizontalPixelRatio, p.y * verticalPixelRatio, 3 * horizontalPixelRatio, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1 * horizontalPixelRatio;
+                        ctx.stroke();
+                        ctx.restore();
+                    });
+                }
+            }
         });
     }
 }

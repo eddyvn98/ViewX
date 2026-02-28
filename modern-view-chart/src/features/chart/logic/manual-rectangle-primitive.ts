@@ -94,6 +94,32 @@ class ManualRectanglePaneRenderer implements IPrimitivePaneRenderer {
                     }
                 });
                 ctx.restore();
+
+                // Draw delete button if selected
+                if (selected && points.length >= 2) {
+                    const midX = ((x1 + x2) / 2) * horizontalPixelRatio;
+                    const midY = ((y1 + y2) / 2) * verticalPixelRatio;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.arc(midX, midY, 10 * horizontalPixelRatio, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.lineWidth = 1 * horizontalPixelRatio;
+                    ctx.strokeStyle = color;
+                    ctx.stroke();
+
+                    const r = 3 * horizontalPixelRatio;
+                    ctx.beginPath();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2 * horizontalPixelRatio;
+                    ctx.moveTo(midX - r, midY - r);
+                    ctx.lineTo(midX + r, midY + r);
+                    ctx.moveTo(midX + r, midY - r);
+                    ctx.lineTo(midX - r, midY + r);
+                    ctx.stroke();
+                    ctx.restore();
+                }
             }
         });
     }

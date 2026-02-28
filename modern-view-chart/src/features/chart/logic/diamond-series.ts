@@ -22,6 +22,7 @@ interface DiamondData extends CustomData<Time> {
     isTentative?: boolean;
     breakoutRayHH?: number; // Price of the latest HH
     breakoutRayLL?: number; // Price of the latest LL
+    theme?: 'light' | 'dark';
 }
 
 class DiamondRenderer implements ICustomSeriesPaneRenderer {
@@ -121,40 +122,85 @@ class DiamondRenderer implements ICustomSeriesPaneRenderer {
                     const low = Math.round(lowY * verticalPixelRatio);
                     const close = Math.round(closeY * verticalPixelRatio);
 
-                    // Gradient Fill (Vertical)
-                    const gradient = ctx.createLinearGradient(0, high, 0, low);
+                    const barTheme = barData.theme || 'dark';
+                    const isLightMode = barTheme === 'light';
 
-                    let ratio = 0.5;
-                    if (low !== high) {
-                        ratio = (close - high) / (low - high);
-                        ratio = Math.max(0, Math.min(1, ratio));
+                    // 3D Horizontal Split Gradient for fast 3D folding effect
+                    const gradient = ctx.createLinearGradient(x - halfWidth, 0, x + halfWidth, 0);
+
+                    if (isLightMode) {
+                        // Light Mode: More solid, vivid colors with higher contrast
+                        gradient.addColorStop(0, color);
+                        gradient.addColorStop(0.5, color);
+                        // Right side slightly darker but NOT transparent
+                        gradient.addColorStop(0.501, color);
+                        gradient.addColorStop(1, color);
+
+                        ctx.fillStyle = gradient;
+                        ctx.save();
+                        ctx.globalAlpha = 1.0; // Full opacity in light mode to prevent "nhợt nhạt"
+                    } else {
+                        // Dark Mode: Keep the 3D folding effect with transparency
+                        gradient.addColorStop(0, color);
+                        gradient.addColorStop(0.5, color);
+                        gradient.addColorStop(0.501, color + '66'); // ~40% opacity 
+                        gradient.addColorStop(1, color + '66');
+
+                        ctx.fillStyle = gradient;
+                        ctx.save();
+                        ctx.globalAlpha = 0.85;
                     }
-
-                    // Sharper Gradient: Min opacity 60% at tips for visibility on Light Mode
-                    gradient.addColorStop(0, color + '99'); // 60%
-                    gradient.addColorStop(ratio, color);
-                    gradient.addColorStop(1, color + '99'); // 60%
-
-                    ctx.fillStyle = gradient;
-                    ctx.strokeStyle = color; // Solid stroke for sharp edges
 
                     ctx.beginPath();
                     // 4-Point Diamond (Close-centric)
-                    // 1. Top Point (High)
-                    ctx.moveTo(x, high);
-                    // 2. Right Point (Close)
-                    ctx.lineTo(x + halfWidth, close);
-                    // 3. Bottom Point (Low)
-                    ctx.lineTo(x, low);
-                    // 4. Left Point (Close)
-                    ctx.lineTo(x - halfWidth, close);
-                    // Back to Top
-                    ctx.lineTo(x, high);
-
+                    ctx.moveTo(x, high); // Top
+                    ctx.lineTo(x + halfWidth, close); // Right
+                    ctx.lineTo(x, low); // Bottom
+                    ctx.lineTo(x - halfWidth, close); // Left
+                    ctx.lineTo(x, high); // Back to top
                     ctx.fill();
-                    ctx.stroke();
+                    ctx.restore();
 
-                    // Keep candles crisp: skip extra faceted overlays that stack alpha and cause haze.
+                    // Neon Glowing Line at Close price
+                    ctx.save();
+
+                    if (isLightMode) {
+                        // Light Mode: Sharp, solid line with minimal glow to avoid washout
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 4;
+                        ctx.strokeStyle = '#FFFFFF'; // White center always looks good
+
+                        // Use a solid color or a very subtle gradient
+                        ctx.strokeStyle = color; // Use body color for the line itself
+                        ctx.shadowBlur = 2;
+
+                        // Solid core for visibility
+                        const lineGradient = ctx.createLinearGradient(x - halfWidth, close, x + halfWidth, close);
+                        lineGradient.addColorStop(0, color);
+                        lineGradient.addColorStop(0.5, '#FFFFFF');
+                        lineGradient.addColorStop(1, color);
+                        ctx.strokeStyle = lineGradient;
+                        ctx.lineWidth = Math.max(2.5, Math.round(verticalPixelRatio * 2));
+                    } else {
+                        // Dark Mode: Strong neon glow
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 8;
+                        const lineGradient = ctx.createLinearGradient(x - halfWidth, close, x + halfWidth, close);
+                        lineGradient.addColorStop(0, color);
+                        lineGradient.addColorStop(0.5, '#FFFFFF');
+                        lineGradient.addColorStop(1, color);
+                        ctx.strokeStyle = lineGradient;
+                        ctx.lineWidth = Math.max(2, Math.round(verticalPixelRatio * 1.5));
+                    }
+
+                    ctx.globalAlpha = 1.0;
+                    const crossHalf = Math.max(4, Math.floor(halfWidth * 1.0));
+
+                    ctx.beginPath();
+                    ctx.moveTo(x - crossHalf, close);
+                    ctx.lineTo(x + crossHalf, close);
+                    ctx.stroke();
+                    ctx.restore();
 
                     // Draw Marker Text (HH, HL, LL, LH)
                     if (barData.markerText) {

@@ -233,9 +233,29 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                     if (msgType === "mt5_candles" && Array.isArray(msg.candles)) {
                         const targetSymbol = msg.symbol;
                         const targetInterval = msg.interval;
+                        const normalizedCandles = msg.candles.map((c: any) => ({
+                            ...c,
+                            time: c.time ?? c.t ?? c.timestamp ?? c.datetime,
+                            open: c.open ?? c.o ?? c.open_price ?? c.price_open,
+                            high: c.high ?? c.h ?? c.high_price ?? c.price_high,
+                            low: c.low ?? c.l ?? c.low_price ?? c.price_low,
+                            close: c.close ?? c.c ?? c.close_price ?? c.price_close,
+                            volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
+                        }));
+                        if (process.env.NODE_ENV !== "production") {
+                            const sample = normalizedCandles[0];
+                            console.log("[WS][mt5_candles]", {
+                                symbol: targetSymbol,
+                                interval: targetInterval,
+                                count: normalizedCandles.length,
+                                source: msg.source,
+                                sampleTime: sample?.time,
+                                sampleOpen: sample?.open,
+                            });
+                        }
                         if (targetSymbol && targetInterval) {
                             const source = msg.source || "MT5";
-                            setCandles(source, targetSymbol, targetInterval, msg.candles);
+                            setCandles(source, targetSymbol, targetInterval, normalizedCandles);
                         }
                     }
 
@@ -551,6 +571,13 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
 
     const sendMessage = useCallback((data: any) => {
         if (globalSocket?.readyState === WebSocket.OPEN) {
+            if (process.env.NODE_ENV !== "production" && data?.command === "get_candles") {
+                console.log("[WS][send get_candles]", {
+                    symbol: data.symbol,
+                    interval: data.interval,
+                    count: data.count,
+                });
+            }
             globalSocket.send(JSON.stringify(data));
         }
     }, []);

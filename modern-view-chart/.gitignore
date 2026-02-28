@@ -70,3 +70,11 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# custom
+output/
+.tmp*
+*.err.log
+*.log
+tunnel*.txt
+cloudflared.exe

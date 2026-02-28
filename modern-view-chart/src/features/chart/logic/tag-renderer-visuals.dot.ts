@@ -30,10 +30,12 @@ export function updateDotTagVisuals(elements: TagElements, tag: TagData, context
 
     const isDotMarker = !!elements.priceBox?.classList.contains('dot-marker');
     if (!isDotMarker || !elements.priceBox) return;
-    const shouldRenderAsArrow = tag.type === 'entry' || !!elements.priceBox.classList.contains('arrow-marker');
-    if (shouldRenderAsArrow) {
-        elements.priceBox.classList.add('arrow-marker');
-    }
+    // Hard-disable legacy arrow overlay on dot tags.
+    // Existing DOM nodes can be reused across updates, so proactively remove stale arrow artifacts.
+    elements.priceBox.classList.remove('arrow-marker');
+    elements.priceBox.classList.remove('h-4', 'w-4', 'min-w-[16px]', 'rounded-none', 'border-0', 'bg-transparent', 'ring-0');
+    elements.priceBox.classList.add('h-3', 'w-3', 'min-w-[12px]', 'rounded-full', 'border-2', 'ring-1');
+    const shouldRenderAsArrow = false;
 
     const pStr = tag.price.toFixed(symbolInfo?.digits || 2);
 
@@ -70,19 +72,9 @@ export function updateDotTagVisuals(elements: TagElements, tag: TagData, context
         elements.priceBox.style.boxShadow = `0 0 0 1px ${tag.color}66, 0 0 4px ${tag.color}55`;
     }
 
-    let arrowGlyph = elements.el.querySelector('.arrow-glyph') as HTMLElement | null;
-    if (shouldRenderAsArrow && !arrowGlyph) {
-        arrowGlyph = document.createElement('span');
-        arrowGlyph.className = 'arrow-glyph text-[12px] font-black leading-none select-none';
-        elements.priceBox.appendChild(arrowGlyph);
-    }
+    const arrowGlyph = elements.el.querySelector('.arrow-glyph') as HTMLElement | null;
     if (arrowGlyph) {
-        const typeText = String(original.type || draftOrder?.type || '').toLowerCase();
-        arrowGlyph.textContent = typeText.includes('sell') ? '\u2193' : '\u2191';
-        arrowGlyph.style.color = tag.color;
-        arrowGlyph.style.display = shouldRenderAsArrow ? '' : 'none';
-        arrowGlyph.style.animation = shouldPulse && shouldRenderAsArrow ? 'mvx-dot-breathe 1.4s ease-in-out infinite' : '';
-        arrowGlyph.style.textShadow = shouldPulse && shouldRenderAsArrow ? `0 0 4px ${tag.color}55` : '';
+        arrowGlyph.remove();
     }
 
     const tagBody = elements.el.querySelector('.tag-body') as HTMLElement | null;

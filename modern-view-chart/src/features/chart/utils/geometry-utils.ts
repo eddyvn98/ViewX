@@ -41,29 +41,48 @@ export function distanceToSegment(x: number, y: number, x1: number, y1: number, 
  * Calculates the position for the delete button (visual 'X') on a selected drawing.
  */
 export function getDeleteButtonPosition(
-    drawing: ManualLineData,
+    drawing: any,
     timeScale: any,
     series: ISeriesApi<any>
-): { x: number, y: number } | null {
+): { x: number; y: number } | null {
     if (!drawing.points || drawing.points.length === 0) return null;
 
-    let x = null, y = null;
+    let x = null;
+    let y = null;
 
     if (drawing.type === 'horizontal-line') {
         const py = series.priceToCoordinate(drawing.points[0].price);
         if (py !== null) {
-            // Match the renderer logic: 50px from right edge
-            // Note: Renderer uses (width - 50) * pixelRatio.
-            // Here we return logical coordinates, so just width - 50.
             x = timeScale.width() - 50;
             y = py;
+        }
+    } else if (drawing.type === 'vertical-line') {
+        const px = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+        if (px !== null) {
+            x = px;
+            y = 80; // Match renderer (y=80) to avoid legend
+        }
+    } else if (drawing.type === 'crosshair') {
+        const px = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+        const py = series.priceToCoordinate(drawing.points[0].price);
+        if (px !== null && py !== null) {
+            x = px + 20;
+            y = py - 20;
+        }
+    } else if ((drawing.type === 'rectangle' || drawing.type.startsWith('fib-')) && drawing.points.length >= 2) {
+        const x1 = timeScale.timeToCoordinate(drawing.points[0].time as Time);
+        const y1 = series.priceToCoordinate(drawing.points[0].price);
+        const x2 = timeScale.timeToCoordinate(drawing.points[1].time as Time);
+        const y2 = series.priceToCoordinate(drawing.points[1].price);
+        if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
+            x = (x1 + x2) / 2;
+            y = (y1 + y2) / 2;
         }
     } else if (drawing.points.length >= 2) {
         const x1 = timeScale.timeToCoordinate(drawing.points[0].time as Time);
         const y1 = series.priceToCoordinate(drawing.points[0].price);
         const x2 = timeScale.timeToCoordinate(drawing.points[1].time as Time);
         const y2 = series.priceToCoordinate(drawing.points[1].price);
-
         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
             x = (x1 + x2) / 2;
             y = (y1 + y2) / 2;

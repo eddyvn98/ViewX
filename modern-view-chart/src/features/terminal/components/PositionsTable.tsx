@@ -86,18 +86,19 @@ function PositionsTableImpl({ positions = [], onClosePosition, onUpdatePosition,
         <table className="w-full text-[11px] text-left border-collapse min-w-[1000px]">
             <thead className="sticky top-0 bg-secondary/10 text-muted-foreground z-10 transition-colors">
                 <tr>
-                    <HeaderCell field="time" label="Time" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <HeaderCell field="symbol" label="Symbol" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <HeaderCell field="ticket" label="Ticket" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <HeaderCell field="magic" label="Magic" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="time" label="Time" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <HeaderCell field="type" label="Type" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <HeaderCell field="volume" label="Volume" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <HeaderCell field="open_price" label="Open P." sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <HeaderCell field="current_price" label="Current P." sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <HeaderCell field="sl" label="SL" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <HeaderCell field="tp" label="TP" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="open_price" label="Price" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="sl" label="S / L" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="tp" label="T / P" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <HeaderCell field="current_price" label="Price" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <HeaderCell field="profit" label="Profit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="p-2 font-medium border-b border-border">Actions</th>
+                    <HeaderCell field="magic" label="Magic" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                    <th className="p-2 font-medium border-b border-border">Comment</th>
+                    <th className="p-2 font-medium border-b border-border text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -208,14 +209,12 @@ const PositionRow = memo(function PositionRow({ pos, onClosePosition, onSymbolCl
         <tr className="hover:bg-blue-500/10 text-foreground border-b border-border/50"
             onMouseEnter={() => setHoveredTicket(pos.ticket)}
             onMouseLeave={() => setHoveredTicket(null)}>
-            <td className="p-2 whitespace-nowrap">{new Date(pos.time * 1000).toLocaleString()}</td>
             <td className="p-2 cursor-pointer hover:text-blue-400 font-medium" onClick={() => onSymbolClick(pos.symbol)}>{pos.symbol ?? '--'}</td>
             <td className="p-2">{pos.ticket ?? '--'}</td>
-            <td className="p-2">{pos.magic ?? 0}</td>
-            <td className={`p-2 font-bold ${(pos.type || '').toLowerCase() === 'buy' ? 'text-green-500' : 'text-red-500'}`}>{(pos.type || '--').toUpperCase()}</td>
+            <td className="p-2 whitespace-nowrap text-muted-foreground/80">{new Date(pos.time * 1000).toLocaleString()}</td>
+            <td className={`p-2 font-bold ${(pos.type || '').toLowerCase() === 'buy' ? 'text-green-500' : 'text-red-500'}`}>{(pos.type || '--').toLowerCase()}</td>
             <td className="p-2">{(pos.volume ?? 0).toFixed(2)}</td>
             <td className="p-2">{(pos.open_price ?? 0).toFixed(5)}</td>
-            <td ref={priceRef} className="p-2">{pos.current_price.toFixed(5)}</td>
             <td className="p-2">
                 {editingCell?.ticket === pos.ticket && editingCell.field === 'sl' ? (
                     <input autoFocus type="number" step="0.00001" className="w-20 bg-secondary text-foreground px-1 rounded border border-blue-500 outline-none"
@@ -236,9 +235,14 @@ const PositionRow = memo(function PositionRow({ pos, onClosePosition, onSymbolCl
                     </span>
                 )}
             </td>
+            <td ref={priceRef} className="p-2 font-medium">{pos.current_price.toFixed(5)}</td>
             <td ref={profitRef} className={`p-2 font-bold ${pos.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>{pos.profit.toFixed(2)}</td>
-            <td className="p-2">
-                <button onClick={() => onClosePosition(pos.ticket)} className="px-2 py-1 text-[10px] text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white transition-colors">Close</button>
+            <td className="p-2 text-muted-foreground/60">{pos.magic ?? 0}</td>
+            <td className="p-2 text-muted-foreground/40">--</td>
+            <td className="p-2 text-center">
+                <button onClick={() => onClosePosition(pos.ticket)} className="p-1 text-red-500/60 hover:text-red-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                </button>
             </td>
         </tr>
     );

@@ -11,6 +11,46 @@ import { calculateDynamicSwingPoints } from '@/features/chart/logic/candle-patte
 const EMPTY_CANDLES: any[] = [];
 const MIN_CANDLES_THRESHOLD = 150;
 
+type CandleLookup = { key: string; candles: any[] };
+
+const resolveCandles = (
+    state: ReturnType<typeof useMarketStore.getState>,
+    source: string | undefined,
+    normSymbol: string,
+    intervalCandidates: string[]
+): CandleLookup => {
+    if (!source || !normSymbol || intervalCandidates.length === 0) {
+        return { key: '', candles: EMPTY_CANDLES };
+    }
+
+    const exactSource = source.trim();
+    const sourceVariants = Array.from(new Set([exactSource, exactSource.toUpperCase(), exactSource.toLowerCase()]));
+    for (const src of sourceVariants) {
+        for (const itv of intervalCandidates) {
+            const key = `${src}:${normSymbol}:${itv}`;
+            const arr = state.candleData[key];
+            if (arr && arr.length > 0) {
+                return { key, candles: arr };
+            }
+        }
+    }
+
+    const symbolLower = normSymbol.toLowerCase();
+    const candidateSet = new Set(intervalCandidates.map((v) => String(v).toLowerCase()));
+    for (const [k, arr] of Object.entries(state.candleData)) {
+        if (!arr || arr.length === 0) continue;
+        const parts = k.split(':');
+        if (parts.length !== 3) continue;
+        const [src, sym, itv] = parts;
+        if (src.toLowerCase() !== exactSource.toLowerCase()) continue;
+        if (sym.toLowerCase() !== symbolLower) continue;
+        if (!candidateSet.has(itv.toLowerCase())) continue;
+        return { key: k, candles: arr };
+    }
+
+    return { key: `${exactSource}:${normSymbol}:${intervalCandidates[0]}`, candles: EMPTY_CANDLES };
+};
+
 interface UseChartHistoryProps {
     symbol: string | undefined;
     interval: string | undefined;
@@ -23,11 +63,12 @@ interface UseChartHistoryProps {
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     isReady: boolean;
+    theme: string;
     onHistoryLoaded: (lastCandle: any) => void;
 }
 
 export function useChartHistory(props: UseChartHistoryProps) {
-    const { symbol, interval, source, chartType, chartRef, subchartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, onHistoryLoaded } = props;
+    const { symbol, interval, source, chartType, chartRef, subchartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
@@ -40,10 +81,28 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
     const normSymbol = normalizeSymbol(symbol);
-    const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
+    const intervalCandidates = (() => {
+        const raw = String(interval || '').trim();
+        if (!raw) return [] as string[];
+        const out = new Set<string>([raw]);
 
-    const candlesCount = useMarketStore(state => (key ? (state.candleData[key]?.length || 0) : 0));
-    const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || EMPTY_CANDLES) : EMPTY_CANDLES);
+        const lower = raw.toLowerCase();
+        const m = lower.match(/^(\d+)m$/);
+        if (m) out.add(m[1]);
+        if (/^\d+$/.test(lower)) out.add(`${lower}m`);
+
+        const mt5 = lower.match(/^m(\d+)$/);
+        if (mt5) {
+            out.add(mt5[1]);
+            out.add(`${mt5[1]}m`);
+        }
+        return Array.from(out);
+    })();
+
+    const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
+    const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
+
+    const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
 
     useEffect(() => {
@@ -64,6 +123,15 @@ export function useChartHistory(props: UseChartHistoryProps) {
         if (!isReady || !symbol || !interval || !seriesRef.current) return;
 
         const currentCandles = getCandles();
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('[ChartHistory][candles]', {
+                symbol,
+                interval,
+                source,
+                intervalCandidates,
+                count: currentCandles.length,
+            });
+        }
         const isContextChange = key !== lastKeyRef.current;
 
         if (isContextChange) {
@@ -91,12 +159,26 @@ export function useChartHistory(props: UseChartHistoryProps) {
             handleSwitch(isContextChange, lastChartTypeRef.current);
             lastChartTypeRef.current = chartType;
 
-            const formatted = formatCandleData(currentCandles, chartType);
+            const formatted = formatCandleData(currentCandles, chartType, theme);
 
             // Fix: Re-check seriesRef.current after potential switch
             if (seriesRef.current) {
                 seriesRef.current.setData(formatted);
                 markerSeriesRef.current?.setData(formatted); // Sync timeline for markers
+                if (process.env.NODE_ENV !== 'production') {
+                    const first = formatted[0];
+                    const last = formatted[formatted.length - 1];
+                    const firstPrice = first ? `${first.open}/${first.high}/${first.low}/${first.close}` : '-';
+                    const lastPrice = last ? `${last.open}/${last.high}/${last.low}/${last.close}` : '-';
+                    console.log('[ChartHistory][setData]', {
+                        len: formatted.length,
+                        firstTime: first?.time,
+                        lastTime: last?.time,
+                        firstPrice,
+                        lastPrice,
+                        seriesType: (seriesRef.current as any)?.seriesType?.(),
+                    });
+                }
             }
 
             if (formatted.length > 0) {
@@ -143,7 +225,6 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 });
 
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                subchartRef.current?.priceScale('right').applyOptions({ autoScale: true });
             } catch (e) {
                 // Ignore transient errors during init
             }

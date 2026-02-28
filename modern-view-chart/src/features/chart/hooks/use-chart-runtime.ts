@@ -67,7 +67,8 @@ export function useChartRuntime(chartId: string) {
         subSyncRef,
         timescaleSyncRef,
         isReady,
-        isAutoScrollEnabledRef
+        isAutoScrollEnabledRef,
+        theme
     );
 
     const filteredPositions = useMemo(

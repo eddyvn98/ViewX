@@ -10,15 +10,20 @@ export function useChartLayoutEffects(
 ) {
     // Dynamic margin adjustment to keep candles above the subchart overlay
     useEffect(() => {
-        if (!priceChartRef.current) return;
+        const chart = priceChartRef.current;
+        if (!chart) return;
 
         const bottomMargin = isSubchartVisible ? 0.32 : 0.08; // 32% if overlay (25%) is visible
-        priceChartRef.current.priceScale('right').applyOptions({
-            scaleMargins: {
-                top: 0.08,
-                bottom: bottomMargin
-            }
-        });
+        try {
+            chart.priceScale('right').applyOptions({
+                scaleMargins: {
+                    top: 0.08,
+                    bottom: bottomMargin
+                }
+            });
+        } catch {
+            // Chart can be in transient dispose/recreate state during StrictMode + layout remount.
+        }
     }, [isSubchartVisible, priceChartRef]);
 
     // Apply Timezone to Chart Localization & Scale
@@ -59,17 +64,29 @@ export function useChartLayoutEffects(
             },
         };
 
-        priceChartRef.current.applyOptions(localizationOptions);
-        (priceChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+        try {
+            priceChartRef.current.applyOptions(localizationOptions);
+            (priceChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+        } catch {
+            // Ignore transient layout errors while chart instances are being recreated.
+        }
 
         if (subchartChartRef.current) {
-            subchartChartRef.current.applyOptions(localizationOptions);
-            (subchartChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+            try {
+                subchartChartRef.current.applyOptions(localizationOptions);
+                (subchartChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+            } catch {
+                // Ignore transient layout errors while chart instances are being recreated.
+            }
         }
 
         if (timescaleChartRef.current) {
-            timescaleChartRef.current.applyOptions(localizationOptions);
-            (timescaleChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+            try {
+                timescaleChartRef.current.applyOptions(localizationOptions);
+                (timescaleChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+            } catch {
+                // Ignore transient layout errors while chart instances are being recreated.
+            }
         }
     }, [timezone, priceChartRef, subchartChartRef, timescaleChartRef]);
 }

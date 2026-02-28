@@ -29,6 +29,14 @@ export class MACDIndicator {
                 visible: this.config.visible,
             });
 
+            this.chart.priceScale('right').applyOptions({
+                autoScale: true,
+            });
+
+            this.chart.priceScale('right').applyOptions({
+                autoScale: true,
+            });
+
             // MACD Line (Fast)
             this.macdSeries = this.chart.addSeries(LineSeries, {
                 color: macdColor,

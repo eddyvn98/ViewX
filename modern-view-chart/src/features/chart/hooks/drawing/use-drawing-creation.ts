@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { IChartApi, ISeriesApi, Time, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { ManualLinePrimitive } from '../../logic/manual-line-primitive';
@@ -124,10 +124,11 @@ export function useDrawingCreation(
             container.removeEventListener('mousemove', handleNativeMouseMove);
             cancelAnimationFrame(rafId);
         };
-    }, [chart, series, currentTool, tempPoints, themeColor]);
+    }, [chart, series, currentTool, tempPoints, themeColor, candles, snapToCandle]);
 
     // Click Handler (Placement)
-    const handleCreationClick = (param: MouseEventParams) => {
+    const handleCreationClick = useCallback((param: MouseEventParams) => {
+        void param; // Still use lastSnappedPointRef for precision/snapping
         if (currentTool === 'none' || !lastSnappedPointRef.current) return;
 
         const { time, price } = lastSnappedPointRef.current;
@@ -138,9 +139,8 @@ export function useDrawingCreation(
         // tempPoints is BEFORE this click, so +1
         if (tempPoints.length + 1 >= pointsNeeded) {
             finishDrawing(chartId);
-            // Reset logic handled by store usually, but we might need to ensure cleanup
         }
-    };
+    }, [currentTool, addDrawingPoint, tempPoints, finishDrawing, chartId]);
 
     return { handleCreationClick };
 }

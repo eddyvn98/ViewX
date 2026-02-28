@@ -148,25 +148,26 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
             {!forceExpanded && (
                 <div
                     className={cn(
-                        "flex items-center justify-between px-4 h-[44px] bg-secondary/10 border-b shrink-0 cursor-pointer hover:bg-secondary/30 transition-all group",
+                        "flex items-center justify-between px-3 h-[30px] bg-secondary/10 border-b shrink-0 cursor-pointer hover:bg-secondary/30 transition-all group",
                         !effectiveCollapsed ? "border-b-border/10" : "border-b-transparent"
                     )}
                     onClick={toggleCollapse}
                 >
-                    <div className="flex items-center gap-3">
-                        <span className={cn(
-                            "text-[11px] font-black uppercase tracking-[0.2em] transition-colors",
-                            !effectiveCollapsed ? "text-primary glow-primary" : "text-muted-foreground/60"
-                        )}>
-                            Trading Terminal
-                        </span>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div
                             className={cn(
-                                "w-2 h-2 rounded-full shadow-lg transition-all",
+                                "w-1.5 h-1.5 rounded-full shadow-lg shrink-0",
                                 isBridgeOnline ? "bg-emerald-500 shadow-emerald-500/40 animate-pulse" : "bg-rose-500 shadow-rose-500/40"
                             )}
                             title={isBridgeOnline ? "Bridge Connected" : "Bridge Disconnected"}
                         />
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                            {forceExpanded ? (
+                                <MobileAccountSummary account={account} />
+                            ) : (
+                                <AccountSummary account={account} />
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center gap-4">
                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest hidden group-hover:block transition-all opacity-0 group-hover:opacity-100 italic">
@@ -186,40 +187,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
             {!effectiveCollapsed && (
                 <div className="flex-1 flex flex-col min-h-0">
-                    {/* Fixed Top Section: Tabs & Account */}
-                    <div className={cn("shrink-0 pb-0", forceExpanded ? "p-1.5" : "p-3")}>
-                        {/* Tabs */}
-                        <div className={cn("flex items-center gap-6 border-b border-border/10 pb-0", forceExpanded ? "mb-1.5" : "mb-4")}>
-                            {['positions', 'orders', 'history'].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setTerminalTab(tab as any)}
-                                    className={cn(
-                                        "pb-2.5 text-[11px] font-black uppercase tracking-widest transition-all relative group",
-                                        terminalTab === tab
-                                            ? "text-primary"
-                                            : "text-muted-foreground/60 hover:text-foreground"
-                                    )}
-                                >
-                                    <span className="relative z-10">
-                                        {tab === 'positions' ? (forceExpanded ? `Pos (${positions.length})` : `Positions (${positions.length})`) :
-                                            tab === 'orders' ? (forceExpanded ? `Ord (${orders.length})` : `Orders (${orders.length})`) :
-                                                'History'}
-                                    </span>
-                                    {terminalTab === tab && (
-                                        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full shadow-glow animate-in fade-in slide-in-from-bottom-1" />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
 
-                        {/* Account Summary - Different for Mobile */}
-                        {forceExpanded ? (
-                            <MobileAccountSummary account={account} />
-                        ) : (
-                            <AccountSummary account={account} />
-                        )}
-                    </div>
 
                     {/* Scrollable Area - ANIMATED SLIDING TABS */}
                     <div
@@ -264,7 +232,8 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                             <div
                                 onScroll={forceExpanded ? handleScroll : undefined}
                                 className={cn(
-                                    "h-full flex-col p-3 pt-0 px-1 md:px-3 overflow-y-auto custom-scrollbar flex",
+                                    "h-full flex-col overflow-y-auto custom-scrollbar flex",
+                                    forceExpanded ? "p-2 pt-0" : "px-2 pt-0 pb-0",
                                     forceExpanded ? "w-full shrink-0" : (terminalTab === 'positions' ? 'w-full' : 'hidden')
                                 )}>
                                 {forceExpanded ? (
@@ -288,7 +257,8 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                             <div
                                 onScroll={forceExpanded ? handleScroll : undefined}
                                 className={cn(
-                                    "h-full flex-col p-3 pt-0 px-1 md:px-3 overflow-y-auto custom-scrollbar flex",
+                                    "h-full flex-col overflow-y-auto custom-scrollbar flex",
+                                    forceExpanded ? "p-2 pt-0" : "px-2 pt-0 pb-0",
                                     forceExpanded ? "w-full shrink-0" : (terminalTab === 'orders' ? 'w-full' : 'hidden')
                                 )}>
                                 {forceExpanded ? (
@@ -310,7 +280,8 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                             <div
                                 onScroll={forceExpanded ? handleScroll : undefined}
                                 className={cn(
-                                    "h-full flex-col p-3 pt-0 px-1 md:px-3 overflow-x-auto custom-scrollbar flex",
+                                    "h-full flex-col overflow-x-auto custom-scrollbar flex",
+                                    forceExpanded ? "p-2 pt-0" : "px-2 pt-0 pb-0",
                                     forceExpanded ? "w-full shrink-0" : (terminalTab === 'history' ? 'w-full' : 'hidden')
                                 )}>
                                 {forceExpanded ? (
@@ -329,6 +300,35 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                     />
                                 )}
                             </div>
+                        </div>
+                    </div>
+
+
+
+                    {/* Bottom Section: Tabs and meta info */}
+                    <div className={cn("shrink-0 border-t border-border/10 bg-background/20", forceExpanded ? "p-1" : "px-2 pb-0.5")}>
+                        <div className="flex items-center gap-6">
+                            {['positions', 'orders', 'history'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setTerminalTab(tab as any)}
+                                    className={cn(
+                                        "pt-0.5 pb-0.5 text-[10px] font-black uppercase tracking-widest transition-all relative group",
+                                        terminalTab === tab
+                                            ? "text-primary"
+                                            : "text-muted-foreground/60 hover:text-foreground"
+                                    )}
+                                >
+                                    <span className="relative z-10">
+                                        {tab === 'positions' ? `Positions (${positions.length})` :
+                                            tab === 'orders' ? `Orders (${orders.length})` :
+                                                'History'}
+                                    </span>
+                                    {terminalTab === tab && (
+                                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary rounded-b-full shadow-glow" />
+                                    )}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>

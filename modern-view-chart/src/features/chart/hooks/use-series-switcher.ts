@@ -9,26 +9,38 @@ interface UseSeriesSwitcherProps {
 
 export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesSwitcherProps) {
     const handleSwitch = (isContextChange: boolean, lastChartType: string) => {
-        if (!chartRef.current || !seriesRef.current) return;
+        const chart = chartRef.current;
+        if (!chart || !seriesRef.current) return;
 
         const isTypeChange = chartType !== lastChartType;
-        if (!isTypeChange && !isContextChange) return;
-
-        const isSmart = chartType === 'smart_candles';
         const currentIsDiamond = (seriesRef.current as any)?.seriesType?.() === 'Custom';
+        const needsDiamond = chartType === 'smart_candles';
+        const hasTypeMismatch = currentIsDiamond !== needsDiamond;
 
-        if (isSmart && !currentIsDiamond) {
-            console.log("[SeriesSwitcher] Switching to Diamond Series");
-            chartRef.current.removeSeries(seriesRef.current);
-            seriesRef.current = chartRef.current.addCustomSeries(new DiamondSeries(), {
+        if (!isTypeChange && !(isContextChange && hasTypeMismatch) && !hasTypeMismatch) return;
+
+        const latestSeries = seriesRef.current;
+        if (!latestSeries) return;
+        const latestIsDiamond = (latestSeries as any)?.seriesType?.() === 'Custom';
+        const latestMismatch = latestIsDiamond !== needsDiamond;
+
+        if (!isTypeChange && !latestMismatch) return;
+
+        console.log(`[SeriesSwitcher] Switching to ${needsDiamond ? 'Diamond' : 'Candlestick'} Series`);
+        try {
+            chart.removeSeries(latestSeries as any);
+        } catch {
+            // Error ignored during chart remount
+        }
+
+        if (needsDiamond) {
+            seriesRef.current = chart.addCustomSeries(new DiamondSeries(), {
                 priceLineVisible: true,
                 priceLineWidth: 1,
                 priceLineStyle: 2,
-            }) as any;
-        } else if (!isSmart && currentIsDiamond) {
-            console.log("[SeriesSwitcher] Switching back to Candlestick Series");
-            chartRef.current.removeSeries(seriesRef.current);
-            seriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
+            });
+        } else {
+            seriesRef.current = chart.addSeries(CandlestickSeries, {
                 borderVisible: false,
                 priceLineVisible: true,
                 priceLineWidth: 1,

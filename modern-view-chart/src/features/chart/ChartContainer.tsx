@@ -140,8 +140,14 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         sendMessage
     });
 
-    const [isSubchartVisible, setIsSubchartVisible] = useState(true);
-    useSubchartSwitcher(chartId, subchartContainerRef, subchartChartRef);
+    const isSubchartVisible = useMarketStore(state => {
+        const activeTab = state.tabs[state.activeTabId];
+        return activeTab?.charts[chartId]?.isSubchartVisible ?? true;
+    });
+    const toggleSubchartVisibility = useMarketStore(state => state.toggleSubchartVisibility);
+    const setIsSubchartVisible = (visible: boolean) => toggleSubchartVisibility(chartId, visible);
+
+    useSubchartSwitcher(chartId, subchartContainerRef);
 
     useChartLayoutEffects(
         priceChartRef,

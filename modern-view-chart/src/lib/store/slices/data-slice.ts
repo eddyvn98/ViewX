@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { Candle } from '../types';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export interface DataSlice {
     candleData: Record<string, Candle[]>;
@@ -10,12 +11,37 @@ export interface DataSlice {
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Candle) => void;
 }
 
-import { normalizeSymbol } from '@/lib/utils/symbol';
-
-// Normalize time to seconds for consistent comparison (handles both ms and sec formats)
+// Normalize time to seconds for consistent comparison (supports numeric and date-string input)
 const toSeconds = (t: any): number => {
-    const n = typeof t === 'object' ? (t as any).timestamp : Number(t);
-    return n > 10000000000 ? Math.floor(n / 1000) : n;
+    const raw = typeof t === 'object' ? (t as any)?.timestamp : t;
+    const n = Number(raw);
+    if (Number.isFinite(n)) {
+        return n > 10000000000 ? Math.floor(n / 1000) : n;
+    }
+
+    if (typeof raw === 'string') {
+        const parsed = Date.parse(raw);
+        if (Number.isFinite(parsed)) {
+            return Math.floor(parsed / 1000);
+        }
+    }
+
+    return NaN;
+};
+
+const normalizeCandle = (candle: Candle): Candle | null => {
+    const time = toSeconds((candle as any).time);
+    if (!Number.isFinite(time)) return null;
+
+    return {
+        ...(candle as any),
+        time,
+        open: Number((candle as any).open),
+        high: Number((candle as any).high),
+        low: Number((candle as any).low),
+        close: Number((candle as any).close),
+        volume: Number((candle as any).volume ?? 0),
+    } as Candle;
 };
 
 export const createDataSlice: StateCreator<DataSlice> = (set) => ({
@@ -23,13 +49,20 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
     isCrosshairSyncEnabled: true,
 
     setCrosshairSync: (enabled) => set({ isCrosshairSyncEnabled: enabled }),
-    syncCrosshair: () => { }, // No longer store in state to prevent global re-renders
+    syncCrosshair: () => { }, // Kept for compatibility; no state update to avoid global re-renders.
 
     setCandles: (source, symbol, interval, data) => set((state) => {
         const normSymbol = normalizeSymbol(symbol);
         const key = `${source}:${normSymbol}:${interval}`;
+        const normalized = (Array.isArray(data) ? data : [])
+            .map(normalizeCandle)
+            .filter((c): c is Candle => c !== null);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('[DataSlice][setCandles]', { key, count: normalized.length });
+        }
+
         return {
-            candleData: { ...state.candleData, [key]: data }
+            candleData: { ...state.candleData, [key]: normalized }
         };
     }),
 
@@ -37,22 +70,22 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const normSymbol = normalizeSymbol(symbol);
         const key = `${source}:${normSymbol}:${interval}`;
         const currentCandles = state.candleData[key] || [];
+        const normalizedCandle = normalizeCandle(candle);
+        if (!normalizedCandle) return state;
+
         const last = currentCandles[currentCandles.length - 1];
-
-        // ⚡ FIX: Compare NORMALIZED seconds to prevent append-spam from format mismatch
-        if (last && toSeconds(last.time) === toSeconds(candle.time)) {
-            // Cập nhật nến hiện tại: Thay thế phần tử cuối
+        // Compare normalized seconds to prevent append-spam from ms/sec mismatch.
+        if (last && toSeconds(last.time) === toSeconds(normalizedCandle.time)) {
             const newCandles = [...currentCandles];
-            newCandles[newCandles.length - 1] = candle;
-            return { candleData: { ...state.candleData, [key]: newCandles } };
-        } else {
-            // Thêm nến mới: Giới hạn tối đa 2000 nến để bảo vệ RAM
-            const MAX_CANDLES = 2000;
-            const newCandles = currentCandles.length >= MAX_CANDLES
-                ? [...currentCandles.slice(1), candle]
-                : [...currentCandles, candle];
-
+            newCandles[newCandles.length - 1] = normalizedCandle;
             return { candleData: { ...state.candleData, [key]: newCandles } };
         }
+
+        const MAX_CANDLES = 2000;
+        const newCandles = currentCandles.length >= MAX_CANDLES
+            ? [...currentCandles.slice(1), normalizedCandle]
+            : [...currentCandles, normalizedCandle];
+
+        return { candleData: { ...state.candleData, [key]: newCandles } };
     }),
 });

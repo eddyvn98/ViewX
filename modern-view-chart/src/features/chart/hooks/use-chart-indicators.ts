@@ -1,38 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { Candle, useMarketStore, IndicatorConfig } from '@/lib/store';
+import { Candle, useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
-import { EMAIndicator } from '../indicators/EMAIndicator';
-import { HMAIndicator } from '../indicators/HMAIndicator';
-import { RSIIndicator } from '../indicators/RSIIndicator';
-import { SignalIndicator } from '../indicators/SignalIndicator';
-import { MarketStructureIndicator } from '../indicators/MarketStructureIndicator';
-import { BreakoutRaysIndicator } from '../indicators/BreakoutRaysIndicator';
 import { chartWorkerClient } from '@/workers/worker-client';
-import { MACDIndicator } from '../indicators/MACDIndicator';
 import { normalizeSymbol } from '@/lib/utils/symbol';
-import { TrendLineIndicator } from '../indicators/TrendLineIndicator';
-import { FibonacciIndicator } from '../indicators/FibonacciIndicator';
-import { FibonacciExtensionIndicator } from '../indicators/FibonacciExtensionIndicator';
-import { ATRIndicator } from '../indicators/ATRIndicator';
-import { BollingerBandsIndicator } from '../indicators/BollingerBandsIndicator';
-import { StochasticIndicator } from '../indicators/StochasticIndicator';
-import { SuperTrendIndicator } from '../indicators/SuperTrendIndicator';
-import { VWAPIndicator } from '../indicators/VWAPIndicator';
-import { IchimokuIndicator } from '../indicators/IchimokuIndicator';
-import { ADXIndicator } from '../indicators/ADXIndicator';
-import { OrderBlockIndicator } from '../indicators/OrderBlockIndicator';
-import { FVGIndicator } from '../indicators/FVGIndicator';
-import { SARIndicator } from '../indicators/SARIndicator';
+import { DEFAULT_CHART_INDICATORS } from './indicators/default-indicators';
+import { formatCandles, buildLiveCandle } from './indicators/indicator-candle-utils';
+import { createIndicatorInstance } from './indicators/sync-indicator-series';
 
 const EMPTY_INDICATORS: any[] = [];
-
-/* ❌ FIX 1: KHÔNG offset time lần nữa (đã offset ở data layer) */
-const formatCandles = (candles: Candle[]) =>
-    candles.map(c => ({
-        ...c,
-        time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
-    }));
 
 export function useChartIndicators(
     chartId: string,
@@ -47,11 +23,12 @@ export function useChartIndicators(
     timezone: string | undefined,
     syncRange: () => void,
     currentPrice?: number,
-    isReady?: boolean
+    isReady?: boolean,
 ) {
-    const indicators = useMarketStore(
-        useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS)
-    );
+    void timezone;
+    void currentPrice;
+
+    const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
     const addIndicators = useMarketStore(state => state.addIndicators);
 
     const instancesRef = useRef<Record<string, any>>({});
@@ -61,202 +38,70 @@ export function useChartIndicators(
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
     const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || []) : []);
 
-    /* ===== DEFAULT INDICATORS ===== */
     useEffect(() => {
         if (!symbol || defaultsAppliedRef.current || indicators.length > 0) return;
-
-        addIndicators(chartId, [
-            { type: 'EMA', params: { period: 25 }, color: '#9c27b0', visible: true, lineWidth: 1, pane: 'main' },
-            { type: 'HMA', params: { period: 25 }, color: '#00bcd4', visible: true, lineWidth: 2, pane: 'main' },
-            { type: 'RSI', params: { period: 14 }, color: '#f06292', visible: true, lineWidth: 2, pane: 'subchart' },
-            { type: 'MACD', params: { fast: 12, slow: 26, signal: 9 }, color: '#2962FF', visible: false, lineWidth: 1, pane: 'subchart' },
-            { type: 'MARKET_STRUCTURE', params: { depth: 7 }, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
-            { type: 'BREAKOUT_RAYS', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
-            { type: 'TREND_LINES', params: {}, color: '#ffffff', visible: true, lineWidth: 1, pane: 'main' },
-            {
-                type: 'FIBONACCI',
-                params: {
-                    depth: 7,
-                    showPercent: true,
-                    showPrice: true,
-                    levels: {
-                        '0': true,
-                        '0.236': true,
-                        '0.382': false,
-                        '0.5': true,
-                        '0.618': true,
-                        '0.786': false,
-                        '1.0': true
-                    }
-                },
-                color: '#ffffff',
-                visible: false,
-                lineWidth: 1,
-                pane: 'main'
-            },
-            {
-                type: 'FIBONACCI_EXTENSION',
-                params: {
-                    depth: 7,
-                    showPercent: true,
-                    showPrice: true,
-                    levels: {
-                        '0': true,
-                        '0.236': true,
-                        '0.382': true,
-                        '0.5': true,
-                        '0.618': true,
-                        '0.786': true,
-                        '1.0': true,
-                        '1.618': true,
-                        '2.618': true
-                    }
-                },
-                color: '#ffffff',
-                visible: false,
-                lineWidth: 1,
-                pane: 'main'
-            },
-        ]);
-
+        addIndicators(chartId, DEFAULT_CHART_INDICATORS as any);
         defaultsAppliedRef.current = true;
     }, [chartId, symbol, indicators.length, addIndicators]);
 
-    /* ===== UPDATE INDICATORS (OPTIMIZED) ===== */
     const lastBarTimeRef = useRef<number>(0);
-    const stableCandlesRef = useRef<any[]>([]); // Cache for formatted closed candles
+    const stableCandlesRef = useRef<any[]>([]);
     const lastKeyRef = useRef<string>('');
 
-    // ⚡ CRITICAL: Use the proper source for this specific chart
-    // We can find it from the chartInstance in the store
-    const chartInstance = useMarketStore(useShallow(state => {
-        for (const tab of Object.values(state.tabs)) {
-            if (tab.charts[chartId]) return tab.charts[chartId];
-        }
-        return null;
-    }));
-
-    const chartSource = chartInstance?.source || 'MT5';
-    const chartInterval = chartInstance?.interval || '1m';
-    const tickerKey = symbol ? `${chartSource}:${normSymbol}` : '';
-
-    /* ===== EFFECT 1: RESET ON CONTEXT CHANGE ===== */
     useEffect(() => {
         if (!isReady || !symbol) return;
-
-        // ✅ CRITICAL: Reset indicators immediately when context changes
         if (key !== lastKeyRef.current) {
-            console.log(`[Indicators] Context change detected: ${key}`);
             lastKeyRef.current = key;
             lastBarTimeRef.current = 0;
             stableCandlesRef.current = [];
-
-            // ✅ IMPROVED: Force destroy ALL instances
-            const instanceIds = Object.keys(instancesRef.current);
-            if (instanceIds.length > 0) {
-                console.log(`[Indicators] Destroying ${instanceIds.length} instances...`);
-                instanceIds.forEach(id => {
-                    try {
-                        instancesRef.current[id]?.destroy?.();
-                        console.log(`[Indicators] ✓ Destroyed: ${id}`);
-                    } catch (err) {
-                        console.warn(`[Indicators] ✗ Cleanup failed for ${id}:`, err);
-                    }
-                });
-                instancesRef.current = {};
-                console.log(`[Indicators] Reset complete`);
-            }
+            Object.keys(instancesRef.current).forEach(id => {
+                try { instancesRef.current[id]?.destroy?.(); } catch { }
+            });
+            instancesRef.current = {};
         }
-    }, [key, isReady, chartId, symbol]); // ✅ Aggressive reset on readiness or context change
+    }, [key, isReady, chartId, symbol]);
 
-    /* ===== EFFECT 2: UPDATE INDICATORS (WITH DEBOUNCE) ===== */
     const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     useEffect(() => {
-        // Clear previous timeout for debouncing
-        if (updateTimeoutRef.current) {
-            clearTimeout(updateTimeoutRef.current);
-        }
+        if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !markerSeriesRef.current || !symbol) return;
+        if (candles.length === 0) return;
 
-        // ✅ Early returns for safety
-        if (!isReady || !priceChartRef.current || !subchartChartRef.current || !seriesRef.current || !markerSeriesRef.current || !symbol) {
-            return;
-        }
-
-        // ✅ Wait for candles to be available
-        if (candles.length === 0) {
-            console.log('[Indicators] Waiting for candles...');
-            return;
-        }
-
-        // ✅ Debounce rapid updates by 100ms
         updateTimeoutRef.current = setTimeout(() => {
             const lastBar = candles[candles.length - 1];
-            if (!lastBar) return; // Safety check
+            if (!lastBar) return;
 
             const lastTime = (typeof lastBar.time === 'object' ? (lastBar.time as any).timestamp : Number(lastBar.time)) || 0;
             const isNewBar = lastTime !== lastBarTimeRef.current;
 
-            // Update stable candles cache only on new bar or first load
             if (isNewBar || stableCandlesRef.current.length === 0) {
                 lastBarTimeRef.current = lastTime;
                 stableCandlesRef.current = formatCandles(candles);
-                console.log(`[Indicators] Updated stable candles: ${stableCandlesRef.current.length} candles`);
             }
 
             const currentIds = new Set(indicators.map(i => i.id));
-
-            // 1. Cleanup old OR hidden instances
             Object.keys(instancesRef.current).forEach(id => {
                 const config = indicators.find(i => i.id === id);
                 if (!currentIds.has(id) || (config && !config.visible)) {
                     instancesRef.current[id].destroy();
                     delete instancesRef.current[id];
-                    console.log(`[Indicators] Removed: ${id}`);
                 }
             });
 
-            // 2. Identify visible indicators that need updates
             const visibleIndicators = indicators.filter(i => i.visible);
             const needsUpdate = isNewBar || stableCandlesRef.current.length === candles.length;
-
             const indicatorsToCalculate: any[] = [];
+
             visibleIndicators.forEach(config => {
                 let instance = instancesRef.current[config.id];
                 if (!instance) {
-                    const isSubchart = config.pane === 'subchart';
-                    const targetChart = isSubchart ? subchartChartRef.current! : priceChartRef.current!;
-
-                    switch (config.type) {
-                        case 'EMA': instance = new EMAIndicator(targetChart, config); break;
-                        case 'HMA': instance = new HMAIndicator(targetChart, config); break;
-                        case 'RSI': instance = new RSIIndicator(targetChart, config); break;
-                        case 'MACD': instance = new MACDIndicator(targetChart, config); break;
-                        case 'BREAKOUT_RAYS':
-                        case 'BreakoutRays': instance = new BreakoutRaysIndicator(markerSeriesRef.current as any, config); break;
-                        case 'TREND_LINES':
-                        case 'TrendLines': instance = new TrendLineIndicator(markerSeriesRef.current as any, config); break;
-                        case 'MARKET_STRUCTURE':
-                        case 'MarketStructure': instance = new MarketStructureIndicator(markerSeriesRef.current as any, config); break;
-                        case 'FIBONACCI':
-                        case 'Fibonacci': instance = new FibonacciIndicator(markerSeriesRef.current as any, config); break;
-                        case 'FIBONACCI_EXTENSION':
-                        case 'FibonacciExtension': instance = new FibonacciExtensionIndicator(markerSeriesRef.current as any, config); break;
-                        case 'ATR': instance = new ATRIndicator(subchartChartRef.current!, config); break;
-                        case 'BollingerBands':
-                        case 'BOLLINGER_BANDS': instance = new BollingerBandsIndicator(priceChartRef.current!, config); break;
-                        case 'Stochastic':
-                        case 'STOCHASTIC': instance = new StochasticIndicator(subchartChartRef.current!, config); break;
-                        case 'SuperTrend':
-                        case 'SUPERTREND': instance = new SuperTrendIndicator(priceChartRef.current!, config); break;
-                        case 'VWAP': instance = new VWAPIndicator(priceChartRef.current!, config); break;
-                        case 'Ichimoku':
-                        case 'ICHIMOKU': instance = new IchimokuIndicator(priceChartRef.current!, config); break;
-                        case 'ADX': instance = new ADXIndicator(subchartChartRef.current!, config); break;
-                        case 'OrderBlock': instance = new OrderBlockIndicator(priceChartRef.current!, seriesRef.current!, config); break;
-                        case 'FVG': instance = new FVGIndicator(priceChartRef.current!, seriesRef.current!, config); break;
-                        case 'SAR': instance = new SARIndicator(priceChartRef.current!, config); break;
-                    }
+                    instance = createIndicatorInstance(config, {
+                        priceChart: priceChartRef.current!,
+                        subchartChart: subchartChartRef.current!,
+                        series: seriesRef.current!,
+                        markerSeries: markerSeriesRef.current!,
+                    });
                     if (instance) {
                         instancesRef.current[config.id] = instance;
                         instance._lastConfigJson = JSON.stringify(config);
@@ -273,22 +118,16 @@ export function useChartIndicators(
                 }
             });
 
-            // 3. Offload to Worker if needed
             if (indicatorsToCalculate.length > 0) {
-                console.log(`[Indicators] Batch calculating ${indicatorsToCalculate.length} items in worker...`);
                 chartWorkerClient.calculateBatch(indicatorsToCalculate, stableCandlesRef.current)
                     .then(results => {
                         const resultsMap = new Map(results.map((r: any) => [r.id, r.values]));
                         indicatorsToCalculate.forEach(config => {
                             const instance = instancesRef.current[config.id];
-                            if (instance) {
-                                instance.update(stableCandlesRef.current, config, resultsMap.get(config.id));
-                            }
+                            if (instance) instance.update(stableCandlesRef.current, config, resultsMap.get(config.id));
                         });
                     })
-                    .catch(err => {
-                        console.error('[Indicators] Worker Batch Error:', err);
-                        // Fallback to sync
+                    .catch(() => {
                         indicatorsToCalculate.forEach(config => {
                             const instance = instancesRef.current[config.id];
                             if (instance) instance.update(stableCandlesRef.current, config);
@@ -296,32 +135,24 @@ export function useChartIndicators(
                     });
             }
 
-            // Sync timescale if subchart exists
-            if (indicators.some(i => i.pane === 'subchart' && i.visible)) {
-                requestAnimationFrame(() => syncRange());
-            }
-        }, 100); // ✅ 100ms debounce
+            if (indicators.some(i => i.pane === 'subchart' && i.visible)) requestAnimationFrame(() => syncRange());
+        }, 100);
 
         return () => {
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-            }
+            if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
         };
-    }, [
-        isReady,
-        candles.length,      // ✅ Track length for updates
-        key,                 // ✅ Track context changes
-        indicators,          // ✅ Track full array (shallow) to detect visibility changes
-        symbol,
-        interval,
-        priceChartRef,
-        subchartChartRef,
-        seriesRef,
-        markerSeriesRef,
-        syncRange,
-    ]);
+    }, [isReady, candles.length, key, indicators, symbol, interval, priceChartRef, subchartChartRef, seriesRef, markerSeriesRef, syncRange]);
 
-    // ⚡ SEPARATE EFFECT FOR REAL-TIME PRICE UPDATES (OPTIMIZED & THROTTLED)
+    const chartInstance = useMarketStore(useShallow(state => {
+        for (const tab of Object.values(state.tabs)) {
+            if (tab.charts[chartId]) return tab.charts[chartId];
+        }
+        return null;
+    }));
+
+    const chartSource = chartInstance?.source || 'MT5';
+    const tickerKey = symbol ? `${chartSource}:${normSymbol}` : '';
+
     useEffect(() => {
         if (!isReady || !symbol || !tickerKey) return;
 
@@ -339,62 +170,15 @@ export function useChartIndicators(
                 if (rafId) cancelAnimationFrame(rafId);
                 rafId = requestAnimationFrame(() => {
                     Object.values(instancesRef.current).forEach(instance => {
-                        if (instance.updateLastPoint) {
-                            const currentCandles = getCandles();
-                            const lastIdx = currentCandles.length - 1;
+                        if (!instance.updateLastPoint) return;
+                        const currentCandles = getCandles();
+                        const lastIdx = currentCandles.length - 1;
+                        if (lastIdx < 0 || !currentCandles[lastIdx]) return;
 
-                            if (lastIdx >= 0 && currentCandles[lastIdx]) {
-                                const baseCandle = currentCandles[lastIdx];
-                                const currentPrice = Number(price);
-
-                                // Parse interval to calculate correct time
-                                let intervalSeconds = 60;
-                                if (interval) {
-                                    const unit = interval.slice(-1);
-                                    const val = parseInt(interval);
-                                    if (unit === 'm') intervalSeconds = val * 60;
-                                    else if (unit === 'h' || unit === 'H') intervalSeconds = val * 3600;
-                                    else if (unit === 'd' || unit === 'D') intervalSeconds = val * 86400;
-                                    else if (unit === 'w' || unit === 'W') intervalSeconds = val * 604800;
-                                    else if (!isNaN(Number(interval))) intervalSeconds = Number(interval) * 60;
-                                }
-
-                                const lastCandleTime = typeof baseCandle.time === 'object' ? (baseCandle.time as any).timestamp : Number(baseCandle.time);
-
-                                // Heuristic: If time > 10 billion, it's Milliseconds
-                                const isMillis = lastCandleTime > 10000000000;
-                                const lastCandleTimeSec = isMillis ? Math.floor(lastCandleTime / 1000) : lastCandleTime;
-
-                                const nowSec = Math.floor(Date.now() / 1000);
-                                const currentIntervalStartSec = Math.floor(nowSec / intervalSeconds) * intervalSeconds;
-
-                                let candleToUpdate;
-
-                                // ⚡ CLIENT-SIDE NEW BAR DETECTION FOR INDICATORS
-                                if (currentIntervalStartSec > lastCandleTimeSec) {
-                                    const newTime = isMillis ? currentIntervalStartSec * 1000 : currentIntervalStartSec;
-                                    // New Bar Mode: projected candle
-                                    candleToUpdate = {
-                                        time: newTime as any,
-                                        open: currentPrice,
-                                        high: currentPrice,
-                                        low: currentPrice,
-                                        close: currentPrice,
-                                        volume: 0
-                                    };
-                                } else {
-                                    // Update Existing Mode
-                                    candleToUpdate = {
-                                        ...baseCandle,
-                                        close: currentPrice,
-                                        high: Math.max(baseCandle.high || currentPrice, currentPrice),
-                                        low: Math.min(baseCandle.low || currentPrice, currentPrice)
-                                    };
-                                }
-
-                                instance.updateLastPoint(candleToUpdate, currentCandles);
-                            }
-                        }
+                        const baseCandle = currentCandles[lastIdx];
+                        const currentLivePrice = Number(price);
+                        const candleToUpdate = buildLiveCandle(baseCandle, currentLivePrice, interval);
+                        instance.updateLastPoint(candleToUpdate, currentCandles);
                     });
                 });
             }
@@ -406,15 +190,10 @@ export function useChartIndicators(
         };
     }, [isReady, symbol, tickerKey, chartId, interval]);
 
-
-
-    /* ===== CLEANUP ===== */
     useEffect(() => {
         return () => {
             Object.values(instancesRef.current).forEach(inst => {
-                try {
-                    inst?.destroy?.();
-                } catch { }
+                try { inst?.destroy?.(); } catch { }
             });
             instancesRef.current = {};
         };

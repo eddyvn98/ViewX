@@ -8,28 +8,7 @@ export class RSIIndicator {
     private lowerLine: any = null;
     private latestRsiValue = 50;
 
-    private getDynamicRange() {
-        const center = Number.isFinite(this.latestRsiValue) ? this.latestRsiValue : 50;
-        const minValue = Math.max(0, center - 20);
-        const maxValue = Math.min(100, center + 20);
-        return { minValue, maxValue };
-    }
 
-    private applyDynamicScale() {
-        const { minValue, maxValue } = this.getDynamicRange();
-        const scale = this.chart.priceScale('right') as any;
-        try {
-            scale.applyOptions?.({
-                visible: true,
-                autoScale: false,
-                scaleMargins: { top: 0.1, bottom: 0.1 },
-                borderVisible: true,
-            });
-            scale.setVisibleRange?.({ from: minValue, to: maxValue });
-        } catch {
-            // Ignore transient price scale errors while chart is reconfiguring.
-        }
-    }
 
     constructor(
         private chart: IChartApi,
@@ -52,7 +31,6 @@ export class RSIIndicator {
                     type: 'custom',
                     formatter: (v: number) => v.toFixed(0),
                 },
-                autoscaleInfoProvider: () => ({ priceRange: this.getDynamicRange() }),
             });
 
             this.chart.priceScale('right').applyOptions({
@@ -61,6 +39,8 @@ export class RSIIndicator {
                 scaleMargins: { top: 0.1, bottom: 0.1 },
                 borderVisible: true,
             });
+
+            this.chart.priceScale('right').setVisibleRange({ from: 0, to: 100 });
 
             // Add standard lines (Overbought/Oversold)
             this.upperLine = this.series.createPriceLine({
@@ -112,7 +92,6 @@ export class RSIIndicator {
             this.latestRsiValue = Number(data[data.length - 1].value);
         }
         this.series.setData(data as any);
-        this.applyDynamicScale();
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
@@ -136,7 +115,6 @@ export class RSIIndicator {
                     time: candleTime as any,
                     value: lastVal
                 });
-                this.applyDynamicScale();
             } catch (err) { }
         }
     }
@@ -145,7 +123,6 @@ export class RSIIndicator {
         if (this.series && this.chart) {
             try {
                 this.chart.removeSeries(this.series);
-                this.chart.priceScale('right').applyOptions({ autoScale: true });
             } catch (err) {
                 console.warn('[RSI] Failed to remove series:', err);
             }

@@ -41,7 +41,7 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
         >
             <div
                 data-indicators
-                className="flex flex-col gap-0.5 p-1 backdrop-blur-lg border rounded-lg bg-background/50 border-border/10 w-fit"
+                className="flex flex-col gap-0.5 p-1 backdrop-blur-[1.5px] border rounded-lg bg-background/5 border-border/10 w-fit"
             >
                 {indicators.map((ind: any) => (
                     <div

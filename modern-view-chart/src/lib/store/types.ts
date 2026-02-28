@@ -85,6 +85,7 @@ export interface ChartInstance {
     group?: 'A' | 'B' | 'C' | 'D' | 'none'; // Symbol Linking Group
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
+    isSubchartVisible?: boolean;
 }
 
 export interface ChartTab {

@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SubchartIndicatorsTabs } from './SubchartIndicatorsTabs';
 import { SubchartLegend } from './SubchartLegend';
 import { Candle } from '@/lib/store';
+import { CursorTooltip } from './CursorTooltip';
 
 interface ChartPanelsProps {
     chartId: string;
@@ -12,7 +13,7 @@ interface ChartPanelsProps {
     source?: string;
     candles: Candle[];
     isSubchartVisible: boolean;
-    setIsSubchartVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsSubchartVisible: (visible: boolean) => void;
     isMinimized: boolean;
     mainContainerRef: React.RefObject<HTMLDivElement | null>;
     priceContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -39,15 +40,16 @@ export function ChartPanels({
     return (
         <>
             <div ref={mainContainerRef} className="flex-1 relative min-h-0">
+                {/* Outer wrapper controls absolute positioning; inner div is given to
+                    lightweight-charts which forces position:relative on whatever it mounts into.
+                    Keeping them separate prevents the library from collapsing our layout. */}
                 <div
-                    ref={priceContainerRef}
                     className={cn(
-                        "absolute top-0 left-0 right-0",
-                        isSubchartVisible
-                            ? (isMinimized ? "bottom-[80px]" : "bottom-[25%]")
-                            : "bottom-0"
+                        "absolute top-0 left-0 right-0 bottom-0"
                     )}
-                />
+                >
+                    <div ref={priceContainerRef} className="w-full h-full" />
+                </div>
 
                 {children}
 
@@ -88,7 +90,7 @@ export function ChartPanels({
                     className={cn(
                         "absolute bottom-0 left-0 right-0 z-10 border-t border-primary/20 transition-all duration-300 transform overflow-hidden",
                         isSubchartVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-                        isMinimized && isSubchartVisible ? "h-[80px] bg-background" : "h-[25%] min-h-[100px] bg-background"
+                        isMinimized && isSubchartVisible ? "h-[80px] bg-background/5 backdrop-blur-[1.5px]" : "h-[25%] min-h-[100px] bg-background/5 backdrop-blur-[1.5px]"
                     )}
                 >
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_8px_var(--glow-primary)]" />
@@ -103,15 +105,28 @@ export function ChartPanels({
                         />
                     </div>
 
-                    <div ref={subchartContainerRef} className="w-full h-full" />
+                    <div className="w-full h-full relative">
+                        {/* Solid background for sub-chart price axis only - matches initialMinW (62) + extra for labels */}
+                        <div className="absolute top-0 right-0 w-[68px] h-full bg-background z-[5] border-l border-primary/20" />
+
+                        <div ref={subchartContainerRef} className="w-full h-full relative z-10" />
+                    </div>
                 </div>
             </div>
 
             <div className="h-[1px] bg-border" />
 
-            <div className="h-[38px] relative overflow-hidden shrink-0 bg-background/95 border-t border-border">
+            <div className="h-[38px] relative overflow-hidden shrink-0 bg-background/5 backdrop-blur-[1.5px] border-t border-border">
                 <div ref={timescaleContainerRef} className="w-full h-full" />
             </div>
+
+            <CursorTooltip
+                chartId={chartId}
+                symbol={symbol}
+                interval={interval}
+                source={source}
+                candles={candles}
+            />
         </>
     );
 }

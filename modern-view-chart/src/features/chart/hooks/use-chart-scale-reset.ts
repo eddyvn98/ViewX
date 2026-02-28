@@ -24,7 +24,11 @@ export function useChartScaleReset(
         /**
          * Resets price scale to auto when double-clicked on the right side.
          */
-        const handlePriceScaleDblClick = (chartRef: React.RefObject<IChartApi | null>, container: HTMLElement) => (e: MouseEvent) => {
+        const handlePriceScaleDblClick = (
+            chartRef: React.RefObject<IChartApi | null>,
+            container: HTMLElement,
+            allowAutoScaleReset: boolean
+        ) => (e: MouseEvent) => {
             const chart = chartRef.current;
             if (!chart) return;
 
@@ -36,7 +40,9 @@ export function useChartScaleReset(
             // This ensures clicks on the right scale area are caught
             if (x > width - 100) {
                 e.stopPropagation();
-                chart.priceScale('right').applyOptions({ autoScale: true });
+                if (allowAutoScaleReset) {
+                    chart.priceScale('right').applyOptions({ autoScale: true });
+                }
             } else {
                 // If double click NOT on the price scale, reset the time scale (TradingView behavior)
                 handleTimeScaleDblClick(e);
@@ -60,8 +66,8 @@ export function useChartScaleReset(
             }
         };
 
-        const onPriceDblClick = handlePriceScaleDblClick(priceChartRef, priceContainer);
-        const onSubchartDblClick = handlePriceScaleDblClick(subchartChartRef, subchartContainer);
+        const onPriceDblClick = handlePriceScaleDblClick(priceChartRef, priceContainer, true);
+        const onSubchartDblClick = handlePriceScaleDblClick(subchartChartRef, subchartContainer, false);
         const onTimescaleDblClick = handleTimeScaleDblClick;
 
         priceContainer.addEventListener('dblclick', onPriceDblClick);

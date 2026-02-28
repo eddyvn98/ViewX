@@ -67,24 +67,24 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
         <table className="w-full text-[11px] text-left border-collapse min-w-[1000px]">
             <thead className="sticky top-0 bg-secondary/10 text-muted-foreground z-10 transition-colors">
                 <tr>
-                    <HeaderCell field="time" label="Time" />
                     <HeaderCell field="symbol" label="Symbol" />
                     <HeaderCell field="ticket" label="Ticket" />
-                    <HeaderCell field="magic" label="Magic" />
+                    <HeaderCell field="time" label="Time" />
                     <HeaderCell field="type" label="Type" />
                     <HeaderCell field="volume" label="Volume" />
                     <HeaderCell field="price_open" label="Price" />
-                    <HeaderCell field="current_price" label="Current" />
-                    <HeaderCell field="sl" label="SL" />
-                    <HeaderCell field="tp" label="TP" />
-                    <th className="p-2 font-medium border-b border-border">Actions</th>
+                    <HeaderCell field="sl" label="S / L" />
+                    <HeaderCell field="tp" label="T / P" />
+                    <HeaderCell field="current_price" label="Price" />
+                    <HeaderCell field="magic" label="Magic" />
+                    <th className="p-2 font-medium border-b border-border">Comment</th>
+                    <th className="p-2 font-medium border-b border-border text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {sortedOrders && sortedOrders.length > 0 ? (
                     sortedOrders.map((ord) => (
                         <tr key={ord.ticket} className="hover:bg-blue-500/10 text-foreground border-b border-border/50">
-                            <td className="p-2 whitespace-nowrap">{new Date(ord.time * 1000).toLocaleString()}</td>
                             <td
                                 className="p-2 cursor-pointer hover:text-blue-400 font-medium"
                                 onClick={() => onSymbolClick(ord.symbol)}
@@ -92,21 +92,20 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
                                 {ord.symbol ?? '--'}
                             </td>
                             <td className="p-2">{ord.ticket ?? '--'}</td>
-                            <td className="p-2">{ord.magic ?? 0}</td>
-                            <td className="p-2 font-bold text-yellow-500">
-                                {(ord.type || '--').toUpperCase()}
+                            <td className="p-2 whitespace-nowrap text-muted-foreground/80">{new Date(ord.time * 1000).toLocaleString()}</td>
+                            <td className="p-2 font-bold text-yellow-500/80">
+                                {(ord.type || '--').toLowerCase()}
                             </td>
                             <td className="p-2">{(ord.volume ?? 0).toFixed(2)}</td>
                             <td className="p-2">{(ord.price_open ?? 0).toFixed(5)}</td>
-                            <td className="p-2">{(ord.current_price ?? 0).toFixed(5)}</td>
                             <td className="p-2">{(ord.sl ?? 0) > 0 ? (ord.sl).toFixed(5) : '--'}</td>
                             <td className="p-2">{(ord.tp ?? 0) > 0 ? (ord.tp).toFixed(5) : '--'}</td>
-                            <td className="p-2">
-                                <button
-                                    onClick={() => onCancelOrder(ord.ticket)}
-                                    className="px-2 py-1 text-[10px] text-red-500 border border-red-500 rounded hover:bg-red-500 hover:text-white transition-colors"
-                                >
-                                    Cancel
+                            <td className="p-2 font-medium">{(ord.current_price ?? 0).toFixed(5)}</td>
+                            <td className="p-2 text-muted-foreground/60">{ord.magic ?? 0}</td>
+                            <td className="p-2 text-muted-foreground/40">--</td>
+                            <td className="p-2 text-center">
+                                <button onClick={() => onCancelOrder(ord.ticket)} className="p-1 text-red-500/60 hover:text-red-500 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                                 </button>
                             </td>
                         </tr>

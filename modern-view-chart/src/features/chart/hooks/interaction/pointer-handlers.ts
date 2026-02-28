@@ -1,0 +1,290 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ISeriesApi } from 'lightweight-charts';
+import { useMarketStore, Order } from '@/lib/store';
+import { getNearElement } from '../../logic/chart-hit-test';
+import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
+
+interface PointerHandlerArgs {
+    chart: any;
+    container: HTMLDivElement;
+    series: ISeriesApi<'Candlestick'>;
+    symbol: string;
+    stateRef: React.MutableRefObject<any>;
+    isDragging: React.MutableRefObject<boolean>;
+    dragState: React.MutableRefObject<any>;
+    mouseDownPos: React.MutableRefObject<{ x: number; y: number } | null>;
+    longPressTimer: React.MutableRefObject<NodeJS.Timeout | null>;
+    setDraftOrder: (value: any) => void;
+    setDraggingPosition: (value: any) => void;
+    handleUpdateAlert: (id: string, price: number) => void;
+    sendMessage?: (data: any) => void;
+}
+
+export function createPointerHandlers(args: PointerHandlerArgs) {
+    const {
+        chart,
+        container,
+        series,
+        symbol,
+        stateRef,
+        isDragging,
+        dragState,
+        mouseDownPos,
+        longPressTimer,
+        setDraftOrder,
+        setDraggingPosition,
+        handleUpdateAlert,
+        sendMessage,
+    } = args;
+
+    const handlePointerDown = (e: PointerEvent) => {
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const target = e.target as HTMLElement;
+        const isDraggable = target.closest('[data-draggable="true"]');
+        const isNoDrag = target.closest('[data-no-drag="true"]');
+        const isInteractive = target.closest('button, input, .cancel-btn, .lot-minus, .lot-plus, .confirm-btn');
+
+        if (isNoDrag || (isInteractive && !isDraggable)) return;
+
+        if (!isDraggable && (document.querySelector('.delete-btn') || document.activeElement?.tagName === 'INPUT')) {
+            if (target.closest('.delete-btn') || target.tagName === 'INPUT') return;
+            useMarketStore.getState().setFocusedTicket(null);
+            return;
+        }
+
+        let hit: any = null;
+        if (isDraggable) {
+            const el = isDraggable as HTMLElement;
+            const ticketAttr = el.getAttribute('data-ticket');
+            let type = el.getAttribute('data-type');
+            // Draft group has nested draggable nodes; prefer explicit button intent.
+            if (target.closest('.tp-btn')) type = 'tp';
+            else if (target.closest('.sl-btn')) type = 'sl';
+            else if (target.closest('.price-box')) type = 'entry';
+            const tagEl = el.closest('[data-tag-id]') as any;
+            const tagData = tagEl?._tagData;
+            if (ticketAttr && type && tagData) {
+                hit = { type, ticket: (ticketAttr === 'draft' || type === 'alert') ? ticketAttr : Number(ticketAttr), price: tagData.price, id: tagData.id };
+            }
+        }
+
+        if (!hit) hit = getNearElement(y, x, series, container, symbol, stateRef.current, e.pointerType === 'touch');
+
+        if (hit) {
+            mouseDownPos.current = { x, y };
+            dragState.current = { ...hit, originalPrice: hit.price, currentPrice: hit.price };
+
+            if (hit.ticket !== 'draft' && hit.ticket) useMarketStore.getState().setFocusedTicket(hit.ticket as number);
+
+            if (e.pointerType === 'touch') {
+                if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                longPressTimer.current = setTimeout(() => {
+                    if (dragState.current && !isDragging.current) {
+                        window.dispatchEvent(new CustomEvent('start-tag-edit', {
+                            detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: dragState.current.price, x: mouseDownPos.current?.x },
+                        }));
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    }
+                }, 450);
+            }
+
+            chart.applyOptions({ handleScroll: false, handleScale: false });
+        } else {
+            const isTagBody = target.closest('.tag-body');
+            const isOverlay = target.closest('.delete-btn') || target.tagName === 'INPUT';
+            if (isTagBody || isOverlay) return;
+            useMarketStore.getState().setFocusedTicket(null);
+        }
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+        if (!dragState.current || !mouseDownPos.current) return;
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const deltaX = x - mouseDownPos.current.x;
+        const deltaY = y - mouseDownPos.current.y;
+
+        if (!isDragging.current) {
+            const dist = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
+            if (dist > 5) {
+                isDragging.current = true;
+                if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
+                }
+            } else return;
+        }
+
+        const price = series.coordinateToPrice(y);
+        if (price === null) return;
+        const finalPrice = Number((price as number).toFixed(stateRef.current.symbolInfo?.digits || 2));
+
+        let validatedPrice = finalPrice;
+        const digits = stateRef.current.symbolInfo?.digits || 2;
+        const currentItemIdx = dragState.current;
+
+        if (currentItemIdx.ticket === 'draft') {
+            const dr = stateRef.current.draftOrder;
+            if (dr) {
+                const isBuy = dr.type === 'buy';
+                const minGap = 5 * Math.pow(10, -digits);
+
+                if (currentItemIdx.type === 'entry') {
+                    let min = -Infinity;
+                    let max = Infinity;
+                    if (dr.sl && dr.sl > 0) {
+                        if (isBuy) min = dr.sl + minGap;
+                        else max = dr.sl - minGap;
+                    }
+                    if (dr.tp && dr.tp > 0) {
+                        if (isBuy) max = dr.tp - minGap;
+                        else min = dr.tp + minGap;
+                    }
+                    validatedPrice = Math.max(min, Math.min(max, finalPrice));
+                } else if (currentItemIdx.type === 'sl') {
+                    const entry = dr.isMarket ? stateRef.current.currentPrice : (dr.price || stateRef.current.currentPrice);
+                    validatedPrice = isBuy ? Math.min(finalPrice, entry - minGap) : Math.max(finalPrice, entry + minGap);
+                } else if (currentItemIdx.type === 'tp') {
+                    const entry = dr.isMarket ? stateRef.current.currentPrice : (dr.price || stateRef.current.currentPrice);
+                    validatedPrice = isBuy ? Math.max(finalPrice, entry + minGap) : Math.min(finalPrice, entry - minGap);
+                }
+            }
+        } else if (currentItemIdx.type !== 'alert' && currentItemIdx.type !== 'entry') {
+            const item = [...stateRef.current.positions, ...stateRef.current.orders].find(i => i.ticket === currentItemIdx.ticket);
+            if (item) {
+                const isPos = 'open_price' in item;
+                const entry = isPos ? (item as any).open_price : (item as any).price_open;
+                const isBuy = item.type.toLowerCase().includes('buy');
+                const minGap = 5 * Math.pow(10, -digits);
+
+                if (currentItemIdx.type === 'sl') validatedPrice = isBuy ? Math.min(finalPrice, entry - minGap) : Math.max(finalPrice, entry + minGap);
+                else if (currentItemIdx.type === 'tp') validatedPrice = isBuy ? Math.max(finalPrice, entry + minGap) : Math.min(finalPrice, entry - minGap);
+            }
+        }
+
+        dragState.current.currentPrice = validatedPrice;
+
+        const isDraft = dragState.current.ticket === 'draft';
+        const dragType = dragState.current.type;
+        const tagId = (isDraft && dragType === 'entry') ? 'draft-group' : (dragType === 'alert' ? `alert-${dragState.current.ticket}` : `${dragState.current.ticket}-${dragState.current.type}`);
+        const tagElement = container.querySelector(`[data-tag-id="${tagId}"]`) as HTMLElement;
+
+        if (tagElement) {
+            (tagElement as any)._tagData = { ...(tagElement as any)._tagData, price: validatedPrice };
+            const newY = series.priceToCoordinate(validatedPrice);
+            if (newY !== null) {
+                tagElement.style.transform = `translateY(${newY - 12}px)`;
+                const priceText = tagElement.querySelector('.price-text');
+                if (priceText) priceText.textContent = validatedPrice.toFixed(digits);
+
+                if (dragType === 'sl' || dragType === 'tp') {
+                    const isBuy = (dragState.current.pOriginal as any)?.type?.toLowerCase()?.includes('buy') ?? stateRef.current.draftOrder?.type === 'buy';
+                    const op = dragState.current.pOriginal
+                        ? (('open_price' in dragState.current.pOriginal) ? (dragState.current.pOriginal as any).open_price : (('price_open' in dragState.current.pOriginal) ? (dragState.current.pOriginal as any).price_open : (('price' in dragState.current.pOriginal) ? (dragState.current.pOriginal as any).price : 0)))
+                        : (stateRef.current.draftOrder?.price || stateRef.current.currentPrice);
+
+                    const pnlVal = calculatePnL({
+                        type: isBuy ? 'buy' : 'sell',
+                        openPrice: op,
+                        currentPrice: validatedPrice,
+                        volume: (dragState.current.pOriginal as any)?.volume || stateRef.current.draftOrder?.volume || 0,
+                        symbolInfo: stateRef.current.symbolInfo,
+                        symbol,
+                    });
+
+                    const pnlEl = tagElement.querySelector('.pnl-text') as HTMLElement;
+                    if (pnlEl) {
+                        pnlEl.textContent = formatPnL(pnlVal);
+                        pnlEl.className = `pnl-text text-[10px] font-bold px-1 rounded bg-black/40 ${pnlVal >= 0 ? 'text-green-400' : 'text-red-400'} max-w-0 overflow-hidden opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 [[dragging]_&]:max-w-[120px] [[dragging]_&]:opacity-100 transition-all duration-300 ease-in-out`;
+                    }
+                    tagElement.setAttribute('dragging', '');
+                }
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('order-line-drag', {
+            detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: validatedPrice, symbol },
+        }));
+
+        if (dragState.current.ticket === 'draft') {
+            const { draftOrder } = stateRef.current;
+            const updates: Partial<typeof draftOrder> = {};
+            if (dragState.current.type === 'entry') { (updates as any).price = validatedPrice; (updates as any).isMarket = false; }
+            else if (dragState.current.type === 'sl') { (updates as any).sl = validatedPrice; (updates as any).slTouched = true; }
+            else if (dragState.current.type === 'tp') { (updates as any).tp = validatedPrice; (updates as any).tpTouched = true; }
+            if (draftOrder) setDraftOrder({ ...draftOrder, ...updates });
+        } else {
+            setDraggingPosition({ ticket: dragState.current.ticket, type: dragState.current.type as any, price: validatedPrice });
+        }
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+
+        if (!dragState.current) return;
+
+        const { ticket, type, currentPrice } = dragState.current;
+
+        if (!isDragging.current) {
+            if (e.pointerType === 'mouse') {
+                window.dispatchEvent(new CustomEvent('start-tag-edit', {
+                    detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: dragState.current.price, x: mouseDownPos.current?.x },
+                }));
+            }
+        } else {
+            if (type === 'alert') {
+                handleUpdateAlert(String(ticket), currentPrice);
+                setDraggingPosition(null);
+            } else if (ticket && ticket !== 'draft') {
+                const mappedType = type === 'entry' ? 'price' : type;
+                const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: currentPrice };
+
+                const store = useMarketStore.getState();
+                const isPos = store.positions.some(p => p.ticket === ticket);
+
+                if (isPos) {
+                    const field = type === 'entry' ? 'open_price' : type;
+                    store.addPendingModification(Number(ticket), field, currentPrice);
+                    store.setPositions(prev => prev.map(p => p.ticket === ticket ? { ...p, [field]: currentPrice } : p));
+                } else {
+                    const field = type === 'entry' ? 'price_open' : type;
+                    store.addPendingModification(Number(ticket), field, currentPrice);
+                    store.setOrders(prev => prev.map(o => o.ticket === ticket ? { ...o, [field as keyof Order]: currentPrice } : o));
+                }
+
+                if (sendMessage) sendMessage(command);
+                else (store as any).sendMessage?.(command);
+
+                setDraggingPosition(null);
+                store.setFocusedTicket(null);
+            }
+        }
+
+        if (dragState.current) {
+            const isDraft = dragState.current.ticket === 'draft';
+            const tagId = (isDraft && dragState.current.type === 'entry') ? 'draft-group' : (dragState.current.type === 'alert' ? `alert-${dragState.current.ticket}` : `${dragState.current.ticket}-${dragState.current.type}`);
+            const tagElement = container.querySelector(`[data-tag-id="${tagId}"]`) as HTMLElement;
+            if (tagElement) {
+                tagElement.removeAttribute('dragging');
+                tagElement.style.opacity = '1';
+            }
+        }
+
+        isDragging.current = false;
+        dragState.current = null;
+        mouseDownPos.current = null;
+
+        const drawingSelected = useMarketStore.getState().selectedDrawingId;
+        if (!drawingSelected) chart.applyOptions({ handleScroll: true, handleScale: true });
+    };
+
+    return { handlePointerDown, handlePointerMove, handlePointerUp };
+}

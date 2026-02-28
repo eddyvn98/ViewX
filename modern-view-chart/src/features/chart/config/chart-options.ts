@@ -19,8 +19,8 @@ export const getThemeColors = (theme: string, themeColor?: string) => {
         : (isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)');
 
     const crosshairColor = (themeColor && gridColors[themeColor])
-        ? gridColors[themeColor].replace(/0\.1[0-2]?|0\.08/g, '0.5') // Higher opacity for crosshair
-        : '#758696';
+        ? gridColors[themeColor].replace(/0\.1[0-2]?|0\.08/g, '0.8') // Significantly higher opacity
+        : (isDark ? '#e5e7eb' : '#374151'); // Higher contrast defaults
 
     return {
         background: isDark ? '#0b0e14' : '#ffffff',
@@ -113,14 +113,14 @@ export const getSubChartOptions = (width: number, height: number, theme: string,
         },
         rightPriceScale: {
             visible: true,
-            autoScale: true,
+            autoScale: false,
             scaleMargins: { top: 0.1, bottom: 0.1 },
             borderVisible: false,
             borderColor: 'transparent',
             minimumWidth: initialMinW,
         },
-        // Lock price-axis manual scaling on subchart so RSI/MACD panes don't get flattened by drag.
-        handleScale: { mouseWheel: false, axisPressedMouseMove: { price: false, time: true } as any },
+        // Allow price-axis manual scaling on subchart so users can adjust RSI/MACD scales
+        handleScale: { mouseWheel: false, axisPressedMouseMove: { price: true, time: true } as any },
         handleScroll: true,
     };
 };
@@ -136,7 +136,7 @@ export const getTimescaleOptions = (width: number, height: number, theme: string
         height,
         timeScale: { ...common.timeScale, visible: true },
         rightPriceScale: {
-            visible: true,
+            visible: false,
             borderVisible: false,
             ticksVisible: false,
             minimumWidth: initialMinW,

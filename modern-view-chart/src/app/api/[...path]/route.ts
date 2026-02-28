@@ -35,19 +35,39 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
   }
 
   const targetUrl = buildTargetUrl(request, pathSegments);
-  const headers = new Headers(request.headers);
-  headers.delete("host");
+  const headers = new Headers();
+  const forwardHeaderKeys = [
+    "accept",
+    "authorization",
+    "content-type",
+    "cookie",
+    "x-client-id",
+    "x-requested-with",
+  ];
+  for (const key of forwardHeaderKeys) {
+    const value = request.headers.get(key);
+    if (value) headers.set(key, value);
+  }
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   const body = hasBody ? await request.arrayBuffer() : undefined;
 
-  const upstream = await fetch(targetUrl, {
-    method: request.method,
-    headers,
-    body,
-    redirect: "manual",
-    cache: "no-store",
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(targetUrl, {
+      method: request.method,
+      headers,
+      body,
+      redirect: "manual",
+      cache: "no-store",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upstream proxy request failed";
+    return new Response(JSON.stringify({ error: message }), {
+      status: 502,
+      headers: { "content-type": "application/json" },
+    });
+  }
 
   const responseHeaders = new Headers(upstream.headers);
   responseHeaders.delete("content-encoding");

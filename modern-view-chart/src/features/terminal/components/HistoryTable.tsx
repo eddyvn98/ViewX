@@ -2,7 +2,7 @@
 
 import { HistoryDeal } from "@/lib/store/types";
 import { useState, useMemo, memo } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Bot, Info } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Bot } from "lucide-react";
 import { useMarketStore } from "@/lib/store";
 
 interface HistoryTableProps {
@@ -32,29 +32,30 @@ const HistoryRow = memo(({
 
     return (
         <div className="flex hover:bg-blue-500/10 text-foreground border-b border-border/50 items-center text-[11px] min-h-[36px]">
-            <div className="p-2 whitespace-nowrap overflow-hidden text-ellipsis" style={{ width: "15%" }}>
+            <div className="p-2 whitespace-nowrap overflow-hidden text-ellipsis text-muted-foreground" style={{ width: "15%" }}>
                 {new Date(deal.time * 1000).toLocaleString()}
             </div>
-            <div className="p-2" style={{ width: "10%" }}>{deal.ticket}</div>
-            <div className="p-2" style={{ width: "10%" }}>{deal.magic}</div>
             <div
                 className="p-2 cursor-pointer hover:text-blue-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis"
-                style={{ width: "10%" }}
+                style={{ width: "8%" }}
                 onClick={() => deal.symbol && onSymbolClick(deal.symbol)}
             >
                 {deal.symbol || '---'}
             </div>
+            <div className="p-2" style={{ width: "10%" }}>{deal.ticket}</div>
             <div className={`p-2 whitespace-nowrap overflow-hidden text-ellipsis ${(deal.type === 'buy' ? 'text-green-500' : deal.type === 'sell' ? 'text-red-500' : 'text-blue-400')}`} style={{ width: "10%" }}>
-                {deal.type?.toUpperCase()} {deal.entry !== 'in/out' && deal.entry ? `(${deal.entry})` : ''}
+                {deal.type?.toLowerCase()} {deal.entry !== 'in/out' && deal.entry ? `(${deal.entry})` : ''}
             </div>
-            <div className="p-2" style={{ width: "10%" }}>{deal.volume?.toFixed(2)}</div>
+            <div className="p-2" style={{ width: "7%" }}>{deal.volume?.toFixed(2)}</div>
             <div className="p-2" style={{ width: "10%" }}>{deal.price?.toFixed(5)}</div>
-            <div className="p-2 text-muted-foreground" style={{ width: "10%" }}>
-                <span className="text-[10px] mr-2">S: {deal.swap?.toFixed(2)}</span>
-            </div>
             <div className={`p-2 font-bold ${(deal.profit >= 0 ? 'text-green-500' : 'text-red-500')}`} style={{ width: "10%" }}>
                 {deal.profit?.toFixed(2)}
             </div>
+            <div className="p-2 text-muted-foreground/60" style={{ width: "8%" }}>
+                {deal.swap?.toFixed(2)}
+            </div>
+            <div className="p-2 text-muted-foreground/60" style={{ width: "8%" }}>{deal.magic}</div>
+            <div className="p-2 text-muted-foreground/30" style={{ width: "9%" }}>--</div>
 
             {/* AI Action/Result Column */}
             <div className="p-2 flex items-center justify-center" style={{ width: "5%" }}>
@@ -64,7 +65,6 @@ const HistoryRow = memo(({
                         title={`${analysisResult.verdict}\n${analysisResult.analysis?.explanation?.join('\n') || analysisResult.reason}`}
                     >
                         <Bot size={14} />
-                        {/* Optional: Show verdict text if space allows */}
                     </div>
                 ) : analyzeEnabled ? (
                     <button
@@ -140,14 +140,15 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze, analyzeEnabled
             {/* Header cố định */}
             <div className="flex bg-secondary/10 text-muted-foreground border-b border-border transition-colors shrink-0 font-medium h-9 items-center sticky top-0 z-10">
                 <HeaderCell field="time" label="Time" width="15%" />
+                <HeaderCell field="symbol" label="Symbol" width="8%" />
                 <HeaderCell field="ticket" label="Ticket" width="10%" />
-                <HeaderCell field="magic" label="Magic" width="10%" />
-                <HeaderCell field="symbol" label="Symbol" width="10%" />
                 <HeaderCell field="type" label="Type" width="10%" />
-                <HeaderCell field="volume" label="Volume" width="10%" />
+                <HeaderCell field="volume" label="Volume" width="7%" />
                 <HeaderCell field="price" label="Price" width="10%" />
-                <div className="p-2 flex items-center overflow-hidden" style={{ width: "10%" }}>Swap</div>
                 <HeaderCell field="profit" label="Profit" width="10%" />
+                <div className="p-2 flex items-center overflow-hidden" style={{ width: "8%" }}>Swap</div>
+                <HeaderCell field="magic" label="Magic" width="8%" />
+                <div className="p-2 flex items-center overflow-hidden text-muted-foreground/60" style={{ width: "9%" }}>Comment</div>
                 <div className="p-2 flex items-center justify-center" style={{ width: "5%" }}>AI</div>
             </div>
 

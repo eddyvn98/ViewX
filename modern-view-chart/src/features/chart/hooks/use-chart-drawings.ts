@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -40,7 +40,7 @@ export function useChartDrawings(
     } = useDrawingEditor(chartId, chart, series, containerRef, isDrawing, primitivesRef, candles);
 
     // 4. Main Event Handlers (Aggregate logic)
-    const handleClick = (param: MouseEventParams) => {
+    const handleClick = useCallback((param: MouseEventParams) => {
         if (!param.point || !series) return;
 
         if (isDrawing) {
@@ -48,7 +48,7 @@ export function useChartDrawings(
         } else {
             handleEditorClick(param);
         }
-    };
+    }, [isDrawing, handleCreationClick, handleEditorClick, series]);
 
     // 5. Subscribe Click Events to Chart
     useEffect(() => {

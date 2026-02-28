@@ -19,7 +19,8 @@ function createElementsFromHtml(tag: TagData, innerHtml: string): TagElements {
 
 function createDraftGroupTagElement(tag: TagData): TagElements {
     return createElementsFromHtml(tag, `
-            <div class="tag-body flex items-center h-8 gap-2 p-1 bg-background/70 dark:bg-zinc-900/70 backdrop-blur-2xl border border-border/40 dark:border-white/10 rounded-xl shadow-2xl pointer-events-auto touch-none touch-action-none transition-all duration-300 ring-1 ring-black/5">
+            <div class="tag-body flex items-center h-8 gap-2 p-1 bg-background/70 dark:bg-zinc-900/70 backdrop-blur-2xl border border-border/40 dark:border-white/10 rounded-xl shadow-2xl pointer-events-auto touch-none touch-action-none transition-all duration-300 ring-1 ring-black/5"
+                data-draggable="true" data-type="entry" data-ticket="draft">
                 <div class="cancel-btn h-full w-6 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all duration-300 [[dragging]_&]:w-0 [[dragging]_&]:opacity-0 [[dragging]_&]:overflow-hidden [[dragging]_&]:p-0" title="Remove" data-no-drag="true">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
@@ -27,8 +28,10 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
                     <span class="tag-label text-[10px] font-black text-foreground uppercase tracking-widest"></span>
                 </div>
 
-                <div class="tp-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all duration-200 uppercase tracking-tight">TP</div>
-                <div class="sl-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold border border-red-500/20 cursor-pointer hover:bg-red-500 hover:text-white transition-all duration-200 uppercase tracking-tight">SL</div>
+                <div class="tp-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
+                    data-draggable="true" data-type="tp" data-ticket="draft">TP</div>
+                <div class="sl-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold border border-red-500/20 cursor-pointer hover:bg-red-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
+                    data-draggable="true" data-type="sl" data-ticket="draft">SL</div>
 
                 <div class="lot-container flex items-center h-full bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 overflow-hidden shrink-0">
                     <div class="lot-minus h-full w-6 flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors active:bg-primary/20 text-primary" title="Decrease Lot" data-no-drag="true">
@@ -42,7 +45,8 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
 
                 <div class="confirm-btn flex items-center justify-center h-full px-2 rounded-lg text-[10px] font-black hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest whitespace-nowrap cursor-pointer shadow-sm" data-no-drag="true">Confirm</div>
 
-                <div class="price-box h-full flex items-center px-3 bg-secondary/50 dark:bg-white/5 border border-border/10 rounded-lg min-w-[85px] justify-center cursor-row-resize hover:bg-secondary/70 transition-colors">
+                <div class="price-box h-full flex items-center px-3 bg-secondary/50 dark:bg-white/5 border border-border/10 rounded-lg min-w-[85px] justify-center cursor-row-resize hover:bg-secondary/70 transition-colors"
+                    data-draggable="true" data-type="entry" data-ticket="draft">
                     <span class="price-text text-[11px] font-bold text-foreground"></span>
                 </div>
             </div>`);
@@ -64,22 +68,13 @@ function createAlertTagElement(tag: TagData): TagElements {
             </div>`);
 }
 
-function getEntryArrowSymbol(tag: TagData): string {
-    const typeText = String((tag.pOriginal as any)?.type || '').toLowerCase();
-    return typeText.includes('sell') ? '↓' : '↑';
-}
-
 function createDotTagElement(tag: TagData): TagElements {
     const isReadOnlyWebTag = typeof tag.ticket === 'string' && tag.ticket.startsWith('web:');
     const draggableAttr = isReadOnlyWebTag
         ? ''
         : `data-draggable="true" data-type="${tag.type}" data-ticket="${tag.ticket}"`;
-    const isEntry = tag.type === 'entry';
-    const markerClass = isEntry ? 'dot-marker arrow-marker' : 'dot-marker';
-    const markerShapeClass = isEntry
-        ? 'h-4 w-4 min-w-[16px] rounded-none border-0 bg-transparent ring-0'
-        : 'h-3 w-3 min-w-[12px] rounded-full border-2 border-white/40 bg-secondary/70 ring-1 ring-black/30';
-    const arrowSymbol = isEntry ? getEntryArrowSymbol(tag) : '';
+    const markerClass = 'dot-marker';
+    const markerShapeClass = 'h-3 w-3 min-w-[12px] rounded-full border-2 border-white/40 bg-secondary/70 ring-1 ring-black/30';
     const isDraft = tag.ticket === 'draft';
     const cancelClass = isReadOnlyWebTag
         ? 'hidden'
@@ -92,7 +87,6 @@ function createDotTagElement(tag: TagData): TagElements {
                 </div>
                 <div class="price-box ${markerClass} ${markerShapeClass} p-0 justify-center items-center cursor-row-resize transition-transform duration-150 group-hover:scale-110" ${draggableAttr}>
                     <span class="price-text hidden"></span>
-                    <span class="arrow-glyph text-[12px] font-black leading-none select-none">${arrowSymbol}</span>
                 </div>
                 <span class="dot-caption text-[9px] font-semibold leading-none text-foreground/75 tracking-tight"></span>
                 <span class="tag-label hidden"></span>
@@ -105,3 +99,4 @@ export function createTagElement(tag: TagData): TagElements {
     if (tag.type === 'alert') return createAlertTagElement(tag);
     return createDotTagElement(tag);
 }
+

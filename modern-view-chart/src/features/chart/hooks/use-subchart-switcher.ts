@@ -1,11 +1,9 @@
 import { useRef, useEffect } from 'react';
-import { IChartApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 
 export function useSubchartSwitcher(
     chartId: string,
-    subchartContainerRef: React.RefObject<HTMLDivElement | null>,
-    subchartChartRef: React.MutableRefObject<IChartApi | null>
+    subchartContainerRef: React.RefObject<HTMLDivElement | null>
 ) {
     const toggleIndicatorVisibility = useMarketStore(state => state.toggleIndicatorVisibility);
     const lastSwitchRef = useRef<number>(0);
@@ -27,16 +25,17 @@ export function useSubchartSwitcher(
             if (nextIndex < 0) nextIndex = subchartIndicators.length - 1;
 
             if (nextIndex !== visibleIndex) {
+                const state = useMarketStore.getState();
+                const activeTab = state.tabs[state.activeTabId];
+                const isSubchartVisible = activeTab?.charts[chartId]?.isSubchartVisible ?? true;
+
+                if (!isSubchartVisible) return;
+
                 lastSwitchRef.current = Date.now();
                 if (visibleIndex !== -1) {
                     toggleIndicatorVisibility(chartId, subchartIndicators[visibleIndex].id);
                 }
                 toggleIndicatorVisibility(chartId, subchartIndicators[nextIndex].id);
-
-                // Auto-fit the new indicator scale
-                requestAnimationFrame(() => {
-                    subchartChartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                });
             }
         };
 

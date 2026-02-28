@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { ISeriesApi, Time } from 'lightweight-charts';
+import { ISeriesApi, Time, IChartApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
@@ -12,11 +12,12 @@ interface UseChartTickerProps {
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     lastCandleRef: React.MutableRefObject<any>;
     isAutoScrollEnabledRef?: React.RefObject<boolean>;
-    chartRef?: React.RefObject<import('lightweight-charts').IChartApi | null>;
+    chartRef?: React.RefObject<IChartApi | null>;
+    theme?: string;
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef,
+    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, theme,
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<any>(null);
@@ -24,6 +25,29 @@ export function useChartTicker({
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
+
+    const getStoreCandles = () => {
+        if (!source || !normSymbol || !interval) return [];
+        const state = useMarketStore.getState();
+        const intervalRaw = String(interval).trim();
+        const intervalLower = intervalRaw.toLowerCase();
+        const intervalCandidates = Array.from(new Set([
+            intervalRaw,
+            intervalLower,
+            intervalLower.replace(/^m(\d+)$/, '$1'),
+            /^\d+$/.test(intervalLower) ? `${intervalLower}m` : intervalLower,
+            intervalLower.endsWith('m') ? intervalLower.slice(0, -1) : intervalLower,
+        ]));
+        const sourceVariants = Array.from(new Set([source, source.toUpperCase(), source.toLowerCase()]));
+        for (const src of sourceVariants) {
+            for (const itv of intervalCandidates) {
+                const key = `${src}:${normSymbol}:${itv}`;
+                const arr = state.candleData[key];
+                if (arr && arr.length > 0) return arr;
+            }
+        }
+        return [];
+    };
 
     const getIntervalSeconds = (intv: string) => {
         const unit = intv.slice(-1);
@@ -73,8 +97,7 @@ export function useChartTicker({
             if (!price) return;
 
             // 1. Get Base Candle
-            const storeKey = `${source}:${normSymbol}:${interval}`;
-            const storeCandles = useMarketStore.getState().candleData[storeKey] || [];
+            const storeCandles = getStoreCandles();
             const lastStoreCandle = storeCandles.length ? storeCandles[storeCandles.length - 1] : null;
 
             let base = realTimeCandleRef.current;
@@ -101,8 +124,6 @@ export function useChartTicker({
             const isSmart = chartType === 'smart_candles';
 
             // TradingView-style guard:
-            // If tab/background causes a large gap, do not synthesize missed bars from sparse ticks.
-            // Request historical backfill and wait for real candles.
             if (lagBars >= 2) {
                 const backfillKey = `${source}:${normSymbol}:${interval}`;
                 const nowMs = Date.now();
@@ -133,7 +154,8 @@ export function useChartTicker({
                     high: price, low: price, close: price,
                     rawOpen: base.rawClose || base.close,
                     rawHigh: price, rawLow: price, rawClose: price,
-                    ha_open: isHA ? haOpen : undefined
+                    ha_open: isHA ? haOpen : undefined,
+                    theme: theme as any
                 };
 
                 realTimeCandleRef.current = newCandle;
@@ -143,7 +165,8 @@ export function useChartTicker({
                     seriesRef.current?.update({
                         time: nextBarTime as Time,
                         open: haOpen, high: Math.max(price, haOpen),
-                        low: Math.min(price, haOpen), close: ((base.rawClose || base.close) + price * 3) / 4
+                        low: Math.min(price, haOpen), close: ((base.rawClose || base.close) + price * 3) / 4,
+                        theme: theme as any
                     });
                 } else {
                     if (isSmart) {
@@ -151,6 +174,7 @@ export function useChartTicker({
                         seriesRef.current?.update({
                             ...newCandle,
                             candleColor: color,
+                            theme: theme as any
                         });
                     } else {
                         seriesRef.current?.update(newCandle);
@@ -184,7 +208,8 @@ export function useChartTicker({
                 const haData = {
                     time: updateTime as Time,
                     open: haOpen, high: Math.max(rHigh, haOpen, haClose),
-                    low: Math.min(rLow, haOpen, haClose), close: haClose
+                    low: Math.min(rLow, haOpen, haClose), close: haClose,
+                    theme: theme as any
                 };
                 base.open = haOpen; base.close = haClose;
                 base.high = haData.high; base.low = haData.low;
@@ -197,14 +222,16 @@ export function useChartTicker({
                 seriesRef.current?.update({
                     time: updateTime as Time,
                     open: rOpen, high: rHigh, low: rLow, close: rClose,
-                    candleColor: color
+                    candleColor: color,
+                    theme: theme as any
                 });
             } else {
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
 
                 const updateData: any = {
                     time: updateTime as Time,
-                    open: base.open, high: base.high, low: base.low, close: base.close
+                    open: base.open, high: base.high, low: base.low, close: base.close,
+                    theme: theme as any
                 };
 
                 if (isSmart) {
@@ -226,7 +253,7 @@ export function useChartTicker({
         );
 
         return () => unsub();
-    }, [symbol, source, interval, chartType]);
+    }, [symbol, source, interval, chartType, theme]);
 
     return realTimeCandleRef;
 }
