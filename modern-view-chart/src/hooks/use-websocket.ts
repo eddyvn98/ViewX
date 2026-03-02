@@ -19,6 +19,8 @@ let subscribeSymbolsTimer: NodeJS.Timeout | null = null;
 let wsTicketCache = "";
 let wsTicketExpiresAt = 0;
 let wsTicketPromise: Promise<string> | null = null;
+let forceFreshTicketOnReconnect = false;
+let unauthorizedFrameReceived = false;
 
 function parseIntervalSeconds(interval: string): number {
     const text = String(interval || "").trim();
@@ -75,27 +77,45 @@ function extractCredentialFromUrl(url: URL): string {
     return credential;
 }
 
-function buildSocketConfig(): { url: string; protocols: string[] } {
+function stripCredentialFromSocketUrl(rawUrl: string): string {
+    try {
+        const parsed = new URL(rawUrl);
+        parsed.searchParams.delete("access_token");
+        parsed.searchParams.delete("access_ticket");
+        return parsed.toString();
+    } catch {
+        return rawUrl;
+    }
+}
+
+function buildSocketConfig(options?: { ignoreUrlCredential?: boolean }): { url: string; protocols: string[] } {
     const baseFallback = deriveDefaultSocketUrl();
     if (typeof window === "undefined") return { url: baseFallback, protocols: [] };
 
     const params = new URLSearchParams(window.location.search);
     const wsOverride = params.get("ws_url");
     const base = wsOverride || baseFallback;
+    const ignoreUrlCredential = Boolean(options?.ignoreUrlCredential);
 
     try {
         const u = new URL(base);
-        let credential = extractCredentialFromUrl(u);
-        if (!credential) {
+        let credential = "";
+        if (!ignoreUrlCredential) {
+            credential = extractCredentialFromUrl(u);
+        } else {
+            u.searchParams.delete("access_token");
+            u.searchParams.delete("access_ticket");
+        }
+        if (!credential && !ignoreUrlCredential) {
             credential = (params.get("access_token") || params.get("access_ticket") || "").trim();
         }
 
         const protocols = credential ? [`bearer.${credential}`] : [];
         return { url: u.toString(), protocols };
     } catch {
-        const credential = (params.get("access_token") || params.get("access_ticket") || "").trim();
+        const credential = ignoreUrlCredential ? "" : (params.get("access_token") || params.get("access_ticket") || "").trim();
         const protocols = credential ? [`bearer.${credential}`] : [];
-        return { url: base, protocols };
+        return { url: ignoreUrlCredential ? stripCredentialFromSocketUrl(base) : base, protocols };
     }
 }
 
@@ -166,13 +186,19 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
         if (globalSocket) return;
 
         const connect = async () => {
-            const socketConfig = buildSocketConfig();
-            if (socketConfig.protocols.length === 0) {
+            const mustRefreshTicket = forceFreshTicketOnReconnect;
+            const socketConfig = buildSocketConfig({ ignoreUrlCredential: mustRefreshTicket });
+            if (mustRefreshTicket) {
+                wsTicketCache = "";
+                wsTicketExpiresAt = 0;
+            }
+            if (socketConfig.protocols.length === 0 || mustRefreshTicket) {
                 const fetchedTicket = await fetchWsTicketFromApi();
                 if (fetchedTicket) {
                     socketConfig.protocols = [`bearer.${fetchedTicket}`];
                 }
             }
+            forceFreshTicketOnReconnect = false;
             SOCKET_URL = socketConfig.url;
             const socket = socketConfig.protocols.length > 0
                 ? new WebSocket(socketConfig.url, socketConfig.protocols)
@@ -192,6 +218,11 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                 try {
                     const msg = JSON.parse(event.data);
                     const msgType = msg.topic || msg.event || msg.type;
+                    if (msgType === "error" && String(msg?.code || "").toLowerCase() === "unauthorized") {
+                        unauthorizedFrameReceived = true;
+                        socket.close(1008, "Unauthorized");
+                        return;
+                    }
 
                     if ((msgType === "priceUpdate" && Array.isArray(msg.data)) || msgType === "tick" || msgType === "mt5_update") {
                         const state = useMarketStore.getState();
@@ -412,13 +443,25 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                 }
             };
 
-            socket.onclose = () => {
+            socket.onclose = (closeEvent) => {
                 setConnected(false);
                 setBridgeOnline(false);
                 if (globalSocket === socket) {
                     globalSocket = null;
                 }
                 historyFetched = false;
+                const closeReason = String(closeEvent?.reason || "").toLowerCase();
+                const unauthorizedClose = Boolean(
+                    unauthorizedFrameReceived ||
+                    closeEvent?.code === 1008 ||
+                    closeReason.includes("unauthorized"),
+                );
+                unauthorizedFrameReceived = false;
+                if (unauthorizedClose) {
+                    forceFreshTicketOnReconnect = true;
+                    wsTicketCache = "";
+                    wsTicketExpiresAt = 0;
+                }
 
                 reconnectAttempts += 1;
                 const delay = Math.min(3000 * Math.pow(2, reconnectAttempts - 1), 30000);

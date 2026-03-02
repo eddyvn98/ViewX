@@ -67,6 +67,12 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
                     sourceId: chartId,
                     point: { x: curX, y: curY },
                     logical: logical !== null ? Number(logical) : null,
+                    sourceEvent: param.sourceEvent
+                        ? {
+                            clientX: Number(param.sourceEvent.clientX),
+                            clientY: Number(param.sourceEvent.clientY),
+                        }
+                        : undefined,
                 };
 
                 store.syncCrosshair(payload);

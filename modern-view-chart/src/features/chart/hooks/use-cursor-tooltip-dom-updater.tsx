@@ -66,7 +66,7 @@ export function useCursorTooltipDOMUpdater(
         };
 
         const handleCrosshair = (e: CustomEvent<CrosshairEventDetail>) => {
-            const { time, sourceId, point } = e.detail || {};
+            const { time, sourceId, point, sourceEvent } = e.detail || {};
 
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             crosshairRafRef.current = requestAnimationFrame(() => {
@@ -80,21 +80,24 @@ export function useCursorTooltipDOMUpdater(
                 containerRef.current.style.opacity = '1';
 
                 const isMobile = window.innerWidth < 768;
-                const tooltipWidth = 70;
-                const tooltipHeight = 50;
+                const tooltipWidth = containerRef.current.offsetWidth || 70;
+                const tooltipHeight = containerRef.current.offsetHeight || 50;
                 // Larger offset on mobile to avoid finger coverage
                 const offsetX = isMobile ? 0 : 15;
                 const offsetY = isMobile ? -70 : 15;
 
-                let left = mousePos.x + offsetX;
-                let top = mousePos.y + offsetY;
+                const pointerX = typeof sourceEvent?.clientX === 'number' ? sourceEvent.clientX : mousePos.x;
+                const pointerY = typeof sourceEvent?.clientY === 'number' ? sourceEvent.clientY : mousePos.y;
+
+                let left = pointerX + offsetX;
+                let top = pointerY + offsetY;
 
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
 
                 // Mobile specific: center tooltip horizontally relative to touch point
                 if (isMobile) {
-                    left = mousePos.x - (tooltipWidth / 2);
+                    left = pointerX - (tooltipWidth / 2);
                 }
 
                 if (left + tooltipWidth > viewportWidth) {
@@ -103,7 +106,7 @@ export function useCursorTooltipDOMUpdater(
                 if (left < 5) left = 5;
 
                 if (top + tooltipHeight > viewportHeight) {
-                    top = mousePos.y - tooltipHeight - (isMobile ? 20 : 15);
+                    top = pointerY - tooltipHeight - (isMobile ? 20 : 15);
                 }
                 if (top < 5) top = 5;
 

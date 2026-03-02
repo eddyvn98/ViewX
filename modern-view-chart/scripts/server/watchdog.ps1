@@ -94,8 +94,20 @@ function Ensure-Database {
 
 function Ensure-Frontend {
     $frontendUp = Test-HttpOk "http://127.0.0.1:3000"
-    $frontendProc = Find-ProcessByPattern "next start --hostname 0.0.0.0 --port 3000"
-    if ($frontendUp -and $frontendProc) { return }
+    if ($frontendUp) { return }
+
+    $frontendPortInUse = $false
+    try {
+        $frontendPortInUse = $null -ne (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction Stop | Select-Object -First 1)
+    }
+    catch {
+        $frontendPortInUse = $false
+    }
+
+    if ($frontendPortInUse) {
+        Write-Warning "[watchdog] Port 3000 is already in use by another process. Skipping frontend restart to avoid EADDRINUSE loop."
+        return
+    }
 
     Write-Host "[watchdog] Restarting frontend..."
     Start-Process -FilePath $NpmCmd `

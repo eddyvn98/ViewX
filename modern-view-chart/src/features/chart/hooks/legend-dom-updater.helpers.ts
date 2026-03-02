@@ -12,6 +12,10 @@ export interface CrosshairEventDetail {
     time?: number | null;
     sourceId?: string;
     point?: CrosshairPoint;
+    sourceEvent?: {
+        clientX?: number;
+        clientY?: number;
+    };
 }
 
 const MOBILE_BREAKPOINT = 768;

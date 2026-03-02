@@ -1,0 +1,7 @@
+﻿ M modern-view-chart/scripts/server/watchdog.ps1
+ M modern-view-chart/src/features/chart/components/ChartLegend.tsx
+ M modern-view-chart/src/features/chart/hooks/init/setup-crosshair-listeners.ts
+ M modern-view-chart/src/features/chart/hooks/legend-dom-updater.helpers.ts
+ M modern-view-chart/src/features/chart/hooks/use-cursor-tooltip-dom-updater.tsx
+ M modern-view-chart/src/hooks/use-websocket.ts
+?? modern-view-chart/git_status.txt

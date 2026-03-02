@@ -45,14 +45,13 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
         <div
             ref={containerRef}
             className={cn(
-                "absolute left-2 top-[38px] z-[40] pointer-events-none select-none flex flex-col gap-1.5 items-start transition-opacity duration-300",
-                isDataMissing ? 'opacity-0' : 'opacity-100'
+                "absolute left-2 right-0 top-2 md:top-[38px] md:right-auto z-[40] pointer-events-none select-none flex flex-col gap-1.5 items-start transition-opacity duration-300 opacity-100"
             )}
         >
             {/* Legend Toggle Button - Visible on Mobile */}
             <button
                 onClick={() => setIsVisible(!isVisible)}
-                className="md:hidden pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-background/60 backdrop-blur-md border border-primary/20 text-muted-foreground hover:text-primary active:scale-95 transition-all shadow-lg"
+                className="md:hidden absolute left-[140px] top-[-30px] z-[60] pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-background/60 backdrop-blur-md border border-primary/20 text-muted-foreground hover:text-primary active:scale-95 transition-all shadow-lg"
             >
                 {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -60,6 +59,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
             {/* Legend Content Wrapper */}
             <div className={cn(
                 "flex flex-col gap-1.5 items-start transition-all duration-300 transform-gpu",
+                isDataMissing && "opacity-0 pointer-events-none",
                 !isVisible && "opacity-0 -translate-x-full pointer-events-none md:opacity-100 md:translate-x-0 md:pointer-events-none"
             )}>
                 {/* Main Info Card - Unified DNA */}
