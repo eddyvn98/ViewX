@@ -58,9 +58,23 @@ def parse_core_symbols():
 
 
 def load_env_file():
-    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    env_path = os.path.join(repo_root, ".env")
-    if not os.path.exists(env_path):
+    # current file is backend/bridge/main.py
+    bridge_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.dirname(bridge_dir)
+    repo_root = os.path.dirname(backend_dir)
+
+    possible_paths = [
+        os.path.join(repo_root, ".env"),
+        os.path.join(backend_dir, ".env"),
+    ]
+
+    env_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            env_path = path
+            break
+
+    if not env_path:
         return
 
     try:
@@ -71,6 +85,7 @@ def load_env_file():
                     continue
                 key, value = line.split("=", 1)
                 os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+        print(f"[BRIDGE] Loaded env from: {env_path}")
     except Exception as exc:
         print(f"[BRIDGE] Warning: failed to load .env ({exc})")
 

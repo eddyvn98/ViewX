@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Menu, BarChart2, Zap, Layout } from 'lucide-react';
+import { Menu, BarChart2, Zap, Pencil } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,8 @@ export const MobileTopBar = memo(function MobileTopBar() {
 
     const updateChart = useMarketStore((state) => state.updateChart);
     const setChartType = useMarketStore((state) => state.setChartType);
+    const isDrawingToolbarVisible = useMarketStore((state) => state.isDrawingToolbarVisible);
+    const toggleDrawingToolbar = useMarketStore((state) => state.toggleDrawingToolbar);
 
     const handleMenuClick = () => {
         if (activeMobileTab === 'menu') {
@@ -50,6 +52,11 @@ export const MobileTopBar = memo(function MobileTopBar() {
         const types: any = { 'candles': 'heikin_ashi', 'heikin_ashi': 'smart_candles', 'smart_candles': 'candles' };
         const nextType = types[activeChart.chartType] || 'candles';
         setChartType(activeChart.id, nextType);
+    };
+
+    const handleDrawingClick = () => {
+        if (activeMobileTab !== 'chart') setActiveMobileTab('chart');
+        toggleDrawingToolbar();
     };
 
     const getChartTypeLabel = (type: string | undefined) => {
@@ -99,6 +106,20 @@ export const MobileTopBar = memo(function MobileTopBar() {
                 >
                     <Zap size={14} />
                     <span>Fx</span>
+                </button>
+
+                <button
+                    onClick={handleDrawingClick}
+                    className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 border",
+                        isDrawingToolbarVisible
+                            ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
+                            : "text-muted-foreground border-border/50 bg-secondary/30"
+                    )}
+                    title="Toggle Drawing Toolbar"
+                >
+                    <Pencil size={14} />
+                    <span>Draw</span>
                 </button>
             </div>
 

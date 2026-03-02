@@ -2,8 +2,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Strategy, StrategySignal, VirtualPosition, TradeContext } from '../types';
-import { BacktestRunner } from '../logic/BacktestRunner';
 import { chartWorkerClient } from '@/workers/worker-client';
+import type { MatrixSortMode, StrategyMatrixConfig } from '../dashboard/matrix-types';
+import { compareTimeframe, normalizeDashboardSymbol, normalizeDashboardTf } from '../dashboard/matrix-utils';
+
+const DEFAULT_MATRIX_CONFIG: StrategyMatrixConfig = {
+    symbols: ['XAUUSDm', 'BTCUSDm', 'EURUSDm'],
+    timeframes: ['1m', '5m', '15m', '1h', '4h'],
+    symbolSortMode: 'added',
+    signalTtlMultiplier: 2,
+    signalTtlFloorSec: 60,
+};
 
 interface StrategyState {
     strategies: Strategy[];
@@ -13,6 +22,7 @@ interface StrategyState {
     initialVirtualBalance: number;
     lastBacktestPnL: number;
     backtestCount: number;
+    matrixConfig: StrategyMatrixConfig;
     addStrategy: (strategy: Strategy) => void;
     updateStrategy: (id: string, updates: Partial<Strategy>) => void;
     deleteStrategy: (id: string) => void;
@@ -34,6 +44,14 @@ interface StrategyState {
     resetVirtualAccount: () => void;
     lastResetTime: number; // For synchronization
     runBacktest: (strategyId: string, candles: any[], overrideSymbol?: string) => Promise<void>;
+    addMatrixSymbol: (symbol: string) => void;
+    removeMatrixSymbol: (symbol: string) => void;
+    addMatrixTimeframe: (timeframe: string) => void;
+    removeMatrixTimeframe: (timeframe: string) => void;
+    setMatrixSymbolSortMode: (mode: MatrixSortMode) => void;
+    setMatrixSignalTtlMultiplier: (multiplier: number) => void;
+    setMatrixSignalTtlFloorSec: (seconds: number) => void;
+    resetMatrixConfig: () => void;
 }
 
 
@@ -191,6 +209,7 @@ export const useStrategyStore = create<StrategyState>()(
             initialVirtualBalance: 10000,
             lastBacktestPnL: 0,
             backtestCount: 0,
+            matrixConfig: DEFAULT_MATRIX_CONFIG,
             addStrategy: (strategy) => {
                 console.log('[Store] Adding strategy:', strategy.name);
                 set((state) => ({ strategies: [...state.strategies, strategy] }));
@@ -319,6 +338,69 @@ export const useStrategyStore = create<StrategyState>()(
                     console.error('[Store] Backtest Worker Failed:', err);
                 }
             },
+            addMatrixSymbol: (symbol: string) => set((state) => {
+                const normalized = normalizeDashboardSymbol(symbol);
+                if (!normalized) return state;
+                if (state.matrixConfig.symbols.some((s) => s.toLowerCase() === normalized.toLowerCase())) return state;
+                return {
+                    matrixConfig: {
+                        ...state.matrixConfig,
+                        symbols: [...state.matrixConfig.symbols, normalized],
+                    },
+                };
+            }),
+            removeMatrixSymbol: (symbol: string) => set((state) => {
+                const normalized = normalizeDashboardSymbol(symbol);
+                if (!normalized) return state;
+                return {
+                    matrixConfig: {
+                        ...state.matrixConfig,
+                        symbols: state.matrixConfig.symbols.filter((s) => s.toLowerCase() !== normalized.toLowerCase()),
+                    },
+                };
+            }),
+            addMatrixTimeframe: (timeframe: string) => set((state) => {
+                const normalized = normalizeDashboardTf(timeframe);
+                if (!normalized) return state;
+                if (state.matrixConfig.timeframes.includes(normalized)) return state;
+                return {
+                    matrixConfig: {
+                        ...state.matrixConfig,
+                        timeframes: [...state.matrixConfig.timeframes, normalized].sort(compareTimeframe),
+                    },
+                };
+            }),
+            removeMatrixTimeframe: (timeframe: string) => set((state) => {
+                const normalized = normalizeDashboardTf(timeframe);
+                if (!normalized) return state;
+                return {
+                    matrixConfig: {
+                        ...state.matrixConfig,
+                        timeframes: state.matrixConfig.timeframes.filter((tf) => tf !== normalized),
+                    },
+                };
+            }),
+            setMatrixSymbolSortMode: (mode: MatrixSortMode) => set((state) => ({
+                matrixConfig: {
+                    ...state.matrixConfig,
+                    symbolSortMode: mode,
+                },
+            })),
+            setMatrixSignalTtlMultiplier: (multiplier: number) => set((state) => ({
+                matrixConfig: {
+                    ...state.matrixConfig,
+                    signalTtlMultiplier: Math.max(1, Number.isFinite(multiplier) ? Math.floor(multiplier) : 2),
+                },
+            })),
+            setMatrixSignalTtlFloorSec: (seconds: number) => set((state) => ({
+                matrixConfig: {
+                    ...state.matrixConfig,
+                    signalTtlFloorSec: Math.max(1, Number.isFinite(seconds) ? Math.floor(seconds) : 60),
+                },
+            })),
+            resetMatrixConfig: () => set({
+                matrixConfig: DEFAULT_MATRIX_CONFIG,
+            }),
         }),
 
         {

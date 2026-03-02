@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Activity, Bot, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { Activity, Bot, MessageSquare, Grid2X2 } from 'lucide-react';
 import { StrategyList } from '@/features/strategy/components/StrategyList';
 import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
 import { cn } from '@/lib/utils';
@@ -40,7 +41,7 @@ export function StrategyPanel() {
         <div className="flex flex-col h-full bg-background text-foreground overflow-hidden font-sans">
             {/* Tabs Header (Child Navigation - Differentiated Hierarchy) */}
             <LayoutGroup id="strategy-panel-tabs">
-                <div className="flex bg-secondary/30 dark:bg-white/[0.02] p-0.5 gap-1 mx-4 mt-0.5 mb-2 rounded-lg shrink-0 relative z-0">
+                <div className="flex items-center bg-secondary/30 dark:bg-white/[0.02] p-0.5 gap-1 mx-4 mt-0.5 mb-2 rounded-lg shrink-0 relative z-0">
                     {tabs.map((tab) => {
                         const isActive = tab.matches ? tab.matches.includes(view) : view === tab.id;
                         return (
@@ -67,6 +68,13 @@ export function StrategyPanel() {
                             </button>
                         );
                     })}
+                    <Link
+                        href="/strategy/matrix"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[9.5px] font-bold uppercase text-muted-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors border border-transparent"
+                    >
+                        <Grid2X2 size={10} />
+                        Matrix
+                    </Link>
                 </div>
             </LayoutGroup>
 

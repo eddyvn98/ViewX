@@ -6,6 +6,7 @@ import { binanceSimulator } from "../services/binanceSimulator.js";
 import {
     incrementWsDroppedRateLimit,
     recordBroadcastLoopDuration,
+    runtimeState,
     setBridgeOnline,
     setWsClients,
 } from "../runtime-state.js";
@@ -274,6 +275,9 @@ export default function initWebSocket(server) {
         ws.isAlive = true;
         addDefaultPriceClient(subscriptionIndex, ws);
         setWsClients(clients.size);
+        if (!clients.get(ws)?.isBridgeAuthenticated) {
+            safeSend(ws, JSON.stringify({ topic: "bridgeStatus", online: runtimeState.bridgeOnline }));
+        }
 
         ws.on("pong", () => {
             ws.isAlive = true;

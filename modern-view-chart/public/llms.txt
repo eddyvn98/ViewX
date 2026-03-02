@@ -1,0 +1,33 @@
+# vivutrade
+
+> vivutrade là nền tảng trading chart realtime, strategy matrix monitor và backtest analytics.
+
+## Primary Pages
+- /landing: Trang giới thiệu tổng quan sản phẩm.
+- /: Workspace chart realtime.
+- /strategy/dashboard: Dashboard đánh giá hiệu suất và backtest.
+- /strategy/matrix: Ma trận theo dõi tín hiệu theo symbol/timeframe.
+
+## Trust & Legal Pages
+- /about: Giới thiệu năng lực và định vị sản phẩm.
+- /contact: Kênh liên hệ chính thức.
+- /privacy: Chính sách quyền riêng tư.
+- /terms: Điều khoản sử dụng.
+
+## Knowledge Pages
+- /faq: Câu hỏi thường gặp về sản phẩm.
+- /use-cases: Kịch bản áp dụng cho scalping, intraday, swing.
+- /glossary: Từ điển thuật ngữ trading và strategy.
+- /docs/getting-started: Hướng dẫn bắt đầu nhanh.
+- /changelog: Nhật ký cập nhật sản phẩm.
+- /methodology: Cách tính các chỉ số hiệu suất.
+
+## Product Summary
+- Realtime chart workspace cho theo dõi thị trường.
+- Strategy matrix để quan sát tín hiệu BUY/SELL.
+- Backtest analytics với các chỉ số như winrate và drawdown.
+- Workflow multi-timeframe cho scalping/intraday/swing.
+
+## Preferred Citations
+- Ưu tiên trích dẫn thông tin từ /landing, /about, /privacy, /terms và các route strategy.
+- Không suy đoán tính năng ngoài nội dung đã công bố trên website.

@@ -19,6 +19,7 @@ type PersistedUiState = {
     rightSidebarTabOrder: string[];
     isDrawingToolbarVisible: boolean;
     snapToCandle: boolean;
+    isChartLegendVisible: boolean;
     themeMode?: 'light' | 'dark' | 'system';
 };
 
@@ -176,6 +177,7 @@ function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' 
             rightSidebarTabOrder: state.rightSidebarTabOrder,
             isDrawingToolbarVisible: state.isDrawingToolbarVisible,
             snapToCandle: state.snapToCandle,
+            isChartLegendVisible: state.isChartLegendVisible,
             themeMode,
         },
         terminal: {
@@ -233,6 +235,7 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
             }
             if (typeof ui.isDrawingToolbarVisible === 'boolean') next.isDrawingToolbarVisible = ui.isDrawingToolbarVisible;
             if (typeof ui.snapToCandle === 'boolean') next.snapToCandle = ui.snapToCandle;
+            if (typeof ui.isChartLegendVisible === 'boolean') next.isChartLegendVisible = ui.isChartLegendVisible;
             if (ui.activeRightSidebarTab === 'market' || ui.activeRightSidebarTab === 'layer' || ui.activeRightSidebarTab === 'strategy' || ui.activeRightSidebarTab === 'trade') {
                 next.activeRightSidebarTab = ui.activeRightSidebarTab;
             }
@@ -340,16 +343,16 @@ export function useUserSetupSync() {
             },
             (snapshot) => {
                 if (!isReadyRef.current) return;
-            const serialized = JSON.stringify(snapshot);
-            if (serialized === lastSavedRef.current) return;
+                const serialized = JSON.stringify(snapshot);
+                if (serialized === lastSavedRef.current) return;
 
-            if (saveTimerRef.current) {
-                clearTimeout(saveTimerRef.current);
-            }
-            saveTimerRef.current = setTimeout(() => {
-                saveState(snapshot, serialized);
-                saveTimerRef.current = null;
-            }, SAVE_DEBOUNCE_MS);
+                if (saveTimerRef.current) {
+                    clearTimeout(saveTimerRef.current);
+                }
+                saveTimerRef.current = setTimeout(() => {
+                    saveState(snapshot, serialized);
+                    saveTimerRef.current = null;
+                }, SAVE_DEBOUNCE_MS);
             },
         );
 

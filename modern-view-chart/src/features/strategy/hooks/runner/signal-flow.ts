@@ -9,6 +9,7 @@ import { TradeLogger } from '../../logic/TradeLogger';
 import type { StrategySignal } from '../../types';
 import type { Strategy, VirtualPosition } from '../../types';
 import { runAiAuditAndTradeLogging } from './background-jobs';
+import { notifyTelegramSignal } from '../../utils/telegram-notifier';
 import type { Candle } from '@/lib/store/types';
 
 interface StoreLike {
@@ -57,6 +58,14 @@ export function processStrategySignal(
         const pending = currentVirtualPositions.find((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
         if (pending) {
             store.cancelVirtualPosition(strategy.id, symbol);
+            void notifyTelegramSignal({
+                strategyName: strategy.name,
+                symbol,
+                timeframe: strategy.timeframe,
+                signalType: 'CANCEL',
+                orderStatus: 'CANCELLED',
+                price: finalSignal.price,
+            });
             if (strategy.executionMode === 'real' && sendMessage) {
                 sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
             }
@@ -101,6 +110,15 @@ export function processStrategySignal(
             confidence: finalSignal.confidence
         });
 
+        void notifyTelegramSignal({
+            strategyName: strategy.name,
+            symbol,
+            timeframe: strategy.timeframe,
+            signalType: side,
+            orderStatus: isMarket ? 'OPEN' : 'PENDING',
+            price: entryPrice,
+        });
+
         if (side === 'BUY') soundService.playBuy();
         else soundService.playSell();
 
@@ -126,8 +144,27 @@ export function processStrategySignal(
         TradeLogger.updateExit(strategy.id, symbol, finalSignal.price, activePos?.metadata).catch((err) => console.error(err));
 
         const pending = currentVirtualPositions.find((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
-        if (pending) store.cancelVirtualPosition(strategy.id, symbol);
-        else store.closeVirtualPosition(strategy.id, symbol, finalSignal.price, { exit_reason: 'SIGNAL' });
+        if (pending) {
+            store.cancelVirtualPosition(strategy.id, symbol);
+            void notifyTelegramSignal({
+                strategyName: strategy.name,
+                symbol,
+                timeframe: strategy.timeframe,
+                signalType: 'CANCEL',
+                orderStatus: 'CANCELLED',
+                price: finalSignal.price,
+            });
+        } else {
+            store.closeVirtualPosition(strategy.id, symbol, finalSignal.price, { exit_reason: 'SIGNAL' });
+            void notifyTelegramSignal({
+                strategyName: strategy.name,
+                symbol,
+                timeframe: strategy.timeframe,
+                signalType: 'EXIT',
+                orderStatus: 'CLOSED',
+                price: finalSignal.price,
+            });
+        }
 
         if (strategy.executionMode === 'real' && sendMessage) {
             sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });

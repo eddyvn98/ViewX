@@ -13,6 +13,8 @@ import { managePositionOnTick } from './runner/position-management';
 import { processStrategySignal } from './runner/signal-flow';
 import { getLegacyStrategyPatch, resolveWarmupDataKey, shouldTriggerWarmup } from './runner/warmup';
 import type { Strategy } from '../types';
+import { buildMatrixRunnerConfigs } from '../dashboard/matrix-cell-state';
+import { mergeRunnerConfigs } from './runner/config-merge';
 
 type TabsLike = Record<string, { charts: Record<string, { symbol: string; interval?: string; source?: string }>; activeChartId?: string | null }>;
 
@@ -21,7 +23,8 @@ export function useStrategyRunner() {
         strategies,
         updateStrategy,
         virtualPositions,
-        lastResetTime
+        lastResetTime,
+        matrixConfig
     } = useStrategyStore();
     const { sendMessage } = useWebSocket();
     const candleData = useMarketStore((state) => state.candleData);
@@ -90,9 +93,11 @@ export function useStrategyRunner() {
             isRunningRef.current = true;
             try {
                 const uniqueChartConfigs = collectUniqueChartConfigs(tabs);
-                if (uniqueChartConfigs.length === 0) return;
+                const matrixConfigs = buildMatrixRunnerConfigs(matrixConfig.symbols, matrixConfig.timeframes);
+                const effectiveConfigs = mergeRunnerConfigs(uniqueChartConfigs, matrixConfigs);
+                if (effectiveConfigs.length === 0) return;
 
-                for (const config of uniqueChartConfigs) {
+                for (const config of effectiveConfigs) {
                     const { symbol, interval, source } = config;
                     const normalizedSymbol = normalizeSymbol(symbol);
                     const pairKey = `${source}:${normalizedSymbol}:${interval}`;
@@ -167,5 +172,5 @@ export function useStrategyRunner() {
         };
 
         void runCycle();
-    }, [candleData, tabs, strategies, positions, sendMessage]);
+    }, [candleData, tabs, strategies, positions, sendMessage, matrixConfig]);
 }

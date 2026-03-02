@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useMarketStore } from "@/lib/store";
 import { soundService } from "@/features/strategy/logic/SoundService";
+import { useStrategyStore } from "@/features/strategy/store/strategy-store";
 
 const WS_URL_FROM_ENV = process.env.NEXT_PUBLIC_WS_URL || "";
 let SOCKET_URL = WS_URL_FROM_ENV || "";
@@ -46,10 +47,17 @@ function normalizeSymbol(symbol: string): string {
 
 function collectActiveSymbolsFromStore(): string[] {
     const state = useMarketStore.getState();
+    const strategyState = useStrategyStore.getState();
     const chartSymbols = Object.values(state.tabs).flatMap((tab: any) =>
         Object.values(tab.charts || {}).map((chart: any) => chart.symbol),
     );
+    const matrixSymbols = (strategyState.matrixConfig?.symbols || []).map((s) => String(s));
+    const activeStrategySymbols = (strategyState.strategies || [])
+        .filter((s) => s.active && s.symbol)
+        .map((s) => String(s.symbol));
     const all = [...state.watchlist, ...chartSymbols]
+        .concat(matrixSymbols)
+        .concat(activeStrategySymbols)
         .filter(Boolean)
         .map((s) => normalizeSymbol(String(s)));
     return Array.from(new Set(all)).slice(0, 300);

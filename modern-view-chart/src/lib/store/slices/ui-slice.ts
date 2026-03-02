@@ -22,6 +22,7 @@ export interface UISlice {
     sidebarTopHeight: number;
     rightSidebarTabOrder: string[];
     isDrawingToolbarVisible: boolean;
+    isChartLegendVisible: boolean;
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
@@ -39,6 +40,7 @@ export interface UISlice {
     setSidebarTopHeight: (height: number) => void;
     setRightSidebarTabOrder: (order: string[]) => void;
     setThemeColor: (color: 'blue' | 'green' | 'amber' | 'red' | 'slate') => void;
+    setChartLegendVisible: (visible: boolean) => void;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
@@ -54,6 +56,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     rightSidebarTabOrder: ['strategy', 'layer', 'trade'],
     themeColor: 'green',
     isDrawingToolbarVisible: false,
+    isChartLegendVisible: true,
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -85,4 +88,5 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
             document.documentElement.classList.add(`theme-${color}`);
         }
     },
+    setChartLegendVisible: (visible) => set({ isChartLegendVisible: visible }),
 });

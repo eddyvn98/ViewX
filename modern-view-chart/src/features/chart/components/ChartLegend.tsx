@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
 import { useLegendDOMUpdater } from '../hooks/use-legend-dom-updater';
 import { useShallow } from 'zustand/react/shallow';
 import { SymbolIcon } from './SymbolIcon';
 import { isSmartAnalysis } from '../indicators/registry/indicator-categories';
-import { SmartAnalysisToggles } from './SmartAnalysisToggles';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +24,10 @@ const EMPTY_INDICATORS: any[] = [];
 
 export function ChartLegend({ chartId, symbol, interval, source, candles, chartType = 'candles' }: ChartLegendProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [isVisible, setIsVisible] = useState(true);
+    const { isVisible, setIsVisible } = useMarketStore(useShallow(state => ({
+        isVisible: state.isChartLegendVisible,
+        setIsVisible: state.setChartLegendVisible
+    })));
 
     // Get indicators config (stable, rarely changes)
     const indicators = useMarketStore(useShallow(
@@ -45,7 +47,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
         <div
             ref={containerRef}
             className={cn(
-                "absolute left-2 right-0 top-2 md:top-[38px] md:right-auto z-[40] pointer-events-none select-none flex flex-col gap-1.5 items-start transition-opacity duration-300 opacity-100"
+                "absolute left-2 top-[38px] right-auto z-[40] pointer-events-none select-none flex flex-col gap-1.5 items-start transition-opacity duration-300 opacity-100"
             )}
         >
             {/* Legend Toggle Button - Visible on Mobile */}
@@ -102,11 +104,6 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
                             <span data-ohlc="change-percent" className="text-[12px] font-extrabold opacity-100">···</span>
                         </div>
                     </div>
-                </div>
-
-                {/* Smart Analysis Tools Section */}
-                <div className="w-[132px]">
-                    <SmartAnalysisToggles chartId={chartId} />
                 </div>
 
                 {/* General Indicators List */}
