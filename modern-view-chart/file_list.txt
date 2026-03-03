@@ -1,0 +1,11 @@
+﻿D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\alert-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\chart-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\data-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\drawing-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\indicator-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\market-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\tab-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\terminal-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\ui-slice.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\terminal\anchor-utils.test.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\store\slices\terminal\reconcile-utils.test.ts

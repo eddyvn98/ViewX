@@ -1,0 +1,11 @@
+﻿D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\hooks\indicators\indicator-candle-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\logic\alert-tag-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\logic\order-tag-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\logic\order-tags\symbol-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\utils\fib-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\utils\geometry-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\utils\snap-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\chart\utils\time-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\strategy\utils\market-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\features\strategy\utils\time-utils.ts
+D:\TradingWeb\BE_ViewChart\modern-view-chart\src\lib\utils.ts
