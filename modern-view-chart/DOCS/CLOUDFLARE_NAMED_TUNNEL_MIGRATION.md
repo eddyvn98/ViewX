@@ -14,10 +14,10 @@ Move from Quick Tunnel to Named Tunnel with fixed domain to avoid URL rotation a
 ## Target State
 
 - Named Tunnel: persistent tunnel ID
-- Fixed DNS hostname (example: `viewx.example.com`)
+- Fixed DNS hostname (example: `vivutrade.example.com`)
 - Service route split:
-  - `viewx.example.com` -> frontend (`http://localhost:3000`)
-  - `api.viewx.example.com` -> backend (`http://localhost:5000`)
+  - `vivutrade.example.com` -> frontend (`http://localhost:3000`)
+  - `api.vivutrade.example.com` -> backend (`http://localhost:5000`)
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ cloudflared tunnel login
 1. Create named tunnel:
 
 ```powershell
-cloudflared tunnel create viewx-prod
+cloudflared tunnel create vivutrade-prod
 ```
 
 2. Create config file at `%USERPROFILE%\\.cloudflared\\config.yml`:
@@ -44,9 +44,9 @@ tunnel: <TUNNEL_UUID>
 credentials-file: C:\Users\<user>\.cloudflared\<TUNNEL_UUID>.json
 
 ingress:
-  - hostname: viewx.example.com
+  - hostname: vivutrade.example.com
     service: http://localhost:3000
-  - hostname: api.viewx.example.com
+  - hostname: api.vivutrade.example.com
     service: http://localhost:5000
   - service: http_status:404
 ```
@@ -54,14 +54,14 @@ ingress:
 3. Bind DNS routes:
 
 ```powershell
-cloudflared tunnel route dns viewx-prod viewx.example.com
-cloudflared tunnel route dns viewx-prod api.viewx.example.com
+cloudflared tunnel route dns vivutrade-prod vivutrade.example.com
+cloudflared tunnel route dns vivutrade-prod api.vivutrade.example.com
 ```
 
 4. Run tunnel:
 
 ```powershell
-cloudflared tunnel run viewx-prod
+cloudflared tunnel run vivutrade-prod
 ```
 
 5. Optional: install as system service:
@@ -72,8 +72,8 @@ cloudflared service install
 
 ## Verification Checklist
 
-1. `https://viewx.example.com` loads chart UI.
-2. `https://api.viewx.example.com/api/health` returns `status=ok`.
+1. `https://vivutrade.example.com` loads chart UI.
+2. `https://api.vivutrade.example.com/api/health` returns `status=ok`.
 3. WS connect succeeds with JWT bearer and receives realtime updates.
 4. Restart `cloudflared` process and confirm clients auto-reconnect.
 
@@ -88,3 +88,4 @@ cloudflared service install
 1. Update `.env`/runtime CORS allowlist to fixed domains.
 2. Update client WS/API base URLs.
 3. Keep Quick Tunnel script as emergency fallback only.
+

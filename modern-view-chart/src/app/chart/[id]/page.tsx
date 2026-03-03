@@ -31,7 +31,7 @@ export default function StandaloneChartPage() {
     // Update document title dynamically
     useEffect(() => {
         if (activeSymbol) {
-            document.title = `${activeSymbol} • ${activeInterval}m | ViewX Chart`;
+            document.title = `${activeSymbol} • ${activeInterval}m | vivutrade Chart`;
         }
     }, [activeSymbol, activeInterval]);
 

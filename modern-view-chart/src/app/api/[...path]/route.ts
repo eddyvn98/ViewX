@@ -24,6 +24,14 @@ function buildTargetUrl(request: NextRequest, pathSegments: string[]): URL {
   return target;
 }
 
+function isSelfProxyTarget(request: NextRequest, target: URL): boolean {
+  const requestProto = request.nextUrl.protocol.toLowerCase();
+  const requestHost = request.nextUrl.host.toLowerCase();
+  const targetProto = target.protocol.toLowerCase();
+  const targetHost = target.host.toLowerCase();
+  return requestProto === targetProto && requestHost === targetHost;
+}
+
 async function proxyRequest(request: NextRequest, context: RouteContext): Promise<Response> {
   const params = await context.params;
   const pathSegments = Array.isArray(params?.path) ? params.path : [];
@@ -35,6 +43,18 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
   }
 
   const targetUrl = buildTargetUrl(request, pathSegments);
+  if (isSelfProxyTarget(request, targetUrl)) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Invalid BACKEND_ORIGIN: proxy target points to this Next.js server and would create a request loop.",
+      }),
+      {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  }
   const headers = new Headers();
   const forwardHeaderKeys = [
     "accept",

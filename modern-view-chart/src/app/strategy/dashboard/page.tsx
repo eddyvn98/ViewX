@@ -128,7 +128,7 @@ export default function StrategyDashboardPage() {
                 </div>
 
                 <footer className="mt-8 border-t border-border/30 pt-4 flex flex-col md:flex-row justify-between items-center gap-4 opacity-50">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase">ViewX High-Performance Rule Engine v2.0</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">vivutrade High-Performance Rule Engine v2.0</span>
                     <span className="text-[9px] font-mono text-muted-foreground">Total Volume: {(virtualPositions.reduce((sum, p) => sum + (p.lotSize || 0), 0)).toFixed(2)} Lot</span>
                 </footer>
             </div>

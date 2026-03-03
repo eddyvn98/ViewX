@@ -46,11 +46,23 @@ class MT5Service:
         return None
 
     def fetch_candles(self, symbol, interval, count=200):
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info is None:
+            print(f"[ERROR] Symbol not found in MT5: {symbol}")
+            return []
+        if not symbol_info.visible:
+            selected = mt5.symbol_select(symbol, True)
+            if not selected:
+                error_code, error_desc = mt5.last_error()
+                print(f"[ERROR] Failed to select symbol {symbol}: {error_code} - {error_desc}")
+                return []
+
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
         print(f"[FETCH] {symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")
         rates = mt5.copy_rates_from_pos(symbol, tf, 0, count)
         if rates is None or len(rates) == 0:
-            print(f"[WARN] No rates found for {symbol} {interval}")
+            error_code, error_desc = mt5.last_error()
+            print(f"[WARN] No rates found for {symbol} {interval} | MT5 error: {error_code} - {error_desc}")
             return []
         
         return [{
@@ -64,6 +76,17 @@ class MT5Service:
 
     def fetch_candles_at(self, symbol, timestamp, interval='1m', count=200):
         """Fetch candles ending at specific timestamp."""
+        symbol_info = mt5.symbol_info(symbol)
+        if symbol_info is None:
+            print(f"[ERROR] Symbol not found in MT5: {symbol}")
+            return []
+        if not symbol_info.visible:
+            selected = mt5.symbol_select(symbol, True)
+            if not selected:
+                error_code, error_desc = mt5.last_error()
+                print(f"[ERROR] Failed to select symbol {symbol}: {error_code} - {error_desc}")
+                return []
+
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
         # Using from_date logic: copy_rates_from(symbol, timeframe, date_from, count)
         # Docs: copy_rates_from(symbol, timeframe, datetime/timestamp, count)
@@ -71,6 +94,8 @@ class MT5Service:
         
         rates = mt5.copy_rates_from(symbol, tf, int(timestamp), count)
         if rates is None:
+            error_code, error_desc = mt5.last_error()
+            print(f"[WARN] No rates_at found for {symbol} {interval} @ {timestamp} | MT5 error: {error_code} - {error_desc}")
             return []
             
         return [{

@@ -7,6 +7,7 @@ const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
+const siteOrigin = getSiteOrigin();
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -19,6 +20,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
+  icons: {
+    icon: "/brand/vivutrade-logo-transparent.png",
+    shortcut: "/brand/vivutrade-logo-transparent.png",
+    apple: "/brand/vivutrade-logo-transparent.png",
+  },
   title: {
     default: "vivutrade | Trading Chart & Strategy",
     template: "%s | vivutrade",
@@ -50,24 +56,23 @@ export const metadata: Metadata = {
     title: "vivutrade | Trading Chart & Strategy",
     description:
       "Trading chart realtime, strategy matrix monitor và backtest analytics trong một nền tảng duy nhất.",
-    images: ["/opengraph-image"],
+    images: [`${siteOrigin}/opengraph-image`],
   },
   twitter: {
     card: "summary_large_image",
     title: "vivutrade | Trading Chart & Strategy",
     description:
       "Trading chart realtime, strategy matrix monitor và backtest analytics trong một nền tảng duy nhất.",
-    images: ["/opengraph-image"],
+    images: [`${siteOrigin}/opengraph-image`],
   },
 };
 
-const siteOrigin = getSiteOrigin();
 const organizationStructuredData = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "vivutrade",
   url: siteOrigin,
-  logo: `${siteOrigin}/favicon.ico`,
+  logo: `${siteOrigin}/brand/vivutrade-logo-transparent.png`,
   description:
     "vivutrade là nền tảng trading chart realtime, strategy matrix monitor và backtest analytics cho nhà giao dịch.",
 };
@@ -90,7 +95,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="vi" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} antialiased`}
         suppressHydrationWarning

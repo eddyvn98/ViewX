@@ -65,13 +65,17 @@ function collectActiveSymbolsFromStore(): string[] {
 
 function deriveDefaultSocketUrl(): string {
     if (typeof window === "undefined") return SOCKET_URL || "ws://127.0.0.1:8091";
+    const isLocalHost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
+    if (isLocalHost) {
+        // In local development, always prefer the local backend websocket.
+        return "ws://127.0.0.1:8091";
+    }
     if (SOCKET_URL) return SOCKET_URL;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-        return "ws://127.0.0.1:8091";
-    }
     return `${protocol}//${host}`;
 }
 

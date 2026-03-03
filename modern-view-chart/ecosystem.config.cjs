@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "modern-view-chart-prod",
+      name: "vivutrade-prod",
       cwd: "d:/viewx/ViewX/modern-view-chart",
       script: "npm.cmd",
       args: "run start",

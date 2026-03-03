@@ -7,7 +7,8 @@ import { useTheme } from 'next-themes';
 
 const USER_STATE_SCHEMA_VERSION = 1;
 const SAVE_DEBOUNCE_MS = 1500;
-const CLIENT_ID_STORAGE_KEY = 'viewx-client-id';
+const CLIENT_ID_STORAGE_KEY = 'vivutrade-client-id';
+const LEGACY_CLIENT_ID_STORAGE_KEY = 'viewx-client-id';
 
 type PersistedUiState = {
     isLeftSidebarOpen: boolean;
@@ -135,6 +136,11 @@ function getOrCreateClientId(): string {
     if (typeof window === 'undefined') return 'public';
     const current = localStorage.getItem(CLIENT_ID_STORAGE_KEY)?.trim() || '';
     if (current) return current;
+    const legacy = localStorage.getItem(LEGACY_CLIENT_ID_STORAGE_KEY)?.trim() || '';
+    if (legacy) {
+        localStorage.setItem(CLIENT_ID_STORAGE_KEY, legacy);
+        return legacy;
+    }
 
     const generated =
         typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'

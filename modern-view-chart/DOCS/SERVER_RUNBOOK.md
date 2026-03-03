@@ -1,11 +1,11 @@
-# Modern View Chart Server Runbook
+# vivutrade Server Runbook
 
 ## Scope
 - Host app from this laptop.
 - Use Cloudflare Quick Tunnel (`trycloudflare.com`) for public access.
 - Keep backend pinned to port `8091`.
 - Protect API/WS with rotating `ACCESS_TOKEN`.
-- Run MongoDB per-project using Docker (`viewx-mongo`).
+- Run MongoDB per-project using Docker (`vivutrade-mongo`).
   Optional: use external MongoDB (Atlas M0) to remove local Docker DB load.
 
 ## File Locations
@@ -25,7 +25,7 @@
 ```env
 PORT=8091
 ACCESS_TOKEN=<strong-random-token>
-URL_MONGOOSE=mongodb://127.0.0.1:27027/viewx?directConnection=true
+URL_MONGOOSE=mongodb://127.0.0.1:27027/vivutrade?directConnection=true
 FORCE_LOCAL_DOCKER_DB=0
 ALLOWED_ORIGINS=https://*.trycloudflare.com,http://localhost:3000,http://127.0.0.1:3000
 MAX_WS_CLIENTS=150
@@ -204,7 +204,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\server\rotate-access-token.ps
 ```
 
 Scheduled rotation:
-- Task name: `ModernViewChartRotateToken`
+- Task name: `vivutradeRotateToken`
 - Runs daily at `TOKEN_ROTATE_CRON_TIME` (default `03:00`)
 - Flow: backup `.env` -> rotate token -> `stop-all` -> `run-all` -> verify health + link artifacts
 
@@ -231,16 +231,16 @@ When enabled:
 - Trading and alert mutating WS commands are blocked.
 
 ## Scheduled Tasks
-- `ModernViewChartServer`: start services at boot.
-- `ModernViewChartBootstrap`: bootstrap at logon (disabled by default).
-- `ModernViewChartWatchdog`: check/recover FE/BE/Bridge/Tunnel every minute.
-- `ModernViewChartRotateToken`: daily token rotation.
+- `vivutradeServer`: start services at boot.
+- `vivutradeBootstrap`: bootstrap at logon (disabled by default).
+- `vivutradeWatchdog`: check/recover FE/BE/Bridge/Tunnel every minute.
+- `vivutradeRotateToken`: daily token rotation.
 
 If task registration is blocked by policy:
 - Startup fallback launchers are written to:
-  - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ModernViewChartServer.cmd`
-  - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ModernViewChartWatchdog.cmd`
-  - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ModernViewChartRotateToken.cmd`
+  - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\vivutradeServer.cmd`
+  - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\vivutradeWatchdog.cmd`
+  - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\vivutradeRotateToken.cmd`
 
 ## Recovery
 ### Tunnel URL changed/reset
@@ -269,3 +269,4 @@ If task registration is blocked by policy:
 - Do not reboot machine during active session.
 - Disable sleep/hibernate for server profile.
 - Keep tunnel process (`start_mobile_access.py`) alive.
+
