@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMarketStore } from '@/lib/store';
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync';
@@ -13,6 +13,15 @@ import { List, type RowComponentProps } from 'react-window';
 type DataSource = 'BINANCE' | 'MT5';
 type SourceTab = 'ALL' | 'BINANCE' | 'MT5';
 const SOURCE_TABS: SourceTab[] = ['ALL', 'BINANCE', 'MT5'];
+const DEFAULT_BINANCE_SYMBOLS = [
+    'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT',
+    'DOGEUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT',
+];
+
+function resolveDataSource(symbol: string): DataSource {
+    const normalized = String(symbol || '').toUpperCase();
+    return normalized.includes('USDT') ? 'BINANCE' : 'MT5';
+}
 
 interface TickerRowProps {
     symbol: string;
@@ -30,10 +39,13 @@ interface TickerRowProps {
  * Prevents re-renders on every ticker update
  */
 const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched, onSelect, onRemove, onAdd, mode }: TickerRowProps) {
+    const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);
     const priceRef = useRef<HTMLSpanElement>(null);
     const changeRef = useRef<HTMLDivElement>(null);
     const rafIdRef = useRef<number | null>(null);
     const lastPriceRef = useRef<string>('');
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const touchRef = useRef({ startX: 0, startY: 0, swiping: false });
 
     // RAF-based price update - bypasses React
     const updateDOM = useCallback(() => {
@@ -87,78 +99,136 @@ const TickerRow = memo(function TickerRow({ symbol, source, isActive, isWatched,
         };
     }, [updateDOM, mode]);
 
+    const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (mode !== 'watchlist') return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        touchRef.current = { startX: touch.clientX, startY: touch.clientY, swiping: false };
+    }, [mode]);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (mode !== 'watchlist') return;
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        const dx = touch.clientX - touchRef.current.startX;
+        const dy = touch.clientY - touchRef.current.startY;
+
+        if (!touchRef.current.swiping) {
+            if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return;
+            touchRef.current.swiping = true;
+        }
+
+        e.preventDefault();
+        const nextOffset = Math.max(0, Math.min(56, -dx));
+        setSwipeOffset(nextOffset);
+    }, [mode]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (mode !== 'watchlist') return;
+        if (!touchRef.current.swiping) {
+            if (swipeOffset > 0) setSwipeOffset(0);
+            return;
+        }
+
+        setSwipeOffset((prev) => (prev > 28 ? 56 : 0));
+        touchRef.current.swiping = false;
+    }, [mode, swipeOffset]);
+
     return (
         <div
-            onClick={() => onSelect(symbol, source)}
+            onClick={() => {
+                if (mode === 'watchlist' && swipeOffset > 0) return;
+                onSelect(symbol, source);
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             className={cn(
-                "grid grid-cols-[3fr_3fr_4.5fr] items-center px-3 py-2.5 mx-3 cursor-pointer hover:bg-white/[0.03] transition-all border-b border-border dark:border-white/[0.02] last:border-0 group min-h-[48px] gap-2 relative overflow-hidden",
+                "px-3 py-2.5 mx-3 cursor-pointer hover:bg-white/[0.03] transition-all border-b border-border dark:border-white/[0.02] last:border-0 group min-h-[48px] gap-2 relative overflow-hidden touch-pan-y",
                 isActive && mode === 'watchlist' && "bg-secondary/50 dark:bg-white/[0.05] rounded-xl border-b-transparent shadow-sm my-1.5"
             )}
         >
-            {isActive && mode === 'watchlist' && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl z-20" />
-            )}
-            {isActive && mode === 'watchlist' && (
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/[0.05] to-transparent pointer-events-none" />
-            )}
-
-            {/* Column 1: Symbol & Source */}
-            <div className="min-w-0 flex items-center gap-2.5 relative z-10">
-                <SymbolIcon symbol={symbol} className="w-7 h-7 shrink-0" />
-                <div className="flex flex-col min-w-0">
-                    <span className={cn(
-                        "text-[13px] font-bold tracking-tight transition-all duration-300 whitespace-nowrap",
-                        isActive && mode === 'watchlist' ? "text-foreground dark:text-white" : "text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-white"
-                    )}>
-                        {symbol.replace('USDT', '').replace('USDTm', '')}
-                    </span>
-                    <span className="text-[9px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
-                </div>
-            </div>
-
-            {mode === 'watchlist' ? (
-                <>
-                    {/* Column 2: Price */}
-                    <div className="text-right overflow-hidden relative z-10 pr-2">
-                        <span ref={priceRef} className="text-foreground dark:text-white/90 text-[13px] font-bold group-hover:text-foreground dark:group-hover:text-white transition-colors tracking-tight">···</span>
-                    </div>
-
-                    {/* Column 3: Change */}
-                    <div className="text-right flex flex-col items-end overflow-hidden relative z-10">
-                        <div ref={changeRef} className="text-[12px] font-bold text-muted-foreground/50 dark:text-muted-foreground/40 mt-0.5 truncate w-full flex justify-end">
-                            <span>--</span>
-                        </div>
-                    </div>
-
-                    {/* Column 4: Actions (Absolute overlay) */}
-                    <div className="absolute right-0 inset-y-0 flex items-center pr-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onRemove(symbol); }}
-                            className="h-8 w-8 flex items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all pointer-events-auto shadow-lg backdrop-blur-md border border-rose-500/20"
-                        >
-                            <Trash2 size={13} />
-                        </button>
-                    </div>
-                </>
-            ) : (
-                <div className="flex justify-end relative z-10">
+            {mode === 'watchlist' && (
+                <div
+                    className={cn(
+                        "absolute right-0 inset-y-0 w-14 flex items-center justify-center pr-2 md:pr-3 z-30 transition-opacity",
+                        swipeOffset > 0 ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto"
+                    )}
+                >
                     <button
+                        type="button"
                         onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
-                            if (isWatched) onRemove(symbol);
-                            else onAdd(symbol);
+                            removeFromWatchlist(symbol);
+                            setSwipeOffset(0);
                         }}
-                        className={cn(
-                            "p-1.5 rounded-xl transition-all border",
-                            isWatched
-                                ? "text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                                : "text-muted-foreground hover:text-foreground hover:bg-secondary border-transparent hover:border-border"
-                        )}
+                        aria-label={`Remove ${symbol} from watchlist`}
+                        className="h-9 w-9 md:h-8 md:w-8 flex items-center justify-center rounded-lg bg-rose-500/15 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-lg backdrop-blur-md border border-rose-500/30 active:scale-95"
                     >
-                        <Star size={13} fill={isWatched ? "currentColor" : "none"} />
+                        <Trash2 size={14} />
                     </button>
                 </div>
             )}
+
+            <div
+                className="grid grid-cols-[3fr_3fr_4.5fr] items-center gap-2 relative z-10 transition-transform duration-200"
+                style={mode === 'watchlist' ? { transform: `translateX(-${swipeOffset}px)` } : undefined}
+            >
+                {isActive && mode === 'watchlist' && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl z-20" />
+                )}
+                {isActive && mode === 'watchlist' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/[0.05] to-transparent pointer-events-none" />
+                )}
+
+                <div className="min-w-0 flex items-center gap-2.5 relative z-10">
+                    <SymbolIcon symbol={symbol} className="w-7 h-7 shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                        <span className={cn(
+                            "text-[13px] font-bold tracking-tight transition-all duration-300 whitespace-nowrap",
+                            isActive && mode === 'watchlist' ? "text-foreground dark:text-white" : "text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-white"
+                        )}>
+                            {symbol.replace('USDT', '').replace('USDTm', '')}
+                        </span>
+                        <span className="text-[9px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
+                    </div>
+                </div>
+
+                {mode === 'watchlist' ? (
+                    <>
+                        <div className="text-right overflow-hidden relative z-10 pr-2">
+                            <span ref={priceRef} className="text-foreground dark:text-white/90 text-[13px] font-bold group-hover:text-foreground dark:group-hover:text-white transition-colors tracking-tight">...</span>
+                        </div>
+
+                        <div className="text-right flex flex-col items-end overflow-hidden relative z-10">
+                            <div ref={changeRef} className="text-[12px] font-bold text-muted-foreground/50 dark:text-muted-foreground/40 mt-0.5 truncate w-full flex justify-end">
+                                <span>--</span>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex justify-end relative z-10">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (isWatched) onRemove(symbol);
+                                else onAdd(symbol);
+                            }}
+                            className={cn(
+                                "p-1.5 rounded-xl transition-all border",
+                                isWatched
+                                    ? "text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary border-transparent hover:border-border"
+                            )}
+                        >
+                            <Star size={13} fill={isWatched ? "currentColor" : "none"} />
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 });
@@ -202,7 +272,7 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const addToWatchlist = useMarketStore((state) => state.addToWatchlist);
     const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);
 
-    // ⚡ PERFORMANCE FIX: Only subscribe to symbol NAMES, not ticker data
+    // âš¡ PERFORMANCE FIX: Only subscribe to symbol NAMES, not ticker data
     // Prices are updated via RAF in each TickerRow
     const allSymbols = useMarketStore(useShallow((state) => Object.keys(state.tickers)));
 
@@ -219,6 +289,7 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const [search, setSearch] = useState('');
     const deferredSearch = useDeferredValue(search);
     const [sourceTab, setSourceTab] = useState<SourceTab>('ALL');
+    const [binanceUniverse, setBinanceUniverse] = useState<string[]>([]);
 
     // FORCE DEFAULT WATCHLIST IF EMPTY
     React.useEffect(() => {
@@ -230,29 +301,69 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
 
     const availableSymbols = useMarketStore((state) => state.availableSymbols);
 
+    useEffect(() => {
+        if (mode !== 'discovery') return;
+        const controller = new AbortController();
+
+        const loadBinanceSymbols = async () => {
+            try {
+                const res = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
+                    signal: controller.signal,
+                    cache: 'no-store',
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const symbols = Array.isArray(data?.symbols)
+                    ? data.symbols
+                        .filter((s: any) => s?.status === 'TRADING' && String(s?.symbol || '').endsWith('USDT'))
+                        .map((s: any) => String(s.symbol))
+                    : [];
+                if (symbols.length > 0) {
+                    setBinanceUniverse(Array.from(new Set(symbols)));
+                }
+            } catch {
+                // Ignore fetch failures; UI still has websocket/default fallback symbols.
+            }
+        };
+
+        void loadBinanceSymbols();
+        return () => controller.abort();
+    }, [mode]);
+
     // Memoized symbol list - never includes ticker DATA, only names
     const symbolList = useMemo(() => {
         let symbols: { symbol: string; source: DataSource }[] = [];
 
         if (mode === 'watchlist') {
             symbols = watchlist.map(symbol => {
-                const isMT5 = symbol.includes('USD') || symbol.endsWith('m') || !symbol.includes('USDT');
-                return { symbol, source: (isMT5 ? 'MT5' : 'BINANCE') as DataSource };
+                return { symbol, source: resolveDataSource(symbol) };
             });
         } else {
-            // Discovery mode: use dynamic available symbols from store
-            if (availableSymbols.length > 0) {
-                symbols = availableSymbols.map(s => ({
-                    symbol: s.symbol,
-                    source: 'MT5' as DataSource
-                }));
-            } else {
-                // Fallback to currently active tickers if availableSymbols is empty
-                symbols = allSymbols.map(symbol => {
-                    const isMT5 = symbol.includes('USD') || symbol.endsWith('m') || !symbol.includes('USDT');
-                    return { symbol, source: (isMT5 ? 'MT5' : 'BINANCE') as DataSource };
-                });
-            }
+            const map = new Map<string, DataSource>();
+
+            // MT5 symbol universe from bridge
+            availableSymbols.forEach((s) => {
+                const symbol = String(s?.symbol || '').trim();
+                if (!symbol) return;
+                map.set(symbol, resolveDataSource(symbol));
+            });
+
+            // Live symbols from websocket tickers (includes Binance)
+            allSymbols.forEach((symbol) => {
+                const normalized = String(symbol || '').trim();
+                if (!normalized) return;
+                map.set(normalized, resolveDataSource(normalized));
+            });
+
+            // Keep core Binance symbols visible even before first WS ticker batch arrives
+            DEFAULT_BINANCE_SYMBOLS.forEach((symbol) => {
+                if (!map.has(symbol)) map.set(symbol, 'BINANCE');
+            });
+            binanceUniverse.forEach((symbol) => {
+                if (!map.has(symbol)) map.set(symbol, 'BINANCE');
+            });
+
+            symbols = Array.from(map.entries()).map(([symbol, source]) => ({ symbol, source }));
         }
 
         return symbols
@@ -263,7 +374,7 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                 return matchesSearch && matchesTab;
             })
             .sort((a, b) => a.symbol.localeCompare(b.symbol));
-    }, [allSymbols, availableSymbols, deferredSearch, sourceTab, watchlist, mode]);
+    }, [allSymbols, availableSymbols, deferredSearch, sourceTab, watchlist, mode, binanceUniverse]);
 
     const watchedSet = useMemo(() => new Set(watchlist), [watchlist]);
 
@@ -363,3 +474,4 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
 }
 
 export const MarketList = memo(MarketListInternal);
+

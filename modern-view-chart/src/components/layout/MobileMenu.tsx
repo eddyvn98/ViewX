@@ -1,13 +1,49 @@
 import React from 'react';
-import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight } from 'lucide-react';
+import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight, House } from 'lucide-react';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export function MobileMenu() {
-    // Demo user info
-    const user = {
-        name: 'Trader User',
-        email: 'user@trading.com',
-        balance: 24500.00
-    };
+    const [user, setUser] = React.useState({
+        name: 'Guest',
+        email: 'guest@vivutrade.io.vn',
+        balance: 24500.00,
+    });
+    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+        const raw = localStorage.getItem("auth_user") || "";
+        const token = (localStorage.getItem("auth_access_token") || "").trim();
+        setIsAuthenticated(Boolean(token));
+        if (!raw) return;
+        try {
+            const parsed = JSON.parse(raw);
+            const email = String(parsed?.username || "").trim() || "guest@vivutrade.io.vn";
+            const name = String(parsed?.display_name || "").trim() || email.split("@")[0] || "Guest";
+            setUser((prev) => ({ ...prev, name, email }));
+        } catch {
+            // Keep default guest profile.
+        }
+    }, []);
+
+    const handleLogout = React.useCallback(async () => {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({}),
+            });
+        } catch {
+            // Ignore logout API errors and still clear local session.
+        } finally {
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('auth_access_token');
+                localStorage.removeItem('auth_user');
+                window.location.href = '/';
+            }
+        }
+    }, []);
 
     return (
         <div className="flex flex-col h-full bg-zinc-950 text-zinc-300">
@@ -28,6 +64,7 @@ export function MobileMenu() {
 
             {/* Menu Items */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                <MenuItem icon={House} label="Trang chủ" onClick={() => { window.location.href = '/'; }} />
                 <MenuItem icon={User} label="Account Profile" />
                 <MenuItem icon={Bell} label="Notifications" badge="3" />
                 <MenuItem icon={Monitor} label="Display Settings" />
@@ -41,10 +78,17 @@ export function MobileMenu() {
 
             {/* Footer */}
             <div className="p-4 border-t border-zinc-800 bg-zinc-900/30">
-                <button className="flex items-center gap-3 w-full p-3 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors group">
-                    <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
-                    <span className="font-medium text-sm">Sign Out</span>
-                </button>
+                {!isAuthenticated ? (
+                    <GoogleSignInButton className="mb-3" text="signin_with" size="large" width={280} redirectTo="/chart" />
+                ) : (
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full p-3 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors group"
+                    >
+                        <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
+                        <span className="font-medium text-sm">Sign Out</span>
+                    </button>
+                )}
                 <div className="mt-4 text-center text-[10px] text-zinc-600 font-mono">
                     OpenTrade Mobile v1.0.0-beta
                 </div>
@@ -53,7 +97,14 @@ export function MobileMenu() {
     );
 }
 
-function MenuItem({ icon: Icon, label, onClick, badge }: any) {
+type MenuItemProps = {
+    icon: React.ComponentType<{ size?: number }>;
+    label: string;
+    onClick?: () => void;
+    badge?: string;
+};
+
+function MenuItem({ icon: Icon, label, onClick, badge }: MenuItemProps) {
     return (
         <button onClick={onClick} className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-zinc-800/50 active:bg-zinc-800 transition-colors group">
             <div className="p-2 rounded-md bg-zinc-900 text-zinc-400 group-hover:text-blue-400 group-hover:bg-blue-400/10 transition-colors">

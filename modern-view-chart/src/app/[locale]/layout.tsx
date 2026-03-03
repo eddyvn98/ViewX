@@ -34,9 +34,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     metadataBase: getSiteUrl(),
     icons: {
-      icon: "/brand/vivutrade-logo-transparent.png",
-      shortcut: "/brand/vivutrade-logo-transparent.png",
-      apple: "/brand/vivutrade-logo-transparent.png",
+      icon: "/icon.svg",
+      shortcut: "/favicon.ico",
+      apple: "/icon.svg",
     },
     title: {
       default: t('title'),
@@ -83,7 +83,7 @@ const organizationStructuredData = {
   "@type": "Organization",
   name: "vivutrade",
   url: siteOrigin,
-  logo: `${siteOrigin}/brand/vivutrade-logo-transparent.png`,
+  logo: `${siteOrigin}/brand/vivutrade-logo.svg`,
   description:
     "vivutrade is a professional trading chart, strategy matrix monitor, and backtest analytics platform. vivutrade là nền tảng trading chart realtime, strategy matrix monitor và backtest analytics cho nhà giao dịch.",
 };

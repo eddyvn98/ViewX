@@ -73,13 +73,15 @@ $BridgeLog = Join-Path $LogsDir "bridge.log"
 $BridgeErrLog = Join-Path $LogsDir "bridge.err.log"
 $TunnelLog = Join-Path $LogsDir "tunnel.log"
 $TunnelErrLog = Join-Path $LogsDir "tunnel.err.log"
+$NamedTunnelLog = Join-Path $LogsDir "named-tunnel.log"
+$NamedTunnelErrLog = Join-Path $LogsDir "named-tunnel.err.log"
 $BuildIdPath = Join-Path $RepoRoot ".next\BUILD_ID"
 
 if (-not (Test-Path $BuildIdPath)) {
     throw "[run-all] Missing .next/BUILD_ID. Run scripts/server/bootstrap.ps1 (or npm run build) before run-all.ps1."
 }
 
-$frontendArgs = 'run start -- --hostname 0.0.0.0 --port 3000'
+$frontendArgs = 'run start -- --hostname localhost --port 3000'
 Write-Host "[run-all] Found production build. Starting frontend (next start) on :3000"
 
 $frontend = Start-Process -FilePath $NpmCmd `
@@ -119,9 +121,42 @@ if ($tunnel.HasExited) {
     throw "Tunnel process exited early with code $($tunnel.ExitCode). Check logs\\tunnel.err.log"
 }
 
+$cloudflaredExe = Join-Path $RepoRoot "cloudflared.exe"
+$cloudflaredConfigPath = Join-Path $env:USERPROFILE ".cloudflared\config.yml"
+$shouldStartNamedTunnel = $false
+if ((Test-Path $cloudflaredExe) -and (Test-Path $cloudflaredConfigPath)) {
+    $configText = Get-Content $cloudflaredConfigPath -Raw
+    if ($configText -match "hostname:\s*vivutrade\.io\.vn") {
+        $shouldStartNamedTunnel = $true
+    }
+}
+
+$namedTunnel = $null
+if ($shouldStartNamedTunnel) {
+    Write-Host "[run-all] Starting Cloudflare named tunnel (viewx-prod)"
+    $namedTunnel = Start-Process -FilePath $cloudflaredExe `
+        -ArgumentList @("tunnel", "run", "viewx-prod") `
+        -WorkingDirectory $RepoRoot `
+        -RedirectStandardOutput $NamedTunnelLog `
+        -RedirectStandardError $NamedTunnelErrLog `
+        -PassThru
+
+    Start-Sleep -Seconds 2
+    if ($namedTunnel.HasExited) {
+        Write-Warning ("[run-all] Named tunnel exited early with code " + $namedTunnel.ExitCode + ". Check logs\\named-tunnel.err.log")
+        $namedTunnel = $null
+    }
+}
+else {
+    Write-Host "[run-all] Named tunnel not configured. Skipping."
+}
+
 Write-Host "[run-all] Started processes:"
 Write-Host ("  FE PID: " + $frontend.Id)
 Write-Host ("  BE PID: " + $backend.Id)
 Write-Host ("  Bridge PID: " + $bridge.Id)
 Write-Host ("  Tunnel PID: " + $tunnel.Id)
+if ($namedTunnel) {
+    Write-Host ("  Named Tunnel PID: " + $namedTunnel.Id)
+}
 Write-Host ("  Logs: " + $LogsDir)

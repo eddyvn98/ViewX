@@ -7,6 +7,23 @@ import { useMarketStore } from '@/lib/store';
 import { useEffect } from 'react';
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync';
 
+function resolvePriceDigits(symbol?: string, digits?: number): number {
+    if (Number.isFinite(digits)) return Number(digits);
+    const s = String(symbol || '').toUpperCase();
+    if (s.includes('JPY')) return 3;
+    if (s.includes('XAU') || s.includes('XAG')) return 3;
+    if (s.includes('USDT') || s.includes('USD')) return 2;
+    return 4;
+}
+
+function formatTabPrice(price: number, digits: number): string {
+    if (!Number.isFinite(price)) return '--';
+    return price.toLocaleString('en-US', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    });
+}
+
 export default function StandaloneChartPage() {
     const params = useParams();
     const searchParams = useSearchParams();
@@ -27,13 +44,25 @@ export default function StandaloneChartPage() {
     const activeSymbol = chart?.symbol || symbol;
     const activeInterval = chart?.interval || interval;
     const activeSource = chart?.source || source;
+    const activeTicker = useMarketStore((state) => state.tickers[activeSymbol]);
+    const activeDigits = useMarketStore((state) => state.symbolInfo[activeSymbol]?.digits);
 
     // Update document title dynamically
     useEffect(() => {
-        if (activeSymbol) {
-            document.title = `${activeSymbol} • ${activeInterval}m | vivutrade Chart`;
+        if (!activeSymbol) return;
+        const digits = resolvePriceDigits(activeSymbol, activeDigits);
+        const price = activeTicker?.price;
+        const changePercent = activeTicker?.change;
+
+        if (!Number.isFinite(price)) {
+            document.title = `${activeSymbol} ${activeInterval}m | vivutrade Chart`;
+            return;
         }
-    }, [activeSymbol, activeInterval]);
+
+        const arrow = (changePercent || 0) >= 0 ? '^' : 'v';
+        const pct = `${(changePercent || 0) >= 0 ? '+' : ''}${(changePercent || 0).toFixed(2)}%`;
+        document.title = `${activeSymbol} ${formatTabPrice(price as number, digits)} ${arrow} ${pct} | vivutrade`;
+    }, [activeSymbol, activeInterval, activeTicker?.price, activeTicker?.change, activeDigits]);
 
     // Initialize standalone chart
     useEffect(() => {
@@ -111,3 +140,4 @@ export default function StandaloneChartPage() {
         </div>
     );
 }
+

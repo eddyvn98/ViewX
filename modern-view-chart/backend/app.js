@@ -214,7 +214,7 @@ export function createApp() {
 
     app.use("/api", (req, res, next) => {
         if (req.path === "/health" || req.path === "/health/ready") return next();
-        const publicAuthPaths = new Set(["/auth/login", "/auth/refresh", "/auth/logout"]);
+        const publicAuthPaths = new Set(["/auth/login", "/auth/google", "/auth/refresh", "/auth/logout"]);
         if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);
     });

@@ -9,7 +9,32 @@ const schema = new Schema(
     },
     password: {
       type: String,
+      required() {
+        return this.authProvider !== "google";
+      },
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
       required: true,
+      default: "local",
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    displayName: {
+      type: String,
+      default: "",
+    },
+    avatarUrl: {
+      type: String,
+      default: "",
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
     },
     role: {
       type: String,
@@ -36,6 +61,7 @@ const create = (data) => {
       const newDocument = new model({
         username: data.username,
         password: data.encryptedPassword,
+        authProvider: "local",
         role: data.role || "viewer",
         sessionVersion: 1,
       });

@@ -28,6 +28,7 @@ export function useCursorTooltipDOMUpdater(
     { chartId, symbol, interval, source, candles, chartType = 'candles' }: CursorTooltipDOMUpdaterProps
 ) {
     const indicatorCacheRef = useRef<IndicatorCache[]>([]);
+    const indicatorCacheLengthRef = useRef(0);
     const crosshairRafRef = useRef<number | null>(null);
     const ohlcRefsRef = useRef<OHLCRefs | null>(null);
     const indicatorRefsRef = useRef<Map<string, { container: HTMLElement; value: HTMLElement; spans?: NodeListOf<HTMLSpanElement> }>>(new Map());
@@ -39,6 +40,7 @@ export function useCursorTooltipDOMUpdater(
 
         const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
         indicatorCacheRef.current = calculateIndicators(candles, indicators);
+        indicatorCacheLengthRef.current = candles.length;
         indicatorRefsRef.current = getIndicatorRefs(containerRef.current, indicatorCacheRef.current);
     }, [candles, chartId, symbol, interval, source, containerRef]);
 
@@ -52,6 +54,15 @@ export function useCursorTooltipDOMUpdater(
         const tickerKey = `${source}:${normalizedSymbol}`;
         const symbolDigits = getSymbolDigits(symbol);
         const mousePos = { x: 0, y: 0 };
+        const getIndicatorsFor = (rawCandles: Candle[]) => {
+            if (rawCandles.length !== indicatorCacheLengthRef.current) {
+                const latestIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
+                indicatorCacheRef.current = calculateIndicators(rawCandles, latestIndicators);
+                indicatorCacheLengthRef.current = rawCandles.length;
+                indicatorRefsRef.current = getIndicatorRefs(containerRef.current!, indicatorCacheRef.current);
+            }
+            return indicatorCacheRef.current;
+        };
 
         const handleMouseMove = (e: MouseEvent) => {
             mousePos.x = e.clientX;
@@ -117,7 +128,7 @@ export function useCursorTooltipDOMUpdater(
                 const fresh = getFreshCandles(symbol, interval, source, chartType);
                 const activeIndex = findCandleIndex(time, fresh.raw);
                 const isLastCandle = activeIndex === fresh.raw.length - 1;
-                const currentIndicators = calculateIndicators(fresh.raw, useMarketStore.getState().chartIndicators[chartId] || []);
+                const currentIndicators = getIndicatorsFor(fresh.raw);
 
                 updateLegendDirect(
                     activeIndex,
@@ -148,6 +159,7 @@ export function useCursorTooltipDOMUpdater(
                 if (!symbol || !interval || !source) return;
                 const fresh = getFreshCandles(symbol, interval, source, chartType);
                 indicatorCacheRef.current = calculateIndicators(fresh.raw, newIndicators || []);
+                indicatorCacheLengthRef.current = fresh.raw.length;
                 if (containerRef.current) {
                     indicatorRefsRef.current = getIndicatorRefs(containerRef.current, indicatorCacheRef.current);
                 }

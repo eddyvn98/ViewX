@@ -28,6 +28,7 @@ export function useLegendDOMUpdater(
     { chartId, symbol, interval, source, candles, chartType = 'candles' }: LegendDOMUpdaterProps
 ) {
     const indicatorCacheRef = useRef<IndicatorCache[]>([]);
+    const indicatorCacheLengthRef = useRef(0);
     const crosshairRafRef = useRef<number | null>(null);
     const tickerRafRef = useRef<number | null>(null);
     const isCrosshairActiveRef = useRef(false);
@@ -42,6 +43,7 @@ export function useLegendDOMUpdater(
 
         const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
         indicatorCacheRef.current = calculateIndicators(candles, indicators);
+        indicatorCacheLengthRef.current = candles.length;
         indicatorRefsRef.current = getIndicatorRefs(containerRef.current, indicatorCacheRef.current);
 
         if (isCrosshairActiveRef.current) return;
@@ -96,6 +98,16 @@ export function useLegendDOMUpdater(
             );
         };
 
+        const getIndicatorsFor = (rawCandles: Candle[]) => {
+            if (rawCandles.length !== indicatorCacheLengthRef.current) {
+                const latestIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
+                indicatorCacheRef.current = calculateIndicators(rawCandles, latestIndicators);
+                indicatorCacheLengthRef.current = rawCandles.length;
+                indicatorRefsRef.current = getIndicatorRefs(containerRef.current!, indicatorCacheRef.current);
+            }
+            return indicatorCacheRef.current;
+        };
+
         const handleCrosshair = (e: CustomEvent<CrosshairEventDetail>) => {
             const { time, sourceId, point } = e.detail || {};
             void point;
@@ -117,7 +129,7 @@ export function useLegendDOMUpdater(
                         resetTimeoutRef.current = setTimeout(() => {
                             isCrosshairActiveRef.current = false;
                             resetTimeoutRef.current = null;
-                            renderLatest(calculateIndicators(fresh.raw, useMarketStore.getState().chartIndicators[chartId] || []));
+                            renderLatest(getIndicatorsFor(fresh.raw));
                         }, 50);
                     }
                     return;
@@ -125,7 +137,7 @@ export function useLegendDOMUpdater(
 
                 const activeIndex = findCandleIndex(time, fresh.raw);
                 const isLastCandle = activeIndex === fresh.raw.length - 1;
-                const currentIndicators = calculateIndicators(fresh.raw, useMarketStore.getState().chartIndicators[chartId] || []);
+                const currentIndicators = getIndicatorsFor(fresh.raw);
 
                 updateLegendDirect(
                     activeIndex,
@@ -145,7 +157,7 @@ export function useLegendDOMUpdater(
             });
         };
 
-        renderLatest(calculateIndicators(getFreshCandles(symbol, interval, source, chartType).raw, useMarketStore.getState().chartIndicators[chartId] || []));
+        renderLatest(getIndicatorsFor(getFreshCandles(symbol, interval, source, chartType).raw));
 
         window.addEventListener('chart-crosshair', handleCrosshair as EventListener);
 
@@ -157,7 +169,7 @@ export function useLegendDOMUpdater(
                 tickerRafRef.current = requestAnimationFrame(() => {
                     if (isCrosshairActiveRef.current) return;
                     const fresh = getFreshCandles(symbol, interval, source, chartType);
-                    const currentIndicators = calculateIndicators(fresh.raw, useMarketStore.getState().chartIndicators[chartId] || []);
+                    const currentIndicators = getIndicatorsFor(fresh.raw);
 
                     updateLegendDirect(
                         fresh.raw.length - 1,
@@ -183,6 +195,7 @@ export function useLegendDOMUpdater(
             (newIndicators) => {
                 const fresh = getFreshCandles(symbol, interval, source, chartType);
                 indicatorCacheRef.current = calculateIndicators(fresh.raw, newIndicators || []);
+                indicatorCacheLengthRef.current = fresh.raw.length;
                 indicatorRefsRef.current = getIndicatorRefs(containerRef.current!, indicatorCacheRef.current);
                 if (!isCrosshairActiveRef.current) {
                     renderLatest(indicatorCacheRef.current);

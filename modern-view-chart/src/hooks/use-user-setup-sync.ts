@@ -152,16 +152,21 @@ function getOrCreateClientId(): string {
 
 function buildApiUrl(clientId: string): string {
     const params = new URLSearchParams();
-    const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-    const accessToken = (search.get('access_token') || '').trim();
-    const accessTicket = (search.get('access_ticket') || '').trim();
-
-    if (accessToken) params.set('access_token', accessToken);
-    if (accessTicket) params.set('access_ticket', accessTicket);
     if (clientId) params.set('client_id', clientId);
 
     const query = params.toString();
     return query ? `/api/user/state?${query}` : '/api/user/state';
+}
+
+function getAuthHeaders(clientId: string): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (clientId) headers['x-client-id'] = clientId;
+    if (typeof window === 'undefined') return headers;
+    const accessToken = (localStorage.getItem('auth_access_token') || '').trim();
+    if (accessToken) {
+        headers.authorization = `Bearer ${accessToken}`;
+    }
+    return headers;
 }
 
 function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' | 'system'): PersistedSetupState {
@@ -292,6 +297,7 @@ export function useUserSetupSync() {
             try {
                 const response = await fetch(apiUrl, {
                     method: 'GET',
+                    headers: getAuthHeaders(clientId),
                     credentials: 'include',
                 });
                 if (!response.ok) {
@@ -324,7 +330,7 @@ export function useUserSetupSync() {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-client-id': clientId,
+                        ...getAuthHeaders(clientId),
                     },
                     credentials: 'include',
                     body: JSON.stringify({

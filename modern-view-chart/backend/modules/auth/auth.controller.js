@@ -1,4 +1,5 @@
 import CryptoJS from "crypto-js";
+import { OAuth2Client } from "google-auth-library";
 import Users from "../../model/user.js";
 import { userModel } from "../../model/user.js";
 import {
@@ -10,6 +11,29 @@ import { createAccessTicket } from "../../auth/accessTicket.js";
 import { normalizeUserRole } from "../../auth/roles.js";
 import { revokeSessionsByUserId } from "../../auth/userSession.js";
 import { logError, logInfo } from "../../logger.js";
+
+const googleClient = new OAuth2Client();
+
+function getGoogleClientId() {
+    return (process.env.GOOGLE_CLIENT_ID || "").trim();
+}
+
+function toAuthResponse(user, tokens, normalizedRole) {
+    return {
+        token_type: "Bearer",
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        expires_at: tokens.accessExpiresAt,
+        user: {
+            _id: user._id,
+            username: user.username,
+            role: normalizedRole,
+            auth_provider: user.authProvider || "local",
+            display_name: user.displayName || "",
+            avatar_url: user.avatarUrl || "",
+        },
+    };
+}
 
 function getRefreshTokenFromRequest(req) {
     if (typeof req.body?.refresh_token === "string" && req.body.refresh_token.trim()) {
@@ -65,20 +89,90 @@ export async function login(req, res) {
             await userModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
         }
 
-        return res.status(200).json({
-            token_type: "Bearer",
-            access_token: tokens.accessToken,
-            refresh_token: tokens.refreshToken,
-            expires_at: tokens.accessExpiresAt,
-            user: {
-                _id: user._id,
-                username: user.username,
-                role: normalizedRole,
-            },
-        });
+        return res.status(200).json(toAuthResponse(user, tokens, normalizedRole));
     } catch (error) {
         logError("auth.login.failed", { error: error?.message || error });
         return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+export async function googleLogin(req, res) {
+    const clientId = getGoogleClientId();
+    if (!clientId) {
+        return res.status(503).json({ error: "Google login is not configured" });
+    }
+
+    const idToken = typeof req.body?.id_token === "string" ? req.body.id_token.trim() : "";
+    if (!idToken) {
+        return res.status(400).json({ error: "id_token is required" });
+    }
+
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: clientId,
+        });
+        const payload = ticket.getPayload();
+        if (!payload?.sub || !payload?.email || payload.email_verified !== true) {
+            return res.status(401).json({ error: "Invalid Google account payload" });
+        }
+
+        const email = String(payload.email).trim().toLowerCase();
+        if (!email) {
+            return res.status(401).json({ error: "Invalid Google account email" });
+        }
+
+        let user = await userModel.findOne({
+            $or: [{ googleId: payload.sub }, { username: email }],
+        });
+
+        if (!user) {
+            user = await userModel.create({
+                username: email,
+                authProvider: "google",
+                googleId: payload.sub,
+                displayName: typeof payload.name === "string" ? payload.name : "",
+                avatarUrl: typeof payload.picture === "string" ? payload.picture : "",
+                emailVerified: true,
+                role: "viewer",
+                sessionVersion: 1,
+            });
+        } else {
+            const update = {};
+            if (!user.googleId) update.googleId = payload.sub;
+            if (user.authProvider !== "google") update.authProvider = "google";
+            if (typeof payload.name === "string" && payload.name && user.displayName !== payload.name) {
+                update.displayName = payload.name;
+            }
+            if (typeof payload.picture === "string" && payload.picture && user.avatarUrl !== payload.picture) {
+                update.avatarUrl = payload.picture;
+            }
+            if (user.emailVerified !== true) update.emailVerified = true;
+
+            if (Object.keys(update).length > 0) {
+                await userModel.updateOne({ _id: user._id }, { $set: update });
+                user = await userModel.findById(user._id);
+            }
+        }
+
+        const sessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
+        const normalizedRole = normalizeUserRole(user.role);
+        const tokens = issueAuthTokens({
+            userId: user._id,
+            role: normalizedRole,
+            sessionVersion,
+        });
+        setRefreshCookie(res, tokens.refreshToken);
+
+        if (normalizedRole !== user.role) {
+            await userModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
+            user.role = normalizedRole;
+        }
+
+        return res.status(200).json(toAuthResponse(user, tokens, normalizedRole));
+    } catch (error) {
+        logError("auth.google_login.failed", { error: error?.message || error });
+        return res.status(401).json({ error: "Google login failed" });
     }
 }
 

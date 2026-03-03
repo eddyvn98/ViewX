@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { SymbolInfo, Ticker } from '../types';
+import { isSameSymbol, normalizeSymbol } from '@/lib/utils/symbol';
 
 export interface MarketSlice {
     isConnected: boolean;
@@ -66,11 +67,17 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
     setAvailableSymbols: (symbols) => set({ availableSymbols: symbols }),
 
     addToWatchlist: (symbol) => set((state) => {
-        if (state.watchlist.includes(symbol)) return state;
-        return { watchlist: [...state.watchlist, symbol] };
+        const normalized = normalizeSymbol(symbol);
+        if (!normalized) return state;
+        if (state.watchlist.some((s) => isSameSymbol(s, normalized))) return state;
+        return { watchlist: [...state.watchlist, normalized] };
     }),
 
-    removeFromWatchlist: (symbol) => set((state) => ({
-        watchlist: state.watchlist.filter(s => s !== symbol)
-    })),
+    removeFromWatchlist: (symbol) => set((state) => {
+        const normalized = normalizeSymbol(symbol);
+        if (!normalized) return state;
+        return {
+            watchlist: state.watchlist.filter((s) => !isSameSymbol(s, normalized))
+        };
+    }),
 });

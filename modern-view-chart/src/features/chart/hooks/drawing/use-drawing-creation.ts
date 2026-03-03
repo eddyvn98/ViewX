@@ -110,18 +110,34 @@ export function useDrawingCreation(
             rafId = requestAnimationFrame(updateDraft);
         };
 
-        const handleNativeMouseMove = (e: MouseEvent) => {
+        const updatePointerPosition = (clientX: number, clientY: number) => {
             const rect = container.getBoundingClientRect();
-            mousePosRef.x = e.clientX - rect.left;
-            mousePosRef.y = e.clientY - rect.top;
+            mousePosRef.x = clientX - rect.left;
+            mousePosRef.y = clientY - rect.top;
             mousePosRef.changed = true;
         };
 
-        container.addEventListener('mousemove', handleNativeMouseMove);
+        const handleMouseMove = (e: MouseEvent) => {
+            updatePointerPosition(e.clientX, e.clientY);
+        };
+
+        const handlePointerDown = (e: PointerEvent) => {
+            updatePointerPosition(e.clientX, e.clientY);
+        };
+
+        const handlePointerMove = (e: PointerEvent) => {
+            updatePointerPosition(e.clientX, e.clientY);
+        };
+
+        container.addEventListener('mousemove', handleMouseMove);
+        container.addEventListener('pointerdown', handlePointerDown);
+        container.addEventListener('pointermove', handlePointerMove);
         rafId = requestAnimationFrame(updateDraft);
 
         return () => {
-            container.removeEventListener('mousemove', handleNativeMouseMove);
+            container.removeEventListener('mousemove', handleMouseMove);
+            container.removeEventListener('pointerdown', handlePointerDown);
+            container.removeEventListener('pointermove', handlePointerMove);
             cancelAnimationFrame(rafId);
         };
     }, [chart, series, currentTool, tempPoints, themeColor, candles, snapToCandle]);

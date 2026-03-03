@@ -1,4 +1,5 @@
 import { EQUITY_AUTO_LOGO_SRC } from "./equity-auto-logo-manifest";
+import { CRYPTO_AUTO_LOGO_SRC } from "./crypto-auto-logo-manifest";
 
 export type AssetClass = "CRYPTO" | "FOREX" | "METAL" | "INDEX" | "COMMODITY" | "EQUITY" | "UNKNOWN";
 
@@ -52,6 +53,15 @@ const CURRENCY_LOGOS: Record<string, LogoEntry> = {
 const SYMBOL_LOGOS: Record<string, LogoEntry> = {
     BTC: { key: "BTC", src: "/symbol-logos/btc.svg", alt: "Bitcoin" },
     ETH: { key: "ETH", src: "/symbol-logos/eth.svg", alt: "Ethereum" },
+    ADA: { key: "ADA", src: "/symbol-logos/ada.svg", alt: "Cardano" },
+    BNB: { key: "BNB", src: "/symbol-logos/bnb.svg", alt: "BNB" },
+    SOL: { key: "SOL", src: "/symbol-logos/sol.svg", alt: "Solana" },
+    XRP: { key: "XRP", src: "/symbol-logos/xrp.svg", alt: "XRP" },
+    DOGE: { key: "DOGE", src: "/symbol-logos/doge.svg", alt: "Dogecoin" },
+    AVAX: { key: "AVAX", src: "/symbol-logos/avax.svg", alt: "Avalanche" },
+    DOT: { key: "DOT", src: "/symbol-logos/dot.svg", alt: "Polkadot" },
+    LINK: { key: "LINK", src: "/symbol-logos/link.svg", alt: "Chainlink" },
+    LTC: { key: "LTC", src: "/symbol-logos/ltc.svg", alt: "Litecoin" },
     XAU: { key: "XAU", src: "/symbol-logos/xau.svg", alt: "Gold" },
     XAG: { key: "XAG", src: "/symbol-logos/xag.svg", alt: "Silver" },
     US30: { key: "US30", src: "/symbol-logos/us30.svg", alt: "US30" },
@@ -118,11 +128,20 @@ const KNOWN_FOREX_CODES = new Set(FOREX_CODES);
 const INDEX_PREFIXES = ["US30", "US500", "USTEC", "NAS100", "GER40", "DE30", "UK100", "AUS200", "FR40", "HK50", "JP225", "STOXX50", "DXY"];
 const COMMODITY_PREFIXES = ["WTI", "BRENT", "USOIL", "UKOIL", "XNG"];
 const METAL_PREFIXES = ["XAU", "XAG", "XPD", "XPT", "XAL", "XCU", "XNI", "XPB", "XZN"];
-const CRYPTO_PREFIXES = ["BTC", "ETH", "SOL", "LTC", "XRP", "DOGE"];
+const CRYPTO_PREFIXES = ["BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA", "AVAX", "DOT", "LINK", "LTC"];
 
 const SYMBOL_PREFIX_ALIASES: Array<{ prefix: string; key: string }> = [
     { prefix: "BTC", key: "BTC" },
     { prefix: "ETH", key: "ETH" },
+    { prefix: "ADA", key: "ADA" },
+    { prefix: "BNB", key: "BNB" },
+    { prefix: "SOL", key: "SOL" },
+    { prefix: "XRP", key: "XRP" },
+    { prefix: "DOGE", key: "DOGE" },
+    { prefix: "AVAX", key: "AVAX" },
+    { prefix: "DOT", key: "DOT" },
+    { prefix: "LINK", key: "LINK" },
+    { prefix: "LTC", key: "LTC" },
     { prefix: "XAU", key: "XAU" },
     { prefix: "XAG", key: "XAG" },
     { prefix: "US30", key: "US30" },
@@ -144,7 +163,16 @@ function normalizeSymbol(raw: string): string {
 }
 
 function getTokenLogo(token: string): LogoEntry | null {
-    return CURRENCY_LOGOS[token] || SYMBOL_LOGOS[token] || null;
+    if (CURRENCY_LOGOS[token]) return CURRENCY_LOGOS[token];
+    if (SYMBOL_LOGOS[token]) return SYMBOL_LOGOS[token];
+    if (CRYPTO_AUTO_LOGO_SRC[token]) {
+        return {
+            key: token,
+            src: CRYPTO_AUTO_LOGO_SRC[token],
+            alt: token,
+        };
+    }
+    return null;
 }
 
 function isAlphaCode(text: string): boolean {
@@ -176,6 +204,12 @@ export function resolveSymbolLogo(rawSymbol: string): ResolvedSymbolLogo {
     const assetClass = classifyAsset(normalized);
 
     const symbolSpecific = [normalized];
+    if (normalized.endsWith("USDT") && normalized.length > 4) {
+        symbolSpecific.push(normalized.slice(0, -4));
+    }
+    if (normalized.endsWith("USD") && normalized.length > 3) {
+        symbolSpecific.push(normalized.slice(0, -3));
+    }
     for (const entry of SYMBOL_PREFIX_ALIASES) {
         if (normalized.startsWith(entry.prefix)) symbolSpecific.push(entry.key);
     }

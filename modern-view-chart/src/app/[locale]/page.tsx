@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link } from "@/i18n/routing";
 import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
@@ -10,7 +10,9 @@ import { Workflow } from "@/features/landing/components/Workflow";
 import { LanguageSwitcher } from "@/features/landing/components/LanguageSwitcher";
 
 export default function LandingPage() {
-  const t = useTranslations('HomePage');
+  const locale = useLocale();
+  const navT = useTranslations('Navigation');
+  const docsLabel = locale === 'vi' ? 'Thông tin' : 'Information';
 
   return (
     <div
@@ -59,10 +61,21 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="flex flex-col gap-2 text-right">
+            <div className="flex flex-wrap justify-end gap-4 text-xs font-semibold text-slate-600">
+              <Link href="/chart">{navT('chart')}</Link>
+              <Link href="/strategy/matrix">{navT('matrix')}</Link>
+              <Link href="/strategy/dashboard">{navT('dashboard')}</Link>
+            </div>
             <p className="text-xs text-slate-500">
               &copy; {new Date().getFullYear()} Vivutrade. All rights reserved.
             </p>
-            <div className="flex gap-4 text-xs text-slate-400">
+            <div className="mt-1 flex flex-wrap justify-end gap-4 text-xs text-slate-500">
+              <span className="font-semibold text-slate-600">{docsLabel}:</span>
+              <Link href="/faq">FAQ</Link>
+              <Link href="/about">About</Link>
+              <Link href="/methodology">Methodology</Link>
+              <Link href="/use-cases">Use Cases</Link>
+              <Link href="/contact">Contact</Link>
               <Link href="/terms">Terms</Link>
               <Link href="/privacy">Privacy</Link>
             </div>

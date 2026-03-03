@@ -40,7 +40,7 @@ export function DrawingToolbar({ chartId }: { chartId: string }) {
     if (!chartId) return null;
 
     return (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-[45] flex items-center pointer-events-none md:flex hidden animate-in fade-in slide-in-from-left-4 duration-500">
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-[60] flex items-center pointer-events-none animate-in fade-in slide-in-from-left-4 duration-500 max-md:left-2 max-md:top-auto max-md:bottom-12 max-md:translate-y-0">
             <motion.div
                 initial={false}
                 animate={{ x: isVisible ? 8 : -52 }}

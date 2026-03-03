@@ -1,0 +1,40 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#013B08"/>
+      <stop offset="100%" stop-color="#0A7D24"/>
+    </linearGradient>
+    <linearGradient id="greenLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BFE9CB"/>
+      <stop offset="100%" stop-color="#74B58C"/>
+    </linearGradient>
+    <linearGradient id="redDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B30000"/>
+      <stop offset="100%" stop-color="#F00000"/>
+    </linearGradient>
+    <linearGradient id="redLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F2B9B9"/>
+      <stop offset="100%" stop-color="#D98A8A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Top spike -->
+  <polygon points="256,8 210,176 256,244" fill="url(#greenDark)"/>
+  <polygon points="256,8 300,176 256,244" fill="url(#greenLight)"/>
+
+  <!-- Upper-left spike -->
+  <polygon points="0,178 178,194 238,252 150,275" fill="url(#greenDark)"/>
+  <polygon points="0,178 150,275 222,258 178,194" fill="#14943A"/>
+
+  <!-- Lower-left spike -->
+  <polygon points="92,474 170,302 244,278 232,360" fill="url(#greenDark)"/>
+  <polygon points="232,360 244,278 170,302 92,474" fill="url(#greenLight)"/>
+
+  <!-- Upper-right spike -->
+  <polygon points="512,178 334,194 274,252 362,275" fill="url(#redDark)"/>
+  <polygon points="512,178 362,275 290,258 334,194" fill="#E13A3A"/>
+
+  <!-- Lower-right spike -->
+  <polygon points="420,474 342,302 268,278 280,360" fill="url(#redDark)"/>
+  <polygon points="280,360 268,278 342,302 420,474" fill="url(#redLight)"/>
+</svg>

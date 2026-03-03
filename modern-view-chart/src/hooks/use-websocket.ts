@@ -22,6 +22,18 @@ let wsTicketExpiresAt = 0;
 let wsTicketPromise: Promise<string> | null = null;
 let forceFreshTicketOnReconnect = false;
 let unauthorizedFrameReceived = false;
+const BINANCE_DISCOVERY_SYMBOLS = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "SOLUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "AVAXUSDT",
+    "DOTUSDT",
+    "LINKUSDT",
+];
 
 function parseIntervalSeconds(interval: string): number {
     const text = String(interval || "").trim();
@@ -45,6 +57,23 @@ function normalizeSymbol(symbol: string): string {
     return symbol;
 }
 
+function buildActiveSymbolSet(state: ReturnType<typeof useMarketStore.getState>): Set<string> {
+    const symbols = [
+        ...state.watchlist,
+        ...Object.values(state.tabs).flatMap((tab: any) =>
+            Object.values(tab.charts || {}).map((chart: any) => chart.symbol),
+        ),
+    ].filter(Boolean) as string[];
+
+    const set = new Set<string>();
+    symbols.forEach((s) => {
+        const normalized = normalizeSymbol(String(s));
+        if (normalized) set.add(normalized);
+    });
+    BINANCE_DISCOVERY_SYMBOLS.forEach((s) => set.add(s));
+    return set;
+}
+
 function collectActiveSymbolsFromStore(): string[] {
     const state = useMarketStore.getState();
     const strategyState = useStrategyStore.getState();
@@ -60,7 +89,9 @@ function collectActiveSymbolsFromStore(): string[] {
         .concat(activeStrategySymbols)
         .filter(Boolean)
         .map((s) => normalizeSymbol(String(s)));
-    return Array.from(new Set(all)).slice(0, 300);
+    const expanded = new Set<string>(all.filter(Boolean));
+    BINANCE_DISCOVERY_SYMBOLS.forEach((s) => expanded.add(s));
+    return Array.from(expanded).slice(0, 300);
 }
 
 function deriveDefaultSocketUrl(): string {
@@ -238,14 +269,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
 
                     if ((msgType === "priceUpdate" && Array.isArray(msg.data)) || msgType === "tick" || msgType === "mt5_update") {
                         const state = useMarketStore.getState();
-                        const activeSymbols = new Set(
-                            [
-                                ...state.watchlist,
-                                ...Object.values(state.tabs).flatMap((tab: any) =>
-                                    Object.values(tab.charts).map((c: any) => c.symbol),
-                                ),
-                            ].filter(Boolean) as string[],
-                        );
+                        const activeSymbols = buildActiveSymbolSet(state);
 
                         const incomingData = msgType === "priceUpdate" ? msg.data : [msg];
                         let usefulUpdate = false;

@@ -6,12 +6,44 @@ import { cn } from '@/lib/utils';
 import { MobileAccessButton } from '@/features/chart/components/MobileAccessButton';
 import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export const Header = memo(function Header() {
     const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
     const toggleRightSidebar = useMarketStore((state) => state.toggleRightSidebar);
     const isLeftSidebarOpen = useMarketStore((state) => state.isLeftSidebarOpen);
     const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
+    const [displayName, setDisplayName] = React.useState("Guest");
+    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const applyUser = () => {
+            const raw = localStorage.getItem("auth_user") || "";
+            const token = (localStorage.getItem("auth_access_token") || "").trim();
+            setIsAuthenticated(Boolean(token));
+            if (!raw) {
+                setDisplayName("Guest");
+                return;
+            }
+            try {
+                const parsed = JSON.parse(raw);
+                const name = String(parsed?.display_name || parsed?.username || "").trim();
+                if (!name) {
+                    setDisplayName("Guest");
+                    return;
+                }
+                setDisplayName(name.split("@")[0]);
+            } catch {
+                setDisplayName("Guest");
+            }
+        };
+
+        applyUser();
+        window.addEventListener("storage", applyUser);
+        return () => window.removeEventListener("storage", applyUser);
+    }, []);
 
     return (
         <header className="hidden md:flex h-8 border-b border-white/5 bg-background/40 backdrop-blur-2xl pl-20 pr-4 items-center justify-between shrink-0 sticky top-0 z-[100] transition-all">
@@ -50,11 +82,20 @@ export const Header = memo(function Header() {
                 </div>
 
                 <div className="flex items-center gap-2 pl-2 group cursor-pointer h-7">
+                    {!isAuthenticated ? (
+                        <GoogleSignInButton
+                            className="mr-1"
+                            text="signin_with"
+                            size="small"
+                            width={170}
+                            redirectTo="/chart"
+                        />
+                    ) : null}
                     <div className="hidden sm:flex flex-col items-end justify-center">
-                        <span className="text-[9px] font-bold text-foreground dark:text-white group-hover:text-primary transition-colors tracking-tight leading-none">Alex</span>
+                        <span className="text-[9px] font-bold text-foreground dark:text-white group-hover:text-primary transition-colors tracking-tight leading-none">{displayName}</span>
                         <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full mt-0.5">
                             <span className="w-1 h-1 bg-emerald-500 rounded-full" />
-                            <span className="text-[7px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">PRO</span>
+                            <span className="text-[7px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">{isAuthenticated ? "PRO" : "GUEST"}</span>
                         </div>
                     </div>
                     <div className="w-7 h-7 rounded-full bg-secondary dark:bg-white/[0.05] border border-border dark:border-white/10 p-[1px] shadow-sm group-hover:border-primary/40 transition-all duration-500">

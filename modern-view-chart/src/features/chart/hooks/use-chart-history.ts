@@ -13,6 +13,20 @@ const MIN_CANDLES_THRESHOLD = 150;
 
 type CandleLookup = { key: string; candles: any[] };
 
+const parseIntervalSeconds = (interval: string): number => {
+    const raw = String(interval || '').trim();
+    if (!raw) return 60;
+    if (/^\d+$/.test(raw)) return Number(raw) * 60;
+    const m = raw.match(/^(\d+)\s*([mhd])$/i);
+    if (!m) return 60;
+    const value = Number(m[1]);
+    const unit = m[2].toLowerCase();
+    if (unit === 'm') return value * 60;
+    if (unit === 'h') return value * 3600;
+    if (unit === 'd') return value * 86400;
+    return 60;
+};
+
 const resolveCandles = (
     state: ReturnType<typeof useMarketStore.getState>,
     source: string | undefined,
@@ -104,20 +118,34 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
+    const requestHistory = () => {
+        if (!symbol || !interval) return;
+        const sourceText = String(source || '').toUpperCase();
+        if (sourceText === 'BINANCE') {
+            const nowSec = Math.floor(Date.now() / 1000);
+            const secondsPerBar = parseIntervalSeconds(interval);
+            sendMessage({
+                topic: "get_binance_candles",
+                symbol,
+                interval,
+                fromTimestamp: nowSec - secondsPerBar * 300,
+                toTimestamp: nowSec,
+            });
+            return;
+        }
+
+        sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
+        sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
+    };
 
     useEffect(() => {
         if (!isReady || !symbol || !interval || !isConnected) return;
         if (candlesCount >= MIN_CANDLES_THRESHOLD) return;
 
-        const requestHistory = () => {
-            sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
-            sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
-        };
-
         requestHistory();
         const timer = setInterval(requestHistory, 2500);
         return () => clearInterval(timer);
-    }, [isReady, symbol, interval, isConnected, candlesCount, sendMessage]);
+    }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage]);
 
     useEffect(() => {
         if (!isReady || !symbol || !interval || !seriesRef.current) return;
@@ -149,8 +177,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
             const now = Date.now();
             if (now - lastFetchRequestTimeRef.current > 2000) {
                 lastFetchRequestTimeRef.current = now;
-                sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval: interval, count: 300 });
-                sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
+                requestHistory();
             }
         }
 

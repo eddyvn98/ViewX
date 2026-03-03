@@ -58,6 +58,23 @@ function PanelFallback({ className = "" }: { className?: string }) {
   return <div className={cn("h-full w-full animate-pulse bg-secondary/20", className)} />;
 }
 
+function resolvePriceDigits(symbol?: string, digits?: number): number {
+  if (Number.isFinite(digits)) return Number(digits);
+  const s = String(symbol || "").toUpperCase();
+  if (s.includes("JPY")) return 3;
+  if (s.includes("XAU") || s.includes("XAG")) return 3;
+  if (s.includes("USDT") || s.includes("USD")) return 2;
+  return 4;
+}
+
+function formatTabPrice(price: number, digits: number): string {
+  if (!Number.isFinite(price)) return "--";
+  return price.toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
 export default function Home() {
   useWebSocket();
   useUserSetupSync();
@@ -86,6 +103,27 @@ export default function Home() {
   const setActiveMobileTab = useMarketStore((state) => state.setActiveMobileTab);
   const setInputFocused = useMarketStore((state) => state.setInputFocused);
   const setIsScrollingPanel = useMarketStore((state) => state.setIsScrollingPanel);
+  const activeChart = useMarketStore((state) => {
+    const tab = state.tabs[state.activeTabId];
+    if (!tab?.activeChartId) return null;
+    return tab.charts[tab.activeChartId] || null;
+  });
+  const activeTicker = useMarketStore((state) => {
+    const tab = state.tabs[state.activeTabId];
+    const activeChartId = tab?.activeChartId;
+    if (!activeChartId) return undefined;
+    const chart = tab.charts[activeChartId];
+    if (!chart?.symbol) return undefined;
+    return state.tickers[chart.symbol];
+  });
+  const activeDigits = useMarketStore((state) => {
+    const tab = state.tabs[state.activeTabId];
+    const activeChartId = tab?.activeChartId;
+    if (!activeChartId) return undefined;
+    const chart = tab.charts[activeChartId];
+    if (!chart?.symbol) return undefined;
+    return state.symbolInfo[chart.symbol]?.digits;
+  });
   const [isMobileWatchlistAddMode, setIsMobileWatchlistAddMode] = React.useState(false);
 
   // Keyboard Detection & Layout Reset
@@ -136,6 +174,23 @@ export default function Home() {
       if (setIsScrollingPanel) setIsScrollingPanel(false);
     };
   }, [setIsScrollingPanel]);
+
+  React.useEffect(() => {
+    const symbol = activeChart?.symbol || "XAUUSDm";
+    const interval = activeChart?.interval || "1";
+    const digits = resolvePriceDigits(symbol, activeDigits);
+    const price = activeTicker?.price;
+    const changePercent = activeTicker?.change;
+
+    if (!Number.isFinite(price)) {
+      document.title = `${symbol} ${interval}m | vivutrade Chart`;
+      return;
+    }
+
+    const arrow = (changePercent || 0) >= 0 ? "^" : "v";
+    const pct = `${(changePercent || 0) >= 0 ? "+" : ""}${(changePercent || 0).toFixed(2)}%`;
+    document.title = `${symbol} ${formatTabPrice(price as number, digits)} ${arrow} ${pct} | vivutrade`;
+  }, [activeChart?.symbol, activeChart?.interval, activeTicker?.price, activeTicker?.change, activeDigits]);
 
   return (
     <div className="app-root bg-background text-foreground font-sans select-none relative transition-colors duration-300">
