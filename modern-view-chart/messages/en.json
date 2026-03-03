@@ -1,0 +1,46 @@
+{
+    "Metadata": {
+        "title": "vivutrade | Advanced Charting & Trading Strategy Platform",
+        "description": "Real-time charts from Exness & Binance, integrated strategy builder and professional demo trading."
+    },
+    "HomePage": {
+        "title": "Powerful Charting Beyond TradingView, Built for Pro Traders.",
+        "description": "Track high-precision data from Exness and Binance with ultra-low latency. Create strategies, simulate trades (Demo), and leverage advanced web features designed for professional edge.",
+        "openChart": "Launch Chart",
+        "features": {
+            "chart": {
+                "title": "Zero-Lag Charting",
+                "desc": "Experience sub-second candle rendering with direct data streams from Exness and Binance. Optimized for precision scalping and fast execution."
+            },
+            "matrix": {
+                "title": "Smart Signal Matrix",
+                "desc": "Never miss a trade. Monitor dozens of pairs simultaneously based on your custom rules. Get instant alerts when market conditions align."
+            },
+            "backtest": {
+                "title": "Pro Discipline Workspace",
+                "desc": "Trade Demo in a distraction-free, minimalist environment. Automatically track winrate and performance to build professional trading psychology."
+            }
+        },
+        "workflow": {
+            "title": "Trade Smarter with Vivutrade",
+            "step1": {
+                "title": "Analyze",
+                "desc": "Use high-fidelity data from Exness/Binance to find opportunities."
+            },
+            "step2": {
+                "title": "Configure",
+                "desc": "Define your strategy rules for systematic system monitoring."
+            },
+            "step3": {
+                "title": "Execute",
+                "desc": "Place Demo trades directly on the chart to verify your performance."
+            }
+        }
+    },
+    "Navigation": {
+        "chart": "Chart",
+        "matrix": "Matrix",
+        "dashboard": "Dashboard",
+        "back": "Back"
+    }
+}

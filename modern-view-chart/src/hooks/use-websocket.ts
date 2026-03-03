@@ -441,13 +441,13 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
                         if (!STRATEGY_ENGINE_ENABLED) {
                             // Strategy engine is intentionally disabled in public endpoint release.
                         } else {
-                        const { signal } = msg;
-                        const direction = signal.signal === "BUY" ? "bullish" : "bearish";
-                        useMarketStore.getState().addNotification(
-                            `STRATEGY: ${signal.signal} ${signal.symbol} - ${signal.params.reason}`,
-                            direction === "bullish" ? "success" : "warning",
-                        );
-                        soundService.playAlert();
+                            const { signal } = msg;
+                            const direction = signal.signal === "BUY" ? "bullish" : "bearish";
+                            useMarketStore.getState().addNotification(
+                                `STRATEGY: ${signal.signal} ${signal.symbol} - ${signal.params.reason}`,
+                                direction === "bullish" ? "success" : "warning",
+                            );
+                            soundService.playAlert();
                         }
                     }
                 } catch {

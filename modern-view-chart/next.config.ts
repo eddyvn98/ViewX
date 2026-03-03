@@ -1,12 +1,10 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from 'next-intl/plugin';
 
-const projectRoot = process.cwd();
+const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: projectRoot,
-  turbopack: {
-    root: projectRoot,
-  },
+  // Cấu hình cơ bản, có thể thêm các option khác ở đây
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

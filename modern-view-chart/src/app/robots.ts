@@ -1,15 +1,18 @@
-import type { MetadataRoute } from "next";
-import { getSiteOrigin } from "@/lib/site-url";
-
-const baseUrl = getSiteOrigin();
+import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vivutrade.io.vn';
+
   return {
     rules: {
-      userAgent: "*",
-      allow: "/",
+      userAgent: '*',
+      allow: '/',
+      disallow: [
+        '/api/',
+        '/admin/',
+        '/internal/',
+      ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
-    host: baseUrl,
   };
 }

@@ -1,12 +1,12 @@
 import React, { memo } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 import { Logo } from './Logo';
 
 export const Sidebar = memo(function Sidebar() {
     return (
         <div className="fixed left-0 top-0 w-20 h-8 flex items-center justify-center z-[110] pointer-events-none">
             <Link
-                href="/landing"
+                href="/"
                 aria-label="Mo landing page vivutrade"
                 title="Mo landing page"
                 className="pointer-events-auto group cursor-pointer"
