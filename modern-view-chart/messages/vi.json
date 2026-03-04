@@ -1,46 +1,46 @@
 {
-    "Metadata": {
-        "title": "vivutrade | Nền tảng Biểu đồ & Chiến lược Giao dịch Chuyên sâu",
-        "description": "Biểu đồ realtime từ Exness & Binance, tích hợp công cụ xây dựng chiến lược và giao dịch demo chuyên nghiệp."
+  "Metadata": {
+    "title": "vivutrade | Nền tảng Chart & Trading Strategy chuyên sâu",
+    "description": "Chart realtime từ Exness & Binance, tích hợp công cụ xây dựng strategy và giao dịch Demo chuyên nghiệp."
+  },
+  "HomePage": {
+    "title": "Charting mạnh hơn TradingView, thiết kế cho Pro Trader.",
+    "description": "Theo dõi dữ liệu realtime từ Exness và Binance với độ trễ cực thấp. Tự do tạo strategy, mô phỏng giao dịch (Demo) và tận dụng các tính năng nâng cao dành cho trader chuyên nghiệp.",
+    "openChart": "Vào Chart",
+    "features": {
+      "chart": {
+        "title": "Chart Zero-Lag",
+        "desc": "Trải nghiệm tốc độ xử lý nến tức thì với dữ liệu stream trực tiếp từ Exness và Binance. Mượt, chính xác và tối ưu cho scalping."
+      },
+      "matrix": {
+        "title": "Signal Matrix",
+        "desc": "Đừng để lỡ kèo. Hệ thống giám sát cùng lúc hàng chục cặp tiền theo rule riêng của bạn, cảnh báo ngay khi điều kiện vào lệnh hội tụ."
+      },
+      "backtest": {
+        "title": "Workspace kỷ luật Pro",
+        "desc": "Giao dịch Demo trong một không gian tối giản, không gây xao nhãng. Tự động thống kê win rate và hiệu suất để bạn rèn luyện tâm lý như một trader thực thụ."
+      }
     },
-    "HomePage": {
-        "title": "Trải nghiệm biểu đồ mạnh mẽ hơn TradingView, thiết kế cho Pro Trader.",
-        "description": "Theo dõi dữ liệu thời gian thực từ Exness và Binance với độ trễ cực thấp. Tự do sáng tạo chiến lược, mô phỏng giao dịch (Demo) và tận dụng các tính năng nâng cao mà không nền tảng web nào có.",
-        "openChart": "Vào Chart",
-        "features": {
-            "chart": {
-                "title": "Biểu Đồ Zero-Lag",
-                "desc": "Trải nghiệm tốc độ xử lý nến tức thì với dữ liệu stream trực tiếp từ Exness và Binance. Mượt mà, chính xác và tối ưu cho scalping."
-            },
-            "matrix": {
-                "title": "Ma Trận Canh Tín Hiệu",
-                "desc": "Đừng để lỡ kèo. Hệ thống giám sát cùng lúc hàng chục cặp tiền theo quy tắc riêng của bạn, báo động ngay khi các điều kiện vào lệnh hội tụ."
-            },
-            "backtest": {
-                "title": "Môi Trường Kỷ Luật Pro",
-                "desc": "Giao dịch Demo trong một không gian tối giản, không gây xao nhãng. Tự động thống kê Winrate và hiệu suất để bạn rèn luyện tâm lý như một trader thực thụ."
-            }
-        },
-        "workflow": {
-            "title": "Giao dịch thông minh hơn với Vivutrade",
-            "step1": {
-                "title": "Phân Tích",
-                "desc": "Sử dụng dữ liệu chuẩn từ Exness/Binance để tìm kiếm cơ hội."
-            },
-            "step2": {
-                "title": "Thiết Lập",
-                "desc": "Tạo bộ quy tắc chiến lược để hệ thống giám sát thay bạn."
-            },
-            "step3": {
-                "title": "Thực Thi",
-                "desc": "Vào lệnh Demo ngay trên biểu đồ để kiểm chứng hiệu quả."
-            }
-        }
-    },
-    "Navigation": {
-        "chart": "Biểu đồ",
-        "matrix": "Ma trận",
-        "dashboard": "Dashboard",
-        "back": "Quay lại"
+    "workflow": {
+      "title": "Giao dịch thông minh hơn với Vivutrade",
+      "step1": {
+        "title": "Phân Tích",
+        "desc": "Dùng dữ liệu chuẩn từ Exness/Binance để tìm cơ hội."
+      },
+      "step2": {
+        "title": "Thiết Lập",
+        "desc": "Tạo bộ rule strategy để hệ thống monitor thay bạn."
+      },
+      "step3": {
+        "title": "Thực Thi",
+        "desc": "Vào lệnh Demo ngay trên chart để kiểm chứng hiệu quả."
+      }
     }
+  },
+  "Navigation": {
+    "chart": "Chart",
+    "matrix": "Matrix",
+    "dashboard": "Dashboard",
+    "back": "Quay lại"
+  }
 }

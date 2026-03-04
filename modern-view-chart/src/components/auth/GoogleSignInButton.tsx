@@ -73,22 +73,23 @@ export function GoogleSignInButton({
     let mounted = true;
 
     const resolveClientId = async (): Promise<string> => {
-      const fromPublicEnv = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "").trim();
-      if (fromPublicEnv) return fromPublicEnv;
-
       try {
         const response = await fetch("/api/auth/google-config", {
           method: "GET",
           cache: "no-store",
           credentials: "include",
         });
-        if (!response.ok) return "";
-        const data = await response.json().catch(() => null);
-        const fromApi = typeof data?.client_id === "string" ? data.client_id.trim() : "";
-        return fromApi;
+        if (response.ok) {
+          const data = await response.json().catch(() => null);
+          const fromApi = typeof data?.client_id === "string" ? data.client_id.trim() : "";
+          if (fromApi) return fromApi;
+        }
       } catch {
-        return "";
+        // Fallback to public env below.
       }
+
+      const fromPublicEnv = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "").trim();
+      return fromPublicEnv;
     };
 
     const mountButton = (clientId: string) => {
