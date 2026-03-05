@@ -168,96 +168,99 @@ async def main():
         else:
             print("[BRIDGE] No active symbol interest from clients. Entering idle mode.")
 
+    reconnect_sleep_sec = 2
     try:
-        client = BridgeClient(
-            NODE_WS_URL,
-            service,
-            alert_service,
-            memory_service,
-            symbols_interest_callback=update_symbols_interest,
-            auth_credential=ACCESS_TOKEN,
-        )
-        await client.connect()
-
-        await client.send_json({"topic": "mt5_symbols_available", "symbols": available_symbols})
-        last_positions_hash = None
-        last_positions_time = 0
-        position_update_interval = ACTIVE_POSITIONS_INTERVAL_SEC
-
-        daily_opens = {}
-        last_daily_open_refresh = 0
-
         while True:
-            import time
-
-            current_time = time.time()
-            await client.drain_pending_commands()
-
-            async with symbols_lock:
-                symbols_snapshot = list(symbols_to_track)
-            is_idle = len(symbols_snapshot) == 0
-            if not is_idle:
+            client = BridgeClient(
+                NODE_WS_URL,
+                service,
+                alert_service,
+                memory_service,
+                symbols_interest_callback=update_symbols_interest,
+                auth_credential=ACCESS_TOKEN,
+            )
+            try:
+                await client.connect()
+                reconnect_sleep_sec = 2
+                await client.send_json({"topic": "mt5_symbols_available", "symbols": available_symbols})
+                last_positions_hash = None
+                last_positions_time = 0
                 position_update_interval = ACTIVE_POSITIONS_INTERVAL_SEC
-            else:
-                position_update_interval = IDLE_POSITIONS_INTERVAL_SEC
+                daily_opens = {}
+                last_daily_open_refresh = 0
 
-            if (not is_idle) and (current_time - last_daily_open_refresh > DAILY_OPEN_REFRESH_INTERVAL_SEC):
-                for symbol in symbols_snapshot:
-                    d_open = await asyncio.to_thread(service.get_daily_open, symbol)
-                    if d_open:
-                        daily_opens[symbol] = d_open
-                last_daily_open_refresh = current_time
-                print(f"[REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
+                while True:
+                    import time
 
-            if not is_idle:
-                for symbol in symbols_snapshot:
-                    tick = await asyncio.to_thread(service.get_tick, symbol)
-                    if tick:
-                        await alert_service.check_alerts(symbol, tick.bid, client.send_json)
+                    current_time = time.time()
+                    await client.drain_pending_commands()
+
+                    async with symbols_lock:
+                        symbols_snapshot = list(symbols_to_track)
+                    is_idle = len(symbols_snapshot) == 0
+                    if not is_idle:
+                        position_update_interval = ACTIVE_POSITIONS_INTERVAL_SEC
+                    else:
+                        position_update_interval = IDLE_POSITIONS_INTERVAL_SEC
+
+                    if (not is_idle) and (current_time - last_daily_open_refresh > DAILY_OPEN_REFRESH_INTERVAL_SEC):
+                        for symbol in symbols_snapshot:
+                            d_open = await asyncio.to_thread(service.get_daily_open, symbol)
+                            if d_open:
+                                daily_opens[symbol] = d_open
+                        last_daily_open_refresh = current_time
+                        print(f"[REFRESH] Daily Open prices updated for {len(daily_opens)} symbols")
+
+                    if not is_idle:
+                        for symbol in symbols_snapshot:
+                            tick = await asyncio.to_thread(service.get_tick, symbol)
+                            if tick:
+                                await alert_service.check_alerts(symbol, tick.bid, client.send_json)
+                                await client.send_json(
+                                    {
+                                        "topic": "mt5_update",
+                                        "symbol": symbol,
+                                        "price": tick.bid,
+                                        "ask": tick.ask,
+                                        "daily_open": daily_opens.get(symbol),
+                                        "time": int(tick.time * 1000),
+                                    }
+                                )
+
+                    acc_data = await asyncio.to_thread(service.get_account_info)
+                    pos_list = await asyncio.to_thread(service.get_positions)
+                    order_list = await asyncio.to_thread(service.get_orders)
+
+                    positions_hash = json.dumps(
+                        [
+                            {"ticket": p["ticket"], "sl": p["sl"], "tp": p["tp"], "profit": round(p["profit"], 2)}
+                            for p in pos_list
+                        ],
+                        sort_keys=True,
+                    )
+
+                    is_empty_unchanged = len(pos_list) == 0 and positions_hash == last_positions_hash
+                    should_send = not is_empty_unchanged and (
+                        positions_hash != last_positions_hash or (current_time - last_positions_time) >= position_update_interval
+                    )
+
+                    if should_send:
                         await client.send_json(
                             {
-                                "topic": "mt5_update",
-                                "symbol": symbol,
-                                "price": tick.bid,
-                                "ask": tick.ask,
-                                "daily_open": daily_opens.get(symbol),
-                                "time": int(tick.time * 1000),
+                                "topic": "mt5_positions_update",
+                                "account": acc_data,
+                                "positions": pos_list,
+                                "orders": order_list,
                             }
                         )
+                        last_positions_hash = positions_hash
+                        last_positions_time = current_time
 
-            acc_data = await asyncio.to_thread(service.get_account_info)
-            pos_list = await asyncio.to_thread(service.get_positions)
-            order_list = await asyncio.to_thread(service.get_orders)
-
-            positions_hash = json.dumps(
-                [
-                    {"ticket": p["ticket"], "sl": p["sl"], "tp": p["tp"], "profit": round(p["profit"], 2)}
-                    for p in pos_list
-                ],
-                sort_keys=True,
-            )
-
-            is_empty_unchanged = len(pos_list) == 0 and positions_hash == last_positions_hash
-            should_send = not is_empty_unchanged and (
-                positions_hash != last_positions_hash or (current_time - last_positions_time) >= position_update_interval
-            )
-
-            if should_send:
-                await client.send_json(
-                    {
-                        "topic": "mt5_positions_update",
-                        "account": acc_data,
-                        "positions": pos_list,
-                        "orders": order_list,
-                    }
-                )
-                last_positions_hash = positions_hash
-                last_positions_time = current_time
-
-            await asyncio.sleep(IDLE_LOOP_SLEEP_SEC if is_idle else ACTIVE_LOOP_SLEEP_SEC)
-
-    except Exception as e:
-        print(f"[CRITICAL] Bridge loop error: {e}")
+                    await asyncio.sleep(IDLE_LOOP_SLEEP_SEC if is_idle else ACTIVE_LOOP_SLEEP_SEC)
+            except Exception as e:
+                print(f"[WARN] Bridge connection loop error: {e}")
+                await asyncio.sleep(reconnect_sleep_sec)
+                reconnect_sleep_sec = min(reconnect_sleep_sec * 2, 30)
     finally:
         service.shutdown()
 

@@ -18,6 +18,8 @@ interface ChartFocusDetail {
     exitTimestamp?: number;
 }
 
+const SHOW_STRATEGY_PRICE_LINES = false;
+
 function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMarkersProps) {
     const showHistoryMarkers = useStrategyStore(state => state.showHistoryMarkers);
     const virtualPositions = useStrategyStore(state => state.virtualPositions);
@@ -249,6 +251,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
     // 3. Handle Active/Pending Lines (Price Lines)
     useEffect(() => {
         if (!mainSeries || !symbol) return;
+        if (!SHOW_STRATEGY_PRICE_LINES) return;
 
         const activePositions = virtualPositions.filter(p => {
             const isMatch = (p.status === 'open' || p.status === 'pending') &&

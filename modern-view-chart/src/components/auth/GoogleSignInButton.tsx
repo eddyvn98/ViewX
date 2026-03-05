@@ -48,6 +48,20 @@ declare global {
 
 const GOOGLE_GSI_SRC = "https://accounts.google.com/gsi/client";
 
+function resolveLocalizedRedirectTarget(target: string): string {
+  const raw = String(target || "").trim() || "/chart";
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const normalized = raw.startsWith("/") ? raw : `/${raw}`;
+  if (typeof window === "undefined") return normalized;
+  if (/^\/(vi|en)(?:\/|$)/i.test(normalized)) return normalized;
+
+  const localeMatch = window.location.pathname.match(/^\/(vi|en)(?:\/|$)/i);
+  const locale = localeMatch?.[1]?.toLowerCase();
+  if (!locale) return normalized;
+  return `/${locale}${normalized}`;
+}
+
 export function GoogleSignInButton({
   className = "",
   redirectTo = "/chart",
@@ -124,7 +138,7 @@ export function GoogleSignInButton({
             localStorage.setItem("auth_access_token", String(data.access_token));
             localStorage.setItem("auth_user", JSON.stringify(data.user || {}));
             isAuthenticatedRef.current = true;
-            window.location.href = redirectTo;
+            window.location.href = resolveLocalizedRedirectTarget(redirectTo);
           } catch (e) {
             if (isAuthenticatedRef.current) return;
             const message = e instanceof Error ? e.message : "Dang nhap Google that bai";

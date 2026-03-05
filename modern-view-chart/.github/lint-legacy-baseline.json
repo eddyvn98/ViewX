@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-04T03:37:09.032Z",
+  "gitSha": "0870272b25347520c3651d721cb252d12c925596",
+  "metrics": {
+    "schemaVersion": 1,
+    "totals": {
+      "errors": 607,
+      "warnings": 197,
+      "messages": 804,
+      "filesWithErrors": 145,
+      "filesWithWarnings": 99,
+      "totalFiles": 398
+    },
+    "ruleCounts": {
+      "@typescript-eslint/no-unused-vars": 167,
+      "@typescript-eslint/no-explicit-any": 539,
+      "react-hooks/purity": 1,
+      "@next/next/no-img-element": 1,
+      "react-hooks/set-state-in-effect": 3,
+      "prefer-const": 8,
+      "react-hooks/exhaustive-deps": 27,
+      "react-hooks/immutability": 2,
+      "react-hooks/refs": 2,
+      "@typescript-eslint/ban-ts-comment": 9,
+      "(unknown)": 2,
+      "react/no-unescaped-entities": 9,
+      "react-hooks/static-components": 20,
+      "react-hooks/rules-of-hooks": 2,
+      "react-hooks/preserve-manual-memoization": 2,
+      "@typescript-eslint/no-require-imports": 10
+    },
+    "topRules": [
+      {
+        "ruleId": "@typescript-eslint/no-explicit-any",
+        "count": 539
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "count": 167
+      },
+      {
+        "ruleId": "react-hooks/exhaustive-deps",
+        "count": 27
+      },
+      {
+        "ruleId": "react-hooks/static-components",
+        "count": 20
+      },
+      {
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "count": 10
+      },
+      {
+        "ruleId": "@typescript-eslint/ban-ts-comment",
+        "count": 9
+      },
+      {
+        "ruleId": "react/no-unescaped-entities",
+        "count": 9
+      },
+      {
+        "ruleId": "prefer-const",
+        "count": 8
+      },
+      {
+        "ruleId": "react-hooks/set-state-in-effect",
+        "count": 3
+      },
+      {
+        "ruleId": "react-hooks/immutability",
+        "count": 2
+      }
+    ],
+    "topFiles": [
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\hooks\\use-websocket.ts",
+        "errors": 19,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\workers\\chart-worker.ts",
+        "errors": 16,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\use-chart-ticker.ts",
+        "errors": 13,
+        "warnings": 2
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\logic\\fibonacci-primitive.ts",
+        "errors": 11,
+        "warnings": 1
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\use-chart-history.ts",
+        "errors": 10,
+        "warnings": 6
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\init\\setup-crosshair-listeners.ts",
+        "errors": 10,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\terminal\\components\\OrdersTable.tsx",
+        "errors": 10,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\lib\\store\\slices\\data-slice.ts",
+        "errors": 10,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\use-chart-indicators.ts",
+        "errors": 9,
+        "warnings": 2
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\use-chart-init.ts",
+        "errors": 9,
+        "warnings": 2
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\indicators\\FibonacciIndicator.ts",
+        "errors": 9,
+        "warnings": 2
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\indicators\\IchimokuIndicator.ts",
+        "errors": 9,
+        "warnings": 2
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\indicators\\RSIIndicator.ts",
+        "errors": 9,
+        "warnings": 2
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\indicators\\ADXIndicator.ts",
+        "errors": 9,
+        "warnings": 1
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\indicators\\SARIndicator.ts",
+        "errors": 9,
+        "warnings": 1
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\drawing\\editor-actions.ts",
+        "errors": 9,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\hooks\\indicators\\sync-indicator-series.ts",
+        "errors": 9,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\indicators\\TrendLineIndicator.ts",
+        "errors": 9,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\features\\chart\\logic\\sar-series.ts",
+        "errors": 9,
+        "warnings": 0
+      },
+      {
+        "filePath": "D:\\viewx\\ViewX\\modern-view-chart\\src\\workers\\worker-client.ts",
+        "errors": 9,
+        "warnings": 0
+      }
+    ]
+  }
+}

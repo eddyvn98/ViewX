@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { ISeriesApi, IPriceLine, LineStyle } from 'lightweight-charts';
 import { Order, useMarketStore } from '@/lib/store';
 
+const SHOW_ORDER_PRICE_LINES = false;
+
 export function useChartOrders(
     symbol: string | undefined,
     seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>,
@@ -30,6 +32,16 @@ export function useChartOrders(
     useEffect(() => {
         const series = seriesRef.current;
         if (!series || !symbol) return;
+        if (!SHOW_ORDER_PRICE_LINES) {
+            Object.keys(priceLinesRef.current).forEach(ticket => {
+                const lines = priceLinesRef.current[ticket];
+                if (lines.entry) series.removePriceLine(lines.entry);
+                if (lines.sl) series.removePriceLine(lines.sl);
+                if (lines.tp) series.removePriceLine(lines.tp);
+                delete priceLinesRef.current[ticket];
+            });
+            return;
+        }
 
         // Show orders even during draft for context
 
@@ -113,6 +125,7 @@ export function useChartOrders(
 
     // EFFECT 2: Fast Drag Sync for Orders
     useEffect(() => {
+        if (!SHOW_ORDER_PRICE_LINES) return;
         const unsub = useMarketStore.subscribe(
             state => state.draggingPosition,
             (drag) => {

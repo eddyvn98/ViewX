@@ -4,17 +4,31 @@ import { normalizeUserRole } from "./roles.js";
 import { userModel } from "../model/user.js";
 
 const activeRefreshJtis = new Map();
+let warnedJwtFallback = false;
+
+function getAccessTokenFallbackSecret() {
+    return (process.env.ACCESS_TOKEN || "").trim();
+}
+
+function getRefreshFallbackFromAccessToken(accessFallbackSecret) {
+    if (!accessFallbackSecret) return "";
+    return `${accessFallbackSecret}:refresh`;
+}
 
 function nowEpochSeconds() {
     return Math.floor(Date.now() / 1000);
 }
 
 function getAccessSecret() {
-    return (process.env.AUTH_ACCESS_JWT_SECRET || process.env.JWT || "").trim();
+    const explicit = (process.env.AUTH_ACCESS_JWT_SECRET || process.env.JWT || "").trim();
+    if (explicit) return explicit;
+    return getAccessTokenFallbackSecret();
 }
 
 function getRefreshSecret() {
-    return (process.env.AUTH_REFRESH_JWT_SECRET || process.env.JWT || "").trim();
+    const explicit = (process.env.AUTH_REFRESH_JWT_SECRET || process.env.JWT || "").trim();
+    if (explicit) return explicit;
+    return getRefreshFallbackFromAccessToken(getAccessTokenFallbackSecret());
 }
 
 function getAccessTtl() {
@@ -30,6 +44,19 @@ function requireSecrets() {
     const refreshSecret = getRefreshSecret();
     if (!accessSecret || !refreshSecret) {
         throw new Error("JWT secrets are not configured");
+    }
+    if (!warnedJwtFallback) {
+        const hasExplicitJwt = Boolean(
+            (process.env.AUTH_ACCESS_JWT_SECRET || "").trim() ||
+                (process.env.AUTH_REFRESH_JWT_SECRET || "").trim() ||
+                (process.env.JWT || "").trim(),
+        );
+        if (!hasExplicitJwt) {
+            warnedJwtFallback = true;
+            console.warn(
+                "[auth] AUTH_ACCESS_JWT_SECRET/AUTH_REFRESH_JWT_SECRET (or JWT) is missing. Falling back to ACCESS_TOKEN-derived secrets.",
+            );
+        }
     }
     return { accessSecret, refreshSecret };
 }

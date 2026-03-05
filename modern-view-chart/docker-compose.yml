@@ -1,0 +1,122 @@
+services:
+  frontend:
+    profiles: ["staging"]
+    container_name: viewx-frontend-staging
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED: ${NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED:-false}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_ORIGIN: ${BACKEND_ORIGIN:-http://backend:8091}
+      ACCESS_TOKEN: ${ACCESS_TOKEN}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+      NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED: ${NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED:-false}
+    ports:
+      - "${FRONTEND_HOST_PORT:-13000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - viewx_net
+
+  backend:
+    profiles: ["staging"]
+    container_name: viewx-backend-staging
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      viewx-mongo:
+        condition: service_started
+    environment:
+      PORT: ${PORT:-8091}
+      ACCESS_TOKEN: ${ACCESS_TOKEN}
+      URL_MONGOOSE: ${URL_MONGOOSE:-mongodb://viewx-mongo:27017/viewx?directConnection=true}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      MAX_WS_CLIENTS: ${MAX_WS_CLIENTS:-150}
+      WS_MSG_RATE_PER_10S: ${WS_MSG_RATE_PER_10S:-60}
+      BRIDGE_WS_MSG_RATE_PER_10S: ${BRIDGE_WS_MSG_RATE_PER_10S:-15000}
+      BRIDGE_SYMBOL_REFRESH_SEC: ${BRIDGE_SYMBOL_REFRESH_SEC:-2}
+      BRIDGE_ACTIVE_LOOP_SLEEP_SEC: ${BRIDGE_ACTIVE_LOOP_SLEEP_SEC:-0.5}
+      BRIDGE_IDLE_LOOP_SLEEP_SEC: ${BRIDGE_IDLE_LOOP_SLEEP_SEC:-1.5}
+      BRIDGE_ACTIVE_POSITIONS_INTERVAL_SEC: ${BRIDGE_ACTIVE_POSITIONS_INTERVAL_SEC:-2}
+      BRIDGE_IDLE_POSITIONS_INTERVAL_SEC: ${BRIDGE_IDLE_POSITIONS_INTERVAL_SEC:-8}
+      BRIDGE_DAILY_OPEN_REFRESH_SEC: ${BRIDGE_DAILY_OPEN_REFRESH_SEC:-300}
+      WS_HEARTBEAT_INTERVAL_MS: ${WS_HEARTBEAT_INTERVAL_MS:-30000}
+      WS_BACKPRESSURE_SKIP_BYTES: ${WS_BACKPRESSURE_SKIP_BYTES:-262144}
+      WS_ALLOW_QUERY_AUTH: ${WS_ALLOW_QUERY_AUTH:-1}
+      WS_QUERY_AUTH_DEPRECATED_UNTIL: ${WS_QUERY_AUTH_DEPRECATED_UNTIL:-2026-03-11T00:00:00.000Z}
+      WS_REQUIRE_ROLE_FOR_TRADING: ${WS_REQUIRE_ROLE_FOR_TRADING:-trader}
+      WS_AUTH_TICKET_TTL_SEC: ${WS_AUTH_TICKET_TTL_SEC:-300}
+      CORE_SYMBOLS: ${CORE_SYMBOLS:-XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm}
+      TOKEN_ROTATE_CRON_TIME: ${TOKEN_ROTATE_CRON_TIME:-03:00}
+      MOBILE_ACCESS_TTL_SEC: ${MOBILE_ACCESS_TTL_SEC:-43200}
+      ALERT_MONITOR_ENABLED: ${ALERT_MONITOR_ENABLED:-1}
+      ALERT_SCAN_INTERVAL_MS: ${ALERT_SCAN_INTERVAL_MS:-15000}
+      ALERT_BRIDGE_OFFLINE_MS: ${ALERT_BRIDGE_OFFLINE_MS:-180000}
+      ALERT_DB_DISCONNECTED_MS: ${ALERT_DB_DISCONNECTED_MS:-120000}
+      ALERT_WS_DROP_SPIKE_WINDOW_MS: ${ALERT_WS_DROP_SPIKE_WINDOW_MS:-60000}
+      ALERT_WS_DROP_SPIKE_DELTA: ${ALERT_WS_DROP_SPIKE_DELTA:-30}
+      ALERT_COOLDOWN_MS: ${ALERT_COOLDOWN_MS:-180000}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      STRATEGY_ENGINE_ENABLED: ${STRATEGY_ENGINE_ENABLED:-0}
+      EMERGENCY_MODE: ${EMERGENCY_MODE:-0}
+      EMERGENCY_BLOCK_HEAVY_HTTP: ${EMERGENCY_BLOCK_HEAVY_HTTP:-1}
+      EMERGENCY_BLOCK_TRADING: ${EMERGENCY_BLOCK_TRADING:-1}
+      EMERGENCY_API_LIMIT_PER_MIN: ${EMERGENCY_API_LIMIT_PER_MIN:-80}
+      EMERGENCY_AI_LIMIT_PER_MIN: ${EMERGENCY_AI_LIMIT_PER_MIN:-4}
+      EMERGENCY_AI_TASK_LIMIT_PER_MIN: ${EMERGENCY_AI_TASK_LIMIT_PER_MIN:-2}
+      EMERGENCY_MARKET_LIMIT_PER_MIN: ${EMERGENCY_MARKET_LIMIT_PER_MIN:-20}
+      EMERGENCY_MAX_WS_CLIENTS: ${EMERGENCY_MAX_WS_CLIENTS:-40}
+      EMERGENCY_WS_MSG_RATE_PER_10S: ${EMERGENCY_WS_MSG_RATE_PER_10S:-30}
+      EMERGENCY_BRIDGE_WS_MSG_RATE_PER_10S: ${EMERGENCY_BRIDGE_WS_MSG_RATE_PER_10S:-4000}
+      EMERGENCY_WS_BROADCAST_INTERVAL_MS: ${EMERGENCY_WS_BROADCAST_INTERVAL_MS:-1500}
+      EMERGENCY_BINANCE_BROADCAST_INTERVAL_MS: ${EMERGENCY_BINANCE_BROADCAST_INTERVAL_MS:-2000}
+      AUTH_ACCESS_JWT_SECRET: ${AUTH_ACCESS_JWT_SECRET:-}
+      AUTH_REFRESH_JWT_SECRET: ${AUTH_REFRESH_JWT_SECRET:-}
+      JWT: ${JWT:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
+    ports:
+      - "${BACKEND_HOST_PORT:-18091}:8091"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8091/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - viewx_net
+
+  viewx-mongo:
+    profiles: ["staging"]
+    image: mongo:7
+    container_name: viewx-mongo-staging
+    restart: unless-stopped
+    ports:
+      - "${MONGO_HOST_PORT:-27028}:27017"
+    volumes:
+      - viewx_mongo_data:/data/db
+    networks:
+      - viewx_net
+
+volumes:
+  viewx_mongo_data:
+
+networks:
+  viewx_net:

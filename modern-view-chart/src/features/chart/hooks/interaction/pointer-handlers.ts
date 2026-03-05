@@ -63,11 +63,24 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
             // Draft group has nested draggable nodes; prefer explicit button intent.
             if (target.closest('.tp-btn')) type = 'tp';
             else if (target.closest('.sl-btn')) type = 'sl';
-            else if (target.closest('.price-box')) type = 'entry';
+            else if (target.closest('.price-box') && type !== 'alert') type = 'entry';
             const tagEl = el.closest('[data-tag-id]') as any;
             const tagData = tagEl?._tagData;
-            if (ticketAttr && type && tagData) {
-                hit = { type, ticket: (ticketAttr === 'draft' || type === 'alert') ? ticketAttr : Number(ticketAttr), price: tagData.price, id: tagData.id };
+            if (ticketAttr && type) {
+                const parsedTicket = (ticketAttr === 'draft' || type === 'alert') ? ticketAttr : Number(ticketAttr);
+
+                if (tagData) {
+                    hit = { type, ticket: parsedTicket, price: tagData.price, id: tagData.id };
+                } else {
+                    const idAttr = (tagEl as HTMLElement | null)?.getAttribute('data-tag-id') || undefined;
+                    const priceTextEl = (tagEl as HTMLElement | null)?.querySelector('.price-text') as HTMLElement | null;
+                    const parsedPrice = Number(priceTextEl?.textContent || '');
+                    const fallbackPrice = Number.isFinite(parsedPrice)
+                        ? parsedPrice
+                        : Number((series.coordinateToPrice(y) ?? 0).toFixed(stateRef.current.symbolInfo?.digits || 2));
+
+                    hit = { type, ticket: parsedTicket, price: fallbackPrice, id: idAttr };
+                }
             }
         }
 

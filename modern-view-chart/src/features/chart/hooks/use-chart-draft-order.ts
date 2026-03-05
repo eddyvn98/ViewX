@@ -3,6 +3,8 @@ import { ISeriesApi, IPriceLine, LineStyle } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 
+const SHOW_DRAFT_PRICE_LINES = false;
+
 export function useChartDraftOrder(
     symbol: string | undefined,
     seriesRef: React.RefObject<ISeriesApi<"Candlestick"> | null>,
@@ -21,6 +23,11 @@ export function useChartDraftOrder(
             if (linesRef.current.tp) { series.removePriceLine(linesRef.current.tp); linesRef.current.tp = undefined; }
             linesRef.current = {};
         };
+
+        if (!SHOW_DRAFT_PRICE_LINES) {
+            cleanup();
+            return;
+        }
 
         const syncLine = (type: 'entry' | 'sl' | 'tp', price: number, color: string, style: LineStyle) => {
             if (price <= 0) {
@@ -77,6 +84,7 @@ export function useChartDraftOrder(
 
     // ⚡ FAST-PATH: Instant response to mouse drag without waiting for store update
     useEffect(() => {
+        if (!SHOW_DRAFT_PRICE_LINES) return;
         const handleFastDrag = (e: any) => {
             const { ticket, type, price, symbol: eventSymbol } = e.detail;
             if (eventSymbol !== symbol || ticket !== 'draft' || !seriesRef.current) return;

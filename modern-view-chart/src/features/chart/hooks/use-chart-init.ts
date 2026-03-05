@@ -151,8 +151,15 @@ export function useChartInit(
 
         let syncRequestId: number | null = null;
         let lastMaxW = initialMinW;
+        let isPointerInteracting = false;
+        let hasPendingAutoSync = false;
+        let lockedScaleWidth: number | null = null;
         const handleAutoSync = () => {
             if (isDisposed) return;
+            if (isPointerInteracting) {
+                hasPendingAutoSync = true;
+                return;
+            }
             autoSyncLayout(
                 priceChart,
                 subchartChart,
@@ -167,8 +174,57 @@ export function useChartInit(
             );
         };
 
+        const flushPendingAutoSync = () => {
+            if (isDisposed || !hasPendingAutoSync) return;
+            hasPendingAutoSync = false;
+            handleAutoSync();
+        };
+
+        const lockScaleWidthDuringPan = () => {
+            try {
+                const priceScale = priceChart.priceScale('right');
+                const subScale = subchartChart.priceScale('right');
+                const width = Math.max(priceScale.width(), subScale.width(), initialMinW);
+                if (!Number.isFinite(width) || width <= 0) return;
+                lockedScaleWidth = width;
+                const opt = { rightPriceScale: { minimumWidth: width } };
+                priceChart.applyOptions(opt);
+                subchartChart.applyOptions(opt);
+                timescaleChart.applyOptions(opt);
+            } catch {
+                // Ignore transient resize/teardown errors.
+            }
+        };
+
+        const handlePointerDown = () => {
+            if (isPointerInteracting) return;
+            isPointerInteracting = true;
+            lockScaleWidthDuringPan();
+        };
+
+        const handlePointerUp = () => {
+            if (!isPointerInteracting) return;
+            isPointerInteracting = false;
+            lockedScaleWidth = null;
+            flushPendingAutoSync();
+        };
+
         priceTS.subscribeVisibleLogicalRangeChange(handleAutoSync);
         subTS.subscribeVisibleLogicalRangeChange(handleAutoSync);
+        priceContainerRef.current?.addEventListener('pointerdown', handlePointerDown, true);
+        subchartContainerRef.current?.addEventListener('pointerdown', handlePointerDown, true);
+        timescaleContainerRef.current?.addEventListener('pointerdown', handlePointerDown, true);
+        priceContainerRef.current?.addEventListener('mousedown', handlePointerDown, true);
+        subchartContainerRef.current?.addEventListener('mousedown', handlePointerDown, true);
+        timescaleContainerRef.current?.addEventListener('mousedown', handlePointerDown, true);
+        priceContainerRef.current?.addEventListener('touchstart', handlePointerDown, true);
+        subchartContainerRef.current?.addEventListener('touchstart', handlePointerDown, true);
+        timescaleContainerRef.current?.addEventListener('touchstart', handlePointerDown, true);
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerUp);
+        window.addEventListener('mouseup', handlePointerUp);
+        window.addEventListener('touchend', handlePointerUp);
+        window.addEventListener('touchcancel', handlePointerUp);
         setTimeout(handleAutoSync, 50);
 
         const syncChartSizes = () => {
@@ -225,6 +281,20 @@ export function useChartInit(
             resizeObserver.disconnect();
             window.removeEventListener('resize', syncChartSizes);
             window.visualViewport?.removeEventListener('resize', syncChartSizes);
+            priceContainerRef.current?.removeEventListener('pointerdown', handlePointerDown, true);
+            subchartContainerRef.current?.removeEventListener('pointerdown', handlePointerDown, true);
+            timescaleContainerRef.current?.removeEventListener('pointerdown', handlePointerDown, true);
+            priceContainerRef.current?.removeEventListener('mousedown', handlePointerDown, true);
+            subchartContainerRef.current?.removeEventListener('mousedown', handlePointerDown, true);
+            timescaleContainerRef.current?.removeEventListener('mousedown', handlePointerDown, true);
+            priceContainerRef.current?.removeEventListener('touchstart', handlePointerDown, true);
+            subchartContainerRef.current?.removeEventListener('touchstart', handlePointerDown, true);
+            timescaleContainerRef.current?.removeEventListener('touchstart', handlePointerDown, true);
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointercancel', handlePointerUp);
+            window.removeEventListener('mouseup', handlePointerUp);
+            window.removeEventListener('touchend', handlePointerUp);
+            window.removeEventListener('touchcancel', handlePointerUp);
             if (priceLineEl?.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
             if (subLineEl?.parentNode) subLineEl.parentNode.removeChild(subLineEl);
             if (footLineEl?.parentNode) footLineEl.parentNode.removeChild(footLineEl);

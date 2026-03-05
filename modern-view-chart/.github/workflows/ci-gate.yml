@@ -12,14 +12,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-critical-and-build:
-    name: lint:critical + build
+  lint-changed-and-build:
+    name: lint:changed + build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,8 +32,61 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run lint:critical
-        run: npm run lint:critical
+      - name: Run lint:changed
+        run: npm run lint:changed
 
       - name: Run build
         run: npm run build
+
+  lint-legacy:
+    name: lint:legacy (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint:legacy
+        run: npm run lint:legacy
+        continue-on-error: true
+
+      - name: Compare lint:legacy with baseline
+        if: always()
+        run: npm run lint:legacy:delta
+        continue-on-error: true
+
+      - name: Publish lint:legacy delta to job summary
+        if: always()
+        run: |
+          echo "## Lint Legacy Delta" >> $GITHUB_STEP_SUMMARY
+          if [ -f .tmp/eslint-legacy-delta-summary.txt ]; then
+            cat .tmp/eslint-legacy-delta-summary.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Delta summary not available." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload lint:legacy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-legacy-report
+          path: |
+            .github/lint-legacy-baseline.json
+            .tmp/eslint-legacy-report.json
+            .tmp/eslint-legacy-metrics.json
+            .tmp/eslint-legacy-summary.txt
+            .tmp/eslint-legacy-delta.json
+            .tmp/eslint-legacy-delta-summary.txt

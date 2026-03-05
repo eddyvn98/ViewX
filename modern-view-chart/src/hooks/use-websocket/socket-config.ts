@@ -1,0 +1,115 @@
+import { wsRuntime } from './runtime';
+
+export function parseIntervalSeconds(interval: string): number {
+    const text = String(interval || '').trim();
+    if (!text) return 60;
+    if (/^\d+$/.test(text)) return Number(text) * 60;
+
+    const m = text.match(/^(\d+)\s*([mhd])$/i);
+    if (!m) return 60;
+    const value = Number(m[1]);
+    const unit = m[2].toLowerCase();
+    if (unit === 'm') return value * 60;
+    if (unit === 'h') return value * 3600;
+    if (unit === 'd') return value * 86400;
+    return 60;
+}
+
+export function deriveDefaultSocketUrl(): string {
+    if (typeof window === 'undefined') return wsRuntime.socketUrl || 'ws://127.0.0.1:8091';
+    const isLocalHost =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1';
+    if (isLocalHost) {
+        // In local development, always prefer the local backend websocket.
+        return 'ws://127.0.0.1:8091';
+    }
+    if (wsRuntime.socketUrl) return wsRuntime.socketUrl;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    return `${protocol}//${host}`;
+}
+
+export function extractCredentialFromUrl(url: URL): string {
+    const token = url.searchParams.get('access_token');
+    const ticket = url.searchParams.get('access_ticket');
+    const credential = (token || ticket || '').trim();
+    if (!credential) return '';
+    url.searchParams.delete('access_token');
+    url.searchParams.delete('access_ticket');
+    return credential;
+}
+
+export function stripCredentialFromSocketUrl(rawUrl: string): string {
+    try {
+        const parsed = new URL(rawUrl);
+        parsed.searchParams.delete('access_token');
+        parsed.searchParams.delete('access_ticket');
+        return parsed.toString();
+    } catch {
+        return rawUrl;
+    }
+}
+
+export function buildSocketConfig(options?: { ignoreUrlCredential?: boolean }): { url: string; protocols: string[] } {
+    const baseFallback = deriveDefaultSocketUrl();
+    if (typeof window === 'undefined') return { url: baseFallback, protocols: [] };
+
+    const params = new URLSearchParams(window.location.search);
+    const wsOverride = params.get('ws_url');
+    const base = wsOverride || baseFallback;
+    const ignoreUrlCredential = Boolean(options?.ignoreUrlCredential);
+
+    try {
+        const u = new URL(base);
+        let credential = '';
+        if (!ignoreUrlCredential) {
+            credential = extractCredentialFromUrl(u);
+        } else {
+            u.searchParams.delete('access_token');
+            u.searchParams.delete('access_ticket');
+        }
+        if (!credential && !ignoreUrlCredential) {
+            credential = (params.get('access_token') || params.get('access_ticket') || '').trim();
+        }
+
+        const protocols = credential ? [`bearer.${credential}`] : [];
+        return { url: u.toString(), protocols };
+    } catch {
+        const credential = ignoreUrlCredential ? '' : (params.get('access_token') || params.get('access_ticket') || '').trim();
+        const protocols = credential ? [`bearer.${credential}`] : [];
+        return { url: ignoreUrlCredential ? stripCredentialFromSocketUrl(base) : base, protocols };
+    }
+}
+
+export async function fetchWsTicketFromApi(): Promise<string> {
+    if (typeof window === 'undefined') return '';
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (wsRuntime.wsTicketCache && wsRuntime.wsTicketExpiresAt > nowSec + 10) {
+        return wsRuntime.wsTicketCache;
+    }
+    if (wsRuntime.wsTicketPromise) return wsRuntime.wsTicketPromise;
+
+    wsRuntime.wsTicketPromise = fetch('/api/auth/ws-ticket', {
+        method: 'GET',
+        credentials: 'include',
+    })
+        .then(async (response) => {
+            if (!response.ok) return '';
+            const data = await response.json().catch(() => null);
+            const ticket = typeof data?.access_ticket === 'string' ? data.access_ticket.trim() : '';
+            const expiresAt = Number.parseInt(String(data?.expires_at || '0'), 10);
+            if (!ticket) return '';
+            wsRuntime.wsTicketCache = ticket;
+            wsRuntime.wsTicketExpiresAt = Number.isFinite(expiresAt) ? expiresAt : Math.floor(Date.now() / 1000) + 300;
+            return wsRuntime.wsTicketCache;
+        })
+        .catch(() => '')
+        .finally(() => {
+            wsRuntime.wsTicketPromise = null;
+        });
+
+    return wsRuntime.wsTicketPromise;
+}

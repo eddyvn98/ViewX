@@ -55,14 +55,16 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
 function createAlertTagElement(tag: TagData): TagElements {
     return createElementsFromHtml(tag, `
             <div class="absolute right-[100%] top-1/2 w-screen border-b-[1px] border-dashed border-amber-500/40 pointer-events-none"></div>
-            <div class="tag-body group flex items-center h-7 gap-1 pointer-events-auto cursor-pointer p-0.5 bg-background/80 backdrop-blur-xl border border-amber-500/20 rounded-lg shadow-ethereal transition-all duration-200 touch-none touch-action-none">
+            <div class="tag-body group flex items-center h-7 gap-1 pointer-events-auto cursor-pointer p-0.5 bg-background/80 backdrop-blur-xl border border-amber-500/20 rounded-lg shadow-ethereal transition-all duration-200 touch-none touch-action-none"
+                data-draggable="true" data-type="alert" data-ticket="${tag.ticket}">
                 <div class="cancel-btn h-full w-5 flex items-center justify-center rounded-md hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-all duration-300" title="Remove Alert" data-no-drag="true">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
                 <div class="tag-label-container px-1.5 h-full flex items-center justify-center rounded-md bg-amber-500/5 border border-amber-500/10 cursor-grab active:cursor-grabbing" data-draggable="true" data-type="alert" data-ticket="${tag.ticket}">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-opacity="0.6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
                 </div>
-                <div class="price-box h-full flex items-center px-2 bg-secondary/10 border border-amber-500/10 rounded-md min-w-[75px] justify-center cursor-row-resize hover:bg-secondary/20 transition-colors">
+                <div class="price-box h-full flex items-center px-2 bg-secondary/10 border border-amber-500/10 rounded-md min-w-[75px] justify-center cursor-row-resize hover:bg-secondary/20 transition-colors"
+                    data-draggable="true" data-type="alert" data-ticket="${tag.ticket}">
                     <span class="price-text text-[11px] font-bold text-amber-500/80"></span>
                 </div>
             </div>`);

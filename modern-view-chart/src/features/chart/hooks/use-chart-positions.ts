@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { ISeriesApi, IPriceLine, LineStyle } from 'lightweight-charts';
 import { Position, useMarketStore } from '@/lib/store';
-import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
+import { calculatePnL } from '@/lib/utils/pnl';
+
+const SHOW_POSITION_PRICE_LINES = false;
 
 export function useChartPositions(
     symbol: string | undefined,
@@ -41,6 +43,16 @@ export function useChartPositions(
     useEffect(() => {
         const series = seriesRef.current;
         if (!series || !symbol) return;
+        if (!SHOW_POSITION_PRICE_LINES) {
+            Object.keys(priceLinesRef.current).forEach(t => {
+                const lines = priceLinesRef.current[t];
+                if (lines.entry) series.removePriceLine(lines.entry);
+                if (lines.sl) series.removePriceLine(lines.sl);
+                if (lines.tp) series.removePriceLine(lines.tp);
+                delete priceLinesRef.current[t];
+            });
+            return;
+        }
 
         // Show positions even during draft for context
 
@@ -131,6 +143,7 @@ export function useChartPositions(
     // EFFECT 2: High-frequency updates (Dragging & Price)
     // Uses manual subscription for maximum smoothness
     useEffect(() => {
+        if (!SHOW_POSITION_PRICE_LINES) return;
         const unsub = useMarketStore.subscribe(
             state => [state.tickers[symbol || '']?.price, state.draggingPosition] as const,
             ([price, drag]) => {
@@ -166,6 +179,7 @@ export function useChartPositions(
 
     // ⚡ FAST-PATH: Listen to direct drag events for instant sync
     useEffect(() => {
+        if (!SHOW_POSITION_PRICE_LINES) return;
         const handleFastDrag = (e: any) => {
             const { ticket, type, price, symbol: eventSymbol } = e.detail;
             if (eventSymbol !== symbol || ticket === 'draft') return;

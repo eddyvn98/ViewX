@@ -1,6 +1,31 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
+const telegramPreferencesSchema = new Schema(
+  {
+    signals: { type: Boolean, default: true },
+    orderEvents: { type: Boolean, default: true },
+    alertHits: { type: Boolean, default: true },
+    system: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
+const telegramSchema = new Schema(
+  {
+    chatId: { type: String, default: "" },
+    telegramUserId: { type: String, default: "" },
+    username: { type: String, default: "" },
+    firstName: { type: String, default: "" },
+    linkedAt: { type: Date, default: null },
+    isActive: { type: Boolean, default: false },
+    pendingLinkTokenHash: { type: String, default: "" },
+    pendingLinkExpiresAt: { type: Date, default: null },
+    preferences: { type: telegramPreferencesSchema, default: () => ({}) },
+  },
+  { _id: false },
+);
+
 const schema = new Schema(
   {
     username: {
@@ -46,6 +71,10 @@ const schema = new Schema(
       type: Number,
       required: true,
       default: 1,
+    },
+    telegram: {
+      type: telegramSchema,
+      default: () => ({}),
     },
   },
   { timestamps: true }

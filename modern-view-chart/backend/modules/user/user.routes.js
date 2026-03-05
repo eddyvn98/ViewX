@@ -21,6 +21,11 @@ router.route("/").delete(checkAdmin, User.deleteUser);
 //Đổi mật khẩu
 router.route("/:id/update-password").put(checkLogin, User.updatePassword);
 router.route("/state").get(User.getUserSetupState).put(User.upsertUserSetupState);
+router.route("/telegram/status").get(User.getTelegramStatus);
+router.route("/telegram/link/start").post(User.startTelegramLink);
+router.route("/telegram/preferences").put(User.updateTelegramPreferences);
+router.route("/telegram/test").post(User.sendTelegramTest);
+router.route("/telegram/unlink").post(User.unlinkTelegram);
 
 router.route("/data").post(async (req, res) => {
   const { symbol, interval } = req.body;

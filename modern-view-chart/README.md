@@ -53,3 +53,47 @@ Backend se tu dong:
 - tra ve `access_token`, `refresh_token` giong login thuong.
 
 
+
+## Docker staging (FE + BE + Mongo, MT5 bridge ngoai Docker)
+
+1. Tao file env Docker:
+
+```powershell
+Copy-Item .env.docker.example .env.docker
+```
+
+2. Start stack staging:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\server\docker-up.ps1
+```
+
+3. Chay smoke test:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\server\docker-smoke.ps1
+```
+
+4. Chay MT5 bridge tren host Windows (khong container hoa):
+
+```powershell
+python backend/bridge/main.py
+```
+
+Yeu cau bridge host:
+- `NODE_WS_URL=ws://127.0.0.1:18091`
+- `ACCESS_TOKEN` phai trung voi backend trong `.env.docker`
+
+5. Xem log / stop stack:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\server\docker-logs.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\server\docker-down.ps1
+```
+
+
+Bridge command nhanh (lay env tu .env.docker):
+
+```powershell
+npm run docker:bridge
+```

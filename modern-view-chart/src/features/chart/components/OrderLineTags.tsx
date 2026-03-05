@@ -81,17 +81,12 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
         const timescale = priceChart.timeScale();
         timescale.subscribeVisibleLogicalRangeChange(sync);
         timescale.subscribeVisibleTimeRangeChange(sync);
-        priceChart.subscribeCrosshairMove(sync);
-
-        window.addEventListener('mousemove', sync);
         window.addEventListener('scroll', sync, { passive: true });
 
         return () => {
             if (syncRafId) cancelAnimationFrame(syncRafId);
             timescale.unsubscribeVisibleLogicalRangeChange(sync);
             timescale.unsubscribeVisibleTimeRangeChange(sync);
-            priceChart.unsubscribeCrosshairMove(sync);
-            window.removeEventListener('mousemove', sync);
             window.removeEventListener('scroll', sync);
         };
     }, [isReady, priceChartRef, seriesRef, latestCandleTime, focusedTicket, hoveredTicket]);

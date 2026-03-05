@@ -4,7 +4,9 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  // Cấu hình cơ bản, có thể thêm các option khác ở đây
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 export default withNextIntl(nextConfig);

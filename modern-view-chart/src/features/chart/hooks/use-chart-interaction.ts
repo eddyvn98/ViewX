@@ -8,6 +8,7 @@ export function useChartInteraction(
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     symbol: string | undefined,
     containerRef: React.RefObject<HTMLDivElement | null>,
+    isReady: boolean,
     alerts: Alert[] = [],
     handleUpdateAlert: (id: string, price: number) => void = () => {},
     handleRemoveAlert: (id: string) => void = () => {},
@@ -43,7 +44,7 @@ export function useChartInteraction(
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (!chartRef.current || !seriesRef.current || !containerRef.current || !symbol) return;
+        if (!isReady || !chartRef.current || !seriesRef.current || !containerRef.current || !symbol) return;
         const chart = chartRef.current;
         const container = containerRef.current;
         const series = seriesRef.current;
@@ -75,5 +76,5 @@ export function useChartInteraction(
             window.removeEventListener('pointerup', handlePointerUp);
             window.removeEventListener('pointercancel', handlePointerUp);
         };
-    }, [symbol, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage]);
+    }, [isReady, symbol, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage]);
 }
