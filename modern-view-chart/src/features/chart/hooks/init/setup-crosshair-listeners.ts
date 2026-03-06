@@ -45,11 +45,20 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         time: number;
         price: number | null;
         sourceId: string;
+        sourcePane: 'price' | 'subchart' | 'timescale';
         point: { x: number; y: number };
         logical: number | null;
+        sourceRect?: {
+            left: number;
+            top: number;
+            width: number;
+            height: number;
+        };
         sourceEvent?: {
             clientX: number;
             clientY: number;
+            pointerType?: string;
+            isTouch?: boolean;
         };
     } | null = null;
     let dispatchRafId: number | null = null;
@@ -72,7 +81,19 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: payload }));
     };
 
+    const getSourceContainer = (sourceChart: IChartApi) => {
+        if (sourceChart === priceChart) return priceLineEl?.parentElement ?? null;
+        if (sourceChart === subchartChart) return subLineEl?.parentElement ?? null;
+        if (sourceChart === timescaleChart) return footLineEl?.parentElement ?? null;
+        return null;
+    };
+
     const handleCrosshairMove = (sourceChart: IChartApi, param: any, hasY: boolean) => {
+        const sourcePane = sourceChart === priceChart
+            ? 'price'
+            : sourceChart === subchartChart
+                ? 'subchart'
+                : 'timescale';
         const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
         const normalizedTime = normalizeCrosshairTime(param.time);
         syncVerticalLines(sourceChart, charts, elements, series as any, param.point?.x ?? null, normalizedTime, Number(logical ?? 0));
@@ -81,18 +102,37 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
             const curTime = normalizedTime;
             const curX = param.point.x;
             const curY = hasY ? param.point.y : 0;
+            const sourceContainer = getSourceContainer(sourceChart);
+            const sourceRect = sourceContainer?.getBoundingClientRect();
 
             if (curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) {
                 pendingPayload = {
                     time: curTime,
                     price: hasY ? Number(seriesRef.current?.coordinateToPrice(curY) ?? 0) : null,
                     sourceId: chartId,
+                    sourcePane,
                     point: { x: curX, y: curY },
                     logical: logical !== null ? Number(logical) : null,
+                    sourceRect: sourceRect
+                        ? {
+                            left: sourceRect.left,
+                            top: sourceRect.top,
+                            width: sourceRect.width,
+                            height: sourceRect.height,
+                        }
+                        : undefined,
                     sourceEvent: param.sourceEvent
                         ? {
                             clientX: Number(param.sourceEvent.clientX),
                             clientY: Number(param.sourceEvent.clientY),
+                            pointerType: typeof param.sourceEvent.pointerType === 'string'
+                                ? param.sourceEvent.pointerType
+                                : undefined,
+                            isTouch: Boolean(
+                                param.sourceEvent.pointerType === 'touch'
+                                || ('touches' in param.sourceEvent && param.sourceEvent.touches?.length)
+                                || ('changedTouches' in param.sourceEvent && param.sourceEvent.changedTouches?.length)
+                            ),
                         }
                         : undefined,
                 };
@@ -112,7 +152,7 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
             lastSyncX = null;
             lastSyncY = null;
             useMarketStore.getState().syncCrosshair(null);
-            window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { time: null, sourceId: chartId } }));
+            window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { time: null, sourceId: chartId, sourcePane } }));
         }
     };
 

@@ -42,6 +42,7 @@ export function useSubchartLegendDOMUpdater(
     const isCrosshairActiveRef = useRef(false);
     const indicatorRefsRef = useRef<Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>>(new Map());
     const lastUpdateAtRef = useRef(0);
+    const lastCrosshairTimeRef = useRef<number | null>(null);
 
     const lastCalcLengthRef = useRef(0);
     useEffect(() => {
@@ -149,6 +150,7 @@ export function useSubchartLegendDOMUpdater(
                 if (!time || sourceId !== chartId) {
                     if (!isCrosshairActiveRef.current) return;
                     isCrosshairActiveRef.current = false;
+                    lastCrosshairTimeRef.current = null;
                     updateLegend(
                         freshCandles.length - 1,
                         true,
@@ -161,6 +163,8 @@ export function useSubchartLegendDOMUpdater(
 
                 const activeIndex = findCandleIndex(time, freshCandles);
                 const isLastCandle = activeIndex === freshCandles.length - 1;
+                if (lastCrosshairTimeRef.current === time && !isLastCandle) return;
+                lastCrosshairTimeRef.current = time;
                 updateLegend(
                     activeIndex,
                     isLastCandle,

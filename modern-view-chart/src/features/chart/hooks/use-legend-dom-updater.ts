@@ -37,6 +37,7 @@ export function useLegendDOMUpdater(
     const indicatorRefsRef = useRef<Map<string, { container: HTMLElement; value: HTMLElement; spans?: NodeListOf<HTMLSpanElement> }>>(new Map());
     const lastUpdateAtRef = useRef(0);
     const lastIsLiveRef = useRef<boolean | null>(null);
+    const lastCrosshairTimeRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!candles.length || !containerRef.current || !symbol || !interval || !source) return;
@@ -130,6 +131,7 @@ export function useLegendDOMUpdater(
                     if (!resetTimeoutRef.current && isCrosshairActiveRef.current) {
                         resetTimeoutRef.current = setTimeout(() => {
                             isCrosshairActiveRef.current = false;
+                            lastCrosshairTimeRef.current = null;
                             resetTimeoutRef.current = null;
                             renderLatest(getIndicatorsFor(fresh.raw));
                         }, 50);
@@ -140,6 +142,8 @@ export function useLegendDOMUpdater(
                 const activeIndex = findCandleIndex(time, fresh.raw);
                 const isLastCandle = activeIndex === fresh.raw.length - 1;
                 const currentIndicators = getIndicatorsFor(fresh.raw);
+                if (lastCrosshairTimeRef.current === time && !isLastCandle) return;
+                lastCrosshairTimeRef.current = time;
 
                 updateLegendDirect(
                     activeIndex,

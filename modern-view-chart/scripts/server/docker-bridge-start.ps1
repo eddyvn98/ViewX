@@ -23,9 +23,15 @@ if ([string]::IsNullOrWhiteSpace($accessToken)) { throw "[docker-bridge-start] A
 $python = Get-Command "python" -ErrorAction SilentlyContinue
 if ($null -eq $python) { throw "[docker-bridge-start] python is not available." }
 
-$existing = Get-CimInstance Win32_Process |
-    Where-Object { $_.Name -eq "python.exe" -and $_.CommandLine -match "backend/bridge/main.py" } |
-    Select-Object -First 1
+$candidates = Get-CimInstance Win32_Process |
+    Where-Object { $_.Name -eq "python.exe" -and $_.CommandLine -match "backend/bridge/main.py" }
+$existing = $null
+foreach ($candidate in $candidates) {
+    if (Get-Process -Id $candidate.ProcessId -ErrorAction SilentlyContinue) {
+        $existing = $candidate
+        break
+    }
+}
 if ($existing) {
     Write-Host ("[docker-bridge-start] Bridge already running. PID=" + $existing.ProcessId)
     exit 0

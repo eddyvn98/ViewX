@@ -31,6 +31,7 @@ export function createIndicatorInstance(config: any, refs: IndicatorRefs): any {
 
     switch (config.type) {
         case 'EMA': return new EMAIndicator(priceChart, config);
+        case 'SMA': return new EMAIndicator(priceChart, config);
         case 'HMA': return new HMAIndicator(priceChart, config);
         case 'RSI': return new RSIIndicator(subchartChart, config);
         case 'MACD': return new MACDIndicator(subchartChart, config);

@@ -78,8 +78,6 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
         const timescale = priceChart.timeScale();
         timescale.subscribeVisibleLogicalRangeChange(sync);
         timescale.subscribeVisibleTimeRangeChange(sync);
-        priceChart.subscribeCrosshairMove(sync);
-        window.addEventListener('mousemove', sync);
         window.addEventListener('scroll', sync, { passive: true });
 
         const unsubDrag = useMarketStore.subscribe(
@@ -114,8 +112,6 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
             if (syncRafId) cancelAnimationFrame(syncRafId);
             timescale.unsubscribeVisibleLogicalRangeChange(sync);
             timescale.unsubscribeVisibleTimeRangeChange(sync);
-            priceChart.unsubscribeCrosshairMove(sync);
-            window.removeEventListener('mousemove', sync);
             window.removeEventListener('scroll', sync);
             unsubDrag();
             unsubDragEnd();

@@ -84,7 +84,11 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
             }
         }
 
-        if (!hit) hit = getNearElement(y, x, series, container, symbol, stateRef.current, e.pointerType === 'touch');
+        // On touch devices, only start dragging when the user actually touches a draggable tag.
+        // Fuzzy line hit-testing from empty chart space makes pan/crosshair gestures snap to active orders.
+        if (!hit && e.pointerType !== 'touch') {
+            hit = getNearElement(y, x, series, container, symbol, stateRef.current, false);
+        }
 
         if (hit) {
             mouseDownPos.current = { x, y };

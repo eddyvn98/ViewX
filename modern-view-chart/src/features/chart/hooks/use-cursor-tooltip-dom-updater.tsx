@@ -34,6 +34,12 @@ export function useCursorTooltipDOMUpdater(
     const indicatorRefsRef = useRef<Map<string, { container: HTMLElement; value: HTMLElement; spans?: NodeListOf<HTMLSpanElement> }>>(new Map());
     const lastUpdateAtRef = useRef(0);
     const lastIsLiveRef = useRef<boolean | null>(null);
+    const lastTooltipStateRef = useRef<{ left: number; top: number; visible: boolean; time: number | null }>({
+        left: Number.NaN,
+        top: Number.NaN,
+        visible: false,
+        time: null
+    });
 
     useEffect(() => {
         if (!candles.length || !containerRef.current || !symbol || !interval || !source) return;
@@ -53,7 +59,6 @@ export function useCursorTooltipDOMUpdater(
         const normalizedSymbol = getNormalizedSymbol(symbol);
         const tickerKey = `${source}:${normalizedSymbol}`;
         const symbolDigits = getSymbolDigits(symbol);
-        const mousePos = { x: 0, y: 0 };
         const getIndicatorsFor = (rawCandles: Candle[]) => {
             if (rawCandles.length !== indicatorCacheLengthRef.current) {
                 const latestIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
@@ -64,51 +69,67 @@ export function useCursorTooltipDOMUpdater(
             return indicatorCacheRef.current;
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
-            mousePos.x = e.clientX;
-            mousePos.y = e.clientY;
-        };
-
-        const handleTouchMove = (e: TouchEvent) => {
-            if (e.touches.length > 0) {
-                mousePos.x = e.touches[0].clientX;
-                mousePos.y = e.touches[0].clientY;
-            }
-        };
-
         const handleCrosshair = (e: CustomEvent<CrosshairEventDetail>) => {
-            const { time, sourceId, point, sourceEvent } = e.detail || {};
+            const { time, sourceId, sourcePane, point, sourceRect, sourceEvent } = e.detail || {};
 
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             crosshairRafRef.current = requestAnimationFrame(() => {
                 if (!containerRef.current) return;
 
                 if (sourceId !== chartId || !time || !point || point.x === undefined || point.y === undefined) {
-                    containerRef.current.style.opacity = '0';
+                    if (lastTooltipStateRef.current.visible) {
+                        containerRef.current.style.opacity = '0';
+                        lastTooltipStateRef.current.visible = false;
+                        lastTooltipStateRef.current.time = null;
+                    }
                     return;
                 }
 
-                containerRef.current.style.opacity = '1';
+                if (sourcePane !== 'price') return;
+
+                if (!lastTooltipStateRef.current.visible) {
+                    containerRef.current.style.opacity = '1';
+                    lastTooltipStateRef.current.visible = true;
+                }
 
                 const isMobile = window.innerWidth < 768;
+                const isTouchInput = Boolean(sourceEvent?.isTouch || sourceEvent?.pointerType === 'touch');
                 const tooltipWidth = containerRef.current.offsetWidth || 70;
                 const tooltipHeight = containerRef.current.offsetHeight || 50;
-                // Larger offset on mobile to avoid finger coverage
-                const offsetX = isMobile ? 0 : 15;
-                const offsetY = isMobile ? -70 : 15;
+                const offsetX = isTouchInput ? 18 : 15;
+                const offsetY = isTouchInput ? 18 : 15;
 
-                const pointerX = typeof sourceEvent?.clientX === 'number' ? sourceEvent.clientX : mousePos.x;
-                const pointerY = typeof sourceEvent?.clientY === 'number' ? sourceEvent.clientY : mousePos.y;
+                const anchorX = typeof sourceRect?.left === 'number'
+                    ? sourceRect.left + point.x
+                    : typeof sourceEvent?.clientX === 'number'
+                    ? sourceEvent.clientX
+                    : lastTooltipStateRef.current.left;
+                const anchorY = typeof sourceRect?.top === 'number'
+                    ? sourceRect.top + point.y
+                    : typeof sourceEvent?.clientY === 'number'
+                    ? sourceEvent.clientY
+                    : lastTooltipStateRef.current.top;
 
-                let left = pointerX + offsetX;
-                let top = pointerY + offsetY;
+                if (!Number.isFinite(anchorX) || !Number.isFinite(anchorY)) return;
+
+                let left = anchorX + offsetX;
+                let top = anchorY + offsetY;
 
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
 
-                // Mobile specific: center tooltip horizontally relative to touch point
-                if (isMobile) {
-                    left = pointerX - (tooltipWidth / 2);
+                if (isTouchInput) {
+                    const preferLeftSide = anchorX > viewportWidth * 0.55;
+                    const preferAboveCrosshair = anchorY > tooltipHeight + 24;
+
+                    left = preferLeftSide
+                        ? anchorX - tooltipWidth - offsetX
+                        : anchorX + offsetX;
+                    top = preferAboveCrosshair
+                        ? anchorY - tooltipHeight - offsetY
+                        : anchorY + offsetY;
+                } else if (isMobile) {
+                    left = anchorX - (tooltipWidth / 2);
                 }
 
                 if (left + tooltipWidth > viewportWidth) {
@@ -117,18 +138,24 @@ export function useCursorTooltipDOMUpdater(
                 if (left < 5) left = 5;
 
                 if (top + tooltipHeight > viewportHeight) {
-                    top = pointerY - tooltipHeight - (isMobile ? 20 : 15);
+                    top = anchorY - tooltipHeight - (isMobile ? 20 : 15);
                 }
                 if (top < 5) top = 5;
 
-                containerRef.current.style.left = '0px';
-                containerRef.current.style.top = '0px';
-                containerRef.current.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+                if (lastTooltipStateRef.current.left !== left || lastTooltipStateRef.current.top !== top) {
+                    containerRef.current.style.left = '0px';
+                    containerRef.current.style.top = '0px';
+                    containerRef.current.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+                    lastTooltipStateRef.current.left = left;
+                    lastTooltipStateRef.current.top = top;
+                }
 
                 const fresh = getFreshCandles(symbol, interval, source, chartType);
                 const activeIndex = findCandleIndex(time, fresh.raw);
                 const isLastCandle = activeIndex === fresh.raw.length - 1;
                 const currentIndicators = getIndicatorsFor(fresh.raw);
+                if (lastTooltipStateRef.current.time === time && !isLastCandle) return;
+                lastTooltipStateRef.current.time = time;
 
                 updateLegendDirect(
                     activeIndex,
@@ -149,9 +176,6 @@ export function useCursorTooltipDOMUpdater(
             });
         };
 
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('touchstart', handleTouchMove, { passive: true });
-        window.addEventListener('touchmove', handleTouchMove, { passive: true });
         window.addEventListener('chart-crosshair', handleCrosshair as EventListener);
 
         const unsubIndicators = useMarketStore.subscribe(
@@ -168,9 +192,6 @@ export function useCursorTooltipDOMUpdater(
         );
 
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('touchstart', handleTouchMove);
-            window.removeEventListener('touchmove', handleTouchMove);
             window.removeEventListener('chart-crosshair', handleCrosshair as EventListener);
             unsubIndicators();
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);

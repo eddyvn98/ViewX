@@ -11,10 +11,19 @@ export interface CrosshairPoint {
 export interface CrosshairEventDetail {
     time?: number | null;
     sourceId?: string;
+    sourcePane?: 'price' | 'subchart' | 'timescale';
     point?: CrosshairPoint;
+    sourceRect?: {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    };
     sourceEvent?: {
         clientX?: number;
         clientY?: number;
+        pointerType?: string;
+        isTouch?: boolean;
     };
 }
 

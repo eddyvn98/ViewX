@@ -39,6 +39,8 @@ export const INDICATOR_REGISTRY: Record<string, IndicatorMetadata> = {
         },
         styles: {
             line: { name: 'line', label: 'EMA Line', type: 'color', default: '#00ff88' },
+            aboveLine: { name: 'aboveLine', label: 'Price Above', type: 'color', default: '#22c55e' },
+            belowLine: { name: 'belowLine', label: 'Price Below', type: 'color', default: '#ef4444' },
             width: { name: 'width', label: 'Line Width', type: 'number', default: 2, min: 1, max: 10 }
         }
     },
@@ -51,6 +53,8 @@ export const INDICATOR_REGISTRY: Record<string, IndicatorMetadata> = {
         },
         styles: {
             line: { name: 'line', label: 'SMA Line', type: 'color', default: '#2196F3' },
+            aboveLine: { name: 'aboveLine', label: 'Price Above', type: 'color', default: '#22c55e' },
+            belowLine: { name: 'belowLine', label: 'Price Below', type: 'color', default: '#ef4444' },
             width: { name: 'width', label: 'Line Width', type: 'number', default: 2, min: 1, max: 10 }
         }
     },
@@ -95,6 +99,8 @@ export const INDICATOR_REGISTRY: Record<string, IndicatorMetadata> = {
         },
         styles: {
             line: { name: 'line', label: 'HMA Line', type: 'color', default: '#00bcd4' },
+            aboveLine: { name: 'aboveLine', label: 'Price Above', type: 'color', default: '#06b6d4' },
+            belowLine: { name: 'belowLine', label: 'Price Below', type: 'color', default: '#a855f7' },
             width: { name: 'width', label: 'Line Width', type: 'number', default: 2, min: 1, max: 10 }
         }
     },

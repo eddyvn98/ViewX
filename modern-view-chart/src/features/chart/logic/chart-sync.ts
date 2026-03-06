@@ -1,5 +1,11 @@
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 
+type SyncLineElement = HTMLDivElement & {
+    __lastLogical?: number | null;
+    __lastLeft?: number | null;
+    __visible?: boolean;
+};
+
 /* ================= DOM-BASED CROSSHAIR SYNC ================= */
 
 export const createSyncLine = (container: HTMLElement | null): HTMLDivElement | null => {
@@ -12,7 +18,11 @@ export const createSyncLine = (container: HTMLElement | null): HTMLDivElement | 
     `;
     container.style.position = 'relative';
     container.appendChild(line);
-    return line;
+    const syncLine = line as SyncLineElement;
+    syncLine.__lastLogical = null;
+    syncLine.__lastLeft = null;
+    syncLine.__visible = false;
+    return syncLine;
 };
 
 export const syncVerticalLines = (
@@ -38,17 +48,30 @@ export const syncVerticalLines = (
 ) => {
     if (x !== null && logical !== null) {
         const items = [
-            { chart: charts.priceChart, line: elements.priceLineEl, series: series.candleSeries },
-            { chart: charts.subchartChart, line: elements.subLineEl, series: series.subSyncSeries },
-            { chart: charts.timescaleChart, line: elements.footLineEl, series: series.footSyncSeries }
+            { chart: charts.priceChart, line: elements.priceLineEl as SyncLineElement | null, series: series.candleSeries },
+            { chart: charts.subchartChart, line: elements.subLineEl as SyncLineElement | null, series: series.subSyncSeries },
+            { chart: charts.timescaleChart, line: elements.footLineEl as SyncLineElement | null, series: series.footSyncSeries }
         ];
 
         items.forEach(item => {
             if (!item.line) return;
+            if (item.line.__lastLogical === logical && item.line.__visible) {
+                if (item.chart === charts.timescaleChart && sourceChart !== charts.timescaleChart && time !== null) {
+                    item.chart.setCrosshairPosition(0, time as any, item.series as any);
+                }
+                return;
+            }
             const targetX = item.chart.timeScale().logicalToCoordinate(logical as any);
             if (targetX !== null) {
-                item.line.style.display = 'block';
-                item.line.style.left = `${targetX}px`;
+                if (!item.line.__visible) {
+                    item.line.style.display = 'block';
+                    item.line.__visible = true;
+                }
+                if (item.line.__lastLeft !== targetX) {
+                    item.line.style.left = `${targetX}px`;
+                    item.line.__lastLeft = targetX;
+                }
+                item.line.__lastLogical = logical;
 
                 // SYNC NATIVE LABEL ONLY FOR FOOTER (TIMESCALE)
                 if (item.chart === charts.timescaleChart && sourceChart !== charts.timescaleChart) {
@@ -57,7 +80,16 @@ export const syncVerticalLines = (
             }
         });
     } else {
-        [elements.priceLineEl, elements.subLineEl, elements.footLineEl].forEach(el => { if (el) el.style.display = 'none'; });
+        [elements.priceLineEl, elements.subLineEl, elements.footLineEl].forEach(el => {
+            const line = el as SyncLineElement | null;
+            if (!line) return;
+            if (line.__visible) {
+                line.style.display = 'none';
+                line.__visible = false;
+            }
+            line.__lastLogical = null;
+            line.__lastLeft = null;
+        });
         // Clear except source
         if (charts.priceChart !== sourceChart) charts.priceChart.clearCrosshairPosition();
         if (charts.subchartChart !== sourceChart) charts.subchartChart.clearCrosshairPosition();
