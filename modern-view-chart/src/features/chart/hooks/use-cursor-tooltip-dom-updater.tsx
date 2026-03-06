@@ -143,7 +143,8 @@ export function useCursorTooltipDOMUpdater(
                     chartType,
                     chartId,
                     indicatorRefsRef.current,
-                    symbolDigits
+                    symbolDigits,
+                    false
                 );
             });
         };

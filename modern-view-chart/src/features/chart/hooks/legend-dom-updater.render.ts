@@ -16,7 +16,8 @@ export function updateLegendDirect(
     chartType: string,
     chartId: string,
     indicatorRefs: Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>,
-    digits: number = 2
+    digits: number = 2,
+    recalculateLiveIndicators: boolean = false
 ) {
     if (!rawCandles.length || !ohlcRefs) return;
 
@@ -57,7 +58,7 @@ export function updateLegendDirect(
         renderStatus(ohlcRefs, isLive);
     }
 
-    if (isLive && currentPrice && activeIndex === rawCandles.length - 1) {
+    if (recalculateLiveIndicators && isLive && currentPrice && activeIndex === rawCandles.length - 1) {
         const storeIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
         const updatedCandles = rawCandles.map((c, idx) =>
             idx === rawCandles.length - 1 ? { ...c, close: currentPrice } : c

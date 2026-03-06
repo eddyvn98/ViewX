@@ -65,7 +65,8 @@ export function useLegendDOMUpdater(
             chartType,
             chartId,
             indicatorRefsRef.current,
-            getSymbolDigits(symbol)
+            getSymbolDigits(symbol),
+            false
         );
     }, [candles, chartId]);
 
@@ -94,7 +95,8 @@ export function useLegendDOMUpdater(
                 chartType,
                 chartId,
                 indicatorRefsRef.current,
-                symbolDigits
+                symbolDigits,
+                false
             );
         };
 
@@ -152,7 +154,8 @@ export function useLegendDOMUpdater(
                     chartType,
                     chartId,
                     indicatorRefsRef.current,
-                    symbolDigits
+                    symbolDigits,
+                    false
                 );
             });
         };
@@ -184,7 +187,8 @@ export function useLegendDOMUpdater(
                         chartType,
                         chartId,
                         indicatorRefsRef.current,
-                        symbolDigits
+                        symbolDigits,
+                        false
                     );
                 });
             }

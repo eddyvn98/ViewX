@@ -1,4 +1,4 @@
-﻿import { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { normalizeCrosshairTime } from './normalize-crosshair-time';
 import { syncVerticalLines } from '../../logic/chart-sync';
 import { useMarketStore } from '@/lib/store';
@@ -41,7 +41,36 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
     let lastSyncTime: number | null = null;
     let lastSyncX: number | null = null;
     let lastSyncY: number | null = null;
-    let lastSideEffectsAt = 0;
+    let pendingPayload: {
+        time: number;
+        price: number | null;
+        sourceId: string;
+        point: { x: number; y: number };
+        logical: number | null;
+        sourceEvent?: {
+            clientX: number;
+            clientY: number;
+        };
+    } | null = null;
+    let dispatchRafId: number | null = null;
+
+    const flushPendingPayload = () => {
+        if (!pendingPayload) {
+            dispatchRafId = null;
+            return;
+        }
+
+        const payload = pendingPayload;
+        pendingPayload = null;
+        dispatchRafId = null;
+        lastSyncTime = payload.time;
+        lastSyncX = payload.point.x;
+        lastSyncY = payload.point.y;
+
+        const store = useMarketStore.getState();
+        store.syncCrosshair(payload);
+        window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: payload }));
+    };
 
     const handleCrosshairMove = (sourceChart: IChartApi, param: any, hasY: boolean) => {
         const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
@@ -52,16 +81,9 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
             const curTime = normalizedTime;
             const curX = param.point.x;
             const curY = hasY ? param.point.y : 0;
-            const now = Date.now();
 
-            if ((curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) && (now - lastSideEffectsAt > 32)) {
-                lastSyncTime = curTime;
-                lastSyncX = curX;
-                lastSyncY = curY;
-                lastSideEffectsAt = now;
-
-                const store = useMarketStore.getState();
-                const payload = {
+            if (curTime !== lastSyncTime || curX !== lastSyncX || curY !== lastSyncY) {
+                pendingPayload = {
                     time: curTime,
                     price: hasY ? Number(seriesRef.current?.coordinateToPrice(curY) ?? 0) : null,
                     sourceId: chartId,
@@ -75,14 +97,20 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
                         : undefined,
                 };
 
-                store.syncCrosshair(payload);
-                window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { ...payload, point: { x: curX, y: curY } } }));
+                if (dispatchRafId === null) {
+                    dispatchRafId = requestAnimationFrame(flushPendingPayload);
+                }
             }
         } else if (!param.point && lastSyncTime !== null) {
+            if (dispatchRafId !== null) {
+                cancelAnimationFrame(dispatchRafId);
+                dispatchRafId = null;
+            }
+
+            pendingPayload = null;
             lastSyncTime = null;
             lastSyncX = null;
             lastSyncY = null;
-            lastSideEffectsAt = 0;
             useMarketStore.getState().syncCrosshair(null);
             window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { time: null, sourceId: chartId } }));
         }
@@ -97,9 +125,9 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
     timescaleChart.subscribeCrosshairMove(onFoot);
 
     return () => {
+        if (dispatchRafId !== null) cancelAnimationFrame(dispatchRafId);
         priceChart.unsubscribeCrosshairMove(onPrice);
         subchartChart.unsubscribeCrosshairMove(onSub);
         timescaleChart.unsubscribeCrosshairMove(onFoot);
     };
 }
-
