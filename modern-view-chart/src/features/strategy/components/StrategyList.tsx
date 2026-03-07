@@ -1,6 +1,5 @@
 import React from 'react';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
-import { useMarketStore } from '@/lib/store';
 import { Plus, Trash2, Bot, Settings, Target, Activity, Layers, Clock, BrainCircuit } from 'lucide-react';
 import { Strategy } from '@/features/strategy/types';
 
@@ -11,9 +10,8 @@ interface StrategyListProps {
 
 export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
     const { strategies, toggleStrategy, toggleAiGuard, deleteStrategy, updateStrategy } = useStrategyStore();
-    const symbolInfo = useMarketStore(state => state.symbolInfo);
 
-    const handleUpdate = (id: string, updates: any) => {
+    const handleUpdate = (id: string, updates: Partial<Strategy>) => {
         updateStrategy(id, updates);
     };
 
@@ -44,34 +42,9 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                 <div className="flex flex-col flex-1">
                                     <span className="text-[11px] font-bold text-foreground group-hover:text-blue-500 transition-colors tracking-tight">{s.name}</span>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        {/* Quick Symbol Edit */}
-                                        <select
-                                            value={s.symbol || ''}
-                                            onChange={(e) => handleUpdate(s.id, { symbol: e.target.value })}
-                                            className="bg-transparent text-[9px] font-bold text-blue-500 hover:text-blue-400 uppercase outline-none border-b border-transparent focus:border-blue-500/30 cursor-pointer tracking-wider transition-colors appearance-none"
-                                        >
-                                            <option value="" className="bg-popover text-muted-foreground">Symbol</option>
-                                            {Object.keys(symbolInfo).sort().map(sym => (
-                                                <option key={sym} value={sym} className="bg-popover text-foreground uppercase">{sym}</option>
-                                            ))}
-                                        </select>
-
-                                        <div className="w-1 h-1 rounded-full bg-border" />
-
-                                        {/* Quick Timeframe Edit */}
-                                        <select
-                                            value={s.timeframe || '1m'}
-                                            onChange={(e) => handleUpdate(s.id, { timeframe: e.target.value })}
-                                            className="bg-transparent text-[9px] font-bold text-muted-foreground hover:text-foreground uppercase outline-none border-b border-transparent focus:border-border/30 cursor-pointer tracking-wider transition-colors appearance-none"
-                                        >
-                                            <option value="1m" className="bg-popover text-foreground">M1</option>
-                                            <option value="5m" className="bg-popover text-foreground">M5</option>
-                                            <option value="15m" className="bg-popover text-foreground">M15</option>
-                                            <option value="30m" className="bg-popover text-foreground">M30</option>
-                                            <option value="1h" className="bg-popover text-foreground">H1</option>
-                                            <option value="4h" className="bg-popover text-foreground">H4</option>
-                                            <option value="1d" className="bg-popover text-foreground">D1</option>
-                                        </select>
+                                        <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wider">
+                                            Generic Strategy
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">

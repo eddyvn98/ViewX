@@ -1,6 +1,15 @@
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { BINANCE_DISCOVERY_SYMBOLS } from './constants';
+import type { MatrixScannerConfig } from '@/features/strategy/dashboard/matrix-types';
+
+interface ChartLike {
+    symbol?: string;
+}
+
+interface TabLike {
+    charts?: Record<string, ChartLike>;
+}
 
 export function normalizeSymbol(symbol: string): string {
     if (!symbol) return '';
@@ -12,8 +21,8 @@ export function normalizeSymbol(symbol: string): string {
 export function buildActiveSymbolSet(state: ReturnType<typeof useMarketStore.getState>): Set<string> {
     const symbols = [
         ...state.watchlist,
-        ...Object.values(state.tabs).flatMap((tab: any) =>
-            Object.values(tab.charts || {}).map((chart: any) => chart.symbol),
+        ...Object.values(state.tabs as Record<string, TabLike>).flatMap((tab) =>
+            Object.values(tab.charts || {}).map((chart) => chart.symbol || ''),
         ),
     ].filter(Boolean) as string[];
 
@@ -29,10 +38,12 @@ export function buildActiveSymbolSet(state: ReturnType<typeof useMarketStore.get
 export function collectActiveSymbolsFromStore(): string[] {
     const state = useMarketStore.getState();
     const strategyState = useStrategyStore.getState();
-    const chartSymbols = Object.values(state.tabs).flatMap((tab: any) =>
-        Object.values(tab.charts || {}).map((chart: any) => chart.symbol),
+    const chartSymbols = Object.values(state.tabs as Record<string, TabLike>).flatMap((tab) =>
+        Object.values(tab.charts || {}).map((chart) => chart.symbol || ''),
     );
-    const matrixSymbols = (strategyState.matrixConfig?.symbols || []).map((s) => String(s));
+    const matrixSymbols = (strategyState.matrixScanners || [])
+        .flatMap((scanner: MatrixScannerConfig) => scanner.symbols || [])
+        .map((s) => String(s));
     const activeStrategySymbols = (strategyState.strategies || [])
         .filter((s) => s.active && s.symbol)
         .map((s) => String(s.symbol));

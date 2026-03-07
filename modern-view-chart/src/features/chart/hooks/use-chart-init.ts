@@ -10,7 +10,7 @@ import {
 } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { getPriceChartOptions, getSubChartOptions, getTimescaleOptions, initialMinW } from '../config/chart-options';
-import { createSyncLine, autoSyncLayout } from '../logic/chart-sync';
+import { createSyncLine, createSyncTimeLabel, autoSyncLayout } from '../logic/chart-sync';
 import { setupCrosshairListeners } from './init/setup-crosshair-listeners';
 
 export function useChartInit(
@@ -19,6 +19,7 @@ export function useChartInit(
     timescaleContainerRef: React.RefObject<HTMLDivElement | null>,
     chartId: string,
     theme: string = 'dark',
+    timezone: string = 'Asia/Ho_Chi_Minh',
 ) {
     const [isReady, setIsReady] = useState(false);
     const priceChartRef = useRef<IChartApi | null>(null);
@@ -107,6 +108,16 @@ export function useChartInit(
         const priceLineEl = createSyncLine(priceContainerRef.current);
         const subLineEl = createSyncLine(subchartContainerRef.current);
         const footLineEl = createSyncLine(timescaleContainerRef.current);
+        const footTimeLabelEl = createSyncTimeLabel(timescaleContainerRef.current);
+        const formatTimeLabel = (timestampSec: number) => new Intl.DateTimeFormat('en-GB', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        }).format(timestampSec * 1000).replace(',', '');
 
         const cleanupCrosshair = setupCrosshairListeners({
             priceChart,
@@ -120,7 +131,9 @@ export function useChartInit(
             priceLineEl,
             subLineEl,
             footLineEl,
+            footTimeLabelEl,
             seriesRef,
+            formatTimeLabel,
         });
 
         const priceTS = priceChart.timeScale();
@@ -298,6 +311,7 @@ export function useChartInit(
             if (priceLineEl?.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
             if (subLineEl?.parentNode) subLineEl.parentNode.removeChild(subLineEl);
             if (footLineEl?.parentNode) footLineEl.parentNode.removeChild(footLineEl);
+            if (footTimeLabelEl?.parentNode) footTimeLabelEl.parentNode.removeChild(footTimeLabelEl);
             priceChart.remove();
             subchartChart.remove();
             timescaleChart.remove();
@@ -309,7 +323,7 @@ export function useChartInit(
             subSyncRef.current = null;
             timescaleSyncRef.current = null;
         };
-    }, [chartId]);
+    }, [chartId, timezone]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();

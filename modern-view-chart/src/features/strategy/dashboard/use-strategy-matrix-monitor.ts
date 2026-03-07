@@ -15,7 +15,7 @@ function isCandleSetStale(lastCandleTime: unknown, timeframeSec: number): boolea
 
 export function useStrategyMatrixMonitor() {
     const isConnected = useMarketStore((s) => s.isConnected);
-    const matrixConfig = useStrategyStore((s) => s.matrixConfig);
+    const matrixScanners = useStrategyStore((s) => s.matrixScanners);
 
     useEffect(() => {
         if (!isConnected) return;
@@ -35,26 +35,29 @@ export function useStrategyMatrixMonitor() {
 
         const tick = () => {
             const now = Date.now();
-            for (const rawSymbol of matrixConfig.symbols) {
-                const symbol = normalizeSymbol(rawSymbol);
-                if (!symbol) continue;
+            for (const scanner of matrixScanners) {
+                if (!scanner.active || !scanner.strategyId) continue;
+                for (const rawSymbol of scanner.symbols) {
+                    const symbol = normalizeSymbol(rawSymbol);
+                    if (!symbol) continue;
 
-                for (const rawTf of matrixConfig.timeframes) {
-                    const tf = normalizeDashboardTf(rawTf);
-                    const interval = timeframeToChartInterval(tf);
-                    const tfSec = timeframeToSeconds(tf);
-                    const key = `MT5:${symbol}:${interval}`;
-                    const candles = useMarketStore.getState().candleData[key] || [];
-                    const missing = candles.length < 50;
-                    const stale = candles.length > 0 ? isCandleSetStale(candles[candles.length - 1]?.time, tfSec) : true;
+                    for (const rawTf of scanner.timeframes) {
+                        const tf = normalizeDashboardTf(rawTf);
+                        const interval = timeframeToChartInterval(tf);
+                        const tfSec = timeframeToSeconds(tf);
+                        const key = `MT5:${symbol}:${interval}`;
+                        const candles = useMarketStore.getState().candleData[key] || [];
+                        const missing = candles.length < 50;
+                        const stale = candles.length > 0 ? isCandleSetStale(candles[candles.length - 1]?.time, tfSec) : true;
 
-                    const refreshEveryMs = Math.min(120_000, Math.max(10_000, Math.floor((Math.max(tfSec, 60) * 1000) / 6)));
-                    const lastReq = lastRequestAt.get(key) || 0;
-                    const dueRefresh = now - lastReq >= refreshEveryMs;
+                        const refreshEveryMs = Math.min(120_000, Math.max(10_000, Math.floor((Math.max(tfSec, 60) * 1000) / 6)));
+                        const lastReq = lastRequestAt.get(key) || 0;
+                        const dueRefresh = now - lastReq >= refreshEveryMs;
 
-                    if ((missing || stale || dueRefresh) && document.visibilityState === 'visible') {
-                        requestBackfill(symbol, interval, 300);
-                        lastRequestAt.set(key, now);
+                        if ((missing || stale || dueRefresh) && document.visibilityState === 'visible') {
+                            requestBackfill(symbol, interval, 300);
+                            lastRequestAt.set(key, now);
+                        }
                     }
                 }
             }
@@ -63,6 +66,6 @@ export function useStrategyMatrixMonitor() {
         tick();
         const timer = window.setInterval(tick, 10_000);
         return () => window.clearInterval(timer);
-    }, [isConnected, matrixConfig]);
+    }, [isConnected, matrixScanners]);
 
 }

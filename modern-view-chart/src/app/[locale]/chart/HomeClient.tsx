@@ -85,6 +85,7 @@ export default function Home() {
     terminalHeight,
     isLeftSidebarOpen,
     isRightSidebarOpen,
+    rightSidebarWidth,
     activeMobileTab,
     isInputFocused,
     isScrollingPanel
@@ -94,6 +95,7 @@ export default function Home() {
     terminalHeight: state.terminalHeight,
     isLeftSidebarOpen: state.isLeftSidebarOpen,
     isRightSidebarOpen: state.isRightSidebarOpen,
+    rightSidebarWidth: state.rightSidebarWidth,
     activeMobileTab: state.activeMobileTab,
     isInputFocused: state.isInputFocused,
     isScrollingPanel: state.isScrollingPanel
@@ -103,6 +105,7 @@ export default function Home() {
   const setActiveMobileTab = useMarketStore((state) => state.setActiveMobileTab);
   const setInputFocused = useMarketStore((state) => state.setInputFocused);
   const setIsScrollingPanel = useMarketStore((state) => state.setIsScrollingPanel);
+  const setRightSidebarWidth = useMarketStore((state) => state.setRightSidebarWidth);
   const activeChart = useMarketStore((state) => {
     const tab = state.tabs[state.activeTabId];
     if (!tab?.activeChartId) return null;
@@ -176,6 +179,12 @@ export default function Home() {
   }, [setIsScrollingPanel]);
 
   React.useEffect(() => {
+    const raw = Number(window.localStorage.getItem('right-sidebar-width') || 320);
+    if (!Number.isFinite(raw)) return;
+    setRightSidebarWidth(raw);
+  }, [setRightSidebarWidth]);
+
+  React.useEffect(() => {
     const symbol = activeChart?.symbol || "XAUUSDm";
     const interval = activeChart?.interval || "1";
     const digits = resolvePriceDigits(symbol, activeDigits);
@@ -187,7 +196,7 @@ export default function Home() {
       return;
     }
 
-    const arrow = (changePercent || 0) >= 0 ? "^" : "v";
+    const arrow = (changePercent || 0) >= 0 ? "▲" : "▼";
     const pct = `${(changePercent || 0) >= 0 ? "+" : ""}${(changePercent || 0).toFixed(2)}%`;
     document.title = `${symbol} ${formatTabPrice(price as number, digits)} ${arrow} ${pct} | vivutrade`;
   }, [activeChart?.symbol, activeChart?.interval, activeTicker?.price, activeTicker?.change, activeDigits]);
@@ -394,8 +403,9 @@ export default function Home() {
           <div
             className={cn(
               "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 hidden md:flex",
-              isRightSidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"
+              isRightSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
+            style={{ width: isRightSidebarOpen ? `${rightSidebarWidth}px` : '0px' }}
           >
             {isRightSidebarOpen ? <RightSidebar /> : null}
           </div>

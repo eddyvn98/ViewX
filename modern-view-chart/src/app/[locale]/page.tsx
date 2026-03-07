@@ -89,7 +89,6 @@ export default function LandingPage() {
           <div className="flex flex-col gap-4 lg:text-right">
             <div className="flex flex-wrap lg:justify-end gap-6 text-sm font-semibold text-slate-700">
               <Link className="hover:text-primary transition-colors" href="/chart">{navT('chart')}</Link>
-              <Link className="hover:text-primary transition-colors" href="/strategy/matrix">{navT('matrix')}</Link>
               <Link className="hover:text-primary transition-colors" href="/strategy/dashboard">{navT('dashboard')}</Link>
             </div>
             <p className="text-xs text-slate-400">

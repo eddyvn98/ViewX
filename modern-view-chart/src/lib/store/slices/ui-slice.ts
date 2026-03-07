@@ -20,6 +20,7 @@ export interface UISlice {
     focusedTicket: number | null;
     themeColor: 'blue' | 'green' | 'amber' | 'red' | 'slate';
     sidebarTopHeight: number;
+    rightSidebarWidth: number;
     rightSidebarTabOrder: string[];
     isDrawingToolbarVisible: boolean;
     isChartLegendVisible: boolean;
@@ -38,6 +39,7 @@ export interface UISlice {
     removeNotification: (id: string) => void;
     setFocusedTicket: (ticket: number | null) => void;
     setSidebarTopHeight: (height: number) => void;
+    setRightSidebarWidth: (width: number) => void;
     setRightSidebarTabOrder: (order: string[]) => void;
     setThemeColor: (color: 'blue' | 'green' | 'amber' | 'red' | 'slate') => void;
     setChartLegendVisible: (visible: boolean) => void;
@@ -53,6 +55,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     notifications: [],
     focusedTicket: null,
     sidebarTopHeight: 40,
+    rightSidebarWidth: 320,
     rightSidebarTabOrder: ['strategy', 'layer', 'trade'],
     themeColor: 'green',
     isDrawingToolbarVisible: false,
@@ -76,6 +79,11 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     })),
     setFocusedTicket: (ticket) => set({ focusedTicket: ticket }),
     setSidebarTopHeight: (height) => set({ sidebarTopHeight: height }),
+    setRightSidebarWidth: (width) => {
+        const value = Math.max(280, Math.min(640, Math.round(width)));
+        set({ rightSidebarWidth: value });
+        if (typeof window !== 'undefined') localStorage.setItem('right-sidebar-width', String(value));
+    },
     setRightSidebarTabOrder: (order) => set({ rightSidebarTabOrder: order }),
     setThemeColor: (color) => {
         set({ themeColor: color });

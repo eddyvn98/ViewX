@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useMarketStore } from '@/lib/store';
+import React, { useState } from 'react';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { RuleBuilder } from '@/features/strategy/components/RuleBuilder';
 import { RiskPanel } from '@/features/strategy/components/RiskPanel';
@@ -14,20 +13,9 @@ interface StrategyBuilderProps {
 
 export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderProps) {
     const { addStrategy, updateStrategy } = useStrategyStore();
-    const symbolInfo = useMarketStore(state => state.symbolInfo);
-
-    // Get active chart info for defaults
-    const activeTabId = useMarketStore(state => state.activeTabId);
-    const tabs = useMarketStore(state => state.tabs);
-    const activeTab = activeTabId ? tabs[activeTabId] : null;
-    const activeChart = (activeTab?.activeChartId && activeTab?.charts) ? activeTab.charts[activeTab.activeChartId] : null;
-    const activeSymbol = activeChart?.symbol || 'XAUUSDm';
-    const activeInterval = activeChart?.interval || '1m';
 
     // State initialization from editingStrategy or defaults
     const [name, setName] = useState(editingStrategy?.name || 'Professional Scalper');
-    const [strategySymbol, setStrategySymbol] = useState(editingStrategy?.symbol || '');
-    const [timeframe, setTimeframe] = useState(editingStrategy?.timeframe || '1m');
     const [side, setSide] = useState<'BUY' | 'SELL'>(editingStrategy?.side || 'BUY');
     const [entry, setEntry] = useState<ConditionGroup>(editingStrategy?.entry || {
         operator: 'AND',
@@ -50,22 +38,14 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
     const [entryType, setEntryType] = useState<'market' | 'stop' | 'limit'>(editingStrategy?.entryType || 'stop');
     const [entryPrice, setEntryPrice] = useState<SLTPConfig>(editingStrategy?.entryPrice || { mode: 'candle', candleField: 'high', candleOffset: 0, offset: 0 });
     const [comment, setComment] = useState(editingStrategy?.comment || 'WebEngine');
-    const [magic, setMagic] = useState(editingStrategy?.magic || 123456);
-
-    // Update defaults if creating new and active chart changes (optional, maybe distracting)
-    useEffect(() => {
-        if (!editingStrategy && !strategySymbol) {
-            // If user hasn't selected a symbol, we could potentially default to active,
-            // but strategySymbol='' implies "Active Chart" already.
-        }
-    }, [activeSymbol, activeInterval, editingStrategy, strategySymbol]);
+    const [magic] = useState(editingStrategy?.magic || 123456);
 
     const handleSave = () => {
         const newStrategy: Strategy = {
             id: editingStrategy?.id || Math.random().toString(36).substring(7),
             name, side, entry, exit, risk, active: true,
-            symbol: strategySymbol || activeSymbol, // Use active symbol if empty
-            timeframe: timeframe || activeInterval,
+            symbol: undefined,
+            timeframe: undefined,
             positionMode, executionMode, entryType, entryPrice, magic, comment,
             sessions: ["London", "NewYork"]
         };
@@ -118,41 +98,6 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                                     className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${side === 'SELL' ? 'bg-red-600 text-white shadow-sm' : 'text-muted-foreground'}`}
                                 >SELL</button>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Symbol</span>
-                            <select
-                                value={strategySymbol}
-                                onChange={(e) => setStrategySymbol(e.target.value)}
-                                className="bg-secondary/60 border border-border focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded appearance-none hover:bg-secondary/80 transition-all cursor-pointer"
-                            >
-                                <option value="" className="bg-popover text-muted-foreground">Active ({activeSymbol})</option>
-                                {Array.from(new Set([
-                                    ...useMarketStore.getState().watchlist,
-                                    ...Object.keys(symbolInfo)
-                                ])).sort().map(s => (
-                                    <option key={s} value={s} className="bg-popover text-foreground">{s}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">Timeframe</span>
-                            <select
-                                value={timeframe}
-                                onChange={(e) => setTimeframe(e.target.value)}
-                                className="bg-secondary/60 border border-border focus:border-blue-500/50 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded appearance-none hover:bg-secondary/80 transition-all cursor-pointer"
-                            >
-                                <option value="1m" className="bg-popover text-foreground">M1</option>
-                                <option value="5m" className="bg-popover text-foreground">M5</option>
-                                <option value="15m" className="bg-popover text-foreground">M15</option>
-                                <option value="30m" className="bg-popover text-foreground">M30</option>
-                                <option value="1h" className="bg-popover text-foreground">H1</option>
-                                <option value="4h" className="bg-popover text-foreground">H4</option>
-                                <option value="1d" className="bg-popover text-foreground">D1</option>
-                            </select>
                         </div>
                     </div>
 

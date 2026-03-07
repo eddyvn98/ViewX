@@ -15,7 +15,9 @@ interface CrosshairSetupArgs {
     priceLineEl: HTMLDivElement | null;
     subLineEl: HTMLDivElement | null;
     footLineEl: HTMLDivElement | null;
+    footTimeLabelEl: HTMLDivElement | null;
     seriesRef: { current: ISeriesApi<any> | null };
+    formatTimeLabel: (timestampSec: number) => string;
 }
 
 export function setupCrosshairListeners(args: CrosshairSetupArgs) {
@@ -31,11 +33,13 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         priceLineEl,
         subLineEl,
         footLineEl,
+        footTimeLabelEl,
         seriesRef,
+        formatTimeLabel,
     } = args;
 
     const charts = { priceChart, subchartChart, timescaleChart };
-    const elements = { priceLineEl, subLineEl, footLineEl };
+    const elements = { priceLineEl, subLineEl, footLineEl, footTimeLabelEl };
     const series = { candleSeries, subSyncSeries, footSyncSeries, markerSeries };
 
     let lastSyncTime: number | null = null;
@@ -96,7 +100,16 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
                 : 'timescale';
         const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
         const normalizedTime = normalizeCrosshairTime(param.time);
-        syncVerticalLines(sourceChart, charts, elements, series as any, param.point?.x ?? null, normalizedTime, Number(logical ?? 0));
+        syncVerticalLines(
+            sourceChart,
+            charts,
+            elements,
+            series as any,
+            param.point?.x ?? null,
+            normalizedTime,
+            logical !== null && Number.isFinite(Number(logical)) ? Number(logical) : null,
+            formatTimeLabel
+        );
 
         if (normalizedTime !== null && param.point) {
             const curTime = normalizedTime;

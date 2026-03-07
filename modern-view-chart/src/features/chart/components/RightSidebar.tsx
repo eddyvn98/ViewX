@@ -7,19 +7,23 @@ import { LayerManager } from '@/features/chart/components/LayerManager';
 import { OrderForm } from '@/features/terminal/components/OrderForm';
 import { motion, LayoutGroup } from 'framer-motion';
 import { StrategyPanel } from '@/features/chart/components/StrategyPanel';
-import { LineChart, Layout, ShoppingCart, Brain, GripHorizontal } from 'lucide-react';
+import { LineChart, Layout, ShoppingCart, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { RightSidebarTab } from '@/lib/store/types';
 
 export const RightSidebar = memo(function RightSidebar() {
     const sidebarRef = useRef<HTMLDivElement>(null);
     const activeTab = useMarketStore(state => state.activeRightSidebarTab);
     const setActiveTab = useMarketStore(state => state.setActiveRightSidebarTab);
     const topHeight = useMarketStore(state => state.sidebarTopHeight);
+    const sidebarWidth = useMarketStore(state => state.rightSidebarWidth);
     const setTopHeight = useMarketStore(state => state.setSidebarTopHeight);
+    const setSidebarWidth = useMarketStore(state => state.setRightSidebarWidth);
     const tabOrder = useMarketStore(state => state.rightSidebarTabOrder);
     const setTabOrder = useMarketStore(state => state.setRightSidebarTabOrder);
 
     const [isResizing, setIsResizing] = useState(false);
+    const [isWidthResizing, setIsWidthResizing] = useState(false);
     const [draggedTab, setDraggedTab] = useState<string | null>(null);
 
     /* ================= RESIZING LOGIC ================= */
@@ -31,6 +35,9 @@ export const RightSidebar = memo(function RightSidebar() {
     const stopResizing = useCallback(() => {
         setIsResizing(false);
     }, []);
+    const stopWidthResizing = useCallback(() => {
+        setIsWidthResizing(false);
+    }, []);
 
     const resize = useCallback((e: MouseEvent) => {
         if (isResizing && sidebarRef.current) {
@@ -41,6 +48,17 @@ export const RightSidebar = memo(function RightSidebar() {
             setTopHeight(Math.max(15, Math.min(85, newHeight)));
         }
     }, [isResizing, setTopHeight]);
+
+    const startWidthResizing = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsWidthResizing(true);
+    }, []);
+
+    const resizeWidth = useCallback((e: MouseEvent) => {
+        if (!isWidthResizing) return;
+        const nextWidth = window.innerWidth - e.clientX;
+        setSidebarWidth(nextWidth);
+    }, [isWidthResizing, setSidebarWidth]);
 
     useEffect(() => {
         if (isResizing) {
@@ -59,6 +77,24 @@ export const RightSidebar = memo(function RightSidebar() {
             window.removeEventListener('mouseup', stopResizing);
         };
     }, [isResizing, resize, stopResizing]);
+
+    useEffect(() => {
+        if (isWidthResizing) {
+            window.addEventListener('mousemove', resizeWidth);
+            window.addEventListener('mouseup', stopWidthResizing);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        } else {
+            window.removeEventListener('mousemove', resizeWidth);
+            window.removeEventListener('mouseup', stopWidthResizing);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+        return () => {
+            window.removeEventListener('mousemove', resizeWidth);
+            window.removeEventListener('mouseup', stopWidthResizing);
+        };
+    }, [isWidthResizing, resizeWidth, stopWidthResizing]);
 
     /* ================= DRAG & DROP LOGIC ================= */
     const handleDragStart = (e: React.DragEvent, tabId: string) => {
@@ -83,7 +119,7 @@ export const RightSidebar = memo(function RightSidebar() {
         setDraggedTab(null);
     };
 
-    const tabConfigs: Record<string, { icon: any, label: string, component: React.ReactNode }> = {
+    const tabConfigs: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>, label: string, component: React.ReactNode }> = {
         market: { icon: LineChart, label: 'Watchlist', component: <MarketList mode="watchlist" /> },
         layer: { icon: Layout, label: 'Layer', component: <LayerManager /> },
         strategy: { icon: Brain, label: 'Strategy', component: <StrategyPanel /> },
@@ -91,10 +127,21 @@ export const RightSidebar = memo(function RightSidebar() {
     };
 
     // Filter to exclude 'market' from the bottom tabs as it's fixed on top
-    const bottomTabs = tabOrder.filter((id: string) => id !== 'market');
+    const bottomTabs = tabOrder.filter((id: string) => id !== 'market') as RightSidebarTab[];
 
     return (
-        <aside ref={sidebarRef} className="w-80 border-l border-white/5 bg-background/60 backdrop-blur-3xl flex flex-col h-full overflow-hidden shrink-0 relative transition-all shadow-2xl z-10 glass-panel">
+        <aside
+            ref={sidebarRef}
+            style={{ width: `${sidebarWidth}px` }}
+            className="border-l border-white/5 bg-background/60 backdrop-blur-3xl flex flex-col h-full overflow-hidden shrink-0 relative transition-all shadow-2xl z-10 glass-panel"
+        >
+            <div
+                onMouseDown={startWidthResizing}
+                className={cn(
+                    "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 bg-transparent hover:bg-primary/20 transition-colors",
+                    isWidthResizing && "bg-primary/40"
+                )}
+            />
             {/* 1. TOP SECTION: WATCHLIST (Fixed) */}
             <div
                 className="flex flex-col min-h-0 overflow-hidden"
@@ -134,7 +181,7 @@ export const RightSidebar = memo(function RightSidebar() {
                                     onDragStart={(e) => handleDragStart(e, tabId)}
                                     onDragOver={(e) => handleDragOver(e, tabId)}
                                     onDragEnd={handleDragEnd}
-                                    onClick={() => setActiveTab(tabId as any)}
+                                    onClick={() => setActiveTab(tabId)}
                                     className={cn(
                                         "flex-1 flex items-center justify-center py-2 gap-2 rounded-lg transition-colors duration-300 relative cursor-pointer active:cursor-grabbing group overflow-hidden border border-transparent outline-none",
                                         isActive

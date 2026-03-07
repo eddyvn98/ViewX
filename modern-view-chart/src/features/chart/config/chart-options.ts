@@ -86,6 +86,14 @@ export const getPriceChartOptions = (width: number, height: number, theme: strin
         width,
         height,
         timeScale: { ...common.timeScale, visible: false },
+        crosshair: {
+            ...common.crosshair,
+            vertLine: {
+                ...common.crosshair?.vertLine,
+                visible: false,
+                labelVisible: false,
+            },
+        },
         rightPriceScale: {
             visible: true,
             scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -147,7 +155,7 @@ export const getTimescaleOptions = (width: number, height: number, theme: string
             mode: CrosshairMode.Normal,
             vertLine: {
                 visible: true,
-                labelVisible: true,
+                labelVisible: false,
                 color: 'transparent',
                 labelBackgroundColor: colors.labelBg
             },

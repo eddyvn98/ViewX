@@ -2,28 +2,30 @@ import React from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { VirtualBalanceCard } from '@/features/strategy/components/VirtualBalanceCard';
-import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
+import { calculatePnL } from '@/lib/utils/pnl';
 import { History as HistoryIcon, Activity, X as XIcon, BrainCircuit, Loader2 } from 'lucide-react';
 import { AiAnalyzer, AnalysisType } from '../logic/AiAnalyzer';
 import { StatsService } from '../logic/StatsService';
 import { ContextCollector } from '../logic/ContextCollector';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { StrategySignalScanners } from '@/features/strategy/components/StrategySignalScanners';
+import type { StrategySignal } from '@/features/strategy/types';
 
 
 export function SignalsView() {
     const {
         signals,
         virtualPositions,
+        matrixScanners,
         closeVirtualPosition,
         cancelVirtualPosition,
         updateSignal,
-        updateStrategy,
     } = useStrategyStore();
 
     const [analyzingIndex, setAnalyzingIndex] = React.useState<number | null>(null);
 
-    const handleManualAnalyze = async (index: number, signal: any) => {
+    const handleManualAnalyze = async (index: number, signal: StrategySignal) => {
         setAnalyzingIndex(index);
         try {
             const strategy = useStrategyStore.getState().strategies.find(s => s.id === signal.strategyId);
@@ -71,12 +73,20 @@ export function SignalsView() {
     const tickers = useMarketStore(state => state.tickers);
     const symbolInfo = useMarketStore(state => state.symbolInfo);
 
-    const activePositions = virtualPositions.filter(p => p.status === 'open' || p.status === 'pending');
+    const scannerStrategyIds = new Set(matrixScanners.map((scanner) => scanner.strategyId).filter(Boolean) as string[]);
+    const activePositions = virtualPositions.filter((p) =>
+        (p.status === 'open' || p.status === 'pending') &&
+        (scannerStrategyIds.size === 0 || scannerStrategyIds.has(p.strategyId))
+    );
+    const visibleSignals = signals
+        .map((sig, index) => ({ sig, index }))
+        .filter(({ sig }) => scannerStrategyIds.size === 0 || scannerStrategyIds.has(sig.strategyId));
 
     return (
         <div className="flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-500 w-full pb-6 px-3">
             {/* VIRTUAL ACCOUNT DASHBOARD */}
             <VirtualBalanceCard />
+            <StrategySignalScanners />
 
             {/* ACTIVE POSITIONS SECTION */}
             {activePositions.length > 0 && (
@@ -91,8 +101,9 @@ export function SignalsView() {
                         {activePositions.map((pos) => {
                             const ticker = tickers[pos.symbol];
                             const currentPrice = ticker?.price || pos.entryPrice;
-                            const pnl = pos.status === 'open' ? calculatePnL({ type: pos.type.toLowerCase() as any, openPrice: pos.entryPrice, currentPrice, volume: pos.lotSize, symbol: pos.symbol, symbolInfo: symbolInfo[pos.symbol] }) : 0;
-                            const isBuy = pos.type === 'BUY';
+                            const side = pos.type === 'BUY' ? 'buy' : 'sell';
+                            const pnl = pos.status === 'open' ? calculatePnL({ type: side, openPrice: pos.entryPrice, currentPrice, volume: pos.lotSize, symbol: pos.symbol, symbolInfo: symbolInfo[pos.symbol] }) : 0;
+                            const isBuy = side === 'buy';
 
                             return (
                                 <div key={pos.id} className="relative group overflow-hidden rounded-xl border border-border dark:border-white/5 bg-secondary/50 dark:bg-white/[0.03] transition-all hover:bg-secondary/70 dark:hover:bg-white/[0.05] shadow-sm">
@@ -155,19 +166,18 @@ export function SignalsView() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    {signals.length === 0 ? (
+                    {visibleSignals.length === 0 ? (
                         <div className="py-8 flex flex-col items-center justify-center opacity-5 text-center gap-2">
                             <Activity size={24} />
                             <span className="text-[9px] uppercase font-black tracking-widest">Scanning</span>
                         </div>
                     ) : (
-                        signals.map((sig, i) => {
+                        visibleSignals.map(({ sig, index }) => {
                             const isExit = sig.type === 'EXIT';
                             const isSell = sig.type === 'SELL';
-                            const isBuy = sig.type === 'BUY';
 
                             return (
-                                <div key={i} className="p-2 rounded-lg border border-border/40 dark:border-white/5 bg-secondary/30 dark:bg-white/[0.01] transition-all hover:bg-secondary/50 dark:hover:bg-white/[0.03] group relative flex items-center justify-between gap-3 shadow-sm overflow-hidden">
+                                <div key={`${sig.strategyId}-${sig.timestamp}-${index}`} className="p-2 rounded-lg border border-border/40 dark:border-white/5 bg-secondary/30 dark:bg-white/[0.01] transition-all hover:bg-secondary/50 dark:hover:bg-white/[0.03] group relative flex items-center justify-between gap-3 shadow-sm overflow-hidden">
                                     <div className={cn(
                                         "absolute inset-y-0 left-0 w-0.5 opacity-30 group-hover:opacity-100 transition-opacity",
                                         isExit ? "bg-orange-500" : (isSell ? "bg-rose-500" : "bg-emerald-500")
@@ -198,11 +208,11 @@ export function SignalsView() {
                                             </div>
                                         ) : !isExit ? (
                                             <button
-                                                onClick={() => handleManualAnalyze(i, sig)}
-                                                disabled={analyzingIndex === i}
+                                                onClick={() => handleManualAnalyze(index, sig)}
+                                                disabled={analyzingIndex === index}
                                                 className="opacity-0 group-hover:opacity-100 transition-all p-1 text-primary hover:text-white bg-primary/10 hover:bg-primary rounded border border-primary/20"
                                             >
-                                                {analyzingIndex === i ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
+                                                {analyzingIndex === index ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
                                             </button>
                                         ) : null}
                                     </div>

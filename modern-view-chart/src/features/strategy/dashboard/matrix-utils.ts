@@ -1,6 +1,6 @@
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { normalizeTF } from '../utils/time-utils';
-import type { StrategyMatrixConfig, MatrixSortMode } from './matrix-types';
+import type { MatrixScannerConfig, MatrixSortMode } from './matrix-types';
 
 const TIMEFRAME_RE = /^(\d+)(m|h|d|w|mo)$/i;
 
@@ -46,7 +46,7 @@ export function sortSymbols(symbols: string[], mode: MatrixSortMode): string[] {
     return deduped;
 }
 
-export function resolveCellTTL(tf: string, config: Pick<StrategyMatrixConfig, 'signalTtlMultiplier' | 'signalTtlFloorSec'>): number {
+export function resolveCellTTL(tf: string, config: Pick<MatrixScannerConfig, 'signalTtlMultiplier' | 'signalTtlFloorSec'>): number {
     const tfSec = timeframeToSeconds(tf);
     const byTf = tfSec > 0 ? tfSec * Math.max(1, config.signalTtlMultiplier || 1) : 0;
     return Math.max(Math.max(1, config.signalTtlFloorSec || 60), byTf);
@@ -71,4 +71,3 @@ export function timeframeToChartInterval(tf: string): string {
 export function chartIntervalToDashboardTf(interval: string): string {
     return normalizeDashboardTf(interval);
 }
-

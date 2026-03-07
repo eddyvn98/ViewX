@@ -5,6 +5,7 @@ import { useMarketStore, Candle } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 // Using relative path to match the file structure
 import { useCursorTooltipDOMUpdater } from '../hooks/use-cursor-tooltip-dom-updater';
+import { isSmartAnalysis } from '../indicators/registry/indicator-categories';
 
 interface CursorTooltipProps {
     chartId: string;
@@ -18,7 +19,11 @@ export function CursorTooltip({ chartId, symbol, interval, source, candles }: Cu
     const containerRef = useRef<HTMLDivElement>(null);
 
     const indicators = useMarketStore(useShallow(
-        state => (state.chartIndicators[chartId] || []).filter((i: any) => i.visible && i.pane !== 'subchart')
+        state => (state.chartIndicators[chartId] || []).filter((i: any) =>
+            i.visible &&
+            i.pane !== 'subchart' &&
+            !isSmartAnalysis(i.type)
+        )
     ));
 
     useCursorTooltipDOMUpdater(containerRef, { chartId, symbol, interval, source, candles });

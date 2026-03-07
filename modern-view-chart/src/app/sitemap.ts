@@ -17,12 +17,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/strategy/matrix`,
-      lastModified: new Date(),
-      changeFrequency: 'always',
-      priority: 0.9,
-    },
-    {
       url: `${baseUrl}/strategy/dashboard`,
       lastModified: new Date(),
       changeFrequency: 'daily',

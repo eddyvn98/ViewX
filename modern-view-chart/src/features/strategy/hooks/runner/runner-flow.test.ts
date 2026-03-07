@@ -125,8 +125,7 @@ describe('runner flow behavior', () => {
                 cancel: 0,
                 close: 0,
                 addSignal: 0,
-                updateLastSignalTime: 0,
-                messages: [] as unknown[]
+                updateLastSignalTime: 0
             };
 
             const store = {
@@ -144,7 +143,6 @@ describe('runner flow behavior', () => {
 
             const strategy = makeStrategy({ executionMode: 'real', magic: 123 });
             const candles = [makeCandle()];
-            const sendMessage = (data: unknown) => calls.messages.push(data);
 
             processStrategySignal(
                 strategy,
@@ -157,11 +155,11 @@ describe('runner flow behavior', () => {
                     risk: strategy.risk
                 },
                 'EURUSD',
+                '1m',
                 candles,
                 candles[0],
                 store.virtualPositions,
                 store,
-                sendMessage,
                 FIXED_NOW_MS
             );
 
@@ -180,11 +178,11 @@ describe('runner flow behavior', () => {
                     risk: strategy.risk
                 },
                 'EURUSD',
+                '1m',
                 candles,
                 candles[0],
                 [{ ...makeVirtualPosition({ id: 'pending-exit', status: 'pending' }) }],
                 store,
-                sendMessage,
                 FIXED_NOW_MS
             );
 
@@ -203,17 +201,16 @@ describe('runner flow behavior', () => {
                     risk: strategy.risk
                 },
                 'EURUSD',
+                '1m',
                 candles,
                 candles[0],
                 [{ ...makeVirtualPosition({ id: 'open-exit', status: 'open' }) }],
                 store,
-                sendMessage,
                 FIXED_NOW_MS
             );
 
             assert.equal(calls.close, 1);
             assert.equal(calls.addSignal, 2);
-            assert.ok(calls.messages.length >= 3);
         } finally {
             AiManager.processSignal = originalProcessSignal;
             TradeLogger.updateExit = originalUpdateExit;

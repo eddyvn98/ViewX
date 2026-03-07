@@ -32,11 +32,11 @@ export function processStrategySignal(
     strategy: Strategy,
     signal: StrategySignal,
     symbol: string,
+    timeframe: string,
     candles: Candle[],
     lastCandle: CandleLike,
     currentVirtualPositions: VirtualPosition[],
     store: StoreLike,
-    sendMessage?: (data: unknown) => void,
     lastTime?: number
 ) {
     const realMetrics = ContextCollector.captureEntryContext(strategy, candles, symbol);
@@ -61,14 +61,11 @@ export function processStrategySignal(
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
-                timeframe: strategy.timeframe,
+                timeframe,
                 signalType: 'CANCEL',
                 orderStatus: 'CANCELLED',
                 price: finalSignal.price,
             });
-            if (strategy.executionMode === 'real' && sendMessage) {
-                sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
-            }
             toast.warning(`[CANCEL] ${strategy.name} order killed.`);
         }
         return;
@@ -113,7 +110,7 @@ export function processStrategySignal(
         void notifyTelegramSignal({
             strategyName: strategy.name,
             symbol,
-            timeframe: strategy.timeframe,
+            timeframe,
             signalType: side,
             orderStatus: isMarket ? 'OPEN' : 'PENDING',
             price: entryPrice,
@@ -121,22 +118,6 @@ export function processStrategySignal(
 
         if (side === 'BUY') soundService.playBuy();
         else soundService.playSell();
-
-        if (strategy.executionMode === 'real' && sendMessage) {
-            sendMessage({
-                topic: 'mt5_command',
-                command: 'order',
-                symbol,
-                is_market: isMarket,
-                type: isMarket ? side.toLowerCase() : (side === 'BUY' ? 'buy_stop' : 'sell_stop'),
-                price: entryPrice,
-                volume: lot,
-                sl,
-                tp,
-                magic: strategy.magic || 0,
-                comment: strategy.comment || 'Web'
-            });
-        }
 
         if (typeof lastTime === 'number') store.updateLastSignalTime(strategy.id, lastTime);
     } else {
@@ -149,7 +130,7 @@ export function processStrategySignal(
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
-                timeframe: strategy.timeframe,
+                timeframe,
                 signalType: 'CANCEL',
                 orderStatus: 'CANCELLED',
                 price: finalSignal.price,
@@ -159,15 +140,11 @@ export function processStrategySignal(
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
-                timeframe: strategy.timeframe,
+                timeframe,
                 signalType: 'EXIT',
                 orderStatus: 'CLOSED',
                 price: finalSignal.price,
             });
-        }
-
-        if (strategy.executionMode === 'real' && sendMessage) {
-            sendMessage({ topic: 'mt5_command', command: 'close_by_magic', symbol, magic: strategy.magic || 0 });
         }
     }
 

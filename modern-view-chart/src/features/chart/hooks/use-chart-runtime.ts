@@ -51,7 +51,7 @@ export function useChartRuntime(chartId: string) {
         timescaleSyncRef,
         syncRange,
         isAutoScrollEnabledRef
-    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme);
+    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone);
 
     const { sendMessage } = useWebSocket();
     const { realTimeCandleRef } = useChartData(

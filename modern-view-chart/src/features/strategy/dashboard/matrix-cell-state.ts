@@ -1,17 +1,18 @@
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { Candle } from '@/lib/store/types';
 import type { Strategy, StrategySignal, VirtualPosition } from '../types';
-import type { MatrixCellState, StrategyMatrixConfig } from './matrix-types';
+import type { MatrixCellState, MatrixScannerConfig } from './matrix-types';
 import { normalizeDashboardTf, resolveCellTTL, timeframeToChartInterval } from './matrix-utils';
 import { RuleEngine } from '../logic/RuleEngine';
 
 interface BuildCellStateInput {
     symbol: string;
     timeframe: string;
+    strategyId?: string | null;
     strategies: Strategy[];
     signals: StrategySignal[];
     virtualPositions: VirtualPosition[];
-    matrixConfig: Pick<StrategyMatrixConfig, 'signalTtlMultiplier' | 'signalTtlFloorSec'>;
+    matrixConfig: Pick<MatrixScannerConfig, 'signalTtlMultiplier' | 'signalTtlFloorSec'>;
     getCandles?: (symbol: string, timeframe: string) => Candle[] | undefined;
     nowMs?: number;
 }
@@ -45,8 +46,19 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     const nowMs = input.nowMs ?? Date.now();
     const symbol = normalizeSymbol(input.symbol);
     const timeframe = normalizeDashboardTf(input.timeframe);
-    const exactMatchingStrategies = input.strategies.filter((s) => matchesCellStrategy(s, symbol, timeframe));
-    const symbolMatchingStrategies = input.strategies.filter((s) => matchesSymbolStrategy(s, symbol));
+    if (!input.strategyId) {
+        return {
+            symbol,
+            timeframe,
+            signal: 'NO_TRADE',
+            badge: null,
+            signalTimestamp: undefined,
+            stale: true,
+        };
+    }
+    const candidateStrategies = input.strategies.filter((s) => s.id === input.strategyId);
+    const exactMatchingStrategies = candidateStrategies.filter((s) => matchesCellStrategy(s, symbol, timeframe));
+    const symbolMatchingStrategies = candidateStrategies.filter((s) => matchesSymbolStrategy(s, symbol));
     const strategiesForEntry = exactMatchingStrategies.length > 0 ? exactMatchingStrategies : symbolMatchingStrategies;
     const strategyIds = new Set(strategiesForEntry.map((s) => s.id));
     const exactStrategyIds = new Set(exactMatchingStrategies.map((s) => s.id));
@@ -120,26 +132,39 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
 }
 
 export interface MatrixRunnerConfigItem {
+    scannerId: string;
+    strategyId: string;
+    timeframe: string;
     symbol: string;
     interval: string;
     source: 'MT5';
 }
 
-export function buildMatrixRunnerConfigs(symbols: string[], timeframes: string[]): MatrixRunnerConfigItem[] {
+export function buildMatrixRunnerConfigs(scanners: MatrixScannerConfig[]): MatrixRunnerConfigItem[] {
     const list: MatrixRunnerConfigItem[] = [];
     const seen = new Set<string>();
 
-    for (const rawSymbol of symbols) {
-        const symbol = normalizeSymbol(rawSymbol);
-        if (!symbol) continue;
-        for (const rawTf of timeframes) {
-            const tf = normalizeDashboardTf(rawTf);
-            if (!tf) continue;
-            const interval = timeframeToChartInterval(tf);
-            const key = `MT5:${symbol}:${interval}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            list.push({ symbol, interval, source: 'MT5' });
+    for (const scanner of scanners) {
+        if (!scanner.active || !scanner.strategyId) continue;
+        for (const rawSymbol of scanner.symbols) {
+            const symbol = normalizeSymbol(rawSymbol);
+            if (!symbol) continue;
+            for (const rawTf of scanner.timeframes) {
+                const tf = normalizeDashboardTf(rawTf);
+                if (!tf) continue;
+                const interval = timeframeToChartInterval(tf);
+                const key = `${scanner.id}:${scanner.strategyId}:MT5:${symbol}:${interval}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                list.push({
+                    scannerId: scanner.id,
+                    strategyId: scanner.strategyId,
+                    timeframe: tf,
+                    symbol,
+                    interval,
+                    source: 'MT5',
+                });
+            }
         }
     }
 

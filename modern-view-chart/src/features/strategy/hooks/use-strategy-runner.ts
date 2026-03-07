@@ -7,14 +7,14 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import { soundService } from '../logic/SoundService';
 import { backgroundService } from '../logic/BackgroundService';
 import type { Candle } from '@/lib/store/types';
-import { collectUniqueChartConfigs, matchActiveStrategiesForChart } from './runner/chart-config';
 import { capturePostExitContexts } from './runner/background-jobs';
 import { managePositionOnTick } from './runner/position-management';
 import { processStrategySignal } from './runner/signal-flow';
 import { getLegacyStrategyPatch, resolveWarmupDataKey, shouldTriggerWarmup } from './runner/warmup';
 import type { Strategy } from '../types';
 import { buildMatrixRunnerConfigs } from '../dashboard/matrix-cell-state';
-import { mergeRunnerConfigs } from './runner/config-merge';
+import { chartIntervalToDashboardTf } from '../dashboard/matrix-utils';
+import { normalizeTF } from '../utils/time-utils';
 
 type TabsLike = Record<string, { charts: Record<string, { symbol: string; interval?: string; source?: string }>; activeChartId?: string | null }>;
 
@@ -24,7 +24,7 @@ export function useStrategyRunner() {
         updateStrategy,
         virtualPositions,
         lastResetTime,
-        matrixConfig
+        matrixScanners
     } = useStrategyStore();
     const { sendMessage } = useWebSocket();
     const candleData = useMarketStore((state) => state.candleData);
@@ -71,7 +71,7 @@ export function useStrategyRunner() {
     }, [strategies, candleData, activeTabId, tabs, runBacktest, updateStrategy, virtualPositions]);
 
     useEffect(() => {
-        const activeCount = strategies.filter((s) => s.active).length;
+        const activeCount = matrixScanners.filter((scanner) => scanner.active && scanner.strategyId).length;
         if (activeCount > 0) {
             backgroundService.init();
             soundService.enableKeepAlive();
@@ -84,7 +84,7 @@ export function useStrategyRunner() {
             backgroundService.releaseWakeLock();
             soundService.disableKeepAlive();
         };
-    }, [strategies]);
+    }, [matrixScanners]);
 
     useEffect(() => {
         if (isRunningRef.current) return;
@@ -92,76 +92,75 @@ export function useStrategyRunner() {
         const runCycle = async () => {
             isRunningRef.current = true;
             try {
-                const uniqueChartConfigs = collectUniqueChartConfigs(tabs);
-                const matrixConfigs = buildMatrixRunnerConfigs(matrixConfig.symbols, matrixConfig.timeframes);
-                const effectiveConfigs = mergeRunnerConfigs(uniqueChartConfigs, matrixConfigs);
+                const effectiveConfigs = buildMatrixRunnerConfigs(matrixScanners);
                 if (effectiveConfigs.length === 0) return;
 
                 for (const config of effectiveConfigs) {
-                    const { symbol, interval, source } = config;
+                    const { symbol, interval, source, strategyId, timeframe } = config;
                     const normalizedSymbol = normalizeSymbol(symbol);
                     const pairKey = `${source}:${normalizedSymbol}:${interval}`;
                     const candles = candleData[pairKey];
 
                     if (!candles || candles.length < 5) continue;
 
-                    const activeStrategies = matchActiveStrategiesForChart(strategies, normalizedSymbol, interval);
-                    if (activeStrategies.length === 0) continue;
+                    const strategy = strategies.find((s) => s.id === strategyId && s.active);
+                    if (!strategy) continue;
+                    const symbolMatch = !strategy.symbol || normalizeSymbol(strategy.symbol) === normalizedSymbol;
+                    const timeframeMatch = !strategy.timeframe || normalizeTF(strategy.timeframe) === normalizeTF(interval);
+                    if (!symbolMatch || !timeframeMatch) continue;
 
                     const lastCandle = candles[candles.length - 1] as Candle;
                     const rawTime = lastCandle.time as unknown;
                     const lastTime = typeof rawTime === 'object' ? Number((rawTime as { timestamp?: number }).timestamp || 0) : Number(rawTime);
 
-                    for (const strategy of activeStrategies) {
-                        const processKey = `${strategy.id}:${symbol}`;
-                        if (Date.now() - (lastProcessedTimeRef.current[processKey] || 0) < 1000) continue;
-                        lastProcessedTimeRef.current[processKey] = Date.now();
+                    const processKey = `${strategy.id}:${symbol}:${interval}`;
+                    if (Date.now() - (lastProcessedTimeRef.current[processKey] || 0) < 1000) continue;
+                    lastProcessedTimeRef.current[processKey] = Date.now();
 
-                        try {
-                            const isNewBar = lastTime > (lastBarTimeRef.current[processKey] || 0);
-                            if (isNewBar) lastBarTimeRef.current[processKey] = lastTime;
+                    try {
+                        const isNewBar = lastTime > (lastBarTimeRef.current[processKey] || 0);
+                        if (isNewBar) lastBarTimeRef.current[processKey] = lastTime;
 
-                            const store = useStrategyStore.getState();
-                            const strategyPositions = store.virtualPositions.filter(
-                                (p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed'
-                            );
+                        const store = useStrategyStore.getState();
+                        const strategyPositions = store.virtualPositions.filter(
+                            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed'
+                        );
 
-                            strategyPositions.forEach((position) => {
-                                managePositionOnTick(strategy, position, symbol, candles, lastCandle, isNewBar, store, sendMessage);
-                            });
+                        strategyPositions.forEach((position) => {
+                            managePositionOnTick(strategy, position, symbol, candles, lastCandle, isNewBar, store, sendMessage);
+                        });
 
-                            const latestStore = useStrategyStore.getState();
-                            const latestVirtualPositions = latestStore.virtualPositions;
+                        const latestStore = useStrategyStore.getState();
+                        const latestVirtualPositions = latestStore.virtualPositions;
 
-                            if (!isNewBar) {
-                                capturePostExitContexts(strategy, symbol, candles, latestVirtualPositions, latestStore.updateVirtualPosition);
-                                continue;
-                            }
-
-                            const engineCtx: EngineContext = {
-                                activePositions: [...positions, ...latestVirtualPositions],
-                                currentPrice: lastCandle.close,
-                                symbol,
-                                lastSignalTime: strategy.lastSignalTime
-                            };
-
-                            const signal = RuleEngine.run(strategy, candles, engineCtx);
-                            if (!signal) continue;
-
-                            processStrategySignal(
-                                strategy,
-                                signal,
-                                symbol,
-                                candles,
-                                lastCandle,
-                                latestVirtualPositions,
-                                latestStore,
-                                sendMessage,
-                                lastTime
-                            );
-                        } catch (strategyError) {
-                            console.error(`[Runner] Strategy ${strategy.name} error:`, strategyError);
+                        if (!isNewBar) {
+                            capturePostExitContexts(strategy, symbol, candles, latestVirtualPositions, latestStore.updateVirtualPosition);
+                            continue;
                         }
+
+                        const engineCtx: EngineContext = {
+                            activePositions: [...positions, ...latestVirtualPositions],
+                            currentPrice: lastCandle.close,
+                            symbol,
+                            lastSignalTime: strategy.lastSignalTime
+                        };
+
+                        const signal = RuleEngine.run(strategy, candles, engineCtx);
+                        if (!signal) continue;
+
+                        processStrategySignal(
+                            strategy,
+                            signal,
+                            symbol,
+                            timeframe || chartIntervalToDashboardTf(interval),
+                            candles,
+                            lastCandle,
+                            latestVirtualPositions,
+                            latestStore,
+                            lastTime
+                        );
+                    } catch (strategyError) {
+                        console.error(`[Runner] Strategy ${strategy.name} error:`, strategyError);
                     }
                 }
             } catch (fatalErr) {
@@ -172,5 +171,5 @@ export function useStrategyRunner() {
         };
 
         void runCycle();
-    }, [candleData, tabs, strategies, positions, sendMessage, matrixConfig]);
+    }, [candleData, tabs, strategies, positions, sendMessage, matrixScanners]);
 }

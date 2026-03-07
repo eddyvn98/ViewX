@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { Activity, Bot, MessageSquare, Grid2X2 } from 'lucide-react';
+import { Activity, Bot, MessageSquare } from 'lucide-react';
 import { StrategyList } from '@/features/strategy/components/StrategyList';
 import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
 import { cn } from '@/lib/utils';
@@ -13,7 +12,8 @@ import { Strategy } from '@/features/strategy/types';
 import { motion, LayoutGroup } from 'framer-motion';
 
 export function StrategyPanel() {
-    const [view, setView] = useState<'build' | 'list' | 'signals' | 'ai_chat'>('signals');
+    type PanelView = 'build' | 'list' | 'signals' | 'ai_chat';
+    const [view, setView] = useState<PanelView>('signals');
     const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
 
     const handleEdit = (strategy: Strategy) => {
@@ -32,9 +32,9 @@ export function StrategyPanel() {
     };
 
     const tabs = [
-        { id: 'signals', label: 'Signals', icon: Activity },
-        { id: 'list', label: 'My bot', icon: Bot, matches: ['list', 'build'] },
-        { id: 'ai_chat', label: 'Ai chat', icon: MessageSquare }
+        { id: 'signals' as PanelView, label: 'Signals', icon: Activity },
+        { id: 'list' as PanelView, label: 'My bot', icon: Bot, matches: ['list', 'build'] },
+        { id: 'ai_chat' as PanelView, label: 'Ai chat', icon: MessageSquare }
     ];
 
     return (
@@ -47,7 +47,7 @@ export function StrategyPanel() {
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setView(tab.id as any)}
+                                onClick={() => setView(tab.id)}
                                 className={cn(
                                     "flex-1 flex items-center justify-center gap-1.5 py-1 rounded-md transition-colors duration-300 text-[9.5px] font-bold uppercase border border-transparent relative outline-none",
                                     isActive
@@ -68,13 +68,6 @@ export function StrategyPanel() {
                             </button>
                         );
                     })}
-                    <Link
-                        href="/strategy/matrix"
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[9.5px] font-bold uppercase text-muted-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors border border-transparent"
-                    >
-                        <Grid2X2 size={10} />
-                        Matrix
-                    </Link>
                 </div>
             </LayoutGroup>
 
