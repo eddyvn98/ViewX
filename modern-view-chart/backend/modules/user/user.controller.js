@@ -36,6 +36,20 @@ function resolveStateScope(req) {
   return { scopeType: "service", scopeId: clientId };
 }
 
+function resolvePublicStateScope(req) {
+  const headerClientId = req.headers["x-client-id"];
+  const queryClientId = req.query?.client_id;
+  const clientId = sanitizeClientId(
+    typeof headerClientId === "string"
+      ? headerClientId
+      : typeof queryClientId === "string"
+        ? queryClientId
+        : "",
+  );
+
+  return { scopeType: "guest", scopeId: clientId };
+}
+
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
 }
@@ -232,9 +246,86 @@ export const getUserSetupState = async (req, res) => {
   }
 };
 
+export const getPublicUserSetupState = async (req, res) => {
+  try {
+    const scope = resolvePublicStateScope(req);
+    const doc = await userStateModel
+      .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
+      .select("state schemaVersion updatedAt")
+      .lean();
+
+    if (!doc) {
+      return res.status(200).json({
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: 1,
+        updated_at: null,
+        state: {},
+      });
+    }
+
+    return res.status(200).json({
+      scope_type: scope.scopeType,
+      scope_id: scope.scopeId,
+      schema_version: doc.schemaVersion || 1,
+      updated_at: doc.updatedAt || null,
+      state: isPlainObject(doc.state) ? doc.state : {},
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const upsertUserSetupState = async (req, res) => {
   try {
     const scope = resolveStateScope(req);
+    const state = req.body?.state;
+    if (!isPlainObject(state)) {
+      return res.status(400).json({ error: "state must be an object" });
+    }
+
+    const serialized = JSON.stringify(state);
+    const maxBytes = parseMaxStateBytes();
+    if (Buffer.byteLength(serialized, "utf8") > maxBytes) {
+      return res.status(413).json({ error: "state payload too large" });
+    }
+
+    const schemaVersionRaw = Number.parseInt(String(req.body?.schema_version || "1"), 10);
+    const schemaVersion = Number.isFinite(schemaVersionRaw) && schemaVersionRaw > 0 ? schemaVersionRaw : 1;
+
+    const doc = await userStateModel.findOneAndUpdate(
+      { scopeType: scope.scopeType, scopeId: scope.scopeId },
+      {
+        $set: {
+          state,
+          schemaVersion,
+          lastSyncedAt: new Date(),
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      },
+    );
+
+    return res.status(200).json({
+      message: "state_saved",
+      scope_type: scope.scopeType,
+      scope_id: scope.scopeId,
+      schema_version: doc.schemaVersion || schemaVersion,
+      updated_at: doc.updatedAt || new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const upsertPublicUserSetupState = async (req, res) => {
+  try {
+    const scope = resolvePublicStateScope(req);
     const state = req.body?.state;
     if (!isPlainObject(state)) {
       return res.status(400).json({ error: "state must be an object" });

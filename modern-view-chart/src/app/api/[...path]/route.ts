@@ -16,12 +16,27 @@ function buildTargetUrl(request: NextRequest, pathSegments: string[]): URL {
     target.searchParams.append(key, value);
   });
 
-  const accessToken = (process.env.ACCESS_TOKEN || "").trim();
-  if (accessToken && !target.searchParams.has("access_token")) {
-    target.searchParams.set("access_token", accessToken);
-  }
-
   return target;
+}
+
+function normalizePath(pathSegments: string[]): string {
+  return `/${pathSegments.join("/")}`;
+}
+
+function shouldForwardAuthorization(pathname: string): boolean {
+  const allowedPrefixes = [
+    "/auth/revoke",
+    "/auth/ws-ticket",
+    "/metrics",
+    "/user",
+    "/ai/bridge",
+  ];
+  return allowedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function shouldForwardCookie(pathname: string): boolean {
+  const allowedPaths = new Set(["/auth/refresh", "/auth/logout"]);
+  return allowedPaths.has(pathname);
 }
 
 function isSelfProxyTarget(request: NextRequest, target: URL): boolean {
@@ -56,17 +71,19 @@ async function proxyRequest(request: NextRequest, context: RouteContext): Promis
     );
   }
   const headers = new Headers();
-  const forwardHeaderKeys = [
-    "accept",
-    "authorization",
-    "content-type",
-    "cookie",
-    "x-client-id",
-    "x-requested-with",
-  ];
+  const targetPath = normalizePath(pathSegments);
+  const forwardHeaderKeys = ["accept", "content-type", "x-client-id", "x-requested-with"];
   for (const key of forwardHeaderKeys) {
     const value = request.headers.get(key);
     if (value) headers.set(key, value);
+  }
+  if (shouldForwardAuthorization(targetPath)) {
+    const authorization = request.headers.get("authorization");
+    if (authorization) headers.set("authorization", authorization);
+  }
+  if (shouldForwardCookie(targetPath)) {
+    const cookie = request.headers.get("cookie");
+    if (cookie) headers.set("cookie", cookie);
   }
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";

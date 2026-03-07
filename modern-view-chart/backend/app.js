@@ -2,6 +2,7 @@ import Express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import path from "path";
 import os from "os";
 import rateLimit from "express-rate-limit";
@@ -57,7 +58,29 @@ const EMERGENCY_BLOCKED_HTTP_PREFIXES = [
 export function createApp() {
     const app = new Express();
     const allowedOrigins = getAllowedOrigins();
+    const isProduction = process.env.NODE_ENV === "production";
 
+    app.disable("x-powered-by");
+    app.use(
+        helmet({
+            contentSecurityPolicy: false,
+            referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+            frameguard: { action: "deny" },
+            hsts: isProduction
+                ? {
+                      maxAge: 15552000,
+                      includeSubDomains: true,
+                  }
+                : false,
+            permissionsPolicy: {
+                features: {
+                    camera: [],
+                    geolocation: [],
+                    microphone: [],
+                },
+            },
+        }),
+    );
     app.use(cookieParser());
     app.use(
         cors({
@@ -100,9 +123,27 @@ export function createApp() {
         legacyHeaders: false,
     });
 
+    const publicStateLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        limit: 30,
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+
+    const authLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        limit: 10,
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+
     app.use("/api", apiLimiter);
+    app.use("/api/auth/login", authLimiter);
+    app.use("/api/auth/google", authLimiter);
+    app.use("/api/auth/refresh", authLimiter);
     app.use("/api/ai/bridge", aiLimiter);
     app.use("/api/ai/bridge/task", aiTaskLimiter);
+    app.use("/api/user/state/public", publicStateLimiter);
     app.use("/api/user/data", marketLimiter);
     app.use("/api/user/prices", marketLimiter);
     app.use("/api/user/symbols", marketLimiter);
@@ -126,10 +167,13 @@ export function createApp() {
         res.setHeader(
             "Content-Security-Policy",
             "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "img-src 'self' data: https:; " +
-                "connect-src 'self' ws: wss: https://stream.binance.com:9443 https://api.binance.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;",
+                "connect-src 'self' ws: wss: https://stream.binance.com:9443 https://api.binance.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "object-src 'none'; " +
+                "base-uri 'self'; " +
+                "frame-ancestors 'none';",
         );
         next();
     });
@@ -139,19 +183,7 @@ export function createApp() {
         const status = isHealthyState(db.state) ? "ok" : "degraded";
         res.status(200).json({
             status,
-            uptime: process.uptime(),
             timestamp: new Date().toISOString(),
-            db,
-            bridge_online: runtimeState.bridgeOnline,
-            ws_clients: runtimeState.wsClients,
-            ws_connected: runtimeState.wsClients,
-            ws_dropped_rate_limit: runtimeState.wsDroppedRateLimit,
-            ws_dropped_backpressure: runtimeState.wsDroppedBackpressure,
-            ws_buffer_pressure: runtimeState.wsBufferPressure,
-            broadcast_p95_ms: runtimeState.broadcastLoopMsP95,
-            bridge_rtt_ms: null,
-            version: process.env.npm_package_version || "0.1.0",
-            emergency_mode: emergencyConfig.enabled,
         });
     });
 
@@ -214,7 +246,14 @@ export function createApp() {
 
     app.use("/api", (req, res, next) => {
         if (req.path === "/health" || req.path === "/health/ready") return next();
-        const publicAuthPaths = new Set(["/auth/login", "/auth/google", "/auth/refresh", "/auth/logout", "/auth/telegram/webhook"]);
+        const publicAuthPaths = new Set([
+            "/auth/login",
+            "/auth/google",
+            "/auth/refresh",
+            "/auth/logout",
+            "/auth/telegram/webhook",
+            "/user/state/public",
+        ]);
         if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);
     });

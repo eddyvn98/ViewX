@@ -6,15 +6,11 @@ export default function requireAccessToken(req, res, next) {
         return res.status(503).json({ error: "Server access token is not configured" });
     }
 
-    const queryToken = typeof req.query.access_token === "string" ? req.query.access_token.trim() : "";
-    const queryTicket = typeof req.query.access_ticket === "string" ? req.query.access_ticket.trim() : "";
     const bearerCredential = extractBearerCredential(req.headers.authorization);
 
     const authorized = isAuthorizedWithCredential({
         expectedToken: expected,
         bearerCredential,
-        queryAccessToken: queryToken,
-        queryAccessTicket: queryTicket,
     });
 
     if (!authorized) {

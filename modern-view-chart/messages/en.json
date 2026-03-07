@@ -4,43 +4,63 @@
         "description": "Real-time charts from Exness & Binance, integrated strategy builder and professional demo trading."
     },
     "HomePage": {
-        "title": "Powerful Charting Beyond TradingView, Built for Pro Traders.",
-        "description": "Track high-precision data from Exness and Binance with ultra-low latency. Create strategies, simulate trades (Demo), and leverage advanced web features designed for professional edge.",
-        "openChart": "Launch Chart",
-        "features": {
-            "chart": {
-                "title": "Zero-Lag Charting",
-                "desc": "Experience sub-second candle rendering with direct data streams from Exness and Binance. Optimized for precision scalping and fast execution."
-            },
-            "matrix": {
-                "title": "Smart Signal Matrix",
-                "desc": "Never miss a trade. Monitor dozens of pairs simultaneously based on your custom rules. Get instant alerts when market conditions align."
-            },
-            "backtest": {
-                "title": "Pro Discipline Workspace",
-                "desc": "Trade Demo in a distraction-free, minimalist environment. Automatically track winrate and performance to build professional trading psychology."
-            }
-        },
-        "workflow": {
-            "title": "Trade Smarter with Vivutrade",
-            "step1": {
-                "title": "Analyze",
-                "desc": "Use high-fidelity data from Exness/Binance to find opportunities."
-            },
-            "step2": {
-                "title": "Configure",
-                "desc": "Define your strategy rules for systematic system monitoring."
-            },
-            "step3": {
-                "title": "Execute",
-                "desc": "Place Demo trades directly on the chart to verify your performance."
-            }
-        }
+    "title": "A Professional Trading Platform With Built-in AI Intelligence.",
+    "description": "Experience zero-lag charts with real-time MT5 data. Generate strategies, leverage AI trade monitoring, evaluate your trades, and build your rules on a platform strictly superior to TradingView.",
+    "openChart": "Launch Chart",
+    "features": {
+      "chart": {
+        "title": "Smart Chart & Analysis",
+        "desc": "Experience sub-second candle rendering with smart analysis tools. Optimized for precision scalping and fast execution."
+      },
+      "diamond": {
+        "title": "Diamond Chart",
+        "desc": "Our exclusive Diamond rendering gives you unique insights into market structures that regular candles hide."
+      },
+      "strategy": {
+        "title": "Strategy Builder",
+        "desc": "Create, test, and live-follow custom strategies. Turn your ideas into an automated AI system."
+      },
+      "matrix": {
+        "title": "Smart Signal Matrix",
+        "desc": "Never miss a trade. Monitor dozens of pairs simultaneously based on your custom rules. Get instant alerts."
+      },
+      "aiMonitor": {
+        "title": "AI Trade Monitor",
+        "desc": "Advanced AI tracking, trade evaluation, and confidence scoring. Let AI assess the market and your positions in real time."
+      },
+      "mt5Data": {
+        "title": "Exclusive Broker Data",
+        "desc": "Direct tick data feeds from MT5. Trade with the exact prices you execute on, a critical edge over TradingView."
+      },
+      "indicators": {
+        "title": "Unlimited Tools",
+        "desc": "No arbitrary limits. Apply unlimited indicators, set unlimited alerts, and build as complex a template as you need."
+      },
+      "multiChart": {
+        "title": "Multi-Chart Workspaces",
+        "desc": "View multiple charts on a single screen, or span multiple screens with our advanced multi-window synchronization."
+      }
     },
-    "Navigation": {
-        "chart": "Chart",
-        "matrix": "Matrix",
-        "dashboard": "Dashboard",
-        "back": "Back"
+    "workflow": {
+      "title": "Trade Smarter with Vivutrade AI",
+      "step1": {
+        "title": "Analyze & Build",
+        "desc": "Use high-fidelity MT5 data and Diamond charts to find opportunities and define your rules."
+      },
+      "step2": {
+        "title": "AI Monitor & Alert",
+        "desc": "Let the AI monitor your rules, evaluate trades, and score market confidence."
+      },
+      "step3": {
+        "title": "Execute & Backtest",
+        "desc": "Place trades, backtest strategies, and review AI trade evaluations directly on the chart."
+      }
     }
+  },
+  "Navigation": {
+    "chart": "Chart",
+    "matrix": "Matrix",
+    "dashboard": "Dashboard",
+    "back": "Back"
+  }
 }

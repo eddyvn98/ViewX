@@ -45,7 +45,7 @@ function parseBooleanEnv(value, fallback) {
 }
 
 function resolveQueryAuthPolicy() {
-    const allowQueryAuth = parseBooleanEnv(process.env.WS_ALLOW_QUERY_AUTH, true);
+    const allowQueryAuth = parseBooleanEnv(process.env.WS_ALLOW_QUERY_AUTH, false);
     const fromEnv = (process.env.WS_QUERY_AUTH_DEPRECATED_UNTIL || "").trim();
     const fallbackMs = Date.now() + 14 * 24 * 60 * 60 * 1000;
     const fallbackIso = new Date(fallbackMs).toISOString();
@@ -67,9 +67,6 @@ function emitWsError(ws, payload) {
 
 async function resolveAuthContext(request, queryAuthPolicy) {
     const expectedToken = (process.env.ACCESS_TOKEN || "").trim();
-    const parsed = new URL(request.url || "/", "http://localhost");
-    const queryAccessToken = (parsed.searchParams.get("access_token") || "").trim();
-    const queryAccessTicket = (parsed.searchParams.get("access_ticket") || "").trim();
 
     const bearerCredential = extractBearerCredential(request.headers?.authorization || "");
     const bearerUserAuth = await resolveUserAuthFromAccessToken(bearerCredential);
@@ -125,32 +122,16 @@ async function resolveAuthContext(request, queryAuthPolicy) {
         }
     }
 
-    const queryAuthUsed = Boolean(queryAccessToken || queryAccessTicket);
-    if (queryAuthUsed) {
-        if (!queryAuthPolicy.allowQueryAuth || !queryAuthPolicy.isDeprecatedWindowOpen()) {
-            logWarn("auth.ws.query_rejected", {
-                reason: queryAuthPolicy.allowQueryAuth ? "sunset_expired" : "query_auth_disabled",
-                has_access_token: Boolean(queryAccessToken),
-                has_access_ticket: Boolean(queryAccessTicket),
-            });
-            return null;
-        }
-
-        if (isAuthorizedWithCredential({
-            expectedToken,
-            queryAccessToken,
-            queryAccessTicket,
-        })) {
-            logWarn("auth.ws.query_deprecated", {
-                deprecated_until: queryAuthPolicy.deprecatedUntilIso,
-                has_access_token: Boolean(queryAccessToken),
-                has_access_ticket: Boolean(queryAccessTicket),
-            });
-            return { type: "service", via: "query_compat" };
-        }
+    const parsed = new URL(request.url || "/", "http://localhost");
+    if (parsed.searchParams.has("access_token") || parsed.searchParams.has("access_ticket")) {
+        logWarn("auth.ws.query_rejected", {
+            reason: queryAuthPolicy.allowQueryAuth ? "sunset_expired" : "query_auth_disabled",
+            has_access_token: parsed.searchParams.has("access_token"),
+            has_access_ticket: parsed.searchParams.has("access_ticket"),
+        });
     }
 
-    return null;
+    return { type: "guest", role: "viewer", via: "anonymous" };
 }
 
 export default function initWebSocket(server) {

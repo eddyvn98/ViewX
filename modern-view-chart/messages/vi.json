@@ -4,36 +4,56 @@
     "description": "Chart realtime từ Exness & Binance, tích hợp công cụ xây dựng strategy và giao dịch Demo chuyên nghiệp."
   },
   "HomePage": {
-    "title": "Charting mạnh hơn TradingView, thiết kế cho Pro Trader.",
-    "description": "Theo dõi dữ liệu realtime từ Exness và Binance với độ trễ cực thấp. Tự do tạo strategy, mô phỏng giao dịch (Demo) và tận dụng các tính năng nâng cao dành cho trader chuyên nghiệp.",
+    "title": "Nền Tảng Giao Dịch Chuyên Nghiệp Tích Hợp AI Thông Minh.",
+    "description": "Trải nghiệm biểu đồ siêu mượt với dữ liệu MT5 realtime. Tạo chiến lược, AI theo dõi lệnh, đánh giá vị thế và xây dựng hệ thống trên một nền tảng ưu việt hơn hẳn TradingView.",
     "openChart": "Vào Chart",
     "features": {
       "chart": {
-        "title": "Chart Zero-Lag",
-        "desc": "Trải nghiệm tốc độ xử lý nến tức thì với dữ liệu stream trực tiếp từ Exness và Binance. Mượt, chính xác và tối ưu cho scalping."
+        "title": "Smart Chart & Analysis",
+        "desc": "Biểu đồ thông minh với các công cụ phân tích sắc bén. Tốc độ render nến siêu nhanh, tối ưu cho scalping chính xác."
+      },
+      "diamond": {
+        "title": "Chart Diamond Khác Biệt",
+        "desc": "Chế độ xem Diamond độc quyền giúp hiển thị chi tiết cấu trúc thị trường mà nến thường không thể hiện."
+      },
+      "strategy": {
+        "title": "Tạo Chiến Lược (Strategy)",
+        "desc": "Lên chiến lược, backtest và auto trade theo chiến lược. Biến ý tưởng của bạn thành một bot AI tự động."
       },
       "matrix": {
-        "title": "Signal Matrix",
-        "desc": "Đừng để lỡ kèo. Hệ thống giám sát cùng lúc hàng chục cặp tiền theo rule riêng của bạn, cảnh báo ngay khi điều kiện vào lệnh hội tụ."
+        "title": "Bảng Matrix Thông Minh",
+        "desc": "Hệ thống giám sát cùng lúc nhiều cặp tiền theo chuẩn quy tắc riêng, liên tục cảnh báo khi có tín hiệu."
       },
-      "backtest": {
-        "title": "Workspace kỷ luật Pro",
-        "desc": "Giao dịch Demo trong một không gian tối giản, không gây xao nhãng. Tự động thống kê win rate và hiệu suất để bạn rèn luyện tâm lý như một trader thực thụ."
+      "aiMonitor": {
+        "title": "AI Theo Dõi Lệnh",
+        "desc": "AI hỗ trợ theo dõi, đánh giá lệnh và cung cấp mức độ tự tin của tín hiệu realtime ngay trên chart."
+      },
+      "mt5Data": {
+        "title": "Direct MT5 Broker Data",
+        "desc": "Lấy giá trực tiếp từ MT5 của sàn (không có trên TradingView) giúp giao dịch chính xác với mức giá thực tế trên tài khoản."
+      },
+      "indicators": {
+        "title": "Không Giới Hạn Công Cụ",
+        "desc": "Xóa bỏ mọi giới hạn của TradingView. Thêm bao nhiêu indicator tuỳ thích, thiết lập vô số alert mà không cần upgrade trả phí."
+      },
+      "multiChart": {
+        "title": "Multi-Chart Không Giới Hạn",
+        "desc": "Xem nhiều biểu đồ trên cùng một màn hình hoặc chia ra nhiều màn hình với tính năng đồng bộ thông minh."
       }
     },
     "workflow": {
-      "title": "Giao dịch thông minh hơn với Vivutrade",
+      "title": "Giao Dịch Đột Phá Cùng Vivutrade AI",
       "step1": {
-        "title": "Phân Tích",
-        "desc": "Dùng dữ liệu chuẩn từ Exness/Binance để tìm cơ hội."
+        "title": "Phân Tích & Setup",
+        "desc": "Sử dụng dữ liệu MT5 và Chart Diamond để tìm điểm vào lệnh tốt nhất, đồng thời thiết lập rule chiến lược."
       },
       "step2": {
-        "title": "Thiết Lập",
-        "desc": "Tạo bộ rule strategy để hệ thống monitor thay bạn."
+        "title": "Theo Dõi Bằng AI",
+        "desc": "Để AI hỗ trợ đánh giá lệnh, tính toán mức độ tự tin và gửi cảnh báo khi có tín hiệu."
       },
       "step3": {
-        "title": "Thực Thi",
-        "desc": "Vào lệnh Demo ngay trên chart để kiểm chứng hiệu quả."
+        "title": "Backtest & Thực Thi",
+        "desc": "Vào lệnh trực tiếp, test lại hiệu quả chiến lược và theo dõi đánh giá AI ngay trên live chart."
       }
     }
   },

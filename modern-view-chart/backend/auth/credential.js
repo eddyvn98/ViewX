@@ -10,16 +10,12 @@ export function extractBearerCredential(authHeader) {
 export function isAuthorizedWithCredential({
     expectedToken,
     bearerCredential = "",
-    queryAccessToken = "",
-    queryAccessTicket = "",
 }) {
     const secret = (expectedToken || "").trim();
     if (!secret) return false;
 
-    if (queryAccessToken && queryAccessToken === secret) return true;
     if (bearerCredential && bearerCredential === secret) return true;
 
-    if (queryAccessTicket && verifyAccessTicket(queryAccessTicket, secret)) return true;
     if (bearerCredential && verifyAccessTicket(bearerCredential, secret)) return true;
 
     return false;

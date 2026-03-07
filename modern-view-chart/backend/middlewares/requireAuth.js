@@ -16,16 +16,12 @@ export default async function requireAuth(req, res, next) {
     }
 
     const expected = (process.env.ACCESS_TOKEN || "").trim();
-    const queryToken = typeof req.query.access_token === "string" ? req.query.access_token.trim() : "";
-    const queryTicket = typeof req.query.access_ticket === "string" ? req.query.access_ticket.trim() : "";
 
     if (
         expected &&
         isAuthorizedWithCredential({
             expectedToken: expected,
             bearerCredential,
-            queryAccessToken: queryToken,
-            queryAccessTicket: queryTicket,
         })
     ) {
         req.auth = { type: "service" };

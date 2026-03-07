@@ -1,5 +1,10 @@
 import { wsRuntime } from './runtime';
 
+function getStoredAccessToken(): string {
+    if (typeof window === 'undefined') return '';
+    return (localStorage.getItem('auth_access_token') || '').trim();
+}
+
 export function parseIntervalSeconds(interval: string): number {
     const text = String(interval || '').trim();
     if (!text) return 60;
@@ -85,6 +90,7 @@ export function buildSocketConfig(options?: { ignoreUrlCredential?: boolean }): 
 
 export async function fetchWsTicketFromApi(): Promise<string> {
     if (typeof window === 'undefined') return '';
+    if (!getStoredAccessToken()) return '';
 
     const nowSec = Math.floor(Date.now() / 1000);
     if (wsRuntime.wsTicketCache && wsRuntime.wsTicketExpiresAt > nowSec + 10) {

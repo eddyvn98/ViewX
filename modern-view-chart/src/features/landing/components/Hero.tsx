@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useTranslations } from 'next-intl';
 import Image from "next/image";
@@ -14,34 +14,35 @@ export function Hero() {
             aria-labelledby="hero-title"
         >
             <article className="space-y-6">
-                <p className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
-                    <Radio className="h-3.5 w-3.5" />
-                    Live Exness & Binance Feeds
-                </p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-sky-200/50 bg-white/60 backdrop-blur-md px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-sm">
+                    <Radio className="h-4 w-4 animate-pulse" />
+                    Live MT5 Broker Data
+                </div>
                 <h1
                     id="hero-title"
-                    className="text-3xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl"
+                    className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl lg:text-6xl"
                     data-ai-label="platform-core-value-proposition"
                 >
                     {t('title')}
                 </h1>
-                <p className="max-w-xl text-sm leading-7 text-slate-700 md:text-base">
+                <p className="max-w-xl text-base leading-relaxed text-slate-600 md:text-lg">
                     {t('description')}
                 </p>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-4 pt-4">
                     <Link
                         href="/chart"
                         aria-label="Vào vùng làm việc biểu đồ thời gian thực"
-                        className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-black text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 hover:opacity-90"
+                        className="group relative inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-black text-primary-foreground overflow-hidden shadow-xl shadow-primary/20 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/30"
                     >
-                        {t('openChart')}
-                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                        <div className="absolute inset-0 bg-white/20 translate-y-full transition-transform group-hover:translate-y-0 duration-300" />
+                        <span className="relative">{t('openChart')}</span>
+                        <ArrowRight className="relative h-5 w-5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
                     </Link>
                     <Link
                         href="/strategy/dashboard"
-                        className="inline-flex items-center gap-2 rounded-md border border-sky-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition-colors hover:bg-sky-50"
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white/50 backdrop-blur-sm px-8 py-4 text-base font-bold text-slate-700 transition-all hover:-translate-y-1 hover:border-slate-300 hover:bg-white shadow-sm hover:shadow-md"
                     >
-                        Dashboard
+                        AI Dashboard
                     </Link>
                 </div>
             </article>

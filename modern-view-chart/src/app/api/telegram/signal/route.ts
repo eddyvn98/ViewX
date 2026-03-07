@@ -30,8 +30,12 @@ export async function POST(request: NextRequest): Promise<Response> {
   const chatId = (process.env.TELEGRAM_CHAT_ID || '').trim();
 
   if (!token || !chatId) {
+    console.error('telegram.signal.config_missing', {
+      hasBotToken: Boolean(token),
+      hasChatId: Boolean(chatId),
+    });
     return NextResponse.json(
-      { ok: false, error: 'Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID' },
+      { ok: false, error: 'Service temporarily unavailable' },
       { status: 503 }
     );
   }
@@ -63,16 +67,20 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const data = await upstream.json().catch(() => ({}));
     if (!upstream.ok || data?.ok === false) {
+      console.error('telegram.signal.upstream_failed', {
+        status: upstream.status,
+        description: data?.description || null,
+      });
       return NextResponse.json(
-        { ok: false, error: data?.description || `Telegram HTTP ${upstream.status}` },
+        { ok: false, error: 'Service temporarily unavailable' },
         { status: 502 }
       );
     }
 
     return NextResponse.json({ ok: true, message_id: data?.result?.message_id || null });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to send Telegram message';
-    return NextResponse.json({ ok: false, error: message }, { status: 502 });
+    console.error('telegram.signal.request_failed', error);
+    return NextResponse.json({ ok: false, error: 'Service temporarily unavailable' }, { status: 502 });
   } finally {
     clearTimeout(timeoutId);
   }

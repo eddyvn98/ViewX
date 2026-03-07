@@ -158,6 +158,14 @@ function buildApiUrl(clientId: string): string {
     return query ? `/api/user/state?${query}` : '/api/user/state';
 }
 
+function buildPublicApiUrl(clientId: string): string {
+    const params = new URLSearchParams();
+    if (clientId) params.set('client_id', clientId);
+
+    const query = params.toString();
+    return query ? `/api/user/state/public?${query}` : '/api/user/state/public';
+}
+
 function getAuthHeaders(clientId: string): Record<string, string> {
     const headers: Record<string, string> = {};
     if (clientId) headers['x-client-id'] = clientId;
@@ -167,6 +175,11 @@ function getAuthHeaders(clientId: string): Record<string, string> {
         headers.authorization = `Bearer ${accessToken}`;
     }
     return headers;
+}
+
+function hasAccessToken(): boolean {
+    if (typeof window === 'undefined') return false;
+    return Boolean((localStorage.getItem('auth_access_token') || '').trim());
 }
 
 function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' | 'system'): PersistedSetupState {
@@ -269,7 +282,10 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
 export function useUserSetupSync() {
     const { theme, setTheme } = useTheme();
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
-    const apiUrl = useMemo(() => (typeof window === 'undefined' ? '/api/user/state' : buildApiUrl(clientId)), [clientId]);
+    const apiUrl = useMemo(() => {
+        if (typeof window === 'undefined') return '/api/user/state';
+        return hasAccessToken() ? buildApiUrl(clientId) : buildPublicApiUrl(clientId);
+    }, [clientId]);
 
     const isReadyRef = useRef(false);
     const hasInitializedRef = useRef(false);
