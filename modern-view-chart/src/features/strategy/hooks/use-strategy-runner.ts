@@ -15,6 +15,7 @@ import type { Strategy } from '../types';
 import { buildMatrixRunnerConfigs } from '../dashboard/matrix-cell-state';
 import { chartIntervalToDashboardTf } from '../dashboard/matrix-utils';
 import { normalizeTF } from '../utils/time-utils';
+import { buildMatrixScopeKey } from '../utils/matrix-scope';
 
 type TabsLike = Record<string, { charts: Record<string, { symbol: string; interval?: string; source?: string }>; activeChartId?: string | null }>;
 
@@ -50,8 +51,29 @@ export function useStrategyRunner() {
 
             if (!strategy.active) {
                 if (backtestRunRef.current[strategy.id]) delete backtestRunRef.current[strategy.id];
-                return;
             }
+        });
+
+        const effectiveConfigs = buildMatrixRunnerConfigs(matrixScanners);
+        if (effectiveConfigs.length > 0) {
+            effectiveConfigs.forEach((config) => {
+                const scopeKey = buildMatrixScopeKey(config.strategyId, config.symbol, config.timeframe);
+                const candles = candleData[`${config.source}:${config.symbol}:${config.interval}`];
+                if (!candles || candles.length < 50) return;
+
+                const lastRun = backtestRunRef.current[scopeKey] || 0;
+                const hasActivePos = virtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.status !== 'closed' && !p.isHistorical);
+                const hasHistoricalPos = virtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.isHistorical);
+                if (!shouldTriggerWarmup(lastRun, hasActivePos, hasHistoricalPos)) return;
+
+                backtestRunRef.current[scopeKey] = Date.now();
+                void runBacktest(config.strategyId, [...candles], config.symbol, config.timeframe, config.source, scopeKey);
+            });
+            return;
+        }
+
+        strategies.forEach((strategy: Strategy) => {
+            if (!strategy.active) return;
 
             const activeTab = activeTabId ? tabs[activeTabId] : null;
             const dataKey = resolveWarmupDataKey(strategy, candleData, activeTab);
@@ -66,9 +88,9 @@ export function useStrategyRunner() {
             const parts = dataKey.split(':');
             const actualSymbol = strategy.symbol || (parts.length >= 2 ? parts[1] : 'BACKTEST');
             backtestRunRef.current[strategy.id] = Date.now();
-            runBacktest(strategy.id, [...candleData[dataKey]], actualSymbol);
+            void runBacktest(strategy.id, [...candleData[dataKey]], actualSymbol, strategy.timeframe, 'MT5');
         });
-    }, [strategies, candleData, activeTabId, tabs, runBacktest, updateStrategy, virtualPositions]);
+    }, [strategies, candleData, activeTabId, tabs, runBacktest, updateStrategy, virtualPositions, matrixScanners]);
 
     useEffect(() => {
         const activeCount = matrixScanners.filter((scanner) => scanner.active && scanner.strategyId).length;
@@ -105,8 +127,10 @@ export function useStrategyRunner() {
 
                     const strategy = strategies.find((s) => s.id === strategyId && s.active);
                     if (!strategy) continue;
-                    const symbolMatch = !strategy.symbol || normalizeSymbol(strategy.symbol) === normalizedSymbol;
-                    const timeframeMatch = !strategy.timeframe || normalizeTF(strategy.timeframe) === normalizeTF(interval);
+                    const scopeKey = buildMatrixScopeKey(strategy.id, normalizedSymbol, timeframe || chartIntervalToDashboardTf(interval));
+                    const hasActiveMatrixConfigs = effectiveConfigs.length > 0;
+                    const symbolMatch = hasActiveMatrixConfigs ? true : (!strategy.symbol || normalizeSymbol(strategy.symbol) === normalizedSymbol);
+                    const timeframeMatch = hasActiveMatrixConfigs ? true : (!strategy.timeframe || normalizeTF(strategy.timeframe) === normalizeTF(interval));
                     if (!symbolMatch || !timeframeMatch) continue;
 
                     const lastCandle = candles[candles.length - 1] as Candle;
@@ -123,7 +147,11 @@ export function useStrategyRunner() {
 
                         const store = useStrategyStore.getState();
                         const strategyPositions = store.virtualPositions.filter(
-                            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed'
+                            (p) =>
+                                p.strategyId === strategy.id &&
+                                p.symbol === symbol &&
+                                p.status !== 'closed' &&
+                                ((!p.matrixScopeKey && !scopeKey) || p.matrixScopeKey === scopeKey)
                         );
 
                         strategyPositions.forEach((position) => {
@@ -157,7 +185,9 @@ export function useStrategyRunner() {
                             lastCandle,
                             latestVirtualPositions,
                             latestStore,
-                            lastTime
+                            lastTime,
+                            source,
+                            scopeKey
                         );
                     } catch (strategyError) {
                         console.error(`[Runner] Strategy ${strategy.name} error:`, strategyError);

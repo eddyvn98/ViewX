@@ -30,6 +30,8 @@ function makeVirtualPosition(overrides: Partial<VirtualPosition> = {}): VirtualP
         id: 'v1',
         strategyId: 's1',
         symbol: 'EURUSD',
+        timeframe: '1m',
+        matrixScopeKey: 's1:EURUSD:1m',
         type: 'BUY',
         entryPrice: 1.1,
         sl: 1.09,
@@ -152,7 +154,7 @@ describe('runner flow behavior', () => {
                     strategyId: 's1',
                     timestamp: FIXED_NOW_MS,
                     price: 1.1,
-                    risk: strategy.risk
+                    risk: strategy.risk!
                 },
                 'EURUSD',
                 '1m',
@@ -160,7 +162,9 @@ describe('runner flow behavior', () => {
                 candles[0],
                 store.virtualPositions,
                 store,
-                FIXED_NOW_MS
+                FIXED_NOW_MS,
+                'MT5',
+                's1:EURUSD:1m'
             );
 
             assert.equal(calls.cancel, 1);
@@ -175,7 +179,7 @@ describe('runner flow behavior', () => {
                     strategyId: 's1',
                     timestamp: FIXED_NOW_MS + 1,
                     price: 1.099,
-                    risk: strategy.risk
+                    risk: strategy.risk!
                 },
                 'EURUSD',
                 '1m',
@@ -183,7 +187,9 @@ describe('runner flow behavior', () => {
                 candles[0],
                 [{ ...makeVirtualPosition({ id: 'pending-exit', status: 'pending' }) }],
                 store,
-                FIXED_NOW_MS
+                FIXED_NOW_MS,
+                'MT5',
+                's1:EURUSD:1m'
             );
 
             assert.equal(calls.cancel, 2);
@@ -198,7 +204,7 @@ describe('runner flow behavior', () => {
                     strategyId: 's1',
                     timestamp: FIXED_NOW_MS + 2,
                     price: 1.098,
-                    risk: strategy.risk
+                    risk: strategy.risk!
                 },
                 'EURUSD',
                 '1m',
@@ -206,7 +212,9 @@ describe('runner flow behavior', () => {
                 candles[0],
                 [{ ...makeVirtualPosition({ id: 'open-exit', status: 'open' }) }],
                 store,
-                FIXED_NOW_MS
+                FIXED_NOW_MS,
+                'MT5',
+                's1:EURUSD:1m'
             );
 
             assert.equal(calls.close, 1);
@@ -214,6 +222,48 @@ describe('runner flow behavior', () => {
         } finally {
             AiManager.processSignal = originalProcessSignal;
             TradeLogger.updateExit = originalUpdateExit;
+        }
+    });
+
+    it('scopes CANCEL by matrixScopeKey so another timeframe is untouched', () => {
+        const originalProcessSignal = AiManager.processSignal;
+        AiManager.processSignal = (signal: StrategySignal) => signal;
+
+        try {
+            const canceled: string[] = [];
+            const store = {
+                virtualPositions: [
+                    makeVirtualPosition({ id: 'm1', status: 'pending', matrixScopeKey: 's1:EURUSD:1m', timeframe: '1m' }),
+                    makeVirtualPosition({ id: 'm5', status: 'pending', matrixScopeKey: 's1:EURUSD:5m', timeframe: '5m' }),
+                ],
+                virtualBalance: 10000,
+                addVirtualPosition: () => {},
+                closeVirtualPosition: () => {},
+                cancelVirtualPosition: (_strategyId: string, _symbol: string, _direction?: 'BUY' | 'SELL', scope?: string) => { if (scope) canceled.push(scope); },
+                addSignal: () => {},
+                updateLastSignalTime: () => {}
+            };
+
+            const strategy = makeStrategy();
+            const candles = [makeCandle()];
+
+            processStrategySignal(
+                strategy,
+                { type: 'CANCEL', symbol: 'EURUSD', strategyId: 's1', timestamp: FIXED_NOW_MS, price: 1.1, risk: strategy.risk! },
+                'EURUSD',
+                '1m',
+                candles,
+                candles[0],
+                store.virtualPositions,
+                store,
+                FIXED_NOW_MS,
+                'MT5',
+                's1:EURUSD:1m'
+            );
+
+            assert.deepEqual(canceled, ['s1:EURUSD:1m']);
+        } finally {
+            AiManager.processSignal = originalProcessSignal;
         }
     });
 });

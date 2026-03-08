@@ -5,10 +5,11 @@ import { getTradingSession } from '../../utils/time-utils';
 import { soundService } from '../../logic/SoundService';
 import type { Strategy, VirtualPosition } from '../../types';
 import type { Candle } from '@/lib/store/types';
+import { getStrategyLeg } from '../../strategy-helpers';
 
 interface StoreLike {
     updateVirtualPosition: (id: string, updates: Partial<VirtualPosition>) => void;
-    closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Record<string, unknown>) => void;
+    closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Record<string, unknown>, direction?: 'BUY' | 'SELL', matrixScopeKey?: string) => void;
 }
 
 interface CandleLike {
@@ -37,9 +38,10 @@ export function managePositionOnTick(
     }
 
     const currentPrice = lastCandle.close;
+    const leg = getStrategyLeg(strategy, position.type);
 
-    if (strategy.risk.trailing) {
-        const tSource = strategy.risk.trailingSource || (position.type === 'BUY' ? 'HA_Low' : 'HA_High');
+    if (leg.risk.trailing) {
+        const tSource = leg.risk.trailingSource || (position.type === 'BUY' ? 'HA_Low' : 'HA_High');
         const haLow = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'low' }, candles.slice(0, -1));
         const haHigh = IndicatorCalculator.getLastValue({ type: 'HA', params: [], field: 'high' }, candles.slice(0, -1));
 
@@ -118,7 +120,7 @@ export function managePositionOnTick(
         }
 
         if (!exitPrice) return;
-        store.closeVirtualPosition(strategy.id, symbol, exitPrice, { exit_reason: exitReason });
+        store.closeVirtualPosition(strategy.id, symbol, exitPrice, { exit_reason: exitReason }, position.type, position.matrixScopeKey);
         if (exitReason === 'TP') soundService.playTP();
         else if (exitReason === 'SL') soundService.playSL();
         toast.warning(`[${exitReason}] ${position.symbol} Closed @ ${exitPrice}`);

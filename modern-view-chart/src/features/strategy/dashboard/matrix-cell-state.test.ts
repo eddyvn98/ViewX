@@ -47,7 +47,7 @@ describe('matrix-cell-state', () => {
             matrixConfig: cfg,
             nowMs: now,
         };
-        const buySignal: StrategySignal = { type: 'BUY', symbol: 'XAUUSDm', strategyId: 's1', timestamp: now - 10_000, price: 1, risk: baseStrategy.risk };
+        const buySignal: StrategySignal = { type: 'BUY', symbol: 'XAUUSDm', strategyId: 's1', timestamp: now - 10_000, price: 1, risk: baseStrategy.risk! };
         const sellSignal: StrategySignal = { ...buySignal, type: 'SELL' };
         const exitSignal: StrategySignal = { ...buySignal, type: 'EXIT' };
         const cancelSignal: StrategySignal = { ...buySignal, type: 'CANCEL' };
@@ -66,7 +66,7 @@ describe('matrix-cell-state', () => {
             strategyId: 's1',
             timestamp: now - 10 * 60_000,
             price: 1,
-            risk: baseStrategy.risk,
+            risk: baseStrategy.risk!,
         };
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
@@ -88,6 +88,7 @@ describe('matrix-cell-state', () => {
                 id: 'p1',
                 strategyId: 's1',
                 symbol: 'XAUUSDm',
+                timeframe: '1m',
                 type: 'BUY',
                 entryPrice: 1,
                 sl: 0,
@@ -100,6 +101,7 @@ describe('matrix-cell-state', () => {
                 id: 'p2',
                 strategyId: 's1',
                 symbol: 'XAUUSDm',
+                timeframe: '1m',
                 type: 'BUY',
                 entryPrice: 1,
                 sl: 0,
@@ -128,6 +130,7 @@ describe('matrix-cell-state', () => {
                 id: 'p-open-buy',
                 strategyId: 's1',
                 symbol: 'XAUUSDm',
+                timeframe: '1m',
                 type: 'BUY',
                 entryPrice: 1,
                 sl: 0,
@@ -148,6 +151,38 @@ describe('matrix-cell-state', () => {
         });
         assert.equal(cell.signal, 'BUY');
         assert.equal(cell.badge, 'OPEN');
+    });
+
+    it('does not leak open positions across timeframes for the same symbol', () => {
+        const now = Date.now();
+        const positions: VirtualPosition[] = [
+            {
+                id: 'p-open-buy-5m',
+                strategyId: 's1',
+                symbol: 'XAUUSDm',
+                timeframe: '5m',
+                type: 'BUY',
+                entryPrice: 1,
+                sl: 0,
+                tp: 0,
+                lotSize: 0.1,
+                timestamp: now,
+                status: 'open',
+            },
+        ];
+
+        const cell = buildMatrixCellState({
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            strategies: [baseStrategy],
+            signals: [],
+            virtualPositions: positions,
+            matrixConfig: cfg,
+            nowMs: now,
+        });
+
+        assert.equal(cell.signal, 'NO_TRADE');
+        assert.equal(cell.badge, null);
     });
 
     it('uses entry-condition readiness from candles when available', () => {

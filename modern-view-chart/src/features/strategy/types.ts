@@ -72,15 +72,29 @@ export interface StrategyRisk {
     cooldownMinutes?: number;
 }
 
+export type StrategyDirection = 'BUY' | 'SELL';
+
+export interface StrategyLeg {
+    entry: ConditionGroup;
+    trigger?: ConditionGroup;
+    exit?: ConditionGroup;
+    cancelConditions?: ConditionGroup;
+    risk: StrategyRisk;
+    entryType?: 'market' | 'stop' | 'limit';
+    entryPrice?: SLTPConfig;
+}
+
 export interface Strategy {
     id: string;
     name: string;
-    side: 'BUY' | 'SELL';
-    entry: ConditionGroup;
-
+    side?: 'BUY' | 'SELL';
+    entry?: ConditionGroup;
+    trigger?: ConditionGroup;
     exit?: ConditionGroup;
     cancelConditions?: ConditionGroup; // For pending orders
-    risk: StrategyRisk;
+    risk?: StrategyRisk;
+    buy?: StrategyLeg;
+    sell?: StrategyLeg;
     active: boolean;
     aiGuard?: boolean; // AI Monitoring for live signals
     symbol?: string;
@@ -157,7 +171,11 @@ export interface StrategySignal {
     strategyId: string;
     timestamp: number;
     price: number;
+    timeframe?: string;
+    source?: 'MT5';
+    matrixScopeKey?: string;
     risk: StrategyRisk;
+    direction?: StrategyDirection;
     confidence?: number;
     aiAnalysis?: AiResponse;
     context?: TradeContext;
@@ -203,6 +221,9 @@ export interface VirtualPosition {
     id: string;
     strategyId: string;
     symbol: string;
+    timeframe?: string;
+    source?: 'MT5';
+    matrixScopeKey?: string;
     type: 'BUY' | 'SELL';
     entryPrice: number;
     sl: number;

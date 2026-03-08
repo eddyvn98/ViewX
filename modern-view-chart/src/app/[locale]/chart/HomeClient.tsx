@@ -78,7 +78,7 @@ function formatTabPrice(price: number, digits: number): string {
 export default function Home() {
   useWebSocket();
   useUserSetupSync();
-  const strategyEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === "true";
+  const strategyEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED !== "false";
   const {
     isTerminalVisible,
     isTerminalCollapsed,

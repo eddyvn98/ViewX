@@ -6,6 +6,7 @@ import { StatsService } from '../../logic/StatsService';
 import { useStrategyStore } from '../../store/strategy-store';
 import { soundService } from '../../logic/SoundService';
 import { toast } from 'sonner';
+import { getPrimaryStrategyRisk, getStrategyLeg } from '../../strategy-helpers';
 
 interface Props {
     position: VirtualPosition;
@@ -80,16 +81,26 @@ export function AIInsightPanel({ position, metrics }: Props) {
             if (!strategy) return;
 
             if (suggestion.field === 'rsi_threshold') {
-                const newEntry = JSON.parse(JSON.stringify(strategy.entry));
+                const leg = getStrategyLeg(strategy, position.type);
+                const newEntry = JSON.parse(JSON.stringify(leg.entry));
                 // Find RSI condition and update value
                 const rsiCond = newEntry.conditions.find((c: any) => c.left?.type === 'RSI');
                 if (rsiCond) {
                     rsiCond.right = suggestion.value;
-                    updateStrategy(strategy.id, { entry: newEntry });
+                    updateStrategy(strategy.id, {
+                        entry: position.type === 'BUY' ? newEntry : strategy.entry,
+                        buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, entry: newEntry } : strategy.buy,
+                        sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, entry: newEntry } : strategy.sell,
+                    });
                     toast.success(`Updated RSI threshold to ${suggestion.value}`);
                 }
             } else if (suggestion.field === 'trailing_stop') {
-                updateStrategy(strategy.id, { risk: { ...strategy.risk, trailing: suggestion.value === 'on' } });
+                const risk = getPrimaryStrategyRisk(strategy);
+                updateStrategy(strategy.id, {
+                    risk: { ...risk, trailing: suggestion.value === 'on' },
+                    buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, risk: { ...strategy.buy.risk, trailing: suggestion.value === 'on' } } : strategy.buy,
+                    sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, risk: { ...strategy.sell.risk, trailing: suggestion.value === 'on' } } : strategy.sell,
+                });
                 toast.success(`Trailing Stop ${suggestion.value === 'on' ? 'Enabled' : 'Disabled'}`);
             } else {
                 toast.info(`Manual update required for: ${suggestion.field}`);

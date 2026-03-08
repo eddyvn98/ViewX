@@ -2,6 +2,7 @@ import { VirtualPosition, Strategy } from '@/features/strategy/types';
 import { Candle } from '@/lib/store/types';
 import { getPipMultiplier, calculateStandardPnL, getPriceOffset } from '@/features/strategy/utils/market-utils';
 import { IndicatorCalculator } from '@/features/strategy/logic/IndicatorCalculator';
+import { getStrategyLeg } from '@/features/strategy/strategy-helpers';
 
 export class PositionManager {
     private positions: VirtualPosition[] = [];
@@ -29,48 +30,46 @@ export class PositionManager {
         currentIndex: number,
         tradeSymbol: string
     ) {
-        if (!strategy.risk.trailing) return;
-
-        const source = strategy.risk.trailingSource || (strategy.side === 'BUY' ? 'HA_Low' : 'HA_High');
-        const haField = source === 'HA_Low' ? 'low' : 'high';
-
         // Note: This matches original logic but re-calculating HA every step is inefficient.
         // In a real optimized engine, we'd cache HA.
         // For faithful refactoring, we'll keep it but it should probably use BacktestIndicators.
-        const haValues = IndicatorCalculator.getValues({ type: 'HA', params: [], field: haField }, candles.slice(0, currentIndex));
-        const currentHaValue = haValues[haValues.length - 1];
+        this.positions.forEach(pos => {
+            if (pos.status !== 'open') return;
+            const leg = getStrategyLeg(strategy, pos.type);
+            if (!leg.risk.trailing) return;
 
-        if (!isNaN(currentHaValue)) {
-            this.positions.forEach(pos => {
-                if (pos.status !== 'open') return;
+            const source = leg.risk.trailingSource || (pos.type === 'BUY' ? 'HA_Low' : 'HA_High');
+            const haField = source === 'HA_Low' ? 'low' : 'high';
+            const haValues = IndicatorCalculator.getValues({ type: 'HA', params: [], field: haField }, candles.slice(0, currentIndex));
+            const currentHaValue = haValues[haValues.length - 1];
+            if (isNaN(currentHaValue)) return;
 
-                const priceOffset = getPriceOffset(tradeSymbol);
-                const moveThreshold = priceOffset * 0.1;
+            const priceOffset = getPriceOffset(tradeSymbol);
+            const moveThreshold = priceOffset * 0.1;
 
-                let shouldUpdate = false;
-                let newSl = pos.sl;
+            let shouldUpdate = false;
+            let newSl = pos.sl;
 
-                if (pos.type === 'BUY' && source === 'HA_Low') {
-                    if (currentHaValue > pos.sl + moveThreshold) {
-                        newSl = currentHaValue;
-                        shouldUpdate = true;
-                    }
-                } else if (pos.type === 'SELL' && source === 'HA_High') {
-                    const proposedSl = currentHaValue + priceOffset;
-                    if (pos.sl === 0 || proposedSl < pos.sl - moveThreshold) {
-                        newSl = proposedSl;
-                        shouldUpdate = true;
-                    }
+            if (pos.type === 'BUY' && source === 'HA_Low') {
+                if (currentHaValue > pos.sl + moveThreshold) {
+                    newSl = currentHaValue;
+                    shouldUpdate = true;
                 }
-
-                if (shouldUpdate) {
-                    const isSafe = pos.type === 'BUY' ? newSl < candles[currentIndex].close : newSl > candles[currentIndex].close;
-                    if (isSafe) {
-                        pos.sl = newSl;
-                    }
+            } else if (pos.type === 'SELL' && source === 'HA_High') {
+                const proposedSl = currentHaValue + priceOffset;
+                if (pos.sl === 0 || proposedSl < pos.sl - moveThreshold) {
+                    newSl = proposedSl;
+                    shouldUpdate = true;
                 }
-            });
-        }
+            }
+
+            if (shouldUpdate) {
+                const isSafe = pos.type === 'BUY' ? newSl < candles[currentIndex].close : newSl > candles[currentIndex].close;
+                if (isSafe) {
+                    pos.sl = newSl;
+                }
+            }
+        });
     }
 
     updateMetrics(candle: Candle, tradeSymbol: string) {

@@ -5,12 +5,25 @@ import { BacktestIndicators } from './BacktestIndicators';
 import { PositionManager } from './PositionManager';
 import { SignalEvaluator } from './SignalEvaluator';
 import { getTradingSession } from '@/features/strategy/utils/time-utils';
+import { getStrategyDirections, getStrategyLeg } from '@/features/strategy/strategy-helpers';
+import { buildMatrixScopeKey } from '../../utils/matrix-scope';
 
 export class BacktestEngine {
-    static run(strategy: Strategy, rawCandles: Candle[], initialBalance: number = 10000, overrideSymbol?: string, memory?: LogicMemory): VirtualPosition[] {
+    static run(
+        strategy: Strategy,
+        rawCandles: Candle[],
+        initialBalance: number = 10000,
+        overrideSymbol?: string,
+        memory?: LogicMemory,
+        overrideTimeframe?: string,
+        source: 'MT5' = 'MT5',
+        matrixScopeKey?: string
+    ): VirtualPosition[] {
         if (!strategy.active || rawCandles.length < 50) return [];
 
         const tradeSymbol = overrideSymbol || strategy.symbol || 'BACKTEST';
+        const tradeTimeframe = overrideTimeframe || strategy.timeframe || '1m';
+        const scopeKey = matrixScopeKey || buildMatrixScopeKey(strategy.id, tradeSymbol, tradeTimeframe);
         console.log(`[Backtest] Running ${strategy.name} on ${tradeSymbol} (${rawCandles.length} candles)...`);
 
         // 1. Prepare Data
@@ -42,11 +55,10 @@ export class BacktestEngine {
             positionManager.updateTrailingStops(strategy, candles, i, tradeSymbol);
             positionManager.updateMetrics(candle, tradeSymbol);
 
-            // Check Custom Exit Conditions (Signal Exit)
-            let shouldSignalExit = false;
-            if (strategy.exit) {
-                shouldSignalExit = SignalEvaluator.evaluate(strategy.exit, i, indicators);
-            }
+            const shouldSignalExit = getStrategyDirections(strategy).some((direction) => {
+                const leg = getStrategyLeg(strategy, direction);
+                return leg.exit ? SignalEvaluator.evaluate(leg.exit, i, indicators) : false;
+            });
 
             const exitResult = positionManager.processExits(candle, i, timestamp, tradeSymbol, strategy, shouldSignalExit);
             if (exitResult) {
@@ -58,13 +70,16 @@ export class BacktestEngine {
             // Only if we have no open positions (simplification for "single_position" mode implied in original code)
             // Original code: positions.filter(p => p.status === 'open').length === 0
             if (positionManager.getPositions().filter(p => p.status === 'open').length === 0) {
-                const isCooledDown = SignalEvaluator.checkCooldown(lastSignalTime, timestamp, strategy.risk.cooldownMinutes);
                 const isNewCandle = i > lastExitIndex;
 
-                if (isCooledDown && isNewCandle) {
-                    const isEntry = SignalEvaluator.evaluate(strategy.entry, i, indicators);
+                if (isNewCandle) {
+                    for (const type of getStrategyDirections(strategy)) {
+                        const leg = getStrategyLeg(strategy, type);
+                        const isCooledDown = SignalEvaluator.checkCooldown(lastSignalTime, timestamp, leg.risk.cooldownMinutes);
+                        const triggerOk = !leg.trigger || SignalEvaluator.evaluate(leg.trigger, i, indicators);
+                        const isEntry = SignalEvaluator.evaluate(leg.entry, i, indicators);
+                        if (!isCooledDown || !triggerOk || !isEntry) continue;
 
-                    if (isEntry) {
                         const price = Number(candle.close);
                         // Snapshot Construction
                         const snapshot: Record<string, number> = {};
@@ -94,10 +109,8 @@ export class BacktestEngine {
                                 }
                             });
                         };
-                        fillSnapshot(strategy.entry);
-
-
-                        const type = strategy.side || 'BUY';
+                        fillSnapshot(leg.entry);
+                        fillSnapshot(leg.trigger);
 
                         // SL/TP Calculation
                         const getRiskValue = (val: number | SLTPConfig | undefined): number => {
@@ -106,8 +119,8 @@ export class BacktestEngine {
                             return 0;
                         };
 
-                        const slVal = getRiskValue(strategy.risk.sl || strategy.risk.stopLoss);
-                        const tpVal = getRiskValue(strategy.risk.tp || strategy.risk.takeProfit);
+                        const slVal = getRiskValue(leg.risk.sl || leg.risk.stopLoss);
+                        const tpVal = getRiskValue(leg.risk.tp || leg.risk.takeProfit);
 
                         let sl = 0, tp = 0;
                         if (type === 'BUY') {
@@ -119,8 +132,8 @@ export class BacktestEngine {
                         }
 
                         let quantity = 0.1;
-                        if (typeof strategy.risk.lotSize === 'number') quantity = strategy.risk.lotSize;
-                        else if (typeof strategy.risk.lotSize === 'object') quantity = strategy.risk.lotSize.value;
+                        if (typeof leg.risk.lotSize === 'number') quantity = leg.risk.lotSize;
+                        else if (typeof leg.risk.lotSize === 'object') quantity = leg.risk.lotSize.value;
 
                         const session = getTradingSession(timestamp);
 
@@ -128,6 +141,9 @@ export class BacktestEngine {
                             id: `bt-${timestamp}-${i}`,
                             strategyId: strategy.id,
                             symbol: tradeSymbol,
+                            timeframe: tradeTimeframe,
+                            source,
+                            matrixScopeKey: scopeKey,
                             type: type as 'BUY' | 'SELL',
                             entryPrice: price,
                             lotSize: quantity,
@@ -153,6 +169,7 @@ export class BacktestEngine {
 
                         positionManager.addPosition(newPos);
                         lastSignalTime = timestamp;
+                        break;
                     }
                 }
             }

@@ -2,7 +2,7 @@ import { Strategy } from '@/features/strategy/types';
 import { Candle } from '@/lib/store/types';
 
 export type WorkerJob =
-    | { type: 'RUN_BACKTEST'; payload: { strategy: Strategy; candles: Candle[]; initialBalance: number; overrideSymbol?: string } }
+    | { type: 'RUN_BACKTEST'; payload: { strategy: Strategy; candles: Candle[]; initialBalance: number; overrideSymbol?: string; overrideTimeframe?: string; source?: 'MT5'; matrixScopeKey?: string } }
     | { type: 'CALCULATE_INDICATORS'; payload: { indicator: any; candles: Candle[] } }
     | { type: 'CALCULATE_BATCH'; payload: { indicators: any[]; candles: Candle[] } };
 
@@ -74,8 +74,16 @@ class ChartWorkerClient {
         });
     }
 
-    async runBacktest(strategy: Strategy, candles: Candle[], initialBalance: number, overrideSymbol?: string) {
-        return this.sendJob('RUN_BACKTEST', { strategy, candles, initialBalance, overrideSymbol });
+    async runBacktest(
+        strategy: Strategy,
+        candles: Candle[],
+        initialBalance: number,
+        overrideSymbol?: string,
+        overrideTimeframe?: string,
+        source?: 'MT5',
+        matrixScopeKey?: string
+    ) {
+        return this.sendJob('RUN_BACKTEST', { strategy, candles, initialBalance, overrideSymbol, overrideTimeframe, source, matrixScopeKey });
     }
 
     async calculateIndicators(indicator: any, candles: Candle[]) {

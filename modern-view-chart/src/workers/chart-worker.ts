@@ -9,8 +9,8 @@ self.onmessage = async (event: MessageEvent) => {
         let result;
         switch (type) {
             case 'RUN_BACKTEST':
-                const { strategy, candles, initialBalance, overrideSymbol } = payload;
-                result = BacktestEngine.run(strategy, candles, initialBalance, overrideSymbol);
+                const { strategy, candles, initialBalance, overrideSymbol, overrideTimeframe, source, matrixScopeKey } = payload;
+                result = BacktestEngine.run(strategy, candles, initialBalance, overrideSymbol, undefined, overrideTimeframe, source, matrixScopeKey);
                 break;
 
             case 'CALCULATE_INDICATORS':

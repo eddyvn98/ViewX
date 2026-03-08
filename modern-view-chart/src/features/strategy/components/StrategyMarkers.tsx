@@ -4,6 +4,7 @@ import { useStrategyStore } from '../store/strategy-store';
 import { normalizeTF } from '../utils/time-utils';
 import { isSameSymbol } from '@/lib/utils/symbol';
 import { useMarketStore } from '@/lib/store';
+import { buildMatrixScopeKey } from '../utils/matrix-scope';
 
 interface StrategyMarkersProps {
     chart: IChartApi;
@@ -82,19 +83,20 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
             return;
         }
 
+        const matchesChartScope = (item: { symbol?: string; timeframe?: string; matrixScopeKey?: string; strategyId?: string }) => {
+            if (!isSameSymbol(item.symbol, symbol)) return false;
+            if (!currentInterval) return true;
+            if (item.timeframe) return normalizeTF(item.timeframe) === currentInterval;
+            if (item.matrixScopeKey && item.strategyId) {
+                return item.matrixScopeKey === buildMatrixScopeKey(item.strategyId, symbol, currentInterval);
+            }
+            return true;
+        };
+
         const closedPositions = virtualPositions.filter(p => {
-            const isMatch = p.status === 'closed' && (
-                !p.symbol ||
-                isSameSymbol(p.symbol, symbol)
-            );
+            const isMatch = p.status === 'closed' && (!p.symbol || matchesChartScope(p));
 
             if (!isMatch) return false;
-
-            if (currentInterval) {
-                const strat = strategies.find(s => s.id === p.strategyId);
-                const stratTF = normalizeTF(strat?.timeframe);
-                if (stratTF && stratTF !== currentInterval) return false;
-            }
             return true;
         });
 
@@ -124,14 +126,8 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         };
 
         virtualPositions.forEach((pos) => {
-            if (!isSameSymbol(pos.symbol, symbol)) return;
+            if (!matchesChartScope(pos)) return;
             if (!(pos.status === 'open' || pos.status === 'pending')) return;
-
-            if (currentInterval) {
-                const strat = strategies.find((s) => s.id === pos.strategyId);
-                const stratTF = normalizeTF(strat?.timeframe);
-                if (stratTF && stratTF !== currentInterval) return;
-            }
 
             const isBuy = pos.type === 'BUY';
             const isPending = pos.status === 'pending';
@@ -207,14 +203,8 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         });
 
         signals
-            .filter((sig) => isSameSymbol(sig.symbol, symbol))
+            .filter((sig) => matchesChartScope(sig))
             .forEach((sig) => {
-                if (currentInterval) {
-                    const strat = strategies.find((s) => s.id === sig.strategyId);
-                    const stratTF = normalizeTF(strat?.timeframe);
-                    if (stratTF && stratTF !== currentInterval) return;
-                }
-
                 const rawTime = toEpochSec(sig.timestamp);
                 if (!rawTime) return;
                 const markerTime = snapToInterval(rawTime, markerStepSec);
@@ -255,12 +245,13 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
 
         const activePositions = virtualPositions.filter(p => {
             const isMatch = (p.status === 'open' || p.status === 'pending') &&
-                (p.symbol === symbol || !p.symbol) &&
+                (isSameSymbol(p.symbol, symbol) || !p.symbol) &&
                 p.strategyId !== '';
 
             if (!isMatch) return false;
 
             if (currentInterval) {
+                if (p.timeframe) return normalizeTF(p.timeframe) === currentInterval;
                 const strat = strategies.find(s => s.id === p.strategyId);
                 const stratTF = normalizeTF(strat?.timeframe);
                 if (stratTF && stratTF !== currentInterval) return false;

@@ -2,6 +2,7 @@ import React from 'react';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { Plus, Trash2, Bot, Settings, Target, Activity, Layers, Clock, BrainCircuit } from 'lucide-react';
 import { Strategy } from '@/features/strategy/types';
+import { getPrimaryStrategyRisk, getStrategyDirections } from '../strategy-helpers';
 
 interface StrategyListProps {
     onEdit: (strategy: Strategy) => void;
@@ -37,13 +38,17 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
             ) : (
                 <div className="grid grid-cols-1 gap-2">
                     {strategies.map((s) => (
+                        (() => {
+                            const risk = getPrimaryStrategyRisk(s);
+                            const directions = getStrategyDirections(s).join('/');
+                            return (
                         <div key={s.id} className="bg-secondary/40 p-2.5 rounded-lg border border-border flex flex-col gap-2 hover:bg-secondary/60 transition-colors group">
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col flex-1">
                                     <span className="text-[11px] font-bold text-foreground group-hover:text-blue-500 transition-colors tracking-tight">{s.name}</span>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wider">
-                                            Generic Strategy
+                                            {directions || 'Generic'}
                                         </span>
                                     </div>
                                 </div>
@@ -70,11 +75,11 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                             <div className="grid grid-cols-3 gap-1.5 border-t border-border/50 pt-2 text-[8px] text-muted-foreground font-bold uppercase tracking-tight">
                                 <div className="flex items-center gap-1">
                                     <Target size={10} className="text-red-500/40" />
-                                    SL: {typeof s.risk.sl === 'object' ? s.risk.sl.mode.toUpperCase() : (s.risk.sl || 'Fixed')}
+                                    SL: {typeof risk.sl === 'object' ? risk.sl.mode.toUpperCase() : (risk.sl || 'Fixed')}
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Target size={10} className="text-green-500/40" />
-                                    TP: {typeof s.risk.tp === 'object' ? s.risk.tp.mode.toUpperCase() : (s.risk.tp || 'N/A')}
+                                    TP: {typeof risk.tp === 'object' ? risk.tp.mode.toUpperCase() : (risk.tp || 'N/A')}
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Activity size={10} className="text-blue-500/40" />
@@ -83,23 +88,29 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                         type="number"
                                         step="0.01"
                                         min="0.01"
-                                        value={typeof s.risk.lotSize === 'object' ? s.risk.lotSize.value : s.risk.lotSize}
+                                        value={typeof risk.lotSize === 'object' ? risk.lotSize.value : risk.lotSize}
                                         onChange={(e) => {
                                             const val = parseFloat(e.target.value);
                                             if (!isNaN(val)) {
-                                                const newLot = typeof s.risk.lotSize === 'object'
-                                                    ? { ...s.risk.lotSize, value: val }
+                                                const newLot = typeof risk.lotSize === 'object'
+                                                    ? { ...risk.lotSize, value: val }
                                                     : val;
-                                                handleUpdate(s.id, { risk: { ...s.risk, lotSize: newLot } });
+                                                handleUpdate(s.id, {
+                                                    risk: { ...risk, lotSize: newLot },
+                                                    buy: s.buy ? { ...s.buy, risk: { ...s.buy.risk, lotSize: newLot } } : s.buy,
+                                                    sell: s.sell ? { ...s.sell, risk: { ...s.sell.risk, lotSize: newLot } } : s.sell,
+                                                });
                                             }
                                         }}
                                         className="bg-secondary/50 border border-border rounded px-1 py-0 w-[40px] text-foreground font-mono font-bold outline-none focus:border-blue-500/30 h-4"
                                     />
                                 </div>
-                                <div className="flex items-center gap-1"><Layers size={10} className="text-purple-500/40" /> Max: {s.risk.maxTrades}</div>
-                                <div className="flex items-center gap-1"><Clock size={10} className="text-blue-500/40" /> Cool: {s.risk.cooldownMinutes}m</div>
+                                <div className="flex items-center gap-1"><Layers size={10} className="text-purple-500/40" /> Max: {risk.maxTrades}</div>
+                                <div className="flex items-center gap-1"><Clock size={10} className="text-blue-500/40" /> Cool: {risk.cooldownMinutes}m</div>
                             </div>
                         </div>
+                            );
+                        })()
                     ))}
                 </div>
             )}

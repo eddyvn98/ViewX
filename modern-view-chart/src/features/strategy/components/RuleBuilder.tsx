@@ -124,13 +124,15 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
 
 interface RuleBuilderProps {
     entry: ConditionGroup;
+    trigger?: ConditionGroup;
     exit?: ConditionGroup;
     side: 'BUY' | 'SELL';
     onChangeEntry: (group: ConditionGroup) => void;
+    onChangeTrigger?: (group: ConditionGroup) => void;
     onChangeExit: (group: ConditionGroup) => void;
 }
 
-export function RuleBuilder({ entry, exit, side, onChangeEntry, onChangeExit }: RuleBuilderProps) {
+export function RuleBuilder({ entry, trigger, exit, side, onChangeEntry, onChangeTrigger, onChangeExit }: RuleBuilderProps) {
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-0.5">
@@ -140,9 +142,16 @@ export function RuleBuilder({ entry, exit, side, onChangeEntry, onChangeExit }: 
 
             <div className="flex flex-col gap-1.5 pl-1 bg-secondary/10 p-1.5 rounded border border-border">
                 <RuleSection
-                    title={`TRIGGER (${side})`}
+                    title={`ENTRY (${side})`}
                     group={entry}
                     onChange={onChangeEntry}
+                    accentColor={side === 'BUY' ? "text-blue-500" : "text-red-500"}
+                />
+                <div className="h-[1px] bg-border/20 w-full" />
+                <RuleSection
+                    title={`TRIGGER (${side})`}
+                    group={trigger || { operator: 'AND', conditions: [] }}
+                    onChange={onChangeTrigger || (() => undefined)}
                     accentColor={side === 'BUY' ? "text-blue-500" : "text-red-500"}
                 />
                 <div className="h-[1px] bg-border/20 w-full" />

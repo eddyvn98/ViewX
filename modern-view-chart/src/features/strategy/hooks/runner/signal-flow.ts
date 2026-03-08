@@ -11,15 +11,16 @@ import type { Strategy, VirtualPosition } from '../../types';
 import { runAiAuditAndTradeLogging } from './background-jobs';
 import { notifyTelegramSignal } from '../../utils/telegram-notifier';
 import type { Candle } from '@/lib/store/types';
+import { getStrategyLeg } from '../../strategy-helpers';
 
 interface StoreLike {
     virtualPositions: VirtualPosition[];
     virtualBalance: number;
     addVirtualPosition: (position: VirtualPosition) => void;
-    closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Record<string, unknown>) => void;
-    cancelVirtualPosition: (strategyId: string, symbol: string) => void;
+    closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Record<string, unknown>, direction?: 'BUY' | 'SELL', matrixScopeKey?: string) => void;
+    cancelVirtualPosition: (strategyId: string, symbol: string, direction?: 'BUY' | 'SELL', matrixScopeKey?: string) => void;
     addSignal: (signal: StrategySignal) => void;
-    updateLastSignalTime: (strategyId: string, timestamp: number) => void;
+    updateLastSignalTime: (strategyId: string, timestamp: number, matrixScopeKey?: string) => void;
 }
 
 interface CandleLike {
@@ -37,7 +38,9 @@ export function processStrategySignal(
     lastCandle: CandleLike,
     currentVirtualPositions: VirtualPosition[],
     store: StoreLike,
-    lastTime?: number
+    lastTime?: number,
+    source: 'MT5' = 'MT5',
+    matrixScopeKey?: string
 ) {
     const realMetrics = ContextCollector.captureEntryContext(strategy, candles, symbol);
     const mMetrics = {
@@ -55,9 +58,11 @@ export function processStrategySignal(
     }
 
     if (finalSignal.type === 'CANCEL') {
-        const pending = currentVirtualPositions.find((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
+        const pending = currentVirtualPositions.find(
+            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === finalSignal.direction && p.status === 'pending' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
+        );
         if (pending) {
-            store.cancelVirtualPosition(strategy.id, symbol);
+            store.cancelVirtualPosition(strategy.id, symbol, finalSignal.direction, matrixScopeKey);
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
@@ -72,20 +77,22 @@ export function processStrategySignal(
     }
 
     if (finalSignal.type !== 'EXIT') {
-        if (store.virtualPositions.some((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed')) return;
+        const direction = (finalSignal.direction || finalSignal.type) as 'BUY' | 'SELL';
+        if (store.virtualPositions.some((p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === direction && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey))) return;
 
         runAiAuditAndTradeLogging(strategy, finalSignal, candles, symbol);
 
-        const side = finalSignal.type as 'BUY' | 'SELL';
+        const side = direction;
+        const leg = getStrategyLeg(strategy, side);
         const pip = getPriceOffset(symbol);
-        const sl = RiskCalculator.calculateLevel(strategy.risk.sl, 'sl', side, candles, lastCandle.close, pip);
-        const tp = RiskCalculator.calculateLevel(strategy.risk.tp, 'tp', side, candles, lastCandle.close, pip, lastCandle.close);
+        const sl = RiskCalculator.calculateLevel(leg.risk.sl, 'sl', side, candles, lastCandle.close, pip);
+        const tp = RiskCalculator.calculateLevel(leg.risk.tp, 'tp', side, candles, lastCandle.close, pip, lastCandle.close);
         const accountBalance = Object.values(useMarketStore.getState().accounts)[0]?.balance || 10000;
         const balance = strategy.executionMode === 'real' ? accountBalance : store.virtualBalance;
-        const lot = RiskCalculator.calculateLot(strategy.risk.lotSize, sl, lastCandle.close, balance, symbol);
+        const lot = RiskCalculator.calculateLot(leg.risk.lotSize, sl, lastCandle.close, balance, symbol);
 
         const positionId = `v-${Date.now()}`;
-        const isMarket = strategy.entryType === 'market';
+        const isMarket = (leg.entryType || strategy.entryType) === 'market';
         const entryPrice = isMarket ? lastCandle.close : (side === 'BUY' ? lastCandle.high + (pip * 3) : lastCandle.low);
         const nowSec = Math.floor(Date.now() / 1000);
 
@@ -93,6 +100,9 @@ export function processStrategySignal(
             id: positionId,
             strategyId: strategy.id,
             symbol,
+            timeframe,
+            source,
+            matrixScopeKey,
             type: side,
             entryPrice,
             sl: Number(sl.toFixed(5)),
@@ -119,14 +129,18 @@ export function processStrategySignal(
         if (side === 'BUY') soundService.playBuy();
         else soundService.playSell();
 
-        if (typeof lastTime === 'number') store.updateLastSignalTime(strategy.id, lastTime);
+        if (typeof lastTime === 'number') store.updateLastSignalTime(strategy.id, lastTime, matrixScopeKey);
     } else {
-        const activePos = currentVirtualPositions.find((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+        const activePos = currentVirtualPositions.find(
+            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === finalSignal.direction && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
+        );
         TradeLogger.updateExit(strategy.id, symbol, finalSignal.price, activePos?.metadata).catch((err) => console.error(err));
 
-        const pending = currentVirtualPositions.find((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status === 'pending');
+        const pending = currentVirtualPositions.find(
+            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === finalSignal.direction && p.status === 'pending' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
+        );
         if (pending) {
-            store.cancelVirtualPosition(strategy.id, symbol);
+            store.cancelVirtualPosition(strategy.id, symbol, finalSignal.direction, matrixScopeKey);
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
@@ -136,7 +150,7 @@ export function processStrategySignal(
                 price: finalSignal.price,
             });
         } else {
-            store.closeVirtualPosition(strategy.id, symbol, finalSignal.price, { exit_reason: 'SIGNAL' });
+            store.closeVirtualPosition(strategy.id, symbol, finalSignal.price, { exit_reason: 'SIGNAL' }, finalSignal.direction, matrixScopeKey);
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
@@ -148,6 +162,11 @@ export function processStrategySignal(
         }
     }
 
-    store.addSignal(finalSignal);
+    store.addSignal({
+        ...finalSignal,
+        timeframe,
+        source,
+        matrixScopeKey,
+    });
     toast.info(`[${finalSignal.type}] ${strategy.name} on ${symbol}`);
 }

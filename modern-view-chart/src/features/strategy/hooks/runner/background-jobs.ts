@@ -77,7 +77,13 @@ export function runAiAuditAndTradeLogging(
                 }
 
                 if (ai.confidence) {
-                    const latestPos = store.virtualPositions.find((p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed');
+                    const latestPos = store.virtualPositions.find(
+                        (p) =>
+                            p.strategyId === strategy.id &&
+                            p.symbol === symbol &&
+                            p.status !== 'closed' &&
+                            (!signal.matrixScopeKey || p.matrixScopeKey === signal.matrixScopeKey)
+                    );
                     if (latestPos) store.updateVirtualPosition(latestPos.id, { confidence: ai.confidence });
                 }
             }

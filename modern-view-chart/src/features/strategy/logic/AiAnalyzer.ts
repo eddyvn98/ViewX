@@ -1,4 +1,5 @@
 import { SignalStats, AiResponse, Strategy, Condition, ConditionGroup } from '../types';
+import { getStrategyLeg } from '../strategy-helpers';
 
 interface CacheEntry {
     response: AiResponse;
@@ -49,7 +50,9 @@ export class AiAnalyzer {
     }
 
     private static buildPrompt(strategy: Strategy, signal: any, metrics: any, stats: SignalStats, type: AnalysisType) {
-        const rules = this.stringifyRules(strategy.entry);
+        const direction = (signal.type === 'BUY' || signal.type === 'SELL' ? signal.type : signal.direction || 'BUY') as 'BUY' | 'SELL';
+        const leg = getStrategyLeg(strategy, direction);
+        const rules = this.stringifyRules(leg.entry);
 
         if (type === AnalysisType.POST_TRADE) {
             const pnl = signal.pnl || 0;
@@ -59,7 +62,7 @@ export class AiAnalyzer {
       You are a trading performance auditor. Return JSON only.
       
       [STRATEGY RULES]
-      Strategy: ${strategy.name} (${strategy.side})
+      Strategy: ${strategy.name} (${direction})
       Entry Rules: ${rules}
 
       [TRADE DETAILS]
@@ -91,7 +94,7 @@ export class AiAnalyzer {
       
       [STRATEGY RULES]
       Strategy Name: ${strategy.name}
-      Side: ${strategy.side}
+      Side: ${direction}
       Entry Conditions: ${rules}
 
       [MARKET CONTEXT AT SIGNAL]
@@ -104,7 +107,7 @@ export class AiAnalyzer {
 
       [HISTORICAL PERFORMANCE STATS]
       Overall Winrate: ${(stats.overallWinrate * 100).toFixed(1)}%
-      Side-specific Winrate (${strategy.side}): ${((strategy.side === 'BUY' ? stats.buyWinrate : stats.sellWinrate) * 100).toFixed(1)}%
+      Side-specific Winrate (${direction}): ${((direction === 'BUY' ? stats.buyWinrate : stats.sellWinrate) * 100).toFixed(1)}%
       Recent Performance (Last 10): ${stats.recentPerformance.wins}W - ${stats.recentPerformance.losses}L (${(stats.recentWinrate * 100).toFixed(1)}%)
       
       Regime-specific Winrate:

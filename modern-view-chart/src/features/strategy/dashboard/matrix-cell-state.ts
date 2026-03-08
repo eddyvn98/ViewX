@@ -4,6 +4,7 @@ import type { Strategy, StrategySignal, VirtualPosition } from '../types';
 import type { MatrixCellState, MatrixScannerConfig } from './matrix-types';
 import { normalizeDashboardTf, resolveCellTTL, timeframeToChartInterval } from './matrix-utils';
 import { RuleEngine } from '../logic/RuleEngine';
+import { getStrategyLeg, strategySupportsDirection } from '../strategy-helpers';
 
 interface BuildCellStateInput {
     symbol: string;
@@ -82,8 +83,8 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     let signal: MatrixCellState['signal'] = 'NO_TRADE';
 
     if (candles.length >= 2 && !stale && strategiesForEntry.length > 0) {
-        const readyBuy = strategiesForEntry.some((s) => s.side === 'BUY' && RuleEngine.evaluateGroup(s.entry, candles));
-        const readySell = strategiesForEntry.some((s) => s.side === 'SELL' && RuleEngine.evaluateGroup(s.entry, candles));
+        const readyBuy = strategiesForEntry.some((s) => strategySupportsDirection(s, 'BUY') && RuleEngine.evaluateGroup(getStrategyLeg(s, 'BUY').entry, candles));
+        const readySell = strategiesForEntry.some((s) => strategySupportsDirection(s, 'SELL') && RuleEngine.evaluateGroup(getStrategyLeg(s, 'SELL').entry, candles));
         if (readyBuy && !readySell) signal = 'BUY';
         else if (readySell && !readyBuy) signal = 'SELL';
     } else if (latestSignal && !stale) {
@@ -95,7 +96,8 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     // so positions from M1 do not leak to H1/H4 cells.
     const matchingPositions = input.virtualPositions.filter((p) =>
         normalizeSymbol(p.symbol).toLowerCase() === symbol.toLowerCase() &&
-        hasMatchingStrategyId(p.strategyId, exactStrategyIds)
+        hasMatchingStrategyId(p.strategyId, exactStrategyIds) &&
+        (!p.timeframe || normalizeDashboardTf(p.timeframe) === timeframe)
     );
 
     const desiredSide = signal === 'BUY' || signal === 'SELL' ? signal : null;

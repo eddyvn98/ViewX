@@ -1,6 +1,7 @@
 import { Candle } from '@/lib/store/types';
 import { IndicatorCalculator } from '@/features/strategy/logic/IndicatorCalculator';
 import { Strategy } from '@/features/strategy/types';
+import { getStrategyDirections, getStrategyLeg } from '@/features/strategy/strategy-helpers';
 
 export class BacktestIndicators {
     private indicators: Record<string, number[]> = {};
@@ -22,8 +23,13 @@ export class BacktestIndicators {
             });
         };
 
-        if (strategy.entry) scanGroup(strategy.entry);
-        if (strategy.exit) scanGroup(strategy.exit);
+        for (const direction of getStrategyDirections(strategy)) {
+            const leg = getStrategyLeg(strategy, direction);
+            scanGroup(leg.entry);
+            scanGroup(leg.trigger);
+            scanGroup(leg.exit);
+            scanGroup(leg.cancelConditions);
+        }
     }
 
     private cacheIndicator(cond: any) {
