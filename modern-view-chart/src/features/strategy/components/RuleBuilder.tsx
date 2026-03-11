@@ -1,15 +1,18 @@
 import React from 'react';
 import { ConditionGroup, Condition, IndicatorType, Comparator } from '../types';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface RuleSectionProps {
     title: string;
     group: ConditionGroup;
     onChange: (group: ConditionGroup) => void;
     accentColor: string;
+    stepNumber?: number;
 }
 
-function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) {
+function RuleSection({ title, group, onChange, accentColor, stepNumber }: RuleSectionProps) {
+    const t = useTranslations('Strategy');
     const addCondition = () => {
         const newCondition: Condition = {
             id: Math.random().toString(36).substring(7),
@@ -40,14 +43,19 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
     };
 
     return (
-        <div className="flex flex-col gap-1 overflow-x-hidden">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                    <span className={`text-[8px] font-black uppercase tracking-widest ${accentColor}`}>{title}</span>
+        <div className="rounded-lg border border-border bg-secondary/10 overflow-hidden">
+            <div className="px-3 py-2 border-b border-border bg-secondary/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    {typeof stepNumber === 'number' && (
+                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center">
+                            {stepNumber}
+                        </span>
+                    )}
+                    <span className={`text-[12px] font-black uppercase tracking-wide ${accentColor}`}>{title}</span>
                     <select
                         value={group.operator}
                         onChange={(e) => onChange({ ...group, operator: e.target.value as any })}
-                        className="bg-secondary/60 text-[8px] font-black px-1 py-0 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer hover:border-blue-500/30"
+                        className="bg-secondary/60 text-[10px] font-black px-1.5 py-0.5 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer hover:border-blue-500/30"
                     >
                         <option value="AND">AND</option>
                         <option value="OR">OR</option>
@@ -55,16 +63,16 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
                 </div>
                 <button
                     onClick={addCondition}
-                    className="text-[8px] font-black text-blue-500/60 hover:text-blue-500 flex items-center gap-1 transition-colors uppercase"
+                    className="text-[11px] font-black text-blue-500/80 hover:text-blue-500 flex items-center gap-1 transition-colors uppercase"
                 >
-                    <Plus size={9} /> Add
+                    <Plus size={12} /> {t('builder.addRule')}
                 </button>
             </div>
 
-            <div className="flex flex-col gap-1 min-h-[10px] justify-center">
+            <div className="p-3 flex flex-col gap-2 min-h-[10px] justify-center">
                 {group.conditions.length === 0 ? (
-                    <div className="py-2 flex justify-center border border-dashed border-border rounded text-[9px] text-muted-foreground font-black uppercase tracking-tighter">
-                        No {title} rules defined
+                    <div className="py-3 flex justify-center border border-dashed border-border rounded text-[10px] text-muted-foreground font-black uppercase tracking-tighter">
+                        {t('builder.noRules')}
                     </div>
                 ) : (
                     group.conditions.filter(c => !('operator' in c)).map((c: any) => (
@@ -125,43 +133,29 @@ function RuleSection({ title, group, onChange, accentColor }: RuleSectionProps) 
 interface RuleBuilderProps {
     entry: ConditionGroup;
     trigger?: ConditionGroup;
-    exit?: ConditionGroup;
     side: 'BUY' | 'SELL';
     onChangeEntry: (group: ConditionGroup) => void;
     onChangeTrigger?: (group: ConditionGroup) => void;
-    onChangeExit: (group: ConditionGroup) => void;
 }
 
-export function RuleBuilder({ entry, trigger, exit, side, onChangeEntry, onChangeTrigger, onChangeExit }: RuleBuilderProps) {
+export function RuleBuilder({ entry, trigger, side, onChangeEntry, onChangeTrigger }: RuleBuilderProps) {
+    const t = useTranslations('Strategy');
     return (
         <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Signal Rules</span>
-                <div className="h-[1px] bg-blue-500/10 w-full" />
-            </div>
-
-            <div className="flex flex-col gap-1.5 pl-1 bg-secondary/10 p-1.5 rounded border border-border">
-                <RuleSection
-                    title={`ENTRY (${side})`}
-                    group={entry}
-                    onChange={onChangeEntry}
-                    accentColor={side === 'BUY' ? "text-blue-500" : "text-red-500"}
-                />
-                <div className="h-[1px] bg-border/20 w-full" />
-                <RuleSection
-                    title={`TRIGGER (${side})`}
-                    group={trigger || { operator: 'AND', conditions: [] }}
-                    onChange={onChangeTrigger || (() => undefined)}
-                    accentColor={side === 'BUY' ? "text-blue-500" : "text-red-500"}
-                />
-                <div className="h-[1px] bg-border/20 w-full" />
-                <RuleSection
-                    title={`EXIT (${side})`}
-                    group={exit || { operator: 'OR', conditions: [] }}
-                    onChange={onChangeExit}
-                    accentColor="text-orange-500"
-                />
-            </div>
+            <RuleSection
+                title={`${t('builder.marketFilter')} (${side})`}
+                group={entry}
+                onChange={onChangeEntry}
+                accentColor={side === 'BUY' ? "text-blue-500" : "text-red-500"}
+                stepNumber={1}
+            />
+            <RuleSection
+                title={`${t('builder.entrySetup')} (${side})`}
+                group={trigger || { operator: 'AND', conditions: [] }}
+                onChange={onChangeTrigger || (() => undefined)}
+                accentColor={side === 'BUY' ? "text-emerald-500" : "text-orange-500"}
+                stepNumber={2}
+            />
         </div>
     );
 }

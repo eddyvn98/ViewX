@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { normalizeCrosshairTime } from './normalize-crosshair-time';
 import { syncVerticalLines } from '../../logic/chart-sync';
 import { useMarketStore } from '@/lib/store';
@@ -92,6 +92,25 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         return null;
     };
 
+    const getSnappedCrosshairX = (
+        sourceChart: IChartApi,
+        normalizedTime: number | null,
+        fallbackX: number | null,
+    ) => {
+        if (normalizedTime === null) return fallbackX;
+
+        try {
+            const snappedX = sourceChart.timeScale().timeToCoordinate(normalizedTime as Time);
+            if (snappedX !== null && Number.isFinite(snappedX)) {
+                return snappedX;
+            }
+        } catch {
+            // Fall back to the raw pointer coordinate if the time cannot be resolved yet.
+        }
+
+        return fallbackX;
+    };
+
     const handleCrosshairMove = (sourceChart: IChartApi, param: any, hasY: boolean) => {
         const sourcePane = sourceChart === priceChart
             ? 'price'
@@ -100,12 +119,13 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
                 : 'timescale';
         const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
         const normalizedTime = normalizeCrosshairTime(param.time);
+        const snappedX = getSnappedCrosshairX(sourceChart, normalizedTime, param.point?.x ?? null);
         syncVerticalLines(
             sourceChart,
             charts,
             elements,
             series as any,
-            param.point?.x ?? null,
+            snappedX,
             normalizedTime,
             logical !== null && Number.isFinite(Number(logical)) ? Number(logical) : null,
             formatTimeLabel
@@ -113,7 +133,7 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
 
         if (normalizedTime !== null && param.point) {
             const curTime = normalizedTime;
-            const curX = param.point.x;
+            const curX = snappedX ?? param.point.x;
             const curY = hasY ? param.point.y : 0;
             const sourceContainer = getSourceContainer(sourceChart);
             const sourceRect = sourceContainer?.getBoundingClientRect();

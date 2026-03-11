@@ -12,6 +12,7 @@ export interface StrategyState {
     backtestCount: number;
     matrixScanners: MatrixScannerConfig[];
     focusedMatrixScannerId: string | null;
+    scopedLastSignalTimes: Record<string, number>;
     addStrategy: (strategy: Strategy) => void;
     updateStrategy: (id: string, updates: Partial<Strategy>) => void;
     deleteStrategy: (id: string) => void;

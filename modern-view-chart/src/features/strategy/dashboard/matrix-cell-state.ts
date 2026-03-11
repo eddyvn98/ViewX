@@ -18,19 +18,19 @@ interface BuildCellStateInput {
     nowMs?: number;
 }
 
-function matchesCellStrategy(strategy: Strategy, symbol: string, timeframe: string): boolean {
+function matchesCellStrategy(strategy: Strategy, _symbol: string, timeframe: string): boolean {
     if (!strategy.active) return false;
     const tf = normalizeDashboardTf(strategy.timeframe || '1m');
     if (tf !== timeframe) return false;
-
-    if (!strategy.symbol) return true;
-    return normalizeSymbol(strategy.symbol).toLowerCase() === symbol.toLowerCase();
+    // In matrix mode, symbol is driven by scanner rows, not by strategy.symbol.
+    return true;
 }
 
-function matchesSymbolStrategy(strategy: Strategy, symbol: string): boolean {
+function matchesSymbolStrategy(strategy: Strategy): boolean {
     if (!strategy.active) return false;
-    if (!strategy.symbol) return true;
-    return normalizeSymbol(strategy.symbol).toLowerCase() === symbol.toLowerCase();
+    // Keep scanner behavior consistent across symbols:
+    // strategy acts as rule template, symbol comes from matrix cell.
+    return true;
 }
 
 function hasMatchingStrategyId(strategyId: string, strategyIds: Set<string>): boolean {
@@ -59,7 +59,7 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     }
     const candidateStrategies = input.strategies.filter((s) => s.id === input.strategyId);
     const exactMatchingStrategies = candidateStrategies.filter((s) => matchesCellStrategy(s, symbol, timeframe));
-    const symbolMatchingStrategies = candidateStrategies.filter((s) => matchesSymbolStrategy(s, symbol));
+    const symbolMatchingStrategies = candidateStrategies.filter((s) => matchesSymbolStrategy(s));
     const strategiesForEntry = exactMatchingStrategies.length > 0 ? exactMatchingStrategies : symbolMatchingStrategies;
     const strategyIds = new Set(strategiesForEntry.map((s) => s.id));
     const exactStrategyIds = new Set(exactMatchingStrategies.map((s) => s.id));
@@ -109,17 +109,8 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     const open = positionsForBadge.some((p) => p.status === 'open');
     const pending = positionsForBadge.some((p) => p.status === 'pending');
 
-    // If no fresh signal but there is active position state in this exact timeframe scope,
-    // infer BUY/SELL from the active position side so the matrix reflects "in trade".
-    if (signal === 'NO_TRADE' && (open || pending)) {
-        const sides = matchingPositions
-            .filter((p) => p.status === 'open' || p.status === 'pending')
-            .map((p) => String(p.type || '').toLowerCase());
-        const hasBuy = sides.some((s) => s.includes('buy'));
-        const hasSell = sides.some((s) => s.includes('sell'));
-        if (hasBuy && !hasSell) signal = 'BUY';
-        else if (hasSell && !hasBuy) signal = 'SELL';
-    }
+    // Matrix signal should represent strategy/rule evaluation only.
+    // Position state is represented by badge (OPEN/PENDING), not by forcing BUY/SELL.
 
     const badge: MatrixCellState['badge'] = open ? 'OPEN' : (pending ? 'PENDING' : null);
 

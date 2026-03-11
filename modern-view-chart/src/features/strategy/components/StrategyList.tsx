@@ -106,7 +106,6 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                     />
                                 </div>
                                 <div className="flex items-center gap-1"><Layers size={10} className="text-purple-500/40" /> Max: {risk.maxTrades}</div>
-                                <div className="flex items-center gap-1"><Clock size={10} className="text-blue-500/40" /> Cool: {risk.cooldownMinutes}m</div>
                             </div>
                         </div>
                             );

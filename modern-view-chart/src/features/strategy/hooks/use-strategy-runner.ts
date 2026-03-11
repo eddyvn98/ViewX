@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '../store/strategy-store';
 import { RuleEngine, EngineContext } from '../logic/RuleEngine';
@@ -14,7 +14,6 @@ import { getLegacyStrategyPatch, resolveWarmupDataKey, shouldTriggerWarmup } fro
 import type { Strategy } from '../types';
 import { buildMatrixRunnerConfigs } from '../dashboard/matrix-cell-state';
 import { chartIntervalToDashboardTf } from '../dashboard/matrix-utils';
-import { normalizeTF } from '../utils/time-utils';
 import { buildMatrixScopeKey } from '../utils/matrix-scope';
 
 type TabsLike = Record<string, { charts: Record<string, { symbol: string; interval?: string; source?: string }>; activeChartId?: string | null }>;
@@ -23,76 +22,117 @@ export function useStrategyRunner() {
     const {
         strategies,
         updateStrategy,
-        virtualPositions,
         lastResetTime,
         matrixScanners
     } = useStrategyStore();
     const { sendMessage } = useWebSocket();
-    const candleData = useMarketStore((state) => state.candleData);
     const activeTabId = useMarketStore((state) => state.activeTabId);
-    const tabs = useMarketStore((state) => state.tabs) as TabsLike;
     const positions = useMarketStore((state) => state.positions);
 
     const lastProcessedTimeRef = useRef<Record<string, number>>({});
     const lastBarTimeRef = useRef<Record<string, number>>({});
     const isRunningRef = useRef(false);
     const backtestRunRef = useRef<Record<string, number>>({});
+    const [isStrategyStoreHydrated, setIsStrategyStoreHydrated] = useState<boolean>(() => {
+        const persistApi = (useStrategyStore as unknown as { persist?: { hasHydrated?: () => boolean } }).persist;
+        return persistApi?.hasHydrated?.() ?? true;
+    });
 
     const runBacktest = useStrategyStore((state) => state.runBacktest);
+
+    useEffect(() => {
+        const persistApi = (useStrategyStore as unknown as {
+            persist?: {
+                onFinishHydration?: (cb: () => void) => () => void;
+                hasHydrated?: () => boolean;
+            };
+        }).persist;
+
+        if (!persistApi) {
+            setIsStrategyStoreHydrated(true);
+            return;
+        }
+
+        if (persistApi.hasHydrated?.()) {
+            setIsStrategyStoreHydrated(true);
+            return;
+        }
+
+        const unsub = persistApi.onFinishHydration?.(() => {
+            setIsStrategyStoreHydrated(true);
+        });
+        return () => {
+            if (typeof unsub === 'function') unsub();
+        };
+    }, []);
 
     useEffect(() => {
         backtestRunRef.current = {};
     }, [lastResetTime]);
 
+    // 1. Effect for patches and warmups - Throttled or check-based
     useEffect(() => {
-        strategies.forEach((strategy: Strategy) => {
-            const patch = getLegacyStrategyPatch(strategy);
-            if (patch) updateStrategy(strategy.id, patch);
+        if (!isStrategyStoreHydrated) return;
+        const runWarmup = async () => {
+            strategies.forEach((strategy: Strategy) => {
+                const patch = getLegacyStrategyPatch(strategy);
+                if (patch) updateStrategy(strategy.id, patch);
 
-            if (!strategy.active) {
-                if (backtestRunRef.current[strategy.id]) delete backtestRunRef.current[strategy.id];
-            }
-        });
-
-        const effectiveConfigs = buildMatrixRunnerConfigs(matrixScanners);
-        if (effectiveConfigs.length > 0) {
-            effectiveConfigs.forEach((config) => {
-                const scopeKey = buildMatrixScopeKey(config.strategyId, config.symbol, config.timeframe);
-                const candles = candleData[`${config.source}:${config.symbol}:${config.interval}`];
-                if (!candles || candles.length < 50) return;
-
-                const lastRun = backtestRunRef.current[scopeKey] || 0;
-                const hasActivePos = virtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.status !== 'closed' && !p.isHistorical);
-                const hasHistoricalPos = virtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.isHistorical);
-                if (!shouldTriggerWarmup(lastRun, hasActivePos, hasHistoricalPos)) return;
-
-                backtestRunRef.current[scopeKey] = Date.now();
-                void runBacktest(config.strategyId, [...candles], config.symbol, config.timeframe, config.source, scopeKey);
+                if (!strategy.active) {
+                    if (backtestRunRef.current[strategy.id]) delete backtestRunRef.current[strategy.id];
+                }
             });
-            return;
-        }
 
-        strategies.forEach((strategy: Strategy) => {
-            if (!strategy.active) return;
+            const currentCandleData = useMarketStore.getState().candleData;
+            const currentVirtualPositions = useStrategyStore.getState().virtualPositions;
+            const currentTabs = useMarketStore.getState().tabs as TabsLike;
 
-            const activeTab = activeTabId ? tabs[activeTabId] : null;
-            const dataKey = resolveWarmupDataKey(strategy, candleData, activeTab);
-            if (!dataKey || !candleData[dataKey] || candleData[dataKey].length < 50) return;
+            const effectiveConfigs = buildMatrixRunnerConfigs(matrixScanners);
+            
+            if (effectiveConfigs.length > 0) {
+                effectiveConfigs.forEach((config) => {
+                    const scopeKey = buildMatrixScopeKey(config.strategyId, config.symbol, config.timeframe);
+                    const candles = currentCandleData[`${config.source}:${config.symbol}:${config.interval}`];
+                    if (!candles || candles.length < 50) return;
 
-            const lastRun = backtestRunRef.current[strategy.id] || 0;
-            const hasActivePos = virtualPositions.some((p) => p.strategyId === strategy.id && p.status !== 'closed');
-            const hasHistoricalPos = virtualPositions.some((p) => p.strategyId === strategy.id && p.isHistorical);
+                    const lastRun = backtestRunRef.current[scopeKey] || 0;
+                    const hasActivePos = currentVirtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.status !== 'closed' && !p.isHistorical);
+                    const hasHistoricalPos = currentVirtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.isHistorical);
+                    if (!shouldTriggerWarmup(lastRun, hasActivePos, hasHistoricalPos)) return;
 
-            if (!shouldTriggerWarmup(lastRun, hasActivePos, hasHistoricalPos)) return;
+                    backtestRunRef.current[scopeKey] = Date.now();
+                    void runBacktest(config.strategyId, [...candles], config.symbol, config.timeframe, config.source, scopeKey);
+                });
+            } else {
+                strategies.forEach((strategy: Strategy) => {
+                    if (!strategy.active) return;
+                    const activeTab = activeTabId ? currentTabs[activeTabId] : null;
+                    const dataKey = resolveWarmupDataKey(strategy, currentCandleData, activeTab);
+                    if (!dataKey || !currentCandleData[dataKey] || currentCandleData[dataKey].length < 50) return;
 
-            const parts = dataKey.split(':');
-            const actualSymbol = strategy.symbol || (parts.length >= 2 ? parts[1] : 'BACKTEST');
-            backtestRunRef.current[strategy.id] = Date.now();
-            void runBacktest(strategy.id, [...candleData[dataKey]], actualSymbol, strategy.timeframe, 'MT5');
-        });
-    }, [strategies, candleData, activeTabId, tabs, runBacktest, updateStrategy, virtualPositions, matrixScanners]);
+                    const lastRun = backtestRunRef.current[strategy.id] || 0;
+                    const hasActivePos = currentVirtualPositions.some((p) => p.strategyId === strategy.id && p.status !== 'closed');
+                    const hasHistoricalPos = currentVirtualPositions.some((p) => p.strategyId === strategy.id && p.isHistorical);
 
+                    if (!shouldTriggerWarmup(lastRun, hasActivePos, hasHistoricalPos)) return;
+
+                    const parts = dataKey.split(':');
+                    const actualSymbol = strategy.symbol || (parts.length >= 2 ? parts[1] : 'BACKTEST');
+                    backtestRunRef.current[strategy.id] = Date.now();
+                    void runBacktest(strategy.id, [...currentCandleData[dataKey]], actualSymbol, strategy.timeframe, 'MT5');
+                });
+            }
+        };
+
+        runWarmup();
+        // Run warmup/patch check every 5 seconds instead of every candle update
+        const timer = setInterval(runWarmup, 5000);
+        return () => clearInterval(timer);
+    }, [isStrategyStoreHydrated, strategies.length, matrixScanners.length, activeTabId, lastResetTime, updateStrategy, runBacktest]);
+
+    // 2. Effect for background service
     useEffect(() => {
+        if (!isStrategyStoreHydrated) return;
         const activeCount = matrixScanners.filter((scanner) => scanner.active && scanner.strategyId).length;
         if (activeCount > 0) {
             backgroundService.init();
@@ -106,44 +146,51 @@ export function useStrategyRunner() {
             backgroundService.releaseWakeLock();
             soundService.disableKeepAlive();
         };
-    }, [matrixScanners]);
+    }, [isStrategyStoreHydrated, matrixScanners]);
 
+    // 3. Main Strategy Runner Loop - Interval based (1s) to prevent UI flooding
     useEffect(() => {
-        if (isRunningRef.current) return;
-
+        if (!isStrategyStoreHydrated) return;
         const runCycle = async () => {
+            if (isRunningRef.current) return;
             isRunningRef.current = true;
+            
             try {
+                const currentCandleData = useMarketStore.getState().candleData;
                 const effectiveConfigs = buildMatrixRunnerConfigs(matrixScanners);
-                if (effectiveConfigs.length === 0) return;
+                if (effectiveConfigs.length === 0) {
+                    isRunningRef.current = false; // Ensure reset if no configs
+                    return;
+                }
 
                 for (const config of effectiveConfigs) {
                     const { symbol, interval, source, strategyId, timeframe } = config;
                     const normalizedSymbol = normalizeSymbol(symbol);
                     const pairKey = `${source}:${normalizedSymbol}:${interval}`;
-                    const candles = candleData[pairKey];
+                    const candles = currentCandleData[pairKey];
 
                     if (!candles || candles.length < 5) continue;
 
                     const strategy = strategies.find((s) => s.id === strategyId && s.active);
                     if (!strategy) continue;
+                    
                     const scopeKey = buildMatrixScopeKey(strategy.id, normalizedSymbol, timeframe || chartIntervalToDashboardTf(interval));
-                    const hasActiveMatrixConfigs = effectiveConfigs.length > 0;
-                    const symbolMatch = hasActiveMatrixConfigs ? true : (!strategy.symbol || normalizeSymbol(strategy.symbol) === normalizedSymbol);
-                    const timeframeMatch = hasActiveMatrixConfigs ? true : (!strategy.timeframe || normalizeTF(strategy.timeframe) === normalizeTF(interval));
-                    if (!symbolMatch || !timeframeMatch) continue;
-
-                    const lastCandle = candles[candles.length - 1] as Candle;
-                    const rawTime = lastCandle.time as unknown;
-                    const lastTime = typeof rawTime === 'object' ? Number((rawTime as { timestamp?: number }).timestamp || 0) : Number(rawTime);
-
                     const processKey = `${strategy.id}:${symbol}:${interval}`;
+                    
+                    // Throttle per-strategy processing to max once per second
                     if (Date.now() - (lastProcessedTimeRef.current[processKey] || 0) < 1000) continue;
                     lastProcessedTimeRef.current[processKey] = Date.now();
 
                     try {
-                        const isNewBar = lastTime > (lastBarTimeRef.current[processKey] || 0);
-                        if (isNewBar) lastBarTimeRef.current[processKey] = lastTime;
+                        const lastCandle = candles[candles.length - 1] as Candle;
+                        const rawTime = lastCandle.time as unknown;
+                        const lastTime = typeof rawTime === 'object' ? Number((rawTime as { timestamp?: number }).timestamp || 0) : Number(rawTime);
+                        
+                        // Robust Bar Detection: If lastBarTimeRef[processKey] is undefined, it's the first tick.
+                        // Record the time but don't mark it as "new bar" to prevent execution on mount for the CURRENT bar.
+                        const previousBarTime = lastBarTimeRef.current[processKey];
+                        const isNewBar = previousBarTime !== undefined && lastTime > previousBarTime;
+                        lastBarTimeRef.current[processKey] = lastTime;
 
                         const store = useStrategyStore.getState();
                         const strategyPositions = store.virtualPositions.filter(
@@ -175,6 +222,10 @@ export function useStrategyRunner() {
 
                         const signal = RuleEngine.run(strategy, candles, engineCtx);
                         if (!signal) continue;
+                        
+                        // Scoped Signal Guard: Prevent duplicate signals for the same bar/scope
+                        const lastSignalTime = scopeKey ? latestStore.scopedLastSignalTimes[scopeKey] : strategy.lastSignalTime;
+                        if (typeof lastSignalTime === 'number' && lastTime <= lastSignalTime) continue;
 
                         processStrategySignal(
                             strategy,
@@ -200,6 +251,7 @@ export function useStrategyRunner() {
             }
         };
 
-        void runCycle();
-    }, [candleData, tabs, strategies, positions, sendMessage, matrixScanners]);
+        const intervalId = setInterval(runCycle, 1000);
+        return () => clearInterval(intervalId);
+    }, [isStrategyStoreHydrated, matrixScanners, strategies, positions, sendMessage]);
 }

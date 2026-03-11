@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StrategyRisk, PositionMode, SLTPConfig, LotConfig, LotMode } from '../types';
 import { Shield, Zap, Settings2, Target } from 'lucide-react';
 import { PriceConfigRow } from './PriceConfigRow';
+import { useTranslations } from 'next-intl';
 
 interface RiskPanelProps {
     risk: StrategyRisk;
@@ -11,6 +12,7 @@ interface RiskPanelProps {
 }
 
 export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: RiskPanelProps) {
+    const t = useTranslations('Strategy');
     const [showAdvanced, setShowAdvanced] = useState(false);
 
     const ensureConfig = (val: number | SLTPConfig | undefined, type: 'sl' | 'tp'): SLTPConfig => {
@@ -35,16 +37,18 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
     };
 
     return (
-        <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Risk Control</span>
-                <div className="h-[1px] bg-blue-500/10 w-full" />
+        <div className="rounded-lg border border-border bg-secondary/10 overflow-hidden">
+            <div className="px-3 py-2 border-b border-border bg-secondary/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center">4</span>
+                    <span className="text-[12px] font-black uppercase tracking-wide text-rose-500">{t('builder.riskManagement')}</span>
+                </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 pl-1 bg-secondary/10 p-1.5 rounded border border-border">
+            <div className="p-3 flex flex-col gap-1.5">
                 {/* LOT SIZE - ROW */}
                 <div className="flex items-center gap-3 h-6">
-                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">Volume (Lot)</span>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">{t('builder.volume')}</span>
 
                     <div className="flex items-center gap-1.5">
                         <select
@@ -52,9 +56,9 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                             onChange={(e) => handleLotModeChange(e.target.value as LotMode)}
                             className="bg-secondary text-[8px] font-black px-1 h-5 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer min-w-[56px] text-center hover:border-blue-500/40 transition-colors"
                         >
-                            <option value="fixed" className="bg-popover text-foreground">Fixed</option>
-                            <option value="percentage" className="bg-popover text-foreground">% Acc</option>
-                            <option value="amount" className="bg-popover text-foreground">$ Fixed</option>
+                            <option value="fixed" className="bg-popover text-foreground">{t('builder.points')}</option>
+                            <option value="percentage" className="bg-popover text-foreground">{t('builder.percent')}</option>
+                            <option value="amount" className="bg-popover text-foreground">{t('builder.amount')}</option>
                         </select>
 
                         <div className="flex items-center gap-1 bg-secondary/60 rounded px-1 border border-border min-h-[20px]">
@@ -79,7 +83,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between h-4">
                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                <Shield size={8} /> Use Stop Loss
+                                <Shield size={8} /> {t('builder.useStopLoss')}
                             </span>
                             <button
                                 onClick={() => onChangeRisk({ ...risk, sl: risk.sl ? undefined : { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 } })}
@@ -106,7 +110,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between h-4">
                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                                <Target size={8} /> Use Take Profit
+                                <Target size={8} /> {t('builder.useTakeProfit')}
                             </span>
                             <button
                                 onClick={() => onChangeRisk({ ...risk, tp: risk.tp ? undefined : { mode: 'fixed', value: 400 } })}
@@ -134,7 +138,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center justify-between h-6">
                         <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                            <Zap size={9} className={risk.trailing ? 'text-blue-500/80' : 'text-muted-foreground/40'} /> Trailing Protect
+                            <Zap size={9} className={risk.trailing ? 'text-blue-500/80' : 'text-muted-foreground/40'} /> {t('builder.trailingProtect')}
                         </span>
                         <button
                             onClick={() => {
@@ -162,25 +166,25 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                         onClick={() => setShowAdvanced(!showAdvanced)}
                         className="flex items-center gap-1.5 text-[9px] font-black text-[#b4b7c1] hover:text-white transition-colors uppercase"
                     >
-                        <Settings2 size={10} /> {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+                        <Settings2 size={10} /> {showAdvanced ? t('builder.hideAdvanced') : t('builder.showAdvanced')}
                     </button>
 
                     {showAdvanced && (
                         <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Position</span>
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">{t('builder.position')}</span>
                                 <select
                                     value={positionMode}
                                     onChange={(e) => onChangeMode(e.target.value as PositionMode)}
                                     className="bg-secondary text-[10px] h-7 px-2 rounded border border-border text-foreground outline-none font-bold appearance-none cursor-pointer hover:border-blue-500/50 transition-colors"
                                 >
-                                    <option value="single_position" className="bg-popover">Single</option>
-                                    <option value="hedge" className="bg-popover">Hedge</option>
-                                    <option value="scale_in" className="bg-popover">Scale In</option>
+                                    <option value="single_position" className="bg-popover">{t('builder.single')}</option>
+                                    <option value="hedge" className="bg-popover">{t('builder.hedge')}</option>
+                                    <option value="scale_in" className="bg-popover">{t('builder.scaleIn')}</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Max Trades</span>
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">{t('builder.maxTrades')}</span>
                                 <input
                                     type="number"
                                     value={risk.maxTrades || 1}

@@ -40,26 +40,74 @@ class MT5Service:
         return mt5.symbol_info_tick(symbol)
 
     def get_daily_open(self, symbol):
-        rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 1)
+        resolved = self._resolve_symbol(symbol)
+        if not resolved:
+            return None
+        rates = mt5.copy_rates_from_pos(resolved, mt5.TIMEFRAME_D1, 0, 1)
         if rates is not None and len(rates) > 0:
             return float(rates[0]['open'])
         return None
 
+    def _normalize_symbol_key(self, value):
+        s = str(value or "").strip().upper()
+        if not s:
+            return ""
+        s = s.replace(".", "")
+        if s.endswith("M") and len(s) > 1:
+            s = s[:-1]
+        return s
+
+    def _resolve_symbol(self, symbol):
+        requested = str(symbol or "").strip()
+        if not requested:
+            return None
+
+        # Fast path: exact symbol exists.
+        info = mt5.symbol_info(requested)
+        if info is not None:
+            if not info.visible:
+                mt5.symbol_select(info.name, True)
+            return info.name
+
+        requested_key = self._normalize_symbol_key(requested)
+        symbols = mt5.symbols_get() or []
+
+        # First pass: exact case-insensitive match.
+        for s in symbols:
+            name = str(getattr(s, "name", "")).strip()
+            if name.lower() == requested.lower():
+                mt5.symbol_select(name, True)
+                return name
+
+        # Second pass: tolerant suffix match (e.g., BTCUSDm <-> BTCUSD).
+        for s in symbols:
+            name = str(getattr(s, "name", "")).strip()
+            if self._normalize_symbol_key(name) == requested_key:
+                mt5.symbol_select(name, True)
+                return name
+
+        return None
+
     def fetch_candles(self, symbol, interval, count=200):
-        symbol_info = mt5.symbol_info(symbol)
+        resolved_symbol = self._resolve_symbol(symbol)
+        if not resolved_symbol:
+            print(f"[ERROR] Symbol not found in MT5: {symbol}")
+            return []
+
+        symbol_info = mt5.symbol_info(resolved_symbol)
         if symbol_info is None:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
         if not symbol_info.visible:
-            selected = mt5.symbol_select(symbol, True)
+            selected = mt5.symbol_select(resolved_symbol, True)
             if not selected:
                 error_code, error_desc = mt5.last_error()
-                print(f"[ERROR] Failed to select symbol {symbol}: {error_code} - {error_desc}")
+                print(f"[ERROR] Failed to select symbol {resolved_symbol}: {error_code} - {error_desc}")
                 return []
 
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
-        print(f"[FETCH] {symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")
-        rates = mt5.copy_rates_from_pos(symbol, tf, 0, count)
+        print(f"[FETCH] {symbol} -> {resolved_symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")
+        rates = mt5.copy_rates_from_pos(resolved_symbol, tf, 0, count)
         if rates is None or len(rates) == 0:
             error_code, error_desc = mt5.last_error()
             print(f"[WARN] No rates found for {symbol} {interval} | MT5 error: {error_code} - {error_desc}")
@@ -76,15 +124,20 @@ class MT5Service:
 
     def fetch_candles_at(self, symbol, timestamp, interval='1m', count=200):
         """Fetch candles ending at specific timestamp."""
-        symbol_info = mt5.symbol_info(symbol)
+        resolved_symbol = self._resolve_symbol(symbol)
+        if not resolved_symbol:
+            print(f"[ERROR] Symbol not found in MT5: {symbol}")
+            return []
+
+        symbol_info = mt5.symbol_info(resolved_symbol)
         if symbol_info is None:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
         if not symbol_info.visible:
-            selected = mt5.symbol_select(symbol, True)
+            selected = mt5.symbol_select(resolved_symbol, True)
             if not selected:
                 error_code, error_desc = mt5.last_error()
-                print(f"[ERROR] Failed to select symbol {symbol}: {error_code} - {error_desc}")
+                print(f"[ERROR] Failed to select symbol {resolved_symbol}: {error_code} - {error_desc}")
                 return []
 
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
@@ -92,7 +145,7 @@ class MT5Service:
         # Docs: copy_rates_from(symbol, timeframe, datetime/timestamp, count)
         # It gets bars with open time <= date_from
         
-        rates = mt5.copy_rates_from(symbol, tf, int(timestamp), count)
+        rates = mt5.copy_rates_from(resolved_symbol, tf, int(timestamp), count)
         if rates is None:
             error_code, error_desc = mt5.last_error()
             print(f"[WARN] No rates_at found for {symbol} {interval} @ {timestamp} | MT5 error: {error_code} - {error_desc}")

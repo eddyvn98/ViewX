@@ -1,6 +1,6 @@
-import React from 'react';
 import { SLTPConfig, SLTPMode, IndicatorType } from '../types';
 import { ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface PriceConfigRowProps {
     label: string;
@@ -17,6 +17,7 @@ export function PriceConfigRow({
     modes = ['fixed', 'percentage', 'amount', 'candle', 'indicator', 'winrate'],
     showLabel = true
 }: PriceConfigRowProps) {
+    const t = useTranslations('Strategy');
 
     const handleModeChange = (mode: SLTPMode) => {
         const newConfig: SLTPConfig = { ...config, mode };
@@ -49,12 +50,12 @@ export function PriceConfigRow({
                         onChange={(e) => handleModeChange(e.target.value as SLTPMode)}
                         className="bg-secondary text-[10px] font-black px-1.5 h-6 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer min-w-[64px] text-center hover:border-blue-500/50 transition-colors"
                     >
-                        {modes.includes('fixed') && <option value="fixed">Points</option>}
-                        {modes.includes('percentage') && <option value="percentage">Percent</option>}
-                        {modes.includes('amount') && <option value="amount">Amount</option>}
-                        {modes.includes('candle') && <option value="candle">Candle</option>}
-                        {modes.includes('indicator') && <option value="indicator">Indicator</option>}
-                        {modes.includes('winrate') && <option value="winrate">R:R Ratio</option>}
+                        {modes.includes('fixed') && <option value="fixed">{t('builder.points')}</option>}
+                        {modes.includes('percentage') && <option value="percentage">{t('builder.percent')}</option>}
+                        {modes.includes('amount') && <option value="amount">{t('builder.amount')}</option>}
+                        {modes.includes('candle') && <option value="candle">{t('builder.candle')}</option>}
+                        {modes.includes('indicator') && <option value="indicator">{t('builder.indicator')}</option>}
+                        {modes.includes('winrate') && <option value="winrate">{t('builder.rrRatio')}</option>}
                     </select>
 
                     <div className="flex items-center gap-1.5 bg-secondary/40 rounded px-1 border border-border min-h-[24px]">
@@ -85,13 +86,16 @@ export function PriceConfigRow({
                                     <option value="open">Open</option>
                                 </select>
                                 <div className="flex items-center gap-0.5">
-                                    <span className="text-[8px] text-muted-foreground font-bold">#</span>
+                                    <span className="text-[8px] text-muted-foreground font-bold cursor-help" title="0: Nến hiện tại (tín hiệu), 1: Nến trước đó, 2: 2 nến trước...">#</span>
                                     <input
                                         type="number"
                                         value={config.candleOffset}
                                         onChange={(e) => onChange({ ...config, candleOffset: parseInt(e.target.value) })}
                                         className="bg-transparent text-[10px] w-6 text-center font-mono font-black text-foreground outline-none border-b border-border"
                                     />
+                                    <span className="text-[7px] text-blue-500/80 font-bold uppercase truncate max-w-[30px]">
+                                        {config.candleOffset === 0 ? 'Signal' : config.candleOffset === 1 ? 'Prev' : 'Ago'}
+                                    </span>
                                 </div>
                                 <ChevronRight size={8} className="text-muted-foreground" />
                                 <div className="flex items-center gap-0.5">

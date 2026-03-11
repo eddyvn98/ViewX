@@ -18,6 +18,7 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
     backtestCount: 0,
     matrixScanners: [createDefaultScanner(0)],
     focusedMatrixScannerId: null,
+    scopedLastSignalTimes: {},
     addStrategy: (strategy) => {
         console.log('[Store] Adding strategy:', strategy.name);
         set((state) => ({ strategies: [...state.strategies, strategy] }));
@@ -54,6 +55,9 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
                 }
                 return { ...s, lastSignalTime: timestamp };
             }),
+            scopedLastSignalTimes: matrixScopeKey 
+                ? { ...state.scopedLastSignalTimes, [matrixScopeKey]: timestamp }
+                : state.scopedLastSignalTimes
         })),
     addVirtualPosition: (pos) => set((state) => ({ virtualPositions: [...state.virtualPositions, pos] })),
     cancelVirtualPosition: (strategyId: string, symbol: string, direction?: StrategyDirection, matrixScopeKey?: string) =>
@@ -119,6 +123,7 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
             lastBacktestPnL: 0,
             backtestCount: 0,
             lastResetTime: Date.now(),
+            scopedLastSignalTimes: {},
         })),
     lastResetTime: 0,
     runBacktest: async (strategyId, candles, overrideSymbol, overrideTimeframe, source = 'MT5', matrixScopeKey) => {

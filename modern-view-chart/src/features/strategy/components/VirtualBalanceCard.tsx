@@ -1,9 +1,11 @@
 import React from 'react';
 import { History, Maximize2, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useStrategyStore } from '../store/strategy-store';
 import { cn } from '@/lib/utils';
 
 export function VirtualBalanceCard() {
+    const t = useTranslations('Signals');
     const { virtualBalance, initialVirtualBalance, lastBacktestPnL, backtestCount, setVirtualBalance, resetVirtualAccount } = useStrategyStore();
     const [mounted, setMounted] = React.useState(false);
     const [confirmAction, setConfirmAction] = React.useState<'balance' | 'all' | null>(null);
@@ -44,7 +46,7 @@ export function VirtualBalanceCard() {
                             "text-[6px] font-black px-0.5 rounded-[1px] uppercase tracking-tighter",
                             isProfit ? "bg-emerald-500/20 text-emerald-500" : "bg-rose-500/20 text-rose-500"
                         )}>
-                            LIVE VIRTUAL
+                            {t('virtualBalance')}
                         </span>
                         {backtestCount > 0 && (
                             <span className="text-[6px] font-bold text-muted-foreground/30 uppercase tracking-[0.1em] flex items-center gap-0.5">

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { timeframeToChartInterval } from '@/features/strategy/dashboard/matrix-utils';
@@ -8,6 +9,7 @@ import { ScannerCard } from './strategy-signal-scanners/ScannerCard';
 import { useScannerViewModel } from './strategy-signal-scanners/useScannerViewModel';
 
 export function StrategySignalScanners() {
+    const t = useTranslations('Signals.matrix');
     useStrategyMatrixMonitor();
 
     const [isBotPickerOpen, setIsBotPickerOpen] = useState(false);
@@ -110,7 +112,7 @@ export function StrategySignalScanners() {
             />
 
             {matrixScanners.length === 0 && (
-                <div className="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">No matrix scanner yet.</div>
+                <div className="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">{t('noBot')}</div>
             )}
 
             {matrixScanners.map((scanner) => {

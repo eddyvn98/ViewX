@@ -253,6 +253,8 @@ export function createApp() {
             "/auth/logout",
             "/auth/telegram/webhook",
             "/user/state/public",
+            "/user/trade-logs/public",
+            "/user/trade-stats/public",
         ]);
         if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);

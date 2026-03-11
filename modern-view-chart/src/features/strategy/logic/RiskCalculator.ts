@@ -93,6 +93,57 @@ export class RiskCalculator {
         }
     }
 
+    static calculateEntry(
+        config: SLTPConfig | undefined,
+        side: 'BUY' | 'SELL',
+        candles: any[],
+        currentPrice: number,
+        pipSize: number
+    ): number {
+        if (!config) {
+            // Default legacy behavior if config is missing
+            return side === 'BUY' ? currentPrice + (pipSize * 3) : currentPrice - (pipSize * 3);
+        }
+
+        const { mode, value, candleOffset, candleField, indicator, offset = 0 } = config;
+        let basePrice = currentPrice;
+
+        switch (mode) {
+            case 'fixed':
+                const fixedOffset = (value || 0) * pipSize;
+                return side === 'BUY' ? currentPrice + fixedOffset : currentPrice - fixedOffset;
+
+            case 'percentage':
+                const pctOffset = currentPrice * ((value || 0) / 100);
+                return side === 'BUY' ? currentPrice + pctOffset : currentPrice - pctOffset;
+
+            case 'candle':
+                if (!candles || candles.length === 0) return currentPrice;
+                const lookback = candleOffset || 0; // Entry usually uses current candle (#0)
+                const targetCandle = candles[candles.length - 1 - lookback];
+                if (!targetCandle) return currentPrice;
+
+                const defaultField = side === 'BUY' ? 'high' : 'low';
+                const field = candleField || defaultField;
+                basePrice = targetCandle[field] || currentPrice;
+                const finalOffset = offset * pipSize;
+                
+                // For STOP/LIMIT, we just return the calculated level + offset
+                // Depending on whether it's above or below, it will be STOP or LIMIT
+                return side === 'BUY' ? basePrice + finalOffset : basePrice - finalOffset;
+
+            case 'indicator':
+                if (!indicator || !candles || candles.length === 0) return currentPrice;
+                const indValue = IndicatorCalculator.getLastValue(indicator, candles);
+                if (indValue === null) return currentPrice;
+                const indOffset = offset * pipSize;
+                return side === 'BUY' ? indValue + indOffset : indValue - indOffset;
+
+            default:
+                return currentPrice;
+        }
+    }
+
     static calculateLot(
         config: number | LotConfig,
         slPrice: number,

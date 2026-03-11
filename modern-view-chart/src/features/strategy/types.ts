@@ -82,6 +82,7 @@ export interface StrategyLeg {
     risk: StrategyRisk;
     entryType?: 'market' | 'stop' | 'limit';
     entryPrice?: SLTPConfig;
+    positionMode?: PositionMode;
 }
 
 export interface Strategy {

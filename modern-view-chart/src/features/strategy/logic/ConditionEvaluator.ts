@@ -8,9 +8,10 @@ export class ConditionEvaluator {
         const leftVal = Calc.getLastValue(left, candles);
         const rightVal = typeof right === 'number' ? right : Calc.getLastValue(right, candles);
 
-        if (Math.random() < 0.1 || condition.left.type === 'RSI') {
-            console.log(`[Eval] ${condition.id || 'cond'}: ${leftVal?.toFixed(2)} ${comparator} ${rightVal}`);
-        }
+        // REMOVED: console.log flooding causing performance issues
+        // if (Math.random() < 0.1 || condition.left.type === 'RSI') {
+        //     console.log(`[Eval] ${condition.id || 'cond'}: ${leftVal?.toFixed(2)} ${comparator} ${rightVal}`);
+        // }
 
         if (isNaN(leftVal) || (typeof right !== 'number' && isNaN(rightVal))) return false;
 

@@ -78,12 +78,23 @@ export function processStrategySignal(
 
     if (finalSignal.type !== 'EXIT') {
         const direction = (finalSignal.direction || finalSignal.type) as 'BUY' | 'SELL';
-        if (store.virtualPositions.some((p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === direction && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey))) return;
+        const leg = getStrategyLeg(strategy, direction);
+        const currentMode = leg.positionMode || strategy.positionMode || 'single_position';
+
+        const activePositions = store.virtualPositions.filter(
+            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === direction && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
+        );
+
+        if (currentMode === 'scale_in') {
+            const max = leg.risk.maxTrades || 1;
+            if (activePositions.length >= max) return;
+        } else {
+            if (activePositions.length >= 1) return;
+        }
 
         runAiAuditAndTradeLogging(strategy, finalSignal, candles, symbol);
 
         const side = direction;
-        const leg = getStrategyLeg(strategy, side);
         const pip = getPriceOffset(symbol);
         const sl = RiskCalculator.calculateLevel(leg.risk.sl, 'sl', side, candles, lastCandle.close, pip);
         const tp = RiskCalculator.calculateLevel(leg.risk.tp, 'tp', side, candles, lastCandle.close, pip, lastCandle.close);
@@ -93,7 +104,7 @@ export function processStrategySignal(
 
         const positionId = `v-${Date.now()}`;
         const isMarket = (leg.entryType || strategy.entryType) === 'market';
-        const entryPrice = isMarket ? lastCandle.close : (side === 'BUY' ? lastCandle.high + (pip * 3) : lastCandle.low);
+        const entryPrice = isMarket ? lastCandle.close : RiskCalculator.calculateEntry(leg.entryPrice || strategy.entryPrice, side, candles, lastCandle.close, pip);
         const nowSec = Math.floor(Date.now() / 1000);
 
         store.addVirtualPosition({
