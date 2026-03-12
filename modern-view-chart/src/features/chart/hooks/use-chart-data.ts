@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { ChartInstance } from '@/lib/store/types';
 import { useChartHistory } from './use-chart-history';
 import { useChartTicker } from './use-chart-ticker';
 
@@ -17,7 +18,8 @@ export function useChartData(
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
     isReady: boolean,
     isAutoScrollEnabledRef: React.RefObject<boolean>,
-    theme: string
+    theme: string,
+    viewport?: ChartInstance['viewport']
 ) {
     // Shared reference to the trusted "Current Candle" (from Store/History)
     const lastCandleRef = useRef<any>(null);
@@ -30,6 +32,7 @@ export function useChartData(
         subSyncRef, timescaleSyncRef,
         isReady,
         theme,
+        viewport,
         onHistoryLoaded: (last) => { lastCandleRef.current = last; }
     });
 

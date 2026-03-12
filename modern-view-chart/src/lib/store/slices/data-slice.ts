@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { Candle } from '../types';
+import { debugLog } from '@/lib/debug';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export interface DataSlice {
@@ -58,16 +59,12 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const normalized = (Array.isArray(data) ? data : [])
             .map(normalizeCandle)
             .filter((c): c is Candle => c !== null);
-        if (process.env.NODE_ENV !== 'production') {
-            console.log('[DataSlice][setCandles]', { key, count: normalized.length });
-        }
+        debugLog('[DataSlice][setCandles]', { key, count: normalized.length });
 
         // Ignore transient empty snapshots from WS to prevent chart flicker
         // when we already have a valid candle buffer for this key.
         if (normalized.length === 0 && current.length > 0) {
-            if (process.env.NODE_ENV !== 'production') {
-                console.log('[DataSlice][setCandles][skip-empty]', { key, prevCount: current.length });
-            }
+            debugLog('[DataSlice][setCandles][skip-empty]', { key, prevCount: current.length });
             return state;
         }
 

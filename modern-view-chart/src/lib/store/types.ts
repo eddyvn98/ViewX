@@ -86,6 +86,21 @@ export interface ChartInstance {
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     isSubchartVisible?: boolean;
+    viewport?: {
+        logicalRange?: {
+            from: number;
+            to: number;
+        };
+        mainPriceRange?: {
+            from: number;
+            to: number;
+        };
+        subPriceRange?: {
+            from: number;
+            to: number;
+        };
+        savedAt?: number;
+    };
 }
 
 export interface ChartTab {

@@ -1,4 +1,5 @@
 import { IChartApi, ISeriesApi, CandlestickSeries } from 'lightweight-charts';
+import { debugLog } from '@/lib/debug';
 import { DiamondSeries } from '../logic/diamond-series';
 
 interface UseSeriesSwitcherProps {
@@ -26,7 +27,7 @@ export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesS
 
         if (!isTypeChange && !latestMismatch) return;
 
-        console.log(`[SeriesSwitcher] Switching to ${needsDiamond ? 'Diamond' : 'Candlestick'} Series`);
+        debugLog(`[SeriesSwitcher] Switching to ${needsDiamond ? 'Diamond' : 'Candlestick'} Series`);
         try {
             chart.removeSeries(latestSeries as any);
         } catch {

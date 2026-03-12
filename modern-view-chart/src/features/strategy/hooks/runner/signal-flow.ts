@@ -12,9 +12,11 @@ import { runAiAuditAndTradeLogging } from './background-jobs';
 import { notifyTelegramSignal } from '../../utils/telegram-notifier';
 import type { Candle } from '@/lib/store/types';
 import { getStrategyLeg } from '../../strategy-helpers';
+import { createPositionId } from '../../utils/position-id';
 
 interface StoreLike {
     virtualPositions: VirtualPosition[];
+    signals?: StrategySignal[];
     virtualBalance: number;
     addVirtualPosition: (position: VirtualPosition) => void;
     closeVirtualPosition: (strategyId: string, symbol: string, exitPrice: number, metadataUpdate?: Record<string, unknown>, direction?: 'BUY' | 'SELL', matrixScopeKey?: string) => void;
@@ -80,6 +82,44 @@ export function processStrategySignal(
         const direction = (finalSignal.direction || finalSignal.type) as 'BUY' | 'SELL';
         const leg = getStrategyLeg(strategy, direction);
         const currentMode = leg.positionMode || strategy.positionMode || 'single_position';
+        const scopedLivePositions = store.virtualPositions.filter(
+            (p) => p.strategyId === strategy.id && p.symbol === symbol && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
+        );
+        const lockMatrixScopeWhileOpen = leg.lockMatrixScopeWhileOpen ?? strategy.lockMatrixScopeWhileOpen ?? false;
+        const hasSameBarSignal =
+            typeof lastTime === 'number' &&
+            (store.signals || []).some(
+                (existingSignal) =>
+                    existingSignal.strategyId === strategy.id &&
+                    existingSignal.symbol === symbol &&
+                    existingSignal.type === direction &&
+                    existingSignal.barTime === lastTime &&
+                    ((!matrixScopeKey && !existingSignal.matrixScopeKey) || existingSignal.matrixScopeKey === matrixScopeKey)
+            );
+        const hasSameBarPosition =
+            typeof lastTime === 'number' &&
+            currentVirtualPositions.some(
+                (position) =>
+                    position.strategyId === strategy.id &&
+                    position.symbol === symbol &&
+                    position.type === direction &&
+                    position.status !== 'closed' &&
+                    position.openedBarTime === lastTime &&
+                    ((!matrixScopeKey && !position.matrixScopeKey) || position.matrixScopeKey === matrixScopeKey)
+            );
+
+        if (hasSameBarSignal || hasSameBarPosition) {
+            if (typeof lastTime === 'number') store.updateLastSignalTime(strategy.id, lastTime, matrixScopeKey);
+            return;
+        }
+
+        // Matrix scanner execution is one live trade per symbol/timeframe cell.
+        // After reload, persisted open/pending trades must block any fresh entry
+        // until that existing trade is closed/cancelled.
+        if (matrixScopeKey && lockMatrixScopeWhileOpen && scopedLivePositions.length >= 1) {
+            if (typeof lastTime === 'number') store.updateLastSignalTime(strategy.id, lastTime, matrixScopeKey);
+            return;
+        }
 
         const activePositions = store.virtualPositions.filter(
             (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === direction && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
@@ -102,7 +142,7 @@ export function processStrategySignal(
         const balance = strategy.executionMode === 'real' ? accountBalance : store.virtualBalance;
         const lot = RiskCalculator.calculateLot(leg.risk.lotSize, sl, lastCandle.close, balance, symbol);
 
-        const positionId = `v-${Date.now()}`;
+        const positionId = createPositionId('v', strategy.id, symbol, timeframe, direction, lastTime);
         const isMarket = (leg.entryType || strategy.entryType) === 'market';
         const entryPrice = isMarket ? lastCandle.close : RiskCalculator.calculateEntry(leg.entryPrice || strategy.entryPrice, side, candles, lastCandle.close, pip);
         const nowSec = Math.floor(Date.now() / 1000);
@@ -114,6 +154,7 @@ export function processStrategySignal(
             timeframe,
             source,
             matrixScopeKey,
+            openedBarTime: lastTime,
             type: side,
             entryPrice,
             sl: Number(sl.toFixed(5)),
@@ -175,6 +216,7 @@ export function processStrategySignal(
 
     store.addSignal({
         ...finalSignal,
+        barTime: lastTime,
         timeframe,
         source,
         matrixScopeKey,

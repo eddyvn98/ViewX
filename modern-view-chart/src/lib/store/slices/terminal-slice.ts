@@ -21,6 +21,14 @@ export interface DraftOrder {
     tpTouched?: boolean;
 }
 
+export interface OrderFormState {
+    orderType: 'market' | 'pending';
+    side: 'buy' | 'sell';
+    volume: string;
+    sl: string;
+    tp: string;
+}
+
 export interface DraggingPosition {
     ticket: number | string;
     type: 'sl' | 'tp' | 'entry' | 'alert';
@@ -73,6 +81,7 @@ export interface TerminalSlice {
     analysisResults: Record<number, AnalysisResult>;
     optimizationResult: OptimizationResult | null;
     draftOrder: DraftOrder | null;
+    orderForm: OrderFormState;
     editingPosition: Position | null;
     draggingPosition: DraggingPosition | null;
     isTerminalVisible: boolean;
@@ -94,6 +103,8 @@ export interface TerminalSlice {
     setTerminalCollapsed: (collapsed: boolean) => void;
     setTerminalHeight: (height: number) => void;
     setDraftOrder: (draft: DraftOrder | null) => void;
+    setOrderForm: (draft: Partial<OrderFormState>) => void;
+    resetOrderForm: () => void;
     setEditingPosition: (position: Position | null) => void;
     setDraggingPosition: (drag: DraggingPosition | null) => void;
     setHoveredTicket: (ticket: number | null) => void;
@@ -107,6 +118,13 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     analysisResults: {},
     optimizationResult: null,
     draftOrder: null,
+    orderForm: {
+        orderType: 'market',
+        side: 'buy',
+        volume: '0.1',
+        sl: '',
+        tp: '',
+    },
     editingPosition: null,
     draggingPosition: null,
     isTerminalVisible: true,
@@ -213,6 +231,21 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     setTerminalCollapsed: (collapsed) => set({ isTerminalCollapsed: collapsed }),
     setTerminalHeight: (height) => set({ terminalHeight: height }),
     setDraftOrder: (draft) => set({ draftOrder: draft }),
+    setOrderForm: (draft) => set((state) => ({
+        orderForm: {
+            ...state.orderForm,
+            ...draft,
+        },
+    })),
+    resetOrderForm: () => set({
+        orderForm: {
+            orderType: 'market',
+            side: 'buy',
+            volume: '0.1',
+            sl: '',
+            tp: '',
+        },
+    }),
     setEditingPosition: (position) => set({ editingPosition: position }),
     setDraggingPosition: (drag) => set({ draggingPosition: drag }),
     setHoveredTicket: (ticket) => set({ hoveredTicket: ticket }),

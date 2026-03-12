@@ -1,6 +1,22 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
 import { RightSidebarTab } from '../types';
+import type { StrategyDirection, StrategyLeg } from '@/features/strategy/types';
+
+export type StrategyPanelView = 'build' | 'list' | 'signals' | 'ai_chat';
+export type SignalHistoryRange = 'day' | 'week' | 'month';
+export type MarketSourceTab = 'ALL' | 'BINANCE' | 'MT5';
+
+export interface StrategyBuilderDraft {
+    editingStrategyId: string | null;
+    name: string;
+    activeDirection: StrategyDirection;
+    buy: StrategyLeg;
+    sell: StrategyLeg;
+    executionMode: 'virtual' | 'real';
+    comment: string;
+    magic: number;
+}
 
 export interface Notification {
     id: string;
@@ -24,6 +40,12 @@ export interface UISlice {
     rightSidebarTabOrder: string[];
     isDrawingToolbarVisible: boolean;
     isChartLegendVisible: boolean;
+    strategyPanelView: StrategyPanelView;
+    strategyEditingStrategyId: string | null;
+    strategyBuilderDraft: StrategyBuilderDraft | null;
+    signalHistoryRange: SignalHistoryRange;
+    marketListSearchQuery: string;
+    marketListSourceTab: MarketSourceTab;
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
@@ -43,6 +65,12 @@ export interface UISlice {
     setRightSidebarTabOrder: (order: string[]) => void;
     setThemeColor: (color: 'blue' | 'green' | 'amber' | 'red' | 'slate') => void;
     setChartLegendVisible: (visible: boolean) => void;
+    setStrategyPanelView: (view: StrategyPanelView) => void;
+    setStrategyEditingStrategyId: (strategyId: string | null) => void;
+    setStrategyBuilderDraft: (draft: StrategyBuilderDraft | null) => void;
+    setSignalHistoryRange: (range: SignalHistoryRange) => void;
+    setMarketListSearchQuery: (query: string) => void;
+    setMarketListSourceTab: (tab: MarketSourceTab) => void;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
@@ -60,6 +88,12 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     themeColor: 'green',
     isDrawingToolbarVisible: false,
     isChartLegendVisible: true,
+    strategyPanelView: 'signals',
+    strategyEditingStrategyId: null,
+    strategyBuilderDraft: null,
+    signalHistoryRange: 'day',
+    marketListSearchQuery: '',
+    marketListSourceTab: 'ALL',
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -97,4 +131,10 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
         }
     },
     setChartLegendVisible: (visible) => set({ isChartLegendVisible: visible }),
+    setStrategyPanelView: (view) => set({ strategyPanelView: view }),
+    setStrategyEditingStrategyId: (strategyId) => set({ strategyEditingStrategyId: strategyId }),
+    setStrategyBuilderDraft: (draft) => set({ strategyBuilderDraft: draft }),
+    setSignalHistoryRange: (range) => set({ signalHistoryRange: range }),
+    setMarketListSearchQuery: (query) => set({ marketListSearchQuery: query }),
+    setMarketListSourceTab: (tab) => set({ marketListSourceTab: tab }),
 });

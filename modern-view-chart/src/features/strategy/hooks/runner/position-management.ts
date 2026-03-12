@@ -6,6 +6,7 @@ import { soundService } from '../../logic/SoundService';
 import type { Strategy, VirtualPosition } from '../../types';
 import type { Candle } from '@/lib/store/types';
 import { getStrategyLeg } from '../../strategy-helpers';
+import { createPositionId } from '../../utils/position-id';
 
 interface StoreLike {
     updateVirtualPosition: (id: string, updates: Partial<VirtualPosition>) => void;
@@ -33,7 +34,10 @@ export function managePositionOnTick(
     if (!(position.status === 'open' || position.status === 'pending')) return;
 
     if (position.isHistorical && position.status === 'open') {
-        store.updateVirtualPosition(position.id, { isHistorical: false, id: `v-taken-${Date.now()}` });
+        store.updateVirtualPosition(position.id, {
+            isHistorical: false,
+            id: createPositionId('v-taken', position.strategyId, position.symbol, position.timeframe, position.timestamp),
+        });
         return;
     }
 

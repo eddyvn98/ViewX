@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi, SeriesMarker, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
+import { debugLog } from '@/lib/debug';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { toSec } from '@/features/chart/utils/time-utils';
 import { formatCandleData } from '@/features/chart/utils/format-candle-data';
 import { useSeriesSwitcher } from './use-series-switcher';
 import { calculateDynamicSwingPoints } from '@/features/chart/logic/candle-patterns';
+import { ChartInstance } from '@/lib/store/types';
 
 const EMPTY_CANDLES: any[] = [];
 const MIN_CANDLES_THRESHOLD = 150;
@@ -78,11 +80,12 @@ interface UseChartHistoryProps {
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     isReady: boolean;
     theme: string;
+    viewport?: ChartInstance['viewport'];
     onHistoryLoaded: (lastCandle: any) => void;
 }
 
 export function useChartHistory(props: UseChartHistoryProps) {
-    const { symbol, interval, source, chartType, chartRef, subchartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, onHistoryLoaded } = props;
+    const { symbol, interval, source, chartType, chartRef, subchartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, viewport, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
@@ -151,15 +154,13 @@ export function useChartHistory(props: UseChartHistoryProps) {
         if (!isReady || !symbol || !interval || !seriesRef.current) return;
 
         const currentCandles = getCandles();
-        if (process.env.NODE_ENV !== 'production') {
-            console.log('[ChartHistory][candles]', {
-                symbol,
-                interval,
-                source,
-                intervalCandidates,
-                count: currentCandles.length,
-            });
-        }
+        debugLog('[ChartHistory][candles]', {
+            symbol,
+            interval,
+            source,
+            intervalCandidates,
+            count: currentCandles.length,
+        });
         const isContextChange = key !== lastKeyRef.current;
 
         if (isContextChange) {
@@ -192,20 +193,18 @@ export function useChartHistory(props: UseChartHistoryProps) {
             if (seriesRef.current) {
                 seriesRef.current.setData(formatted);
                 markerSeriesRef.current?.setData(formatted); // Sync timeline for markers
-                if (process.env.NODE_ENV !== 'production') {
-                    const first = formatted[0];
-                    const last = formatted[formatted.length - 1];
-                    const firstPrice = first ? `${first.open}/${first.high}/${first.low}/${first.close}` : '-';
-                    const lastPrice = last ? `${last.open}/${last.high}/${last.low}/${last.close}` : '-';
-                    console.log('[ChartHistory][setData]', {
-                        len: formatted.length,
-                        firstTime: first?.time,
-                        lastTime: last?.time,
-                        firstPrice,
-                        lastPrice,
-                        seriesType: (seriesRef.current as any)?.seriesType?.(),
-                    });
-                }
+                const first = formatted[0];
+                const last = formatted[formatted.length - 1];
+                const firstPrice = first ? `${first.open}/${first.high}/${first.low}/${first.close}` : '-';
+                const lastPrice = last ? `${last.open}/${last.high}/${last.low}/${last.close}` : '-';
+                debugLog('[ChartHistory][setData]', {
+                    len: formatted.length,
+                    firstTime: first?.time,
+                    lastTime: last?.time,
+                    firstPrice,
+                    lastPrice,
+                    seriesType: (seriesRef.current as any)?.seriesType?.(),
+                });
             }
 
             if (formatted.length > 0) {
@@ -245,11 +244,24 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
         requestAnimationFrame(() => {
             try {
+                const persistedRange = viewport?.logicalRange;
+                if (
+                    persistedRange &&
+                    Number.isFinite(persistedRange.from) &&
+                    Number.isFinite(persistedRange.to) &&
+                    persistedRange.to > persistedRange.from
+                ) {
+                    chartRef.current?.timeScale().setVisibleLogicalRange({
+                        from: persistedRange.from,
+                        to: persistedRange.to
+                    });
+                } else {
                 // Ensure the chart is following the END of the data
-                chartRef.current?.timeScale().setVisibleLogicalRange({
-                    from: candles.length - (window.innerWidth < 768 ? 40 : 80),
-                    to: candles.length + 5
-                });
+                    chartRef.current?.timeScale().setVisibleLogicalRange({
+                        from: candles.length - (window.innerWidth < 768 ? 40 : 80),
+                        to: candles.length + 5
+                    });
+                }
 
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
             } catch (e) {

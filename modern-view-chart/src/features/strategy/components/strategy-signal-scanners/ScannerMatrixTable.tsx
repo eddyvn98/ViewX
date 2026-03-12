@@ -94,7 +94,23 @@ export function ScannerMatrixTable({
                                 {vm.timeframes.map((tf) => {
                                     const cell = vm.cells.get(`${symbol}__${tf}`);
                                     const signal = cell?.signal || 'NO_TRADE';
+                                    const isOpen = cell?.badge === 'OPEN';
                                     const isPending = cell?.badge === 'PENDING';
+                                    const isOpenBuy = isOpen && signal === 'BUY';
+                                    const isOpenSell = isOpen && signal === 'SELL';
+                                    const isPendingBuy = isPending && signal === 'BUY';
+                                    const isPendingSell = isPending && signal === 'SELL';
+                                    const isSignalBuy = !isOpen && !isPending && signal === 'BUY';
+                                    const isSignalSell = !isOpen && !isPending && signal === 'SELL';
+                                    const openLabel = isOpenBuy
+                                        ? t('openBuy')
+                                        : (isOpenSell ? t('openSell') : t('open'));
+                                    const pendingLabel = isPendingBuy
+                                        ? t('pendingBuy')
+                                        : (isPendingSell ? t('pendingSell') : t('pending'));
+                                    const signalLabel = isSignalBuy
+                                        ? t('signalBuy')
+                                        : (isSignalSell ? t('signalSell') : t('noTrade'));
 
                                     return (
                                         <td key={`${scannerId}-${symbol}-${tf}`} className="border border-border/60 p-0.5 min-w-[72px] w-[72px]">
@@ -102,8 +118,20 @@ export function ScannerMatrixTable({
                                                 onClick={() => onOpenChart(symbol, tf)}
                                                 className={cn(
                                                     'w-full h-7 rounded border text-[8px] font-black relative leading-none transition-colors duration-200',
-                                                    isPending
-                                                        ? 'bg-amber-500/30 border-amber-500/50 text-amber-500'
+                                                    isOpen
+                                                        ? (isOpenBuy
+                                                            ? 'bg-emerald-500/20 border-emerald-500/65 text-emerald-700 dark:text-emerald-400'
+                                                            : (isOpenSell
+                                                                ? 'bg-rose-500/20 border-rose-500/65 text-rose-600 dark:text-rose-400'
+                                                                : 'bg-sky-500/20 border-sky-500/60 text-sky-600 dark:text-sky-400'
+                                                            ))
+                                                        : isPending
+                                                        ? (isPendingBuy
+                                                            ? 'bg-emerald-500/14 border-emerald-500/55 text-emerald-600 dark:text-emerald-400'
+                                                            : (isPendingSell
+                                                                ? 'bg-rose-500/14 border-rose-500/55 text-rose-500'
+                                                                : 'bg-amber-500/30 border-amber-500/50 text-amber-500'
+                                                            ))
                                                         : (signal === 'BUY'
                                                             ? 'bg-primary/15 border-primary/40 text-primary'
                                                             : (signal === 'SELL'
@@ -113,7 +141,31 @@ export function ScannerMatrixTable({
                                                         )
                                                 )}
                                             >
-                                                {isPending ? t('pending') : (signal === 'BUY' ? t('buy') : (signal === 'SELL' ? t('sell') : t('noTrade')))}
+                                                <span className="flex items-center justify-center gap-1.5">
+                                                    {isOpenBuy || isOpenSell || isPendingBuy || isPendingSell ? (
+                                                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                                            <span
+                                                                className={cn(
+                                                                    'absolute inline-flex h-full w-full rounded-full animate-ping opacity-75',
+                                                                    (isOpenBuy || isPendingBuy) ? 'bg-emerald-500' : 'bg-rose-500'
+                                                                )}
+                                                            />
+                                                            <span
+                                                                className={cn(
+                                                                    'relative inline-flex h-2.5 w-2.5 rounded-full',
+                                                                    (isOpenBuy || isPendingBuy) ? 'bg-emerald-500' : 'bg-rose-500'
+                                                                )}
+                                                            />
+                                                        </span>
+                                                    ) : null}
+                                                    <span>
+                                                        {isOpen
+                                                            ? openLabel
+                                                            : (isPending
+                                                                ? pendingLabel
+                                                                : signalLabel)}
+                                                    </span>
+                                                </span>
                                             </button>
                                         </td>
                                     );

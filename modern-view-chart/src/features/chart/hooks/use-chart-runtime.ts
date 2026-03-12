@@ -25,6 +25,7 @@ export function useChartRuntime(chartId: string) {
     const source = chartInstance?.source;
     const timezone = chartInstance?.timezone || 'Asia/Ho_Chi_Minh';
     const chartType = chartInstance?.chartType || 'candles';
+    const viewport = chartInstance?.viewport;
 
     const normSymbol = normalizeSymbol(symbol);
     const key = `${source}:${normSymbol}:${interval}`;
@@ -51,7 +52,7 @@ export function useChartRuntime(chartId: string) {
         timescaleSyncRef,
         syncRange,
         isAutoScrollEnabledRef
-    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone);
+    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone, viewport);
 
     const { sendMessage } = useWebSocket();
     const { realTimeCandleRef } = useChartData(
@@ -68,7 +69,8 @@ export function useChartRuntime(chartId: string) {
         timescaleSyncRef,
         isReady,
         isAutoScrollEnabledRef,
-        theme
+        theme,
+        viewport
     );
 
     const filteredPositions = useMemo(
@@ -87,6 +89,7 @@ export function useChartRuntime(chartId: string) {
         source,
         timezone,
         chartType,
+        viewport,
         candles,
         mainContainerRef,
         priceContainerRef,

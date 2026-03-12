@@ -1,33 +1,43 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Activity, Bot, MessageSquare } from 'lucide-react';
 import { StrategyList } from '@/features/strategy/components/StrategyList';
 import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
 import { cn } from '@/lib/utils';
 import { SignalsView } from '@/features/strategy/components/SignalsView';
 import { AIChatView } from '@/features/strategy/components/AIChatView';
+import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { Strategy } from '@/features/strategy/types';
+import { useMarketStore } from '@/lib/store';
 
 import { motion, LayoutGroup } from 'framer-motion';
 
 export function StrategyPanel() {
     type PanelView = 'build' | 'list' | 'signals' | 'ai_chat';
-    const [view, setView] = useState<PanelView>('signals');
-    const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
+    const view = useMarketStore((state) => state.strategyPanelView) as PanelView;
+    const setView = useMarketStore((state) => state.setStrategyPanelView);
+    const editingStrategyId = useMarketStore((state) => state.strategyEditingStrategyId);
+    const setEditingStrategyId = useMarketStore((state) => state.setStrategyEditingStrategyId);
+    const setBuilderDraft = useMarketStore((state) => state.setStrategyBuilderDraft);
+    const availableStrategies = useStrategyStore((state) => state.strategies);
+    const editingStrategy = availableStrategies.find((strategy: Strategy) => strategy.id === editingStrategyId) || null;
 
     const handleEdit = (strategy: Strategy) => {
-        setEditingStrategy(strategy);
+        setEditingStrategyId(strategy.id);
+        setBuilderDraft(null);
         setView('build');
     };
 
     const handleAdd = () => {
-        setEditingStrategy(null);
+        setEditingStrategyId(null);
+        setBuilderDraft(null);
         setView('build');
     };
 
     const handleCloseBuilder = () => {
-        setEditingStrategy(null);
+        setEditingStrategyId(null);
+        setBuilderDraft(null);
         setView('list');
     };
 

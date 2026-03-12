@@ -27,10 +27,12 @@ export function SignalsView() {
         closeVirtualPosition,
         cancelVirtualPosition,
         updateSignal,
+        addSignal,
     } = useStrategyStore();
 
     const [analyzingIndex, setAnalyzingIndex] = React.useState<number | null>(null);
-    const [selectedRange, setSelectedRange] = React.useState<SignalRange>('day');
+    const selectedRange = useMarketStore((state) => state.signalHistoryRange) as SignalRange;
+    const setSelectedRange = useMarketStore((state) => state.setSignalHistoryRange);
 
     const aiGuardStrategyIds = React.useMemo(
         () => new Set(strategies.filter((strategy) => strategy.aiGuard).map((strategy) => strategy.id)),
@@ -103,9 +105,33 @@ export function SignalsView() {
     const handleCloseOrCancel = (position: VirtualPosition, currentPrice: number) => {
         if (position.status === 'open') {
             closeVirtualPosition(position.strategyId, position.symbol, currentPrice);
+            addSignal({
+                type: 'EXIT',
+                symbol: position.symbol,
+                strategyId: position.strategyId,
+                timestamp: Date.now(),
+                price: currentPrice,
+                risk: { trailing: false, lotSize: position.lotSize, sl: position.sl, tp: position.tp },
+                direction: position.type,
+                context: { exit_reason: 'MANUAL', session: 'Close' } as any,
+                source: position.source,
+                matrixScopeKey: position.matrixScopeKey,
+            });
             return;
         }
         cancelVirtualPosition(position.strategyId, position.symbol);
+        addSignal({
+            type: 'CANCEL',
+            symbol: position.symbol,
+            strategyId: position.strategyId,
+            timestamp: Date.now(),
+            price: currentPrice,
+            risk: { trailing: false, lotSize: position.lotSize, sl: position.sl, tp: position.tp },
+            direction: position.type,
+            context: { exit_reason: 'MANUAL', session: 'Close' } as any,
+            source: position.source,
+            matrixScopeKey: position.matrixScopeKey,
+        });
     };
 
     return (
@@ -185,6 +211,7 @@ export function SignalsView() {
                                 </div>
                                 <SignalHistoryList
                                     filteredSignals={filteredSignals}
+                                    virtualPositions={virtualPositions}
                                     analyzingIndex={analyzingIndex}
                                     aiGuardStrategyIds={aiGuardStrategyIds}
                                     noRecentSignalsLabel={t('noRecentSignals')}

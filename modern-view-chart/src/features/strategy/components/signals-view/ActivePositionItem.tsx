@@ -44,6 +44,11 @@ export function ActivePositionItem({
                             {position.timeframe}
                         </span>
                     )}
+                    {position.status === 'pending' && (
+                        <span className="text-[8px] font-black text-yellow-500 bg-yellow-500/10 px-1 py-0.25 rounded uppercase border border-yellow-500/20">
+                            WAIT
+                        </span>
+                    )}
                     {position.confidence && aiGuardEnabled && (
                         <div className="flex items-center gap-0.5 text-primary/60">
                             <BrainCircuit size={8} />

@@ -1,8 +1,10 @@
 import type { StateCreator } from 'zustand';
+import { debugLog } from '@/lib/debug';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { chartWorkerClient } from '@/workers/worker-client';
 import { compareTimeframe, normalizeDashboardSymbol, normalizeDashboardTf } from '../dashboard/matrix-utils';
 import type { StrategyDirection, TradeContext, VirtualPosition } from '../types';
+import { getPositionDedupKey } from '../utils/position-id';
 import { buildMatrixScopeKey } from '../utils/matrix-scope';
 import { normalizeTF } from '../utils/time-utils';
 import { createDefaultScanner, DEFAULT_SCANNER_BASE, initialStrategies } from './strategy-store.defaults';
@@ -20,11 +22,11 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
     focusedMatrixScannerId: null,
     scopedLastSignalTimes: {},
     addStrategy: (strategy) => {
-        console.log('[Store] Adding strategy:', strategy.name);
+        debugLog('[Store] Adding strategy:', strategy.name);
         set((state) => ({ strategies: [...state.strategies, strategy] }));
     },
     updateStrategy: (id, updates) => {
-        console.log('[Store] Updating strategy:', id, updates);
+        debugLog('[Store] Updating strategy:', id, updates);
         set((state) => ({ strategies: state.strategies.map((s) => (s.id === id ? { ...s, ...updates } : s)) }));
     },
     deleteStrategy: (id) =>
@@ -59,7 +61,15 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
                 ? { ...state.scopedLastSignalTimes, [matrixScopeKey]: timestamp }
                 : state.scopedLastSignalTimes
         })),
-    addVirtualPosition: (pos) => set((state) => ({ virtualPositions: [...state.virtualPositions, pos] })),
+    addVirtualPosition: (pos) =>
+        set((state) => {
+            const nextKey = getPositionDedupKey(pos);
+            const exists = state.virtualPositions.some((existing) => getPositionDedupKey(existing) === nextKey);
+            if (exists) {
+                return { virtualPositions: state.virtualPositions };
+            }
+            return { virtualPositions: [...state.virtualPositions, pos] };
+        }),
     cancelVirtualPosition: (strategyId: string, symbol: string, direction?: StrategyDirection, matrixScopeKey?: string) =>
         set((state) => ({
             virtualPositions: state.virtualPositions.filter(

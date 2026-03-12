@@ -22,6 +22,7 @@ export function createMergedHullStrategy(): Strategy {
         entryType: 'stop',
         magic: 123456,
         comment: 'WebHA',
+        lockMatrixScopeWhileOpen: true,
         buy: {
             entry: {
                 operator: 'AND',
@@ -44,6 +45,7 @@ export function createMergedHullStrategy(): Strategy {
                 lotSize: 0.1,
             },
             entryType: 'stop',
+            lockMatrixScopeWhileOpen: true,
         },
         sell: {
             entry: {
@@ -67,6 +69,7 @@ export function createMergedHullStrategy(): Strategy {
                 lotSize: 0.1,
             },
             entryType: 'stop',
+            lockMatrixScopeWhileOpen: true,
         },
         risk: {
             sl: { mode: 'candle', candleField: 'low', candleOffset: 1, offset: 0 },

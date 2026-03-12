@@ -92,8 +92,8 @@ export function createApp() {
             credentials: true,
         }),
     );
-    app.use(bodyParser.json({ limit: "1mb" }));
-    app.use(bodyParser.urlencoded({ extended: true, limit: "1mb" }));
+    app.use(bodyParser.json({ limit: "10mb" }));
+    app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 
     const apiLimiter = rateLimit({
         windowMs: 60 * 1000,
@@ -255,6 +255,7 @@ export function createApp() {
             "/user/state/public",
             "/user/trade-logs/public",
             "/user/trade-stats/public",
+            "/user/symbols",
         ]);
         if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);
@@ -274,3 +275,4 @@ export function createApp() {
 
     return app;
 }
+

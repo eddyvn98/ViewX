@@ -34,6 +34,8 @@ export function getStrategyLeg(strategy: Strategy, direction: StrategyDirection)
             risk: explicitLeg.risk || createDefaultRisk(direction),
             entryType: explicitLeg.entryType || strategy.entryType,
             entryPrice: explicitLeg.entryPrice || strategy.entryPrice,
+            positionMode: explicitLeg.positionMode || strategy.positionMode,
+            lockMatrixScopeWhileOpen: explicitLeg.lockMatrixScopeWhileOpen ?? strategy.lockMatrixScopeWhileOpen,
         };
     }
 
@@ -46,6 +48,8 @@ export function getStrategyLeg(strategy: Strategy, direction: StrategyDirection)
         risk: (isLegacyMatch && strategy.risk) || createDefaultRisk(direction),
         entryType: strategy.entryType,
         entryPrice: strategy.entryPrice,
+        positionMode: strategy.positionMode,
+        lockMatrixScopeWhileOpen: strategy.lockMatrixScopeWhileOpen,
     };
 }
 

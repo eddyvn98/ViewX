@@ -6,7 +6,7 @@ const schema = new Schema(
     {
         scopeType: {
             type: String,
-            enum: ["user", "service"],
+            enum: ["user", "service", "guest"],
             required: true,
         },
         scopeId: {

@@ -10,7 +10,7 @@ export { migrateStrategyStoreState } from './strategy-store.migrations';
 export const useStrategyStore = create<StrategyState>()(
     persist(createStrategyStoreState, {
         name: 'strategy-storage',
-        version: 4,
+        version: 6,
         migrate: migrateStrategyStoreState,
     })
 );

@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
+import { debugLog } from '@/lib/debug';
 import { connectSocket } from './connection';
 import { useBackfillEventEffect, useInitialHistoryAndForegroundResyncEffect, useSymbolInterestEffect } from './effects';
 import { wsRuntime } from './runtime';
@@ -56,8 +57,8 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
     const sendMessage = useCallback((data: any) => {
         const socket = wsRuntime.globalSocket;
         if (socket?.readyState === WebSocket.OPEN) {
-            if (process.env.NODE_ENV !== 'production' && data?.command === 'get_candles') {
-                console.log('[WS][send get_candles]', {
+            if (data?.command === 'get_candles') {
+                debugLog('[WS][send get_candles]', {
                     symbol: data.symbol,
                     interval: data.interval,
                     count: data.count,

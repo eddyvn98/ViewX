@@ -3,11 +3,12 @@ import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { RuleBuilder } from '@/features/strategy/components/RuleBuilder';
 import { RiskPanel } from '@/features/strategy/components/RiskPanel';
 import { Plus, X as XIcon } from 'lucide-react';
-import { Strategy, ConditionGroup, StrategyRisk, PositionMode, SLTPConfig, StrategyDirection, StrategyLeg } from '@/features/strategy/types';
+import { Strategy, ConditionGroup, StrategyRisk, SLTPConfig, StrategyDirection, StrategyLeg } from '@/features/strategy/types';
 import { PriceConfigRow } from '@/features/strategy/components/PriceConfigRow';
 import { getStrategyLeg } from '../strategy-helpers';
 import { StrategyPreview } from '@/features/strategy/components/StrategyPreview';
 import { useTranslations } from 'next-intl';
+import { useMarketStore } from '@/lib/store';
 
 interface StrategyBuilderProps {
     editingStrategy?: Strategy | null;
@@ -49,8 +50,11 @@ function buildDefaultLeg(direction: StrategyDirection): StrategyLeg {
 export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderProps) {
     const t = useTranslations('Strategy');
     const { addStrategy, updateStrategy } = useStrategyStore();
-    const [name, setName] = useState(editingStrategy?.name || 'Professional Scalper');
-    const [activeDirection, setActiveDirection] = useState<StrategyDirection>('BUY');
+    const builderDraft = useMarketStore((state) => state.strategyBuilderDraft);
+    const setBuilderDraft = useMarketStore((state) => state.setStrategyBuilderDraft);
+    const setEditingStrategyId = useMarketStore((state) => state.setStrategyEditingStrategyId);
+    const [name, setName] = useState(builderDraft?.name || editingStrategy?.name || 'Professional Scalper');
+    const [activeDirection, setActiveDirection] = useState<StrategyDirection>(builderDraft?.activeDirection || 'BUY');
 
     // Ensure editing strategy legs have positionMode if they don't from old version
     const initialBuy = editingStrategy ? getStrategyLeg(editingStrategy, 'BUY') : buildDefaultLeg('BUY');
@@ -59,11 +63,11 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
     if (editingStrategy && !initialBuy.positionMode) initialBuy.positionMode = editingStrategy.positionMode || 'single_position';
     if (editingStrategy && !initialSell.positionMode) initialSell.positionMode = editingStrategy.positionMode || 'single_position';
 
-    const [buy, setBuy] = useState<StrategyLeg>(initialBuy);
-    const [sell, setSell] = useState<StrategyLeg>(initialSell);
-    const [executionMode, setExecutionMode] = useState<'virtual' | 'real'>(editingStrategy?.executionMode || 'virtual');
-    const [comment, setComment] = useState(editingStrategy?.comment || 'WebEngine');
-    const [magic] = useState(editingStrategy?.magic || 123456);
+    const [buy, setBuy] = useState<StrategyLeg>(builderDraft?.buy || initialBuy);
+    const [sell, setSell] = useState<StrategyLeg>(builderDraft?.sell || initialSell);
+    const [executionMode, setExecutionMode] = useState<'virtual' | 'real'>(builderDraft?.executionMode || editingStrategy?.executionMode || 'virtual');
+    const [comment, setComment] = useState(builderDraft?.comment || editingStrategy?.comment || 'WebEngine');
+    const [magic] = useState(builderDraft?.magic || editingStrategy?.magic || 123456);
 
     const currentLeg = activeDirection === 'BUY' ? buy : sell;
     const setCurrentLeg = (updater: (leg: StrategyLeg) => StrategyLeg) => {
@@ -97,6 +101,27 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
 
         if (editingStrategy) updateStrategy(editingStrategy.id, newStrategy);
         else addStrategy(newStrategy);
+        setBuilderDraft(null);
+        setEditingStrategyId(null);
+        onClose();
+    };
+
+    React.useEffect(() => {
+        setBuilderDraft({
+            editingStrategyId: editingStrategy?.id || null,
+            name,
+            activeDirection,
+            buy,
+            sell,
+            executionMode,
+            comment,
+            magic,
+        });
+    }, [activeDirection, buy, comment, editingStrategy?.id, executionMode, magic, name, sell, setBuilderDraft]);
+
+    const handleClose = () => {
+        setBuilderDraft(null);
+        setEditingStrategyId(null);
         onClose();
     };
 
@@ -108,7 +133,7 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                         <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">{t('builder.botIdentity')}</span>
                         <div className="h-[1px] bg-blue-500/20 w-full" />
                     </div>
-                    <button onClick={onClose} className="ml-3 p-1 text-muted-foreground hover:text-foreground bg-secondary/50 rounded transition-all">
+                    <button onClick={handleClose} className="ml-3 p-1 text-muted-foreground hover:text-foreground bg-secondary/50 rounded transition-all">
                         <XIcon size={12} />
                     </button>
                 </div>
@@ -168,8 +193,8 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                     </div>
                 </div>
 
-                <div className="p-3">
-                    <div className="flex flex-col gap-1.5 py-1 px-1.5 rounded bg-black/10 border border-white/5">
+                <div className="p-3 flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">{t('builder.orderType')}</span>
                             <div className="flex bg-secondary/80 rounded p-0.5 border border-border h-6 w-[140px]">

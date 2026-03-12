@@ -1,4 +1,5 @@
 import { useMarketStore } from '@/lib/store';
+import { debugLog } from '@/lib/debug';
 import { soundService } from '@/features/strategy/logic/SoundService';
 import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_BUFFER_MS } from './constants';
 import { wsRuntime } from './runtime';
@@ -69,17 +70,15 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 close: c.close ?? c.c ?? c.close_price ?? c.price_close,
                 volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
             }));
-            if (process.env.NODE_ENV !== 'production') {
-                const sample = normalizedCandles[0];
-                console.log('[WS][mt5_candles]', {
-                    symbol: targetSymbol,
-                    interval: targetInterval,
-                    count: normalizedCandles.length,
-                    source: msg.source,
-                    sampleTime: sample?.time,
-                    sampleOpen: sample?.open,
-                });
-            }
+            const sample = normalizedCandles[0];
+            debugLog('[WS][mt5_candles]', {
+                symbol: targetSymbol,
+                interval: targetInterval,
+                count: normalizedCandles.length,
+                source: msg.source,
+                sampleTime: sample?.time,
+                sampleOpen: sample?.open,
+            });
             if (targetSymbol && targetInterval) {
                 const source = msg.source || 'MT5';
                 deps.setCandles(source, targetSymbol, targetInterval, normalizedCandles);

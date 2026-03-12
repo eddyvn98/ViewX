@@ -93,7 +93,6 @@ export function ChartPanels({
                         isMinimized && isSubchartVisible ? "h-[80px] bg-background/5 backdrop-blur-[1.5px]" : "h-[25%] min-h-[100px] bg-background/5 backdrop-blur-[1.5px]"
                     )}
                 >
-                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent shadow-[0_0_8px_var(--glow-primary)]" />
 
                     <div className="absolute left-3 top-[5%] z-10 pointer-events-none select-none">
                         <SubchartLegend

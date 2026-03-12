@@ -12,7 +12,11 @@ import { List, type RowComponentProps } from 'react-window';
 
 type DataSource = 'BINANCE' | 'MT5';
 type SourceTab = 'ALL' | 'BINANCE' | 'MT5';
+type BinanceExchangeSymbol = { symbol?: string; status?: string };
+type BinanceExchangeInfo = { symbols?: BinanceExchangeSymbol[] };
 const SOURCE_TABS: SourceTab[] = ['ALL', 'BINANCE', 'MT5'];
+let cachedBinanceUniverse: string[] | null = null;
+let pendingBinanceUniverseRequest: Promise<string[]> | null = null;
 const DEFAULT_BINANCE_SYMBOLS = [
     'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT',
     'DOGEUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT',
@@ -21,6 +25,34 @@ const DEFAULT_BINANCE_SYMBOLS = [
 function resolveDataSource(symbol: string): DataSource {
     const normalized = String(symbol || '').toUpperCase();
     return normalized.includes('USDT') ? 'BINANCE' : 'MT5';
+}
+
+async function fetchBinanceUniverse(): Promise<string[]> {
+    if (cachedBinanceUniverse) return cachedBinanceUniverse;
+    if (pendingBinanceUniverseRequest) return pendingBinanceUniverseRequest;
+
+    pendingBinanceUniverseRequest = (async () => {
+        const res = await fetch('/api/user/symbols', { cache: 'no-store' });
+        if (!res.ok) return [];
+
+        const data = (await res.json()) as string[] | BinanceExchangeInfo;
+        const symbols = Array.isArray(data)
+            ? data.filter((symbol) => String(symbol || '').endsWith('USDT'))
+            : Array.isArray(data?.symbols)
+                ? data.symbols
+                    .filter((s) => s?.status === 'TRADING' && String(s?.symbol || '').endsWith('USDT'))
+                    .map((s) => String(s.symbol))
+                : [];
+
+        cachedBinanceUniverse = Array.from(new Set(symbols));
+        return cachedBinanceUniverse;
+    })();
+
+    try {
+        return await pendingBinanceUniverseRequest;
+    } finally {
+        pendingBinanceUniverseRequest = null;
+    }
 }
 
 interface TickerRowProps {
@@ -280,16 +312,18 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const activeTab = useMarketStore(useShallow(state => activeTabId ? state.tabs[activeTabId] : null));
 
     const activeChartId = activeTab?.activeChartId || null;
-    const charts = activeTab?.charts || {};
+    const charts = useMemo(() => activeTab?.charts || {}, [activeTab?.charts]);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
     const { broadcastSymbolChange, broadcastGroupSymbolChange } = useCrossWindowSync();
 
     const activeChartSymbol = (activeChartId && charts[activeChartId]) ? charts[activeChartId].symbol : null;
 
-    const [search, setSearch] = useState('');
+    const search = useMarketStore((state) => state.marketListSearchQuery);
+    const setSearch = useMarketStore((state) => state.setMarketListSearchQuery);
     const deferredSearch = useDeferredValue(search);
-    const [sourceTab, setSourceTab] = useState<SourceTab>('ALL');
-    const [binanceUniverse, setBinanceUniverse] = useState<string[]>([]);
+    const sourceTab = useMarketStore((state) => state.marketListSourceTab) as SourceTab;
+    const setSourceTab = useMarketStore((state) => state.setMarketListSourceTab);
+    const [binanceUniverse, setBinanceUniverse] = useState<string[]>(() => cachedBinanceUniverse ?? []);
 
     // FORCE DEFAULT WATCHLIST IF EMPTY
     React.useEffect(() => {
@@ -303,22 +337,17 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
 
     useEffect(() => {
         if (mode !== 'discovery') return;
-        const controller = new AbortController();
+        if (cachedBinanceUniverse || binanceUniverse.length > 0) {
+            return;
+        }
+
+        let isMounted = true;
 
         const loadBinanceSymbols = async () => {
             try {
-                const res = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
-                    signal: controller.signal,
-                    cache: 'no-store',
-                });
-                if (!res.ok) return;
-                const data = await res.json();
-                const symbols = Array.isArray(data?.symbols)
-                    ? data.symbols
-                        .filter((s: any) => s?.status === 'TRADING' && String(s?.symbol || '').endsWith('USDT'))
-                        .map((s: any) => String(s.symbol))
-                    : [];
+                const symbols = await fetchBinanceUniverse();
                 if (symbols.length > 0) {
+                    if (!isMounted) return;
                     setBinanceUniverse(Array.from(new Set(symbols)));
                 }
             } catch {
@@ -327,8 +356,10 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
         };
 
         void loadBinanceSymbols();
-        return () => controller.abort();
-    }, [mode]);
+        return () => {
+            isMounted = false;
+        };
+    }, [mode, binanceUniverse.length]);
 
     // Memoized symbol list - never includes ticker DATA, only names
     const symbolList = useMemo(() => {

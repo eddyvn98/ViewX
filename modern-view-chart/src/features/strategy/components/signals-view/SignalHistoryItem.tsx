@@ -1,10 +1,11 @@
 import React from 'react';
 import { BrainCircuit, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { StrategySignal } from '@/features/strategy/types';
+import type { StrategySignal, VirtualPosition } from '@/features/strategy/types';
 
 interface SignalHistoryItemProps {
     signal: StrategySignal;
+    linkedPosition?: VirtualPosition;
     signalIndex: number;
     isAnalyzing: boolean;
     aiGuardEnabled: boolean;
@@ -16,6 +17,7 @@ interface SignalHistoryItemProps {
 
 export function SignalHistoryItem({
     signal,
+    linkedPosition,
     signalIndex,
     isAnalyzing,
     aiGuardEnabled,
@@ -68,6 +70,25 @@ export function SignalHistoryItem({
                         </span>
                     </div>
                 </div>
+                
+                {linkedPosition && (
+                    <div className="flex items-center ml-1">
+                        {linkedPosition.status === 'open' && (
+                            <span className="text-[7px] font-bold text-green-500 bg-green-500/10 px-1 py-0.5 rounded uppercase">OPEN</span>
+                        )}
+                        {linkedPosition.status === 'pending' && (
+                            <span className="text-[7px] font-bold text-yellow-500 bg-yellow-500/10 px-1 py-0.5 rounded uppercase">WAIT</span>
+                        )}
+                        {linkedPosition.status === 'closed' && (
+                            <span className={cn(
+                                'text-[7px] font-bold px-1 py-0.5 rounded uppercase',
+                                (linkedPosition.pnl || 0) > 0 ? 'text-green-500 bg-green-500/10' : (linkedPosition.pnl || 0) < 0 ? 'text-rose-500 bg-rose-500/10' : 'text-zinc-500 bg-zinc-500/10'
+                            )}>
+                                {(linkedPosition.pnl || 0) > 0 ? 'WIN' : (linkedPosition.pnl || 0) < 0 ? 'LOSS' : 'FLAT'}
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-2">

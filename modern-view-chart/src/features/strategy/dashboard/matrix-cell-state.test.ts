@@ -42,6 +42,7 @@ describe('matrix-cell-state', () => {
         const base = {
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [baseStrategy],
             virtualPositions: [] as VirtualPosition[],
             matrixConfig: cfg,
@@ -71,6 +72,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [baseStrategy],
             signals: [oldSignal],
             virtualPositions: [],
@@ -114,6 +116,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [baseStrategy],
             signals: [],
             virtualPositions: positions,
@@ -121,6 +124,7 @@ describe('matrix-cell-state', () => {
             nowMs: now,
         });
         assert.equal(cell.badge, 'OPEN');
+        assert.equal(cell.signal, 'BUY');
     });
 
     it('uses position side for signal when active position exists but no fresh signal', () => {
@@ -143,6 +147,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [baseStrategy],
             signals: [],
             virtualPositions: positions,
@@ -150,6 +155,49 @@ describe('matrix-cell-state', () => {
             nowMs: now,
         });
         assert.equal(cell.signal, 'BUY');
+        assert.equal(cell.badge, 'OPEN');
+    });
+
+    it('prefers active position side over conflicting fresh signal', () => {
+        const now = Date.now();
+        const positions: VirtualPosition[] = [
+            {
+                id: 'p-open-sell',
+                strategyId: 's1',
+                symbol: 'XAUUSDm',
+                timeframe: '1m',
+                type: 'SELL',
+                entryPrice: 1,
+                sl: 0,
+                tp: 0,
+                lotSize: 0.1,
+                timestamp: now,
+                status: 'open',
+            },
+        ];
+        const signals: StrategySignal[] = [
+            {
+                type: 'BUY',
+                symbol: 'XAUUSDm',
+                strategyId: 's1',
+                timestamp: now - 1000,
+                price: 1,
+                risk: baseStrategy.risk!,
+            },
+        ];
+
+        const cell = buildMatrixCellState({
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            strategyId: 's1',
+            strategies: [baseStrategy],
+            signals,
+            virtualPositions: positions,
+            matrixConfig: cfg,
+            nowMs: now,
+        });
+
+        assert.equal(cell.signal, 'SELL');
         assert.equal(cell.badge, 'OPEN');
     });
 
@@ -174,6 +222,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [baseStrategy],
             signals: [],
             virtualPositions: positions,
@@ -205,6 +254,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [strategy],
             signals: [],
             virtualPositions: [],
@@ -246,6 +296,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '1m',
+            strategyId: 's1',
             strategies: [strategy],
             signals: [],
             virtualPositions: [],
@@ -258,7 +309,7 @@ describe('matrix-cell-state', () => {
         assert.equal(cell.stale, true);
     });
 
-    it('falls back to symbol-scoped active strategies when timeframe-specific strategy is missing', () => {
+    it('does not invent a cross-timeframe signal when the strategy timeframe does not match the cell', () => {
         const m1OnlyStrategy: Strategy = {
             ...baseStrategy,
             timeframe: '1m',
@@ -279,6 +330,7 @@ describe('matrix-cell-state', () => {
         const cell = buildMatrixCellState({
             symbol: 'XAUUSDm',
             timeframe: '4h',
+            strategyId: 's1',
             strategies: [m1OnlyStrategy],
             signals: [],
             virtualPositions: [],
@@ -286,7 +338,33 @@ describe('matrix-cell-state', () => {
             getCandles: () => makeCandles(50),
         });
 
-        assert.equal(cell.signal, 'BUY');
+        assert.equal(cell.signal, 'NO_TRADE');
+    });
+
+    it('filters latest signals by timeframe scope before painting a cell', () => {
+        const now = Date.now();
+        const scoped15mSignal: StrategySignal = {
+            type: 'BUY',
+            symbol: 'XAUUSDm',
+            strategyId: 's1',
+            timestamp: now - 1000,
+            timeframe: '15m',
+            price: 1,
+            risk: baseStrategy.risk!,
+        };
+
+        const cell = buildMatrixCellState({
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            strategyId: 's1',
+            strategies: [baseStrategy],
+            signals: [scoped15mSignal],
+            virtualPositions: [],
+            matrixConfig: cfg,
+            nowMs: now,
+        });
+
+        assert.equal(cell.signal, 'NO_TRADE');
     });
 
     it('only evaluates selected strategy id in matrix scanner', () => {

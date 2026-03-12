@@ -1,4 +1,5 @@
 import { Candle } from '@/lib/store/types';
+import { debugLog } from '@/lib/debug';
 import { Strategy, VirtualPosition, SLTPConfig, LogicMemory } from '@/features/strategy/types';
 import { BacktestData } from './BacktestData';
 import { BacktestIndicators } from './BacktestIndicators';
@@ -7,6 +8,7 @@ import { SignalEvaluator } from './SignalEvaluator';
 import { getTradingSession } from '@/features/strategy/utils/time-utils';
 import { getStrategyDirections, getStrategyLeg } from '@/features/strategy/strategy-helpers';
 import { buildMatrixScopeKey } from '../../utils/matrix-scope';
+import { createPositionId } from '../../utils/position-id';
 
 export class BacktestEngine {
     static run(
@@ -24,7 +26,7 @@ export class BacktestEngine {
         const tradeSymbol = overrideSymbol || strategy.symbol || 'BACKTEST';
         const tradeTimeframe = overrideTimeframe || strategy.timeframe || '1m';
         const scopeKey = matrixScopeKey || buildMatrixScopeKey(strategy.id, tradeSymbol, tradeTimeframe);
-        console.log(`[Backtest] Running ${strategy.name} on ${tradeSymbol} (${rawCandles.length} candles)...`);
+        debugLog(`[Backtest] Running ${strategy.name} on ${tradeSymbol} (${rawCandles.length} candles)...`);
 
         // 1. Prepare Data
         const candles = BacktestData.prepare(rawCandles);
@@ -44,7 +46,7 @@ export class BacktestEngine {
         // Dynamic warmup: 1/3 of data or at least enough for typical indicators (20-50)
         // This ensures the strategy can run even on H1/H4 where we might only have 300 candles.
         const warmupCount = Math.min(150, Math.floor(candles.length / 3));
-        console.log(`[Backtest] ${strategy.name} beginning simulation at index ${warmupCount} (Warmup: ${warmupCount})`);
+        debugLog(`[Backtest] ${strategy.name} beginning simulation at index ${warmupCount} (Warmup: ${warmupCount})`);
 
         for (let i = warmupCount; i < candles.length; i++) {
             const candle = candles[i];
@@ -138,7 +140,7 @@ export class BacktestEngine {
                         const session = getTradingSession(timestamp);
 
                         const newPos: VirtualPosition = {
-                            id: `bt-${timestamp}-${i}`,
+                            id: createPositionId('bt', strategy.id, tradeSymbol, tradeTimeframe, timestamp, i, type, scopeKey),
                             strategyId: strategy.id,
                             symbol: tradeSymbol,
                             timeframe: tradeTimeframe,
@@ -175,7 +177,7 @@ export class BacktestEngine {
             }
         }
 
-        console.log(`[Backtest] Finished ${strategy.name}. Generated ${positionManager.getPositions().length} positions.`);
+        debugLog(`[Backtest] Finished ${strategy.name}. Generated ${positionManager.getPositions().length} positions.`);
         return positionManager.getPositions();
     }
 }

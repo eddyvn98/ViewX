@@ -56,7 +56,7 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
                     >
                         {/* Active Indicator Top Border */}
                         {isVisible && (
-                            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-primary shadow-[0_0_8px_var(--glow-primary)]" />
+                            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-primary" />
                         )}
                         {ind.type}
                     </button>

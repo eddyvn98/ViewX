@@ -7,7 +7,7 @@ import { migrateStrategyStoreState } from './strategy-store';
 interface MigratedState {
     strategies?: Array<{ id: string; name: string; buy?: object; sell?: object }>;
     matrixScanners: Array<{ strategyId: string | null; symbols: string[] }>;
-    virtualPositions?: Array<{ timeframe?: string; matrixScopeKey?: string }>;
+    virtualPositions?: Array<{ id: string; timeframe?: string; matrixScopeKey?: string }>;
 }
 
 describe('strategy-store migration', () => {
@@ -135,6 +135,89 @@ describe('strategy-store migration', () => {
         assert.ok(merged?.sell);
         assert.equal(migrated.matrixScanners[0].strategyId, 'hull-ha-gold-scalper');
     });
+
+    it('rewrites duplicate virtual position ids during migration', () => {
+        const migrated = migrateStrategyStoreState(
+            {
+                matrixScanners: [{ id: 'scanner-1', name: 'Default', strategyId: null, active: false, symbols: ['BTCUSDm'], timeframes: ['1m'] }],
+                virtualPositions: [
+                    {
+                        id: 'bt-dup',
+                        strategyId: 's1',
+                        symbol: 'BTCUSDm',
+                        timeframe: '1m',
+                        type: 'BUY',
+                        entryPrice: 1,
+                        sl: 0,
+                        tp: 0,
+                        lotSize: 0.1,
+                        timestamp: 1,
+                        status: 'open',
+                    },
+                    {
+                        id: 'bt-dup',
+                        strategyId: 's1',
+                        symbol: 'BTCUSDm',
+                        timeframe: '1m',
+                        type: 'SELL',
+                        entryPrice: 1,
+                        sl: 0,
+                        tp: 0,
+                        lotSize: 0.1,
+                        timestamp: 2,
+                        status: 'open',
+                    },
+                ],
+            },
+            4
+        ) as MigratedState;
+
+        assert.equal(migrated.virtualPositions?.length, 2);
+        assert.notEqual(migrated.virtualPositions?.[0]?.id, migrated.virtualPositions?.[1]?.id);
+    });
+
+    it('drops duplicated active virtual positions during migration', () => {
+        const migrated = migrateStrategyStoreState(
+            {
+                matrixScanners: [{ id: 'scanner-1', name: 'Default', strategyId: 's1', active: true, symbols: ['XAUUSDm'], timeframes: ['5m'] }],
+                virtualPositions: [
+                    {
+                        id: 'v-1',
+                        strategyId: 's1',
+                        symbol: 'XAUUSDm',
+                        timeframe: '5m',
+                        matrixScopeKey: 's1:XAUUSDm:5m',
+                        openedBarTime: 111,
+                        type: 'BUY',
+                        entryPrice: 5172.08,
+                        sl: 5171.59,
+                        tp: 0,
+                        lotSize: 0.1,
+                        timestamp: 1,
+                        status: 'open',
+                    },
+                    {
+                        id: 'v-2',
+                        strategyId: 's1',
+                        symbol: 'XAUUSDm',
+                        timeframe: '5m',
+                        matrixScopeKey: 's1:XAUUSDm:5m',
+                        openedBarTime: 111,
+                        type: 'BUY',
+                        entryPrice: 5172.08,
+                        sl: 5171.59,
+                        tp: 0,
+                        lotSize: 0.1,
+                        timestamp: 2,
+                        status: 'open',
+                    },
+                ],
+            },
+            5
+        ) as MigratedState;
+
+        assert.equal(migrated.virtualPositions?.length, 1);
+    });
 });
 
 describe('strategy-store actions', () => {
@@ -178,5 +261,29 @@ describe('strategy-store actions', () => {
         store.getState().toggleMatrixScanner(scannerId);
 
         assert.equal(store.getState().matrixScanners[0].active, false);
+    });
+
+    it('addVirtualPosition ignores duplicate active positions for the same bar scope', () => {
+        const store = createStore(createStrategyStoreState);
+        const position = {
+            id: 'v-1',
+            strategyId: 's1',
+            symbol: 'XAUUSDm',
+            timeframe: '5m',
+            matrixScopeKey: 's1:XAUUSDm:5m',
+            openedBarTime: 111,
+            type: 'BUY' as const,
+            entryPrice: 5172.08,
+            sl: 5171.59,
+            tp: 0,
+            lotSize: 0.1,
+            timestamp: 1,
+            status: 'open' as const,
+        };
+
+        store.getState().addVirtualPosition(position);
+        store.getState().addVirtualPosition({ ...position, id: 'v-2', timestamp: 2 });
+
+        assert.equal(store.getState().virtualPositions.length, 1);
     });
 });

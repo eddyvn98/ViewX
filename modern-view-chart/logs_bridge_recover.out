@@ -1,0 +1,2404 @@
+[BRIDGE] Loaded env from: D:\TradingWeb\BE_ViewChart\modern-view-chart\backend\.env
+[MEMORY] Initialized Neural Memory Service
+[OK] Found 239 tradeable symbols
+[OK] Bridge connected to ws://127.0.0.1:8091
+[REFRESH] Daily Open prices updated for 5 symbols
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772627350 to 1773318550
+[OK] Fetched 959 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] History from TS 1772627356 to 1773318556
+[OK] Fetched 959 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772627637 to 1773318837
+[OK] Fetched 957 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772627638 to 1773318838
+[OK] Fetched 957 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] History from TS 1772627701 to 1773318901
+[OK] Fetched 958 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772627720 to 1773318920
+[OK] Fetched 957 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[REFRESH] Daily Open prices updated for 5 symbols
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772687188 to 1773378388
+[OK] Fetched 980 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[REFRESH] Daily Open prices updated for 5 symbols
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772687195 to 1773378395
+[OK] Fetched 980 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772689975 to 1773381175
+[OK] Fetched 985 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] History from TS 1772689979 to 1773381179
+[OK] Fetched 985 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772690595 to 1773381795
+[OK] Fetched 987 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772690812 to 1773382012
+[OK] Fetched 988 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772690844 to 1773382044
+[OK] Fetched 987 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772690945 to 1773382145
+[OK] Fetched 987 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772690964 to 1773382164
+[OK] Fetched 987 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] History from TS 1772691251 to 1773382451
+[OK] Fetched 987 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772691595 to 1773382795
+[OK] Fetched 984 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772692283 to 1773383483
+[OK] Fetched 986 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] History from TS 1772692290 to 1773383490
+[OK] Fetched 986 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] History from TS 1772694458 to 1773385658
+[OK] Fetched 990 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] History from TS 1772694548 to 1773385748
+[OK] Fetched 990 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[BRIDGE] Updated interest symbols (5): XAUUSDm, BTCUSDm, ETHUSDm, EURUSDm, GBPUSDm
+[FETCH] History from TS 1772694809 to 1773386009
+[OK] Fetched 990 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[BRIDGE] No active symbol interest from clients. Entering idle mode.
+[FETCH] History from TS 1772694855 to 1773386055
+[OK] Fetched 990 history deals from MT5
+[FETCH] Limiting to last 100 items
+[FETCH] Sent chunk 1 with 100 deals
+[OK] History sent in chunks (Total: 100)
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, EURUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[BRIDGE] Updated interest symbols (3): XAUUSDm, BTCUSDm, ETHUSDm
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[REFRESH] Daily Open prices updated for 5 symbols
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 5 | TF_ID: 5 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 15 | TF_ID: 15 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 60 | TF_ID: 16385 | Count: 300
+[FETCH] XAUUSDm -> XAUUSDm | Interval: 240 | TF_ID: 16388 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 1 | TF_ID: 1 | Count: 300
+[FETCH] BTCUSDm -> BTCUSDm | Interval: 15 | TF_ID: 15 | Count: 300

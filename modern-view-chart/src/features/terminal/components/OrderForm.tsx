@@ -4,15 +4,12 @@ import React, { useState, useMemo, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { cn } from '@/lib/utils';
-import { X, ChevronDown, Minus, Plus } from 'lucide-react';
-
 // Sub-components
 import { OrderTypeTabs } from './OrderForm/OrderTypeTabs';
 import { SideButtons } from './OrderForm/SideButtons';
 import { OrderInputs } from './OrderForm/OrderInputs';
 import { OrderDetails } from './OrderForm/OrderDetails';
 import { SentimentBar } from './OrderForm/SentimentBar';
-import { MobileTradeFlow } from './OrderForm/MobileTradeFlow';
 
 type OrderType = 'market' | 'pending';
 type Side = 'buy' | 'sell';
@@ -21,11 +18,13 @@ type Side = 'buy' | 'sell';
  * Mobile-specific order logic hook
  */
 export function useOrderFormLogic() {
-    const [orderType, setOrderType] = useState<OrderType>('market');
-    const [side, setSide] = useState<Side>('buy');
-    const [volume, setVolume] = useState('0.1');
-    const [sl, setSl] = useState('');
-    const [tp, setTp] = useState('');
+    const orderType = useMarketStore((state) => state.orderForm.orderType) as OrderType;
+    const side = useMarketStore((state) => state.orderForm.side) as Side;
+    const volume = useMarketStore((state) => state.orderForm.volume);
+    const sl = useMarketStore((state) => state.orderForm.sl);
+    const tp = useMarketStore((state) => state.orderForm.tp);
+    const setOrderForm = useMarketStore((state) => state.setOrderForm);
+    const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
     const [isDrafting, setIsDrafting] = useState(false);
 
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
@@ -55,7 +54,17 @@ export function useOrderFormLogic() {
         return () => setDraftOrder(null);
     }, [symbol, side, volume, sl, tp, orderType, isDrafting, setDraftOrder]);
 
-    const resetForm = () => { setSl(''); setTp(''); setIsDrafting(false); setDraftOrder(null); };
+    const setOrderType = (value: OrderType) => setOrderForm({ orderType: value });
+    const setSide = (value: Side) => setOrderForm({ side: value });
+    const setVolume = (value: string) => setOrderForm({ volume: value });
+    const setSl = (value: string) => setOrderForm({ sl: value });
+    const setTp = (value: string) => setOrderForm({ tp: value });
+
+    const resetForm = () => {
+        resetOrderForm();
+        setIsDrafting(false);
+        setDraftOrder(null);
+    };
 
     const adjustValue = (val: string, step: number, isSL: boolean) => {
         let current = parseFloat(val);
@@ -117,15 +126,19 @@ export const OrderForm = memo(function OrderForm() {
     const {
         symbol, side, setSide, orderType, setOrderType, volume, setVolume,
         sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
-        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl
+        handleSubmit, setIsDrafting, formatPrice, calculatePnl
     } = useOrderFormLogic();
+    const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
 
     const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
 
     const slPnl = useMemo(() => calculatePnl(sl), [sl, calculatePnl]);
     const tpPnl = useMemo(() => calculatePnl(tp), [tp, calculatePnl]);
 
-    const resetForm = () => { setSl(''); setTp(''); setIsDrafting(false); };
+    const resetForm = () => {
+        resetOrderForm();
+        setIsDrafting(false);
+    };
 
     const isCrypto = symbol.includes('BTC') || symbol.includes('ETH'); // Simplified check for display
 

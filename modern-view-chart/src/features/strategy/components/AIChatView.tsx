@@ -16,9 +16,16 @@ export function AIChatView() {
     const [isSending, setIsSending] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const hasAccessToken =
+        typeof window !== 'undefined' &&
+        Boolean((localStorage.getItem('auth_access_token') || '').trim());
 
     // Fetch history on mount and when switching to logs
     const fetchHistory = async () => {
+        if (!hasAccessToken) {
+            setIsLoading(false);
+            return;
+        }
         try {
             const res = await fetch('/api/ai/bridge/history');
             if (res.ok) {
@@ -33,10 +40,14 @@ export function AIChatView() {
     };
 
     useEffect(() => {
+        if (!hasAccessToken) {
+            setIsLoading(false);
+            return;
+        }
         fetchHistory();
         const interval = setInterval(fetchHistory, 5000); // Polling logs
         return () => clearInterval(interval);
-    }, []);
+    }, [hasAccessToken]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -45,7 +56,7 @@ export function AIChatView() {
     }, [messages, mode]);
 
     const handleSend = async () => {
-        if (!inputValue.trim() || isSending) return;
+        if (!hasAccessToken || !inputValue.trim() || isSending) return;
 
         const prompt = inputValue;
         setInputValue('');
@@ -101,6 +112,11 @@ export function AIChatView() {
                     <div className="flex-1 flex flex-col items-center justify-center opacity-20 gap-3">
                         <Loader2 size={32} className="animate-spin" />
                         <span className="text-xs uppercase font-black">Connecting to Gemini...</span>
+                    </div>
+                ) : !hasAccessToken ? (
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-40 gap-3 text-center">
+                        <ShieldCheck size={36} />
+                        <span className="text-[11px] uppercase font-black max-w-[220px]">Sign in to use AI Assistant</span>
                     </div>
                 ) : (
                     <>
@@ -175,7 +191,7 @@ export function AIChatView() {
                         />
                         <button
                             onClick={handleSend}
-                            disabled={isSending || !inputValue.trim()}
+                            disabled={!hasAccessToken || isSending || !inputValue.trim()}
                             className="absolute right-1 w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-30 disabled:hover:bg-blue-600 transition-all shadow-lg active:scale-90"
                         >
                             {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

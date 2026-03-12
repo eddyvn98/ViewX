@@ -83,6 +83,7 @@ export interface StrategyLeg {
     entryType?: 'market' | 'stop' | 'limit';
     entryPrice?: SLTPConfig;
     positionMode?: PositionMode;
+    lockMatrixScopeWhileOpen?: boolean;
 }
 
 export interface Strategy {
@@ -108,6 +109,7 @@ export interface Strategy {
     comment?: string;
     sessions?: ("London" | "NewYork" | "Tokyo" | "Sydney")[];
     lastSignalTime?: number; // Internal tracking
+    lockMatrixScopeWhileOpen?: boolean;
 }
 
 export interface SignalStats {
@@ -171,6 +173,7 @@ export interface StrategySignal {
     symbol: string;
     strategyId: string;
     timestamp: number;
+    barTime?: number;
     price: number;
     timeframe?: string;
     source?: 'MT5';
@@ -225,6 +228,7 @@ export interface VirtualPosition {
     timeframe?: string;
     source?: 'MT5';
     matrixScopeKey?: string;
+    openedBarTime?: number;
     type: 'BUY' | 'SELL';
     entryPrice: number;
     sl: number;

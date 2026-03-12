@@ -1,10 +1,11 @@
 import React from 'react';
-import type { StrategySignal } from '@/features/strategy/types';
+import type { StrategySignal, VirtualPosition } from '@/features/strategy/types';
 import type { SignalWithIndex } from './types';
 import { SignalHistoryItem } from './SignalHistoryItem';
 
 interface SignalHistoryListProps {
     filteredSignals: SignalWithIndex[];
+    virtualPositions: VirtualPosition[];
     analyzingIndex: number | null;
     aiGuardStrategyIds: Set<string>;
     noRecentSignalsLabel: string;
@@ -16,6 +17,7 @@ interface SignalHistoryListProps {
 
 export function SignalHistoryList({
     filteredSignals,
+    virtualPositions,
     analyzingIndex,
     aiGuardStrategyIds,
     noRecentSignalsLabel,
@@ -34,19 +36,33 @@ export function SignalHistoryList({
 
     return (
         <div className="max-h-72 overflow-y-auto pr-1 flex flex-col gap-1.5">
-            {filteredSignals.map(({ sig, index }) => (
-                <SignalHistoryItem
-                    key={`${sig.strategyId}-${sig.timestamp}-${index}`}
-                    signal={sig}
-                    signalIndex={index}
-                    isAnalyzing={analyzingIndex === index}
-                    aiGuardEnabled={aiGuardStrategyIds.has(sig.strategyId)}
-                    buyLabel={buyLabel}
-                    sellLabel={sellLabel}
-                    exitLabel={exitLabel}
-                    onManualAnalyze={onManualAnalyze}
-                />
-            ))}
+            {filteredSignals.map(({ sig, index }) => {
+                let linkedPosition: VirtualPosition | undefined;
+                if (sig.type === 'BUY' || sig.type === 'SELL') {
+                    // Try to match the position created for this entry
+                    linkedPosition = virtualPositions.find(p => 
+                        p.strategyId === sig.strategyId &&
+                        p.symbol === sig.symbol &&
+                        p.type === sig.type &&
+                        (sig.barTime ? p.openedBarTime === sig.barTime : p.openedBarTime === sig.timestamp)
+                    );
+                }
+
+                return (
+                    <SignalHistoryItem
+                        key={`${sig.strategyId}-${sig.timestamp}-${index}`}
+                        signal={sig}
+                        signalIndex={index}
+                        linkedPosition={linkedPosition}
+                        isAnalyzing={analyzingIndex === index}
+                        aiGuardEnabled={aiGuardStrategyIds.has(sig.strategyId)}
+                        buyLabel={buyLabel}
+                        sellLabel={sellLabel}
+                        exitLabel={exitLabel}
+                        onManualAnalyze={onManualAnalyze}
+                    />
+                );
+            })}
         </div>
     );
 }

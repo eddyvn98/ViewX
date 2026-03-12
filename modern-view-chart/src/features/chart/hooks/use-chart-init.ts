@@ -12,6 +12,15 @@ import { useMarketStore } from '@/lib/store';
 import { getPriceChartOptions, getSubChartOptions, getTimescaleOptions, initialMinW } from '../config/chart-options';
 import { createSyncLine, createSyncTimeLabel, autoSyncLayout } from '../logic/chart-sync';
 import { setupCrosshairListeners } from './init/setup-crosshair-listeners';
+import { ChartInstance } from '@/lib/store/types';
+
+type PersistedRange = { from: number; to: number };
+
+const sanitizeRange = (range: PersistedRange | null | undefined): PersistedRange | null => {
+    if (!range) return null;
+    if (!Number.isFinite(range.from) || !Number.isFinite(range.to) || range.to <= range.from) return null;
+    return { from: Number(range.from), to: Number(range.to) };
+};
 
 export function useChartInit(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
@@ -20,6 +29,7 @@ export function useChartInit(
     chartId: string,
     theme: string = 'dark',
     timezone: string = 'Asia/Ho_Chi_Minh',
+    persistedViewport?: ChartInstance['viewport'],
 ) {
     const [isReady, setIsReady] = useState(false);
     const priceChartRef = useRef<IChartApi | null>(null);
@@ -30,7 +40,14 @@ export function useChartInit(
     const subSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const timescaleSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const isAutoScrollEnabledRef = useRef(true);
+    const viewportSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const persistedViewportRef = useRef(persistedViewport);
     const themeColor = useMarketStore(state => state.themeColor);
+    const updateChart = useMarketStore(state => state.updateChart);
+
+    useEffect(() => {
+        persistedViewportRef.current = persistedViewport;
+    }, [persistedViewport]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -139,6 +156,35 @@ export function useChartInit(
         const priceTS = priceChart.timeScale();
         const subTS = subchartChart.timeScale();
         const footTS = timescaleChart.timeScale();
+        let lastViewportSnapshot = '';
+
+        const persistViewport = () => {
+            const logicalRange = sanitizeRange(priceTS.getVisibleLogicalRange() as PersistedRange | null);
+            const mainPriceRange = sanitizeRange((priceChart.priceScale('right') as any)?.getVisibleRange?.() as PersistedRange | null);
+            const subPriceRange = sanitizeRange((subchartChart.priceScale('right') as any)?.getVisibleRange?.() as PersistedRange | null);
+
+            const nextViewport: NonNullable<ChartInstance['viewport']> = {
+                savedAt: Date.now(),
+            };
+
+            if (logicalRange) nextViewport.logicalRange = logicalRange;
+            if (mainPriceRange) nextViewport.mainPriceRange = mainPriceRange;
+            if (subPriceRange) nextViewport.subPriceRange = subPriceRange;
+
+            const nextSnapshot = JSON.stringify(nextViewport);
+            if (nextSnapshot === lastViewportSnapshot) return;
+
+            lastViewportSnapshot = nextSnapshot;
+            updateChart(chartId, { viewport: nextViewport });
+        };
+
+        const scheduleViewportPersist = () => {
+            if (viewportSaveTimeoutRef.current) clearTimeout(viewportSaveTimeoutRef.current);
+            viewportSaveTimeoutRef.current = setTimeout(() => {
+                viewportSaveTimeoutRef.current = null;
+                persistViewport();
+            }, 180);
+        };
 
         let syncing = false;
         const syncTime = (range: any) => {
@@ -148,6 +194,7 @@ export function useChartInit(
             subTS.setVisibleLogicalRange(range);
             footTS.setVisibleLogicalRange(range);
             syncing = false;
+            scheduleViewportPersist();
         };
 
         priceTS.subscribeVisibleLogicalRangeChange(syncTime);
@@ -220,10 +267,13 @@ export function useChartInit(
             isPointerInteracting = false;
             lockedScaleWidth = null;
             flushPendingAutoSync();
+            scheduleViewportPersist();
         };
 
         priceTS.subscribeVisibleLogicalRangeChange(handleAutoSync);
         subTS.subscribeVisibleLogicalRangeChange(handleAutoSync);
+        priceTS.subscribeVisibleLogicalRangeChange(scheduleViewportPersist);
+        subTS.subscribeVisibleLogicalRangeChange(scheduleViewportPersist);
         priceContainerRef.current?.addEventListener('pointerdown', handlePointerDown, true);
         subchartContainerRef.current?.addEventListener('pointerdown', handlePointerDown, true);
         timescaleContainerRef.current?.addEventListener('pointerdown', handlePointerDown, true);
@@ -239,6 +289,28 @@ export function useChartInit(
         window.addEventListener('touchend', handlePointerUp);
         window.addEventListener('touchcancel', handlePointerUp);
         setTimeout(handleAutoSync, 50);
+
+        const restorePersistedViewport = () => {
+            try {
+                const logicalRange = sanitizeRange(persistedViewportRef.current?.logicalRange);
+                const mainPriceRange = sanitizeRange(persistedViewportRef.current?.mainPriceRange);
+                const subPriceRange = sanitizeRange(persistedViewportRef.current?.subPriceRange);
+
+                if (logicalRange) {
+                    priceTS.setVisibleLogicalRange(logicalRange);
+                    subTS.setVisibleLogicalRange(logicalRange);
+                    footTS.setVisibleLogicalRange(logicalRange);
+                }
+                if (mainPriceRange) {
+                    (priceChart.priceScale('right') as any)?.setVisibleRange?.(mainPriceRange);
+                }
+                if (subPriceRange) {
+                    (subchartChart.priceScale('right') as any)?.setVisibleRange?.(subPriceRange);
+                }
+            } catch {
+                // Ignore restore races while charts are still initializing.
+            }
+        };
 
         const syncChartSizes = () => {
             if (isDisposed) return;
@@ -273,6 +345,10 @@ export function useChartInit(
         syncChartSizes();
         const initRafId = requestAnimationFrame(syncChartSizes);
         const initTimeoutId = setTimeout(syncChartSizes, 80);
+        const restoreTimeoutId = setTimeout(() => {
+            restorePersistedViewport();
+            scheduleViewportPersist();
+        }, 220);
 
         priceChartRef.current = priceChart;
         subchartChartRef.current = subchartChart;
@@ -289,8 +365,10 @@ export function useChartInit(
             setIsReady(false);
             cleanupCrosshair();
             clearTimeout(initTimeoutId);
+            clearTimeout(restoreTimeoutId);
             cancelAnimationFrame(initRafId);
             if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
+            if (viewportSaveTimeoutRef.current) clearTimeout(viewportSaveTimeoutRef.current);
             resizeObserver.disconnect();
             window.removeEventListener('resize', syncChartSizes);
             window.visualViewport?.removeEventListener('resize', syncChartSizes);
@@ -323,7 +401,7 @@ export function useChartInit(
             subSyncRef.current = null;
             timescaleSyncRef.current = null;
         };
-    }, [chartId, timezone]);
+    }, [chartId, timezone, theme, themeColor, updateChart]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMarketStore } from '@/lib/store';
+import { debugLog } from '@/lib/debug';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -37,7 +38,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
     useEffect(() => {
         if (history.length > 0) {
-            console.log(`🏦 [TERMINAL] Store has ${history.length} history deals`);
+            debugLog(`[TERMINAL] Store has ${history.length} history deals`);
         }
     }, [history.length]);
 
@@ -100,7 +101,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
     }, [setChartSymbol]);
 
     const handleAnalyze = useCallback((deal: any) => {
-        console.log("brain", deal);
+        debugLog('[TERMINAL][analyze]', deal);
         sendMessage({
             topic: "request_analysis",
             deal: deal

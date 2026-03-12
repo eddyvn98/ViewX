@@ -2,6 +2,7 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { MatrixScannerConfig, StrategyMatrixConfig } from '../dashboard/matrix-types';
 import type { Strategy } from '../types';
 import { normalizeMatrixScopeKey } from '../utils/matrix-scope';
+import { ensureUniquePositionIds, getPositionDedupKey } from '../utils/position-id';
 import { normalizeTF } from '../utils/time-utils';
 import {
     createDefaultScanner,
@@ -78,6 +79,26 @@ export function mergeLegacyHullStrategies(rawStrategies: Strategy[]): { strategi
 
 export function migrateStrategyStoreState(persistedState: unknown, version: number) {
     const state = (persistedState || {}) as Record<string, unknown>;
+    const normalizeStrategy = (raw: any) => {
+        if (!raw || typeof raw !== 'object') return raw;
+        if (raw.id !== MERGED_HULL_STRATEGY_ID) return raw;
+        return {
+            ...raw,
+            lockMatrixScopeWhileOpen: raw.lockMatrixScopeWhileOpen ?? true,
+            buy: raw.buy
+                ? {
+                      ...raw.buy,
+                      lockMatrixScopeWhileOpen: raw.buy.lockMatrixScopeWhileOpen ?? true,
+                  }
+                : raw.buy,
+            sell: raw.sell
+                ? {
+                      ...raw.sell,
+                      lockMatrixScopeWhileOpen: raw.sell.lockMatrixScopeWhileOpen ?? true,
+                  }
+                : raw.sell,
+        };
+    };
     const normalizePosition = (raw: any) => {
         if (!raw || typeof raw !== 'object') return raw;
         const symbol = typeof raw.symbol === 'string' ? normalizeSymbol(raw.symbol) : raw.symbol;
@@ -89,6 +110,56 @@ export function migrateStrategyStoreState(persistedState: unknown, version: numb
             source: raw.source === 'MT5' ? 'MT5' : raw.source,
             matrixScopeKey: normalizeMatrixScopeKey(raw.strategyId, symbol, timeframe, raw.matrixScopeKey),
         };
+    };
+    const dedupeVirtualPositions = (positions: any[]) => {
+        const seenMap = new Map<string, any>();
+        positions.forEach((position) => {
+            if (!position || typeof position !== 'object') return;
+            // Ignore closed positions in deduping since they shouldn't conflict with current active ones
+            if (position.status === 'closed') {
+                seenMap.set(position.id || Date.now().toString(), position);
+                return;
+            }
+            
+            // Generate a unique identity key WITHOUT the precise bar time/lot size 
+            // to ensure duplicate MT5 signals reloading on F5 merge together
+            const identityKey = [
+                position.strategyId,
+                position.symbol,
+                position.timeframe,
+                position.type,   
+                position.matrixScopeKey || ''
+            ].join('|').toLowerCase();
+
+            // If we've seen this active order identifier before, keep the most recent one
+            const existing = seenMap.get(identityKey);
+            if (!existing || (position.timestamp > existing.timestamp)) {
+                seenMap.set(identityKey, position);
+            }
+        });
+        return Array.from(seenMap.values());
+    };
+    const normalizeVirtualPositions = (positions: unknown[]) =>
+        ensureUniquePositionIds(dedupeVirtualPositions(positions.map(remapStrategyId).map(normalizePosition)));
+    const dedupeSignals = (sigs: any[]) => {
+        const seenMap = new Map<string, any>();
+        sigs.forEach((sig) => {
+            if (!sig || typeof sig !== 'object') return;
+            const identityKey = [
+                sig.strategyId,
+                sig.symbol,
+                sig.timeframe,
+                sig.type,
+                sig.matrixScopeKey || ''
+            ].join('|').toLowerCase();
+
+            // Store the most recent signal for each matrix cell/type
+            const existing = seenMap.get(identityKey);
+            if (!existing || (sig.timestamp > existing.timestamp)) {
+                seenMap.set(identityKey, sig);
+            }
+        });
+        return Array.from(seenMap.values()).sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
     };
     const normalizeSignal = (raw: any) => {
         if (!raw || typeof raw !== 'object') return raw;
@@ -104,6 +175,7 @@ export function migrateStrategyStoreState(persistedState: unknown, version: numb
     };
     const rawStrategies = Array.isArray(state.strategies) ? (state.strategies as Strategy[]) : [];
     const mergedHull = mergeLegacyHullStrategies(rawStrategies);
+    const normalizedStrategies = (mergedHull.strategies.length > 0 ? mergedHull.strategies : [createMergedHullStrategy()]).map(normalizeStrategy);
     const remapStrategyId = (raw: any) => {
         if (!raw || typeof raw !== 'object') return raw;
         const nextStrategyId = mergedHull.idMap.get(raw.strategyId) || raw.strategyId;
@@ -129,27 +201,27 @@ export function migrateStrategyStoreState(persistedState: unknown, version: numb
                 : [createScannerFromConfig(legacyConfig, null)];
         return {
             ...state,
-            strategies: mergedHull.strategies,
+            strategies: normalizedStrategies,
             matrixScanners: scanners,
             focusedMatrixScannerId: null,
-            virtualPositions: Array.isArray(state.virtualPositions) ? state.virtualPositions.map(remapStrategyId).map(normalizePosition) : [],
-            signals: Array.isArray(state.signals) ? state.signals.map(remapStrategyId).map(normalizeSignal) : [],
+            virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+            signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
         };
     }
     if (version < 3) {
         return {
             ...state,
-            strategies: mergedHull.strategies,
+            strategies: normalizedStrategies,
             matrixScanners: Array.isArray(state.matrixScanners) && state.matrixScanners.length > 0 ? state.matrixScanners : [createDefaultScanner(0)],
             focusedMatrixScannerId: typeof state.focusedMatrixScannerId === 'string' ? state.focusedMatrixScannerId : null,
-            virtualPositions: Array.isArray(state.virtualPositions) ? state.virtualPositions.map(remapStrategyId).map(normalizePosition) : [],
-            signals: Array.isArray(state.signals) ? state.signals.map(remapStrategyId).map(normalizeSignal) : [],
+            virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+            signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
         };
     }
     if (version < 4) {
         return {
             ...state,
-            strategies: mergedHull.strategies.length > 0 ? mergedHull.strategies : [createMergedHullStrategy()],
+            strategies: normalizedStrategies,
             matrixScanners:
                 Array.isArray(state.matrixScanners) && state.matrixScanners.length > 0
                     ? state.matrixScanners.map((scanner: any) => ({
@@ -158,29 +230,61 @@ export function migrateStrategyStoreState(persistedState: unknown, version: numb
                       }))
                     : [createDefaultScanner(0)],
             focusedMatrixScannerId: typeof state.focusedMatrixScannerId === 'string' ? state.focusedMatrixScannerId : null,
-            virtualPositions: Array.isArray(state.virtualPositions) ? state.virtualPositions.map(remapStrategyId).map(normalizePosition) : [],
-            signals: Array.isArray(state.signals) ? state.signals.map(remapStrategyId).map(normalizeSignal) : [],
+            virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+            signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
+        };
+    }
+    if (version < 5) {
+        return {
+            ...state,
+            strategies: normalizedStrategies,
+            matrixScanners:
+                Array.isArray(state.matrixScanners) && state.matrixScanners.length > 0
+                    ? state.matrixScanners.map((scanner: any) => ({
+                          ...scanner,
+                          strategyId: mergedHull.idMap.get(scanner.strategyId) || scanner.strategyId,
+                      }))
+                    : [createDefaultScanner(0)],
+            focusedMatrixScannerId: typeof state.focusedMatrixScannerId === 'string' ? state.focusedMatrixScannerId : null,
+            virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+            signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
+        };
+    }
+    if (version < 6) {
+        return {
+            ...state,
+            strategies: normalizedStrategies,
+            matrixScanners:
+                Array.isArray(state.matrixScanners) && state.matrixScanners.length > 0
+                    ? state.matrixScanners.map((scanner: any) => ({
+                          ...scanner,
+                          strategyId: mergedHull.idMap.get(scanner.strategyId) || scanner.strategyId,
+                      }))
+                    : [createDefaultScanner(0)],
+            focusedMatrixScannerId: typeof state.focusedMatrixScannerId === 'string' ? state.focusedMatrixScannerId : null,
+            virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+            signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
         };
     }
     if (!Array.isArray(state.matrixScanners) || state.matrixScanners.length === 0) {
         return {
             ...state,
-            strategies: mergedHull.strategies.length > 0 ? mergedHull.strategies : [createMergedHullStrategy()],
+            strategies: normalizedStrategies,
             matrixScanners: [createDefaultScanner(0)],
             focusedMatrixScannerId: null,
-            virtualPositions: Array.isArray(state.virtualPositions) ? state.virtualPositions.map(remapStrategyId).map(normalizePosition) : [],
-            signals: Array.isArray(state.signals) ? state.signals.map(remapStrategyId).map(normalizeSignal) : [],
+            virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+            signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
         };
     }
     return {
         ...state,
-        strategies: mergedHull.strategies.length > 0 ? mergedHull.strategies : [createMergedHullStrategy()],
+        strategies: normalizedStrategies,
         matrixScanners: (state.matrixScanners as any[]).map((scanner) => ({
             ...scanner,
             strategyId: mergedHull.idMap.get(scanner.strategyId) || scanner.strategyId,
         })),
         focusedMatrixScannerId: typeof state.focusedMatrixScannerId === 'string' ? state.focusedMatrixScannerId : null,
-        virtualPositions: Array.isArray(state.virtualPositions) ? state.virtualPositions.map(remapStrategyId).map(normalizePosition) : [],
-        signals: Array.isArray(state.signals) ? state.signals.map(remapStrategyId).map(normalizeSignal) : [],
+        virtualPositions: Array.isArray(state.virtualPositions) ? normalizeVirtualPositions(state.virtualPositions) : [],
+        signals: Array.isArray(state.signals) ? dedupeSignals(state.signals.map(remapStrategyId).map(normalizeSignal)) : [],
     };
 }
