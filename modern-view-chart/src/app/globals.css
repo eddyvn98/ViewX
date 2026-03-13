@@ -295,6 +295,39 @@
     overflow: hidden;
   }
 
+  .chart-scaled-desktop-shell {
+    overflow: hidden;
+  }
+
+  .chart-scaled-desktop-shell .md\:hidden {
+    display: none !important;
+  }
+
+  .chart-scaled-desktop-shell .md\:block {
+    display: block !important;
+  }
+
+  .chart-scaled-desktop-shell .md\:flex {
+    display: flex !important;
+  }
+
+  .chart-scaled-desktop-viewport {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-scaled-desktop-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: 0;
+    height: 0;
+    transform-origin: top left;
+    will-change: transform;
+    overflow: hidden;
+  }
+
   .glass-card {
     @apply bg-background/40 backdrop-blur-md border border-white/5 shadow-premium transition-all duration-300;
   }

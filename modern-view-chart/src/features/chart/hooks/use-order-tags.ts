@@ -14,7 +14,6 @@ export function useOrderTags(symbol: string | undefined) {
     const orders = useMarketStore(state => state.orders);
     const draftOrder = useMarketStore(state => state.draftOrder); // Keep global, filtering inside useMemo is safer for now if we want to avoid deep equality check on selectors
     const focusedTicket = useMarketStore(state => state.focusedTicket);
-    const draggingPosition = useMarketStore(state => state.draggingPosition);
     const virtualPositions = useStrategyStore(state => state.virtualPositions);
 
     // Subscribe to symbol-specific data
@@ -32,7 +31,7 @@ export function useOrderTags(symbol: string | undefined) {
     const tags = useMemo(() => {
         if (!symbol) return [];
 
-        let result: TagData[] = [];
+        const result: TagData[] = [];
         const price = currentPrice || 0;
 
         // 1. Draft
@@ -49,12 +48,14 @@ export function useOrderTags(symbol: string | undefined) {
         const finalPos = focusedTicket ? symPos.filter(p => p.ticket === focusedTicket) : symPos;
         const finalOrd = focusedTicket ? symOrd.filter(o => o.ticket === focusedTicket) : symOrd;
 
-        result.push(...getPositionTags(finalPos, symbol, draggingPosition));
-        result.push(...getOrderTags(finalOrd, symbol, draggingPosition));
-        result.push(...getVirtualPositionTags(virtualPositions, symbol, draggingPosition));
+        // Drag visuals are updated directly at the DOM layer while the pointer is moving.
+        // Avoid rebuilding the whole tag list on every drag tick.
+        result.push(...getPositionTags(finalPos, symbol, null));
+        result.push(...getOrderTags(finalOrd, symbol, null));
+        result.push(...getVirtualPositionTags(virtualPositions, symbol, null));
 
         return result;
-    }, [symbol, targetSymbol, positions, orders, draftOrder, focusedTicket, draggingPosition, currentPrice, virtualPositions]);
+    }, [symbol, targetSymbol, positions, orders, draftOrder, focusedTicket, currentPrice, virtualPositions]);
 
 
     return {

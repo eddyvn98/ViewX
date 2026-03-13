@@ -41,7 +41,8 @@
     "dev:all": "dev.bat",
     "dev:ide": "concurrently -n \"FE,BE,BRIDGE,TUNNEL\" -c \"cyan,magenta,yellow,green\" \"npm run dev\" \"npm run server:dev\" \"python backend/bridge/main.py\" \"python start_mobile_access.py\"",
     "test:e2e": "npx playwright test",
-    "test:report": "npx playwright show-report"
+    "test:report": "npx playwright show-report",
+    "benchmark:exness": "node scripts/benchmark-exness.mjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

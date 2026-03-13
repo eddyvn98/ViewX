@@ -16,6 +16,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
     const containerRef = useRef<HTMLDivElement>(null);
     const countdownRef = useRef<HTMLDivElement>(null);
     const priceRef = useRef<HTMLDivElement>(null);
+    const isTimescaleInteractingRef = useRef(false);
 
     // Use smaller selectors for static config
     const activeChartId = useMarketStore(state => state.tabs[state.activeTabId]?.activeChartId);
@@ -38,6 +39,10 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
 
         const updateDOM = () => {
             if (!containerRef.current) return;
+            if (isTimescaleInteractingRef.current) {
+                containerRef.current.style.display = 'none';
+                return;
+            }
             const state = useMarketStore.getState();
             const symbolInfo = state.symbolInfo[normSymbol];
             const currentPrice = realTimeRef?.current?.close ?? state.tickers[normSymbol]?.price;
@@ -107,9 +112,20 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
         updateDOM();
         chart.timeScale().subscribeVisibleLogicalRangeChange(updateDOM);
 
+        const handleTimescaleInteraction = (event: Event) => {
+            const detail = (event as CustomEvent<{ chartId?: string; active?: boolean }>).detail;
+            if (detail?.chartId !== activeChartId) return;
+            isTimescaleInteractingRef.current = Boolean(detail.active);
+            if (!detail.active) {
+                requestAnimationFrame(updateDOM);
+            }
+        };
+        window.addEventListener('chart-timescale-interaction', handleTimescaleInteraction as EventListener);
+
         return () => {
             clearInterval(intervalId);
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateDOM);
+            window.removeEventListener('chart-timescale-interaction', handleTimescaleInteraction as EventListener);
             // Restore native label on unmount
             series.applyOptions({ lastValueVisible: true });
         };

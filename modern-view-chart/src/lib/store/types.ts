@@ -87,6 +87,7 @@ export interface ChartInstance {
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     isSubchartVisible?: boolean;
     viewport?: {
+        contextKey?: string;
         logicalRange?: {
             from: number;
             to: number;

@@ -25,10 +25,15 @@ interface OrderLineTagsProps {
 export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, priceChartRef, isReady, sendMessage, source, interval }: OrderLineTagsProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const tagElementsMap = useRef<Map<string, TagElements>>(new Map());
+    const dragVisualRafRef = useRef<number | null>(null);
+    const latestCandleTimeRef = useRef<number | undefined>(undefined);
+    const focusedTicketRef = useRef<number | null>(null);
+    const hoveredTicketRef = useRef<number | null>(null);
     const focusedTicket = useMarketStore((state) => state.focusedTicket);
     const hoveredTicket = useMarketStore((state) => state.hoveredTicket);
 
     const { tags, currentPrice, symbolInfo, draftOrder } = useOrderTags(symbol);
+    const symbolInfoRef = useRef(symbolInfo);
     const latestCandleTime = useMarketStore(state => {
         if (!symbol || !source || !interval) return undefined;
         const key = `${source}:${normalizeSymbol(symbol)}:${interval}`;
@@ -38,6 +43,22 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
         return typeof t === 'object' ? (t as any).timestamp : Number(t);
     });
     const { editingState, isDeletingRef, handleInputFinish } = useTagEditSession({ sendMessage });
+
+    useEffect(() => {
+        latestCandleTimeRef.current = latestCandleTime;
+    }, [latestCandleTime]);
+
+    useEffect(() => {
+        focusedTicketRef.current = focusedTicket;
+    }, [focusedTicket]);
+
+    useEffect(() => {
+        hoveredTicketRef.current = hoveredTicket;
+    }, [hoveredTicket]);
+
+    useEffect(() => {
+        symbolInfoRef.current = symbolInfo;
+    }, [symbolInfo]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -52,11 +73,11 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
             (elements, tag) => setupTagInteractions(elements, tag, sendMessage),
             (elements, tag) => {
                 updateTagVisuals(elements, tag, symbolInfo, currentPrice, draftOrder, symbol);
-                updateTagPosition(elements, series, tag.price, priceChartRef.current, tag, latestCandleTime);
+                updateTagPosition(elements, series, tag.price, priceChartRef.current, tag, latestCandleTimeRef.current);
             }
         );
         applyTagCaptionDeclutter(tagElementsMap.current, focusedTicket, hoveredTicket);
-    }, [tags, currentPrice, symbolInfo, draftOrder, seriesRef, symbol, sendMessage, priceChartRef, latestCandleTime, focusedTicket, hoveredTicket]);
+    }, [tags, currentPrice, symbolInfo, draftOrder, seriesRef, symbol, sendMessage, priceChartRef, focusedTicket, hoveredTicket]);
 
     useLayoutEffect(() => {
         const priceChart = priceChartRef.current;
@@ -71,10 +92,10 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
                 tagElementsMap.current.forEach((cached) => {
                     const td = (cached.el as any)._tagData;
                     if (td && seriesRef.current) {
-                        updateTagPosition(cached, seriesRef.current, td.price, priceChartRef.current, td, latestCandleTime);
+                        updateTagPosition(cached, seriesRef.current, td.price, priceChartRef.current, td, latestCandleTimeRef.current);
                     }
                 });
-                applyTagCaptionDeclutter(tagElementsMap.current, focusedTicket, hoveredTicket);
+                applyTagCaptionDeclutter(tagElementsMap.current, focusedTicketRef.current, hoveredTicketRef.current);
             });
         };
 
@@ -89,7 +110,46 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
             timescale.unsubscribeVisibleTimeRangeChange(sync);
             window.removeEventListener('scroll', sync);
         };
-    }, [isReady, priceChartRef, seriesRef, latestCandleTime, focusedTicket, hoveredTicket]);
+    }, [isReady, priceChartRef, seriesRef]);
+
+    useEffect(() => {
+        const unsub = useMarketStore.subscribe(
+            s => s.draggingPosition,
+            (drag) => {
+                if (dragVisualRafRef.current) cancelAnimationFrame(dragVisualRafRef.current);
+                dragVisualRafRef.current = requestAnimationFrame(() => {
+                    dragVisualRafRef.current = null;
+                    if (!drag) return;
+
+                    const tagId = `${drag.ticket}-${drag.type}`;
+                    const cached = tagElementsMap.current.get(tagId);
+                    const series = seriesRef.current;
+                    if (!cached || !series) return;
+
+                    const nextTag = {
+                        ...(cached.el as any)._tagData,
+                        price: drag.price,
+                    };
+                    (cached.el as any)._tagData = nextTag;
+                    updateTagPosition(cached, series, drag.price, priceChartRef.current, nextTag, latestCandleTimeRef.current);
+
+                    const priceText = cached.el.querySelector('.price-text');
+                    if (priceText instanceof HTMLElement) {
+                        const digits = Math.max(0, symbolInfoRef.current?.digits ?? 2);
+                        priceText.textContent = Number(drag.price).toFixed(digits);
+                    }
+                });
+            }
+        );
+
+        return () => {
+            if (dragVisualRafRef.current) {
+                cancelAnimationFrame(dragVisualRafRef.current);
+                dragVisualRafRef.current = null;
+            }
+            unsub();
+        };
+    }, [priceChartRef, seriesRef]);
 
     return (
         <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[5] overflow-hidden touch-none">

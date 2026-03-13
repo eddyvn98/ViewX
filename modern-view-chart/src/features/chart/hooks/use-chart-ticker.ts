@@ -14,14 +14,16 @@ interface UseChartTickerProps {
     isAutoScrollEnabledRef?: React.RefObject<boolean>;
     chartRef?: React.RefObject<IChartApi | null>;
     theme?: string;
+    contextKey?: string;
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, theme,
+    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, theme, contextKey,
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<any>(null);
     const lastBackfillRequestAtRef = useRef<Record<string, number>>({});
+    const activeContextKeyRef = useRef(contextKey);
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
@@ -61,8 +63,12 @@ export function useChartTicker({
 
     // Reset local state when context changes
     useEffect(() => {
+        activeContextKeyRef.current = contextKey;
+    }, [contextKey]);
+
+    useEffect(() => {
         realTimeCandleRef.current = null;
-    }, [symbol, interval, source]);
+    }, [symbol, interval, source, contextKey]);
 
     // Sync visualized candle with store (base truth)
     useEffect(() => {
@@ -74,6 +80,8 @@ export function useChartTicker({
     // Ticker Subscription
     useEffect(() => {
         if (!symbol || !source || !seriesRef.current) return;
+
+        const effectContextKey = contextKey;
 
         let lastStoreSync = 0;
         const lastSeriesUpdateTimeRef = { current: null as number | null };
@@ -95,6 +103,7 @@ export function useChartTicker({
 
         const handleTick = (price: number, serverTimeMs?: number) => {
             if (!price) return;
+            if (activeContextKeyRef.current !== effectContextKey) return;
 
             // 1. Get Base Candle
             const storeCandles = getStoreCandles();
@@ -105,7 +114,7 @@ export function useChartTicker({
             if (lastStoreCandle) {
                 const storeTime = toSec(lastStoreCandle.time);
                 const baseTime = base ? toSec(base.time) : 0;
-                if (!base || storeTime > baseTime) {
+                if (!base || storeTime >= baseTime) {
                     base = { ...lastStoreCandle };
                     realTimeCandleRef.current = base;
                 }
@@ -248,12 +257,16 @@ export function useChartTicker({
             (state) => state.tickers[tickerKey] || state.tickers[normSymbol],
             (ticker) => {
                 if (!ticker) return;
-                requestAnimationFrame(() => handleTick(Number(ticker.price), ticker.serverTime));
+                const scheduledContextKey = effectContextKey;
+                requestAnimationFrame(() => {
+                    if (activeContextKeyRef.current !== scheduledContextKey) return;
+                    handleTick(Number(ticker.price), ticker.serverTime);
+                });
             }
         );
 
         return () => unsub();
-    }, [symbol, source, interval, chartType, theme]);
+    }, [symbol, source, interval, chartType, theme, contextKey]);
 
     return realTimeCandleRef;
 }

@@ -3,6 +3,7 @@ import userStateModel from "../../model/user_state.js";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
 import { normalizeUserRole } from "../../auth/roles.js";
+import { getDatabaseHealth } from "../../services/database.js";
 import {
   buildTelegramDeepLink,
   buildTelegramStartPayload,
@@ -63,6 +64,21 @@ function isPlainObject(value) {
 function parseMaxStateBytes() {
   const configured = Number.parseInt(process.env.USER_STATE_MAX_BYTES || "262144", 10);
   return Number.isFinite(configured) && configured > 1024 ? configured : 262144;
+}
+
+function isDatabaseReadyForUserState() {
+  const db = getDatabaseHealth();
+  return db.state === "connected";
+}
+
+function buildEmptySetupStateResponse(scope) {
+  return {
+    scope_type: scope.scopeType,
+    scope_id: scope.scopeId,
+    schema_version: 1,
+    updated_at: null,
+    state: {},
+  };
 }
 
 function sanitizeStrategyId(input) {
@@ -259,19 +275,17 @@ export const getUserSetupState = async (req, res) => {
 export const getPublicUserSetupState = async (req, res) => {
   try {
     const scope = resolvePublicStateScope(req);
+    if (!isDatabaseReadyForUserState()) {
+      return res.status(200).json(buildEmptySetupStateResponse(scope));
+    }
+
     const doc = await userStateModel
       .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
       .select("state schemaVersion updatedAt")
       .lean();
 
     if (!doc) {
-      return res.status(200).json({
-        scope_type: scope.scopeType,
-        scope_id: scope.scopeId,
-        schema_version: 1,
-        updated_at: null,
-        state: {},
-      });
+      return res.status(200).json(buildEmptySetupStateResponse(scope));
     }
 
     return res.status(200).json({
@@ -336,6 +350,16 @@ export const upsertUserSetupState = async (req, res) => {
 export const upsertPublicUserSetupState = async (req, res) => {
   try {
     const scope = resolvePublicStateScope(req);
+    if (!isDatabaseReadyForUserState()) {
+      return res.status(202).json({
+        message: "state_skipped_db_unavailable",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: 1,
+        updated_at: null,
+      });
+    }
+
     const state = req.body?.state;
     if (!isPlainObject(state)) {
       return res.status(400).json({ error: "state must be an object" });

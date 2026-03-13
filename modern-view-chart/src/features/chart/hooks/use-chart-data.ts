@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { ChartInstance } from '@/lib/store/types';
 import { useChartHistory } from './use-chart-history';
 import { useChartTicker } from './use-chart-ticker';
 
@@ -19,7 +18,7 @@ export function useChartData(
     isReady: boolean,
     isAutoScrollEnabledRef: React.RefObject<boolean>,
     theme: string,
-    viewport?: ChartInstance['viewport']
+    contextKey?: string
 ) {
     // Shared reference to the trusted "Current Candle" (from Store/History)
     const lastCandleRef = useRef<any>(null);
@@ -27,12 +26,13 @@ export function useChartData(
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store
     const { candles } = useChartHistory({
+        chartId: id,
         symbol, interval, source, chartType,
         chartRef, subchartRef, seriesRef, markerSeriesRef,
         subSyncRef, timescaleSyncRef,
         isReady,
         theme,
-        viewport,
+        contextKey,
         onHistoryLoaded: (last) => { lastCandleRef.current = last; }
     });
 
@@ -48,7 +48,7 @@ export function useChartData(
     // Only updates the EXISTING candle visually to prevent timezone/offset bugs
     const realTimeCandleRef = useChartTicker({
         symbol, interval, source, seriesRef, chartType, lastCandleRef,
-        isAutoScrollEnabledRef, chartRef, theme
+        isAutoScrollEnabledRef, chartRef, theme, contextKey
     });
 
     return { realTimeCandleRef };

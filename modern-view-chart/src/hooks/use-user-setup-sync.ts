@@ -8,12 +8,14 @@ import { migrateStrategyStoreState } from '@/features/strategy/store/strategy-st
 import type { StrategyState } from '@/features/strategy/store/strategy-store.types';
 import type { TradeContext } from '@/features/strategy/types';
 import { useTheme } from 'next-themes';
+import { shallow } from 'zustand/shallow';
 
 const USER_STATE_SCHEMA_VERSION = 1;
 const SAVE_DEBOUNCE_MS = 1500;
 const MIN_SAVE_INTERVAL_MS = 5000;
 const FALLBACK_SAVE_INTERVAL_MS = 15000;
 const RATE_LIMIT_BACKOFF_MS = 30000;
+const PUBLIC_STATE_SAVE_PAUSE_MS = 60000;
 const USER_STATE_TARGET_BYTES = 220 * 1024;
 const CLIENT_ID_STORAGE_KEY = 'vivutrade-client-id';
 const LEGACY_CLIENT_ID_STORAGE_KEY = 'viewx-client-id';
@@ -78,6 +80,26 @@ type PersistedSetupState = {
 type UserStateApiResponse = {
     state?: Partial<PersistedSetupState>;
 };
+
+function stripViewportFromTabs(tabs: RootState['tabs']): RootState['tabs'] {
+    const sanitizedTabs: RootState['tabs'] = {};
+
+    for (const [tabId, tab] of Object.entries(tabs || {})) {
+        const sanitizedCharts = Object.fromEntries(
+            Object.entries(tab.charts || {}).map(([chartId, chart]) => [
+                chartId,
+                chart.viewport ? { ...chart, viewport: undefined } : chart,
+            ]),
+        );
+
+        sanitizedTabs[tabId] = {
+            ...tab,
+            charts: sanitizedCharts,
+        };
+    }
+
+    return sanitizedTabs;
+}
 
 function getPersistedUiState(state: Partial<PersistedSetupState> | undefined): Partial<PersistedUiState> | null {
     if (!state || !isPlainObject(state.ui)) return null;
@@ -354,7 +376,7 @@ function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' 
     const strategyState = useStrategyStore.getState();
     return {
         watchlist: state.watchlist,
-        tabs: state.tabs,
+        tabs: stripViewportFromTabs(state.tabs),
         activeTabId: state.activeTabId,
         favoriteTimeframes: state.favoriteTimeframes,
         chartIndicators: state.chartIndicators,
@@ -400,6 +422,56 @@ function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' 
             showHistoryMarkers: strategyState.showHistoryMarkers,
             lastResetTime: strategyState.lastResetTime,
         },
+    };
+}
+
+function selectPersistableMarketState(state: RootState) {
+    return {
+        watchlist: state.watchlist,
+        tabs: stripViewportFromTabs(state.tabs),
+        activeTabId: state.activeTabId,
+        favoriteTimeframes: state.favoriteTimeframes,
+        chartIndicators: state.chartIndicators,
+        chartDrawings: state.chartDrawings,
+        alerts: state.alerts,
+        isLeftSidebarOpen: state.isLeftSidebarOpen,
+        isRightSidebarOpen: state.isRightSidebarOpen,
+        activeRightSidebarTab: state.activeRightSidebarTab,
+        activeMobileTab: state.activeMobileTab,
+        themeColor: state.themeColor,
+        sidebarTopHeight: state.sidebarTopHeight,
+        rightSidebarWidth: state.rightSidebarWidth,
+        rightSidebarTabOrder: state.rightSidebarTabOrder,
+        isDrawingToolbarVisible: state.isDrawingToolbarVisible,
+        snapToCandle: state.snapToCandle,
+        isChartLegendVisible: state.isChartLegendVisible,
+        strategyPanelView: state.strategyPanelView,
+        strategyEditingStrategyId: state.strategyEditingStrategyId,
+        strategyBuilderDraft: state.strategyBuilderDraft,
+        signalHistoryRange: state.signalHistoryRange,
+        marketListSearchQuery: state.marketListSearchQuery,
+        marketListSourceTab: state.marketListSourceTab,
+        isTerminalVisible: state.isTerminalVisible,
+        isTerminalCollapsed: state.isTerminalCollapsed,
+        terminalHeight: state.terminalHeight,
+        orderForm: state.orderForm,
+    };
+}
+
+function selectPersistableStrategyState(state: StrategyState) {
+    return {
+        strategies: state.strategies,
+        signals: state.signals,
+        virtualPositions: state.virtualPositions,
+        virtualBalance: state.virtualBalance,
+        initialVirtualBalance: state.initialVirtualBalance,
+        lastBacktestPnL: state.lastBacktestPnL,
+        backtestCount: state.backtestCount,
+        matrixScanners: state.matrixScanners,
+        focusedMatrixScannerId: state.focusedMatrixScannerId,
+        scopedLastSignalTimes: state.scopedLastSignalTimes,
+        showHistoryMarkers: state.showHistoryMarkers,
+        lastResetTime: state.lastResetTime,
     };
 }
 
@@ -509,10 +581,14 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
 export function useUserSetupSync() {
     const { theme, setTheme } = useTheme();
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
+    const isAuthenticated = useMemo(() => {
+        if (typeof window === 'undefined') return false;
+        return hasAccessToken();
+    }, []);
     const apiUrl = useMemo(() => {
         if (typeof window === 'undefined') return '/api/user/state';
-        return hasAccessToken() ? buildApiUrl(clientId) : buildPublicApiUrl(clientId);
-    }, [clientId]);
+        return isAuthenticated ? buildApiUrl(clientId) : buildPublicApiUrl(clientId);
+    }, [clientId, isAuthenticated]);
 
     const isReadyRef = useRef(false);
     const hasInitializedRef = useRef(false);
@@ -561,9 +637,11 @@ export function useUserSetupSync() {
                     }),
                 });
 
-                if (response.ok) {
+                if (response.ok || response.status === 202) {
                     lastSavedRef.current = serialized;
-                    retryAfterRef.current = 0;
+                    retryAfterRef.current = response.status === 202 && !isAuthenticated
+                        ? Date.now() + PUBLIC_STATE_SAVE_PAUSE_MS
+                        : 0;
                     return true;
                 }
 
@@ -649,12 +727,20 @@ export function useUserSetupSync() {
 
         loadInitialState();
 
-        const unsubscribeMarket = useMarketStore.subscribe(() => {
-            scheduleSave();
-        });
-        const unsubscribeStrategy = useStrategyStore.subscribe(() => {
-            scheduleSave();
-        });
+        const unsubscribeMarket = useMarketStore.subscribe(
+            selectPersistableMarketState,
+            () => {
+                scheduleSave();
+            },
+            { equalityFn: shallow }
+        );
+        const unsubscribeStrategy = useStrategyStore.subscribe(
+            selectPersistableStrategyState,
+            () => {
+                scheduleSave();
+            },
+            { equalityFn: shallow }
+        );
 
         // Fallback poll to guarantee persistence even if subscribe callbacks are skipped
         // due middleware signature differences.
@@ -675,5 +761,5 @@ export function useUserSetupSync() {
                 saveIntervalRef.current = null;
             }
         };
-    }, [apiUrl, clientId]);
+    }, [apiUrl, clientId, isAuthenticated]);
 }

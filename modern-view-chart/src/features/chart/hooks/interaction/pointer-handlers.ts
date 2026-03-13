@@ -37,6 +37,41 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         sendMessage,
     } = args;
 
+    let dragStoreRafId: number | null = null;
+    let pendingDragStoreUpdate: any = null;
+
+    const flushDragStoreUpdate = () => {
+        dragStoreRafId = null;
+        const nextUpdate = pendingDragStoreUpdate;
+        pendingDragStoreUpdate = null;
+        if (!nextUpdate) return;
+
+        if (nextUpdate.kind === 'draft') {
+            const currentDraft = useMarketStore.getState().draftOrder;
+            if (!currentDraft) return;
+            setDraftOrder({ ...currentDraft, ...nextUpdate.updates });
+            return;
+        }
+
+        if (nextUpdate.kind === 'drag') {
+            setDraggingPosition(nextUpdate.value);
+        }
+    };
+
+    const scheduleDragStoreUpdate = (nextUpdate: any) => {
+        pendingDragStoreUpdate = nextUpdate;
+        if (dragStoreRafId !== null) return;
+        dragStoreRafId = window.requestAnimationFrame(flushDragStoreUpdate);
+    };
+
+    const cancelPendingDragStoreUpdate = () => {
+        pendingDragStoreUpdate = null;
+        if (dragStoreRafId !== null) {
+            window.cancelAnimationFrame(dragStoreRafId);
+            dragStoreRafId = null;
+        }
+    };
+
     const handlePointerDown = (e: PointerEvent) => {
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -234,9 +269,12 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
             if (dragState.current.type === 'entry') { (updates as any).price = validatedPrice; (updates as any).isMarket = false; }
             else if (dragState.current.type === 'sl') { (updates as any).sl = validatedPrice; (updates as any).slTouched = true; }
             else if (dragState.current.type === 'tp') { (updates as any).tp = validatedPrice; (updates as any).tpTouched = true; }
-            if (draftOrder) setDraftOrder({ ...draftOrder, ...updates });
+            if (draftOrder) scheduleDragStoreUpdate({ kind: 'draft', updates });
         } else {
-            setDraggingPosition({ ticket: dragState.current.ticket, type: dragState.current.type as any, price: validatedPrice });
+            scheduleDragStoreUpdate({
+                kind: 'drag',
+                value: { ticket: dragState.current.ticket, type: dragState.current.type as any, price: validatedPrice }
+            });
         }
     };
 
@@ -247,6 +285,8 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         }
 
         if (!dragState.current) return;
+
+        flushDragStoreUpdate();
 
         const { ticket, type, currentPrice } = dragState.current;
 
@@ -298,6 +338,7 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         isDragging.current = false;
         dragState.current = null;
         mouseDownPos.current = null;
+        cancelPendingDragStoreUpdate();
 
         const drawingSelected = useMarketStore.getState().selectedDrawingId;
         if (!drawingSelected) chart.applyOptions({ handleScroll: true, handleScale: true });

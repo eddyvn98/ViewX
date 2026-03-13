@@ -97,16 +97,25 @@ export const createChartSlice: StateCreator<
             (normSymbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
 
         const newCharts = { ...activeTab.charts };
+        let hasChanges = false;
 
         if (sourceChart.group && sourceChart.group !== 'none') {
             Object.values(newCharts).forEach(chart => {
                 if (chart.group === sourceChart.group) {
+                    if (chart.symbol === normSymbol && chart.source === symbolSource) return;
                     newCharts[chart.id] = { ...chart, symbol: normSymbol, source: symbolSource };
+                    hasChanges = true;
                 }
             });
         } else {
+            if (sourceChart.symbol === normSymbol && sourceChart.source === symbolSource) {
+                return state;
+            }
             newCharts[id] = { ...sourceChart, symbol: normSymbol, source: symbolSource };
+            hasChanges = true;
         }
+
+        if (!hasChanges) return state;
 
         const updatedTab = { ...activeTab, charts: newCharts };
         return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
@@ -115,6 +124,7 @@ export const createChartSlice: StateCreator<
     setChartTimeframe: (id, interval) => set((state) => {
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab || !activeTab.charts[id]) return state;
+        if (activeTab.charts[id].interval === interval) return state;
 
         const updatedTab = {
             ...activeTab,
@@ -144,6 +154,7 @@ export const createChartSlice: StateCreator<
     setChartTimezone: (id, timezone) => set((state) => {
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab || !activeTab.charts[id]) return state;
+        if ((activeTab.charts[id].timezone || 'Asia/Ho_Chi_Minh') === timezone) return state;
 
         const updatedTab = {
             ...activeTab,
@@ -159,6 +170,7 @@ export const createChartSlice: StateCreator<
     setChartType: (id, type) => set((state) => {
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab || !activeTab.charts[id]) return state;
+        if (activeTab.charts[id].chartType === type) return state;
 
         const updatedTab = {
             ...activeTab,

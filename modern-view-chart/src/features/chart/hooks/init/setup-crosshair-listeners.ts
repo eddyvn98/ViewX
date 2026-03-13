@@ -131,6 +131,23 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
             formatTimeLabel
         );
 
+        // Footer timescale only needs local visual sync while dragging.
+        // Broadcasting every move through the store/window adds overhead
+        // without improving the interaction.
+        if (sourcePane === 'timescale') {
+            if (!param.point && lastSyncTime !== null) {
+                if (dispatchRafId !== null) {
+                    cancelAnimationFrame(dispatchRafId);
+                    dispatchRafId = null;
+                }
+                pendingPayload = null;
+                lastSyncTime = null;
+                lastSyncX = null;
+                lastSyncY = null;
+            }
+            return;
+        }
+
         if (normalizedTime !== null && param.point) {
             const curTime = normalizedTime;
             const curX = snappedX ?? param.point.x;

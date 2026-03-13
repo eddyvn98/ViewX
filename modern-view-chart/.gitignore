@@ -78,5 +78,7 @@ output/
 .tmp*
 *.err.log
 *.log
+logs_*.out
+logs_*.err
 tunnel*.txt
 cloudflared.exe

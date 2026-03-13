@@ -245,9 +245,11 @@ export const autoSyncLayout = (
 
             const priceW = priceScale.width();
             const subW = subchartScale.width();
-            const maxW = Math.max(priceW, subW, initialMinW);
+            const maxW = Math.round(Math.max(priceW, subW, initialMinW));
 
-            if (Math.abs(maxW - lastMaxW) > 1) {
+            // Small right-scale width oscillations create visible jitter during pan/zoom.
+            // Only resync when the delta is large enough to matter visually.
+            if (Math.abs(maxW - lastMaxW) >= 4) {
                 setLastMaxW(maxW);
                 const opt = { rightPriceScale: { minimumWidth: maxW } };
                 priceChart?.applyOptions(opt);

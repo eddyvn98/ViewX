@@ -65,16 +65,16 @@ export const getCommonOptions = (theme: string, themeColor?: string): DeepPartia
         timeScale: {
             rightOffset: 12,
             barSpacing: 10,
-            fixLeftEdge: true,
+            fixLeftEdge: false,
             fixRightEdge: false,
             lockVisibleTimeRangeOnResize: true,
-            rightBarStaysOnScroll: true,
+            rightBarStaysOnScroll: false,
             borderVisible: false,
             borderColor: 'transparent',
             visible: true,
             timeVisible: true,
             secondsVisible: false,
-            shiftVisibleRangeOnNewBar: true,
+            shiftVisibleRangeOnNewBar: false,
         },
     };
 };
@@ -161,7 +161,7 @@ export const getTimescaleOptions = (width: number, height: number, theme: string
             },
             horzLine: { visible: false, labelVisible: false },
         },
-        handleScale: { mouseWheel: true, axisPressedMouseMove: { time: true } as any },
+        handleScale: { mouseWheel: false, axisPressedMouseMove: { time: true } as any },
         handleScroll: true,
     };
 };

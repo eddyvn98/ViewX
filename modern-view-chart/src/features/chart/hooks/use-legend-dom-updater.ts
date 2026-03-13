@@ -38,6 +38,7 @@ export function useLegendDOMUpdater(
     const lastUpdateAtRef = useRef(0);
     const lastIsLiveRef = useRef<boolean | null>(null);
     const lastCrosshairTimeRef = useRef<number | null>(null);
+    const isTimescaleInteractingRef = useRef(false);
 
     useEffect(() => {
         if (!candles.length || !containerRef.current || !symbol || !interval || !source) return;
@@ -112,6 +113,7 @@ export function useLegendDOMUpdater(
         };
 
         const handleCrosshair = (e: CustomEvent<CrosshairEventDetail>) => {
+            if (isTimescaleInteractingRef.current) return;
             const { time, sourceId, point } = e.detail || {};
             void point;
 
@@ -166,7 +168,20 @@ export function useLegendDOMUpdater(
 
         renderLatest(getIndicatorsFor(getFreshCandles(symbol, interval, source, chartType).raw));
 
+        const handleTimescaleInteraction = (event: Event) => {
+            const detail = (event as CustomEvent<{ chartId?: string; active?: boolean }>).detail;
+            if (detail?.chartId !== chartId) return;
+            isTimescaleInteractingRef.current = Boolean(detail.active);
+            if (containerRef.current) {
+                containerRef.current.style.opacity = detail.active ? '0.3' : '';
+            }
+            if (!detail.active) {
+                renderLatest(getIndicatorsFor(getFreshCandles(symbol, interval, source, chartType).raw));
+            }
+        };
+
         window.addEventListener('chart-crosshair', handleCrosshair as EventListener);
+        window.addEventListener('chart-timescale-interaction', handleTimescaleInteraction as EventListener);
 
         const unsubTicker = useMarketStore.subscribe(
             state => state.tickers[tickerKey]?.price || state.tickers[normalizedSymbol]?.price,
@@ -213,6 +228,7 @@ export function useLegendDOMUpdater(
 
         return () => {
             window.removeEventListener('chart-crosshair', handleCrosshair as EventListener);
+            window.removeEventListener('chart-timescale-interaction', handleTimescaleInteraction as EventListener);
             unsubTicker();
             unsubIndicators();
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);

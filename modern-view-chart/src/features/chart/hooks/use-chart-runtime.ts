@@ -13,22 +13,44 @@ export function useChartRuntime(chartId: string) {
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
 
-    const chartInstance = useMarketStore((state) => {
+    const symbol = useMarketStore((state) => {
         for (const tab of Object.values(state.tabs)) {
-            if (tab.charts[chartId]) return tab.charts[chartId];
+            const chart = tab.charts[chartId];
+            if (chart) return chart.symbol;
         }
-        return null;
+        return undefined;
+    });
+    const interval = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.interval;
+        }
+        return undefined;
+    });
+    const source = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.source;
+        }
+        return undefined;
+    });
+    const timezone = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.timezone || 'Asia/Ho_Chi_Minh';
+        }
+        return 'Asia/Ho_Chi_Minh';
+    });
+    const chartType = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.chartType || 'candles';
+        }
+        return 'candles';
     });
 
-    const symbol = chartInstance?.symbol;
-    const interval = chartInstance?.interval;
-    const source = chartInstance?.source;
-    const timezone = chartInstance?.timezone || 'Asia/Ho_Chi_Minh';
-    const chartType = chartInstance?.chartType || 'candles';
-    const viewport = chartInstance?.viewport;
-
     const normSymbol = normalizeSymbol(symbol);
-    const key = `${source}:${normSymbol}:${interval}`;
+    const key = source && normSymbol && interval ? `${source}:${normSymbol}:${interval}` : '';
 
     // Keep subscription by candle count to preserve current update behavior.
     const candlesCount = useMarketStore(state => (state.candleData[key] || EMPTY_CANDLES).length);
@@ -52,7 +74,7 @@ export function useChartRuntime(chartId: string) {
         timescaleSyncRef,
         syncRange,
         isAutoScrollEnabledRef
-    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone, viewport);
+    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone, key);
 
     const { sendMessage } = useWebSocket();
     const { realTimeCandleRef } = useChartData(
@@ -70,7 +92,7 @@ export function useChartRuntime(chartId: string) {
         isReady,
         isAutoScrollEnabledRef,
         theme,
-        viewport
+        key
     );
 
     const filteredPositions = useMemo(
@@ -82,6 +104,18 @@ export function useChartRuntime(chartId: string) {
         [orders, source]
     );
 
+    const chartInstance = useMemo(() => {
+        if (!symbol || !interval || !source) return null;
+        return {
+            id: chartId,
+            symbol,
+            interval,
+            source,
+            timezone,
+            chartType,
+        };
+    }, [chartId, symbol, interval, source, timezone, chartType]);
+
     return {
         chartInstance,
         symbol,
@@ -89,7 +123,6 @@ export function useChartRuntime(chartId: string) {
         source,
         timezone,
         chartType,
-        viewport,
         candles,
         mainContainerRef,
         priceContainerRef,
