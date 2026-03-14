@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateATR } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class ATRIndicator {
     private series: ISeriesApi<"Line"> | null = null;
@@ -75,9 +76,7 @@ export class ATRIndicator {
 
     destroy() {
         if (this.series && this.chart) {
-            try {
-                this.chart.removeSeries(this.series);
-            } catch (err) { }
+            safeRemoveSeries(this.chart, this.series, 'ATR');
             this.series = null;
         }
     }

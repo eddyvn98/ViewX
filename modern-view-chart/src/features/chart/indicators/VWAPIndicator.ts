@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateVWAP } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class VWAPIndicator {
     private series: ISeriesApi<"Line"> | null = null;
@@ -71,9 +72,7 @@ export class VWAPIndicator {
 
     destroy() {
         if (this.series && this.chart) {
-            try {
-                this.chart.removeSeries(this.series);
-            } catch (err) { }
+            safeRemoveSeries(this.chart, this.series, 'VWAP');
             this.series = null;
         }
     }

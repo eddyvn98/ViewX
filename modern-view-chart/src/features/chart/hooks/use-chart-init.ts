@@ -250,7 +250,7 @@ export function useChartInit(
             subSyncRef.current = null;
             timescaleSyncRef.current = null;
         };
-    }, [chartId, timezone, theme, themeColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef]);
+    }, [chartId, timezone, theme, themeColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef, currentContextKey]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();

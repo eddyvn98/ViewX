@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateSAR } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 import { SARSeries } from '../logic/sar-series';
 
 export class SARIndicator {
@@ -90,11 +91,7 @@ export class SARIndicator {
 
     destroy() {
         if (this.series && this.chart) {
-            try {
-                this.chart.removeSeries(this.series as any);
-            } catch (err) {
-                console.warn('[SAR] Failed to remove series:', err);
-            }
+            safeRemoveSeries(this.chart, this.series as any, 'SAR');
             this.series = null;
         }
     }

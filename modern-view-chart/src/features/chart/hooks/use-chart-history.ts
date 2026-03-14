@@ -48,6 +48,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const latestLLRef = useRef<number | undefined>(undefined);
     const applyDataRafRef = useRef<number | null>(null);
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
+    const clearedForKeyRef = useRef<string | null>(null);
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
@@ -156,6 +157,16 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
         if (isContextChange && currentCandles.length === 0) {
             chartStateRef.current = 'loading';
+            if (clearedForKeyRef.current !== key) {
+                clearedForKeyRef.current = key;
+                try {
+                    seriesRef.current?.setData([]);
+                    markerSeriesRef.current?.setData([]);
+                    updateSyncData([], subSyncRef, timescaleSyncRef);
+                } catch {
+                    // Ignore transient teardown races while the chart is rebuilding.
+                }
+            }
             return;
         }
 
@@ -165,6 +176,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
             isInitialMount.current = true;
             lastDataLength.current = 0;
             autoFitProgressRef.current = null;
+            clearedForKeyRef.current = null;
         }
 
         const isTypeChange = chartType !== lastChartTypeRef.current;
@@ -210,6 +222,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 }
 
                 if (formatted.length > 0) {
+                    clearedForKeyRef.current = null;
                     onHistoryLoaded(nextCandles[nextCandles.length - 1]);
                     updateSyncData(formatted, subSyncRef, timescaleSyncRef);
 

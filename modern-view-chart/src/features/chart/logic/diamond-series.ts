@@ -76,8 +76,11 @@ class DiamondRenderer implements ICustomSeriesPaneRenderer {
 
         target.useBitmapCoordinateSpace((scope: any) => {
             const ctx = scope.context;
-            const { horizontalPixelRatio, verticalPixelRatio } = scope;
+            const { horizontalPixelRatio, verticalPixelRatio, bitmapSize } = scope;
             const data = this._data!;
+            const visibleRange = data.visibleRange;
+
+            if (!visibleRange) return;
 
             // Set font for labels once (Smaller for price values)
             ctx.font = `${Math.round(8 * verticalPixelRatio)}px Arial`;
@@ -87,21 +90,31 @@ class DiamondRenderer implements ICustomSeriesPaneRenderer {
             // Draw Breakout Rays First (as background)
             this._drawBreakoutRays(ctx, data, priceConverter, horizontalPixelRatio, verticalPixelRatio);
 
-            const barWidthMedia = data.barSpacing * 0.8;
+            const effectiveBarSpacing = (data.conflationFactor || 1) * data.barSpacing;
+            const barWidthMedia = effectiveBarSpacing * 0.8;
             const barWidth = Math.max(1, Math.round(barWidthMedia * horizontalPixelRatio));
             const halfWidth = barWidth / 2;
+            const from = Math.max(0, Math.floor(visibleRange.from) - 2);
+            const to = Math.min(data.bars.length, Math.ceil(visibleRange.to) + 2);
+            const visibleBars = data.bars.slice(from, to);
 
             // Group bars by color for efficient rendering
             const barsByColor = new Map<string, any[]>();
-            for (const bar of data.bars) {
-                if (!isNaN(bar.x)) {
-                    const color = (bar.originalData as DiamondData).candleColor || '#22c55e';
-                    if (!barsByColor.has(color)) {
-                        barsByColor.set(color, []);
-                    }
-                    barsByColor.get(color)?.push(bar);
+            for (const bar of visibleBars) {
+                if (isNaN(bar.x)) continue;
+                const x = Math.round(bar.x * horizontalPixelRatio);
+                if (x < -barWidth || x > bitmapSize.width + barWidth) continue;
+                const color = (bar.originalData as DiamondData).candleColor || '#22c55e';
+                if (!barsByColor.has(color)) {
+                    barsByColor.set(color, []);
                 }
+                barsByColor.get(color)?.push(bar);
             }
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, bitmapSize.width, bitmapSize.height);
+            ctx.clip();
 
             for (const [color, bars] of barsByColor.entries()) {
                 ctx.lineWidth = 1;
@@ -227,6 +240,8 @@ class DiamondRenderer implements ICustomSeriesPaneRenderer {
                     }
                 }
             }
+
+            ctx.restore();
         });
     }
 }

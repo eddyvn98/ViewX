@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries, LineStyle } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateRSI } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class RSIIndicator {
     private series: ISeriesApi<"Line"> | null = null;
@@ -121,11 +122,7 @@ export class RSIIndicator {
 
     destroy() {
         if (this.series && this.chart) {
-            try {
-                this.chart.removeSeries(this.series);
-            } catch (err) {
-                console.warn('[RSI] Failed to remove series:', err);
-            }
+            safeRemoveSeries(this.chart, this.series, 'RSI');
             this.series = null;
         }
     }

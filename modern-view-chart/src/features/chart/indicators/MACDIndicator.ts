@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries, HistogramSeries } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateMACD } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class MACDIndicator {
     private macdSeries: ISeriesApi<"Line"> | null = null;
@@ -135,15 +136,15 @@ export class MACDIndicator {
     destroy() {
         if (this.chart) {
             if (this.macdSeries) {
-                this.chart.removeSeries(this.macdSeries);
+                safeRemoveSeries(this.chart, this.macdSeries, 'MACD');
                 this.macdSeries = null;
             }
             if (this.signalSeries) {
-                this.chart.removeSeries(this.signalSeries);
+                safeRemoveSeries(this.chart, this.signalSeries, 'MACD');
                 this.signalSeries = null;
             }
             if (this.histogramSeries) {
-                this.chart.removeSeries(this.histogramSeries);
+                safeRemoveSeries(this.chart, this.histogramSeries, 'MACD');
                 this.histogramSeries = null;
             }
         }

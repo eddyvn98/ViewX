@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateSuperTrend } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class SuperTrendIndicator {
     private series: ISeriesApi<"Line"> | null = null;
@@ -85,9 +86,7 @@ export class SuperTrendIndicator {
 
     destroy() {
         if (this.series && this.chart) {
-            try {
-                this.chart.removeSeries(this.series);
-            } catch (err) { }
+            safeRemoveSeries(this.chart, this.series, 'SuperTrend');
             this.series = null;
         }
     }

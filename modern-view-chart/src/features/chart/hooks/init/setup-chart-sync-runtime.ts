@@ -126,6 +126,7 @@ export function setupChartSyncRuntime({
   const queueLogicalRangeSync = (range: unknown, source: LogicalRangeSource) => {
     const nextRange = sanitizeRange(range as PersistedRange | null);
     if (!nextRange || syncing) return;
+    if (isPointerInteracting && pointerInteractionSource && source !== pointerInteractionSource) return;
     if (logicalRangesEqual(nextRange, pendingLogicalRange) || logicalRangesEqual(nextRange, lastAppliedLogicalRange)) return;
     pendingLogicalRange = nextRange;
     pendingLogicalRangeSource = source;

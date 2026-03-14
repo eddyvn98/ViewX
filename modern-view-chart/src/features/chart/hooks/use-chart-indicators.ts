@@ -33,6 +33,7 @@ export function useChartIndicators(
 
     const instancesRef = useRef<Record<string, any>>({});
     const defaultsAppliedRef = useRef(false);
+    const batchVersionRef = useRef(0);
 
     const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
@@ -52,6 +53,7 @@ export function useChartIndicators(
         if (!isReady || !symbol) return;
         if (key !== lastKeyRef.current) {
             lastKeyRef.current = key;
+            batchVersionRef.current += 1;
             lastBarTimeRef.current = 0;
             stableCandlesRef.current = [];
             Object.keys(instancesRef.current).forEach(id => {
@@ -119,18 +121,24 @@ export function useChartIndicators(
             });
 
             if (indicatorsToCalculate.length > 0) {
-                chartWorkerClient.calculateBatch(indicatorsToCalculate, stableCandlesRef.current)
+                const batchVersion = batchVersionRef.current;
+                const batchKey = key;
+                const batchCandles = stableCandlesRef.current;
+
+                chartWorkerClient.calculateBatch(indicatorsToCalculate, batchCandles)
                     .then(results => {
+                        if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
                         const resultsMap = new Map(results.map((r: any) => [r.id, r.values]));
                         indicatorsToCalculate.forEach(config => {
                             const instance = instancesRef.current[config.id];
-                            if (instance) instance.update(stableCandlesRef.current, config, resultsMap.get(config.id));
+                            if (instance) instance.update(batchCandles, config, resultsMap.get(config.id));
                         });
                     })
                     .catch(() => {
+                        if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
                         indicatorsToCalculate.forEach(config => {
                             const instance = instancesRef.current[config.id];
-                            if (instance) instance.update(stableCandlesRef.current, config);
+                            if (instance) instance.update(batchCandles, config);
                         });
                     });
             }
@@ -192,6 +200,7 @@ export function useChartIndicators(
 
     useEffect(() => {
         return () => {
+            batchVersionRef.current += 1;
             Object.values(instancesRef.current).forEach(inst => {
                 try { inst?.destroy?.(); } catch { }
             });
