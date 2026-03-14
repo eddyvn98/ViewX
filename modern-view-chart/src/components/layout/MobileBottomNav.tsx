@@ -16,12 +16,17 @@ interface MobileBottomNavProps {
     activeTab: string;
     onTabChange: (tab: string) => void;
     isHidden?: boolean;
+    className?: string;
+    compact?: boolean;
+    mini?: boolean;
 }
 
 type NavMode = 'symbol' | 'drawing' | 'actions' | 'timeframe';
 
 const MODES: NavMode[] = ['actions', 'symbol', 'drawing'];
-const ITEM_HEIGHT = 62;
+const DEFAULT_ITEM_HEIGHT = 62;
+const COMPACT_ITEM_HEIGHT = 52;
+const MINI_ITEM_HEIGHT = 44;
 
 const NAV_ITEMS = [
     { id: 'watchlist', label: 'Watchlist', icon: List },
@@ -31,7 +36,15 @@ const NAV_ITEMS = [
     { id: 'menu', label: 'Menu', icon: Menu },
 ];
 
-export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabChange, isHidden = false }: MobileBottomNavProps) {
+export const MobileBottomNav = memo(function MobileBottomNav({
+    activeTab,
+    onTabChange,
+    isHidden = false,
+    className,
+    compact = false,
+    mini = false
+}: MobileBottomNavProps) {
+    const itemHeight = mini ? MINI_ITEM_HEIGHT : compact ? COMPACT_ITEM_HEIGHT : DEFAULT_ITEM_HEIGHT;
     const [mode, setMode] = useState<NavMode>('symbol');
     const [isTimeframe, setIsTimeframe] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -121,7 +134,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
     if (isHidden) return null;
 
     const renderModeContent = (targetMode: NavMode, isActive: boolean) => {
-        const itemStyle = { height: `${ITEM_HEIGHT}px` };
+        const itemStyle = { height: `${itemHeight}px` };
         const isTradeActive = activeTab === 'trade';
 
         // Lazy Rendering: Only render heavy components if isActive
@@ -168,7 +181,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
                                         <div className={cn("p-1 rounded-lg", isItemActive ? "bg-primary/20 text-primary" : "bg-transparent")}>
                                             <item.icon size={14} strokeWidth={isItemActive ? 2.5 : 2} />
                                         </div>
-                                        <span className={cn("text-[10px] font-black uppercase tracking-widest", isItemActive ? "opacity-100" : "opacity-40")}>
+                                        <span className={cn("font-black uppercase tracking-widest", compact ? "text-[9px]" : "text-[10px]", isItemActive ? "opacity-100" : "opacity-40")}>
                                             {item.label}
                                         </span>
                                     </button>
@@ -182,16 +195,16 @@ export const MobileBottomNav = memo(function MobileBottomNav({ activeTab, onTabC
     };
 
     return (
-        <div className="md:hidden w-full z-[99] flex flex-col items-center pointer-events-auto shrink-0 relative bg-background overflow-x-hidden">
+        <div className={cn("w-full z-[99] flex flex-col items-center pointer-events-auto shrink-0 relative bg-background overflow-x-hidden", className)}>
             <div
                 className="w-full z-[100] backdrop-blur-2xl border-t border-border/10 bg-background/95 supports-[backdrop-filter]:bg-background/80 h-auto overflow-hidden touch-pan-x pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
                 onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
             >
-                <div className="w-full relative overflow-hidden flex flex-col items-center shrink-0" style={{ height: `${ITEM_HEIGHT}px` }}>
+                <div className="w-full relative overflow-hidden flex flex-col items-center shrink-0" style={{ height: `${itemHeight}px` }}>
                     {!isTimeframe ? (
                         <motion.div
                             className="w-full flex flex-col items-center will-change-transform"
-                            animate={{ y: -ITEM_HEIGHT }}
+                            animate={{ y: -itemHeight }}
                             transition={{ type: "spring", damping: 30, stiffness: 300 }}
                             key={mode}
                         >

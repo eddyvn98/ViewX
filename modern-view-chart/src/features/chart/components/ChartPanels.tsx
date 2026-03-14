@@ -39,7 +39,7 @@ export function ChartPanels({
 }: ChartPanelsProps) {
     return (
         <>
-            <div ref={mainContainerRef} className="flex-1 relative min-h-0">
+            <div ref={mainContainerRef} className="flex-1 relative min-h-0 touch-none">
                 {/* Outer wrapper controls absolute positioning; inner div is given to
                     lightweight-charts which forces position:relative on whatever it mounts into.
                     Keeping them separate prevents the library from collapsing our layout. */}
@@ -48,7 +48,7 @@ export function ChartPanels({
                         "absolute top-0 left-0 right-0 bottom-0"
                     )}
                 >
-                    <div ref={priceContainerRef} className="w-full h-full" />
+                    <div ref={priceContainerRef} className="w-full h-full touch-none" />
                 </div>
 
                 {children}
@@ -108,7 +108,7 @@ export function ChartPanels({
                         {/* Solid background for sub-chart price axis only - matches initialMinW (62) + extra for labels */}
                         <div className="absolute top-0 right-0 w-[68px] h-full bg-background z-[5] border-l border-primary/20" />
 
-                        <div ref={subchartContainerRef} className="w-full h-full relative z-10" />
+                        <div ref={subchartContainerRef} className="w-full h-full relative z-10 touch-none" />
                     </div>
                 </div>
             </div>
@@ -116,7 +116,7 @@ export function ChartPanels({
             <div className="h-[1px] bg-border" />
 
             <div className="h-[38px] relative overflow-hidden shrink-0 bg-background/5 backdrop-blur-[1.5px] border-t border-border">
-                <div ref={timescaleContainerRef} className="w-full h-full" />
+                <div ref={timescaleContainerRef} className="w-full h-full touch-none" />
             </div>
 
             <CursorTooltip

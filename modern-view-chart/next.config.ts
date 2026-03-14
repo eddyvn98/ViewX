@@ -13,6 +13,7 @@ const nonHtmlContentSecurityPolicy = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  output: "standalone",
   async headers() {
     return [
       {
