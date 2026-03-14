@@ -88,6 +88,19 @@ export function useChartInit(
     useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
         let isDisposed = false;
+        const applyTouchAction = (container: HTMLDivElement | null) => {
+            if (!container) return;
+            container.style.touchAction = 'none';
+            Array.from(container.querySelectorAll<HTMLElement>('*')).forEach((el) => {
+                el.style.touchAction = 'none';
+            });
+        };
+        const createTouchObserver = (container: HTMLDivElement | null) => {
+            if (!container) return null;
+            const observer = new MutationObserver(() => applyTouchAction(container));
+            observer.observe(container, { childList: true, subtree: true, attributes: true });
+            return observer;
+        };
         const priceWidth = Math.max(1, Math.round(priceContainerRef.current.clientWidth || 1));
         const priceHeight = Math.max(1, Math.round(priceContainerRef.current.clientHeight || 1));
         const subWidth = Math.max(1, Math.round(subchartContainerRef.current.clientWidth || 1));
@@ -98,6 +111,12 @@ export function useChartInit(
         const priceChart = createChart(priceContainerRef.current, getPriceChartOptions(priceWidth, priceHeight, theme, themeColor));
         const subchartChart = createChart(subchartContainerRef.current, getSubChartOptions(subWidth, subHeight, theme, themeColor));
         const timescaleChart = createChart(timescaleContainerRef.current, getTimescaleOptions(timeWidth, timeHeight, theme, themeColor));
+        applyTouchAction(priceContainerRef.current);
+        applyTouchAction(subchartContainerRef.current);
+        applyTouchAction(timescaleContainerRef.current);
+        const priceTouchObserver = createTouchObserver(priceContainerRef.current);
+        const subchartTouchObserver = createTouchObserver(subchartContainerRef.current);
+        const timescaleTouchObserver = createTouchObserver(timescaleContainerRef.current);
 
         const candleSeries = priceChart.addSeries(CandlestickSeries, {
             upColor: '#22c55e',
@@ -314,6 +333,9 @@ export function useChartInit(
 
         const syncChartSizes = () => {
             if (isDisposed) return;
+            applyTouchAction(priceContainerRef.current);
+            applyTouchAction(subchartContainerRef.current);
+            applyTouchAction(timescaleContainerRef.current);
             if (priceContainerRef.current && priceContainerRef.current.clientWidth > 0 && priceContainerRef.current.clientHeight > 0) {
                 const w = Math.max(1, Math.round(priceContainerRef.current.clientWidth));
                 const h = Math.max(1, Math.round(priceContainerRef.current.clientHeight));
@@ -370,6 +392,9 @@ export function useChartInit(
             if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
             if (viewportSaveTimeoutRef.current) clearTimeout(viewportSaveTimeoutRef.current);
             resizeObserver.disconnect();
+            priceTouchObserver?.disconnect();
+            subchartTouchObserver?.disconnect();
+            timescaleTouchObserver?.disconnect();
             window.removeEventListener('resize', syncChartSizes);
             window.visualViewport?.removeEventListener('resize', syncChartSizes);
             priceContainerRef.current?.removeEventListener('pointerdown', handlePointerDown, true);

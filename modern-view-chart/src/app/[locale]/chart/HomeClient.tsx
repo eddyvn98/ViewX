@@ -6,7 +6,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useUserSetupSync } from "@/hooks/use-user-setup-sync";
 import { useMarketStore, RootState } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
-import { X, Plus } from "lucide-react";
+import { X, Plus, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
@@ -128,6 +128,47 @@ export default function Home() {
     return state.symbolInfo[chart.symbol]?.digits;
   });
   const [isMobileWatchlistAddMode, setIsMobileWatchlistAddMode] = React.useState(false);
+  const [isMobileLayout, setIsMobileLayout] = React.useState(false);
+  const [isCompactMobile, setIsCompactMobile] = React.useState(false);
+  const [isMiniMobile, setIsMiniMobile] = React.useState(false);
+  const [showMiniControls, setShowMiniControls] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const evaluateViewport = () => {
+      const vv = window.visualViewport;
+      const width = vv?.width ?? window.innerWidth;
+      const height = vv?.height ?? window.innerHeight;
+      const isCoarsePointer = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+      const isLandscape = window.matchMedia("(orientation: landscape)").matches || width > height;
+      const mobileByWidth = width < 768;
+      const nextMobileLayout = isCoarsePointer ? !isLandscape : mobileByWidth;
+      const compactByHeight = nextMobileLayout && height <= 460;
+      const miniByHeight = nextMobileLayout && height <= 300;
+      setIsMobileLayout(nextMobileLayout);
+      setIsCompactMobile(compactByHeight);
+      setIsMiniMobile(miniByHeight);
+    };
+
+    evaluateViewport();
+    window.addEventListener("resize", evaluateViewport);
+    window.visualViewport?.addEventListener("resize", evaluateViewport);
+    return () => {
+      window.removeEventListener("resize", evaluateViewport);
+      window.visualViewport?.removeEventListener("resize", evaluateViewport);
+    };
+  }, []);
+
+  const enableMiniMode = isMiniMobile;
+
+  React.useEffect(() => {
+    if (!enableMiniMode) {
+      setShowMiniControls(true);
+    } else {
+      setShowMiniControls(false);
+    }
+  }, [enableMiniMode]);
 
   // Keyboard Detection & Layout Reset
   React.useEffect(() => {
@@ -202,15 +243,23 @@ export default function Home() {
   }, [activeChart?.symbol, activeChart?.interval, activeTicker?.price, activeTicker?.change, activeDigits]);
 
   return (
-    <div className="app-root bg-background text-foreground font-sans select-none relative transition-colors duration-300">
+    <div className="safe-viewport bg-background">
+      <div className="h-full w-full overflow-hidden flex items-stretch">
+    <div
+      className="app-root w-full bg-background text-foreground font-sans select-none relative transition-colors duration-300"
+    >
       {strategyEnabled && <StrategyRunnerBootstrap />}
       <NotificationManager />
-      <div className="hidden md:block">
+      {!isMobileLayout && (
         <Header />
-      </div>
+      )}
 
       {/* Mobile Top Bar */}
-      <MobileTopBar />
+      <MobileTopBar
+        className={cn(isMobileLayout && (!enableMiniMode || showMiniControls) ? "flex" : "hidden")}
+        compact={isCompactMobile}
+        mini={enableMiniMode}
+      />
 
       {/* 
           Mobile Height: 100dvh - 64px (Bottom Nav)
@@ -218,7 +267,7 @@ export default function Home() {
       */}
       <div className="flex flex-1 pt-0 overflow-hidden min-h-0">
         {/* LEFT BAR: Icons */}
-        <div className="hidden md:flex h-full">
+        <div className={cn("h-full", isMobileLayout ? "hidden" : "flex")}>
           <Sidebar />
         </div>
 
@@ -227,7 +276,8 @@ export default function Home() {
           {/* OPTIONAL LEFT PANEL: Market List */}
           <div
             className={cn(
-              "border-r border-border bg-background flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0 hidden md:flex",
+              "border-r border-border bg-background flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0",
+              isMobileLayout ? "hidden" : "flex",
               isLeftSidebarOpen ? "w-72 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           >
@@ -246,19 +296,21 @@ export default function Home() {
 
           {/* MAIN CENTER: Charts & Terminal */}
           <main className={cn(
-            "flex-1 flex flex-col p-0 md:p-1.5 overflow-hidden relative min-w-0 bg-secondary/10 pb-0 md:pb-0"
+            "flex-1 flex flex-col overflow-hidden relative min-w-0 bg-secondary/10 pb-0",
+            isMobileLayout ? "p-0" : "p-1.5"
           )}>
             {/* Show Chart ONLY if active tab is 'chart' on Mobile, OR always on Desktop */}
             <div className={cn(
-              "flex-1 flex flex-col min-h-0 bg-card rounded-none md:rounded-lg border-0 md:border border-border/50 overflow-hidden shadow-2xl",
-              (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions' || activeMobileTab === 'strategy' || activeMobileTab === 'indicators') ? 'flex' : 'hidden md:flex'
+              "flex-1 flex flex-col min-h-0 bg-card border-border/50 overflow-hidden shadow-2xl",
+              isMobileLayout ? "rounded-none border-0" : "rounded-lg border",
+              (activeMobileTab === 'chart' || activeMobileTab === 'trade' || activeMobileTab === 'positions' || activeMobileTab === 'strategy' || activeMobileTab === 'indicators') ? 'flex' : (isMobileLayout ? 'hidden' : 'flex')
             )}>
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-0">
-                <div className="hidden md:block">
+                {!isMobileLayout && (
                   <React.Suspense fallback={<PanelFallback className="h-11" />}>
                     <ChartsToolbarMemo />
                   </React.Suspense>
-                </div>
+                )}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <React.Suspense fallback={<PanelFallback />}>
                     <ChartGrid />
@@ -269,7 +321,10 @@ export default function Home() {
               {/* Desktop Terminal - CONDITIONAL RENDER to prevent re-renders when hidden */}
               {isTerminalVisible && (
                 <div
-                  className="transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-border hidden md:flex border-t opacity-100"
+                  className={cn(
+                    "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 border-border border-t opacity-100",
+                    isMobileLayout ? "hidden" : "flex"
+                  )}
                   style={{ height: isTerminalCollapsed ? 40 : terminalHeight }}
                 >
                   <Terminal />
@@ -282,7 +337,7 @@ export default function Home() {
 
             {/* Mobile Watchlist Tab */}
             {activeMobileTab === 'watchlist' && (
-              <div className="flex-1 flex flex-col bg-background md:hidden h-full min-h-0">
+              <div className={cn("flex-1 flex flex-col bg-background h-full min-h-0", isMobileLayout ? "flex" : "hidden")}>
                 <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/20">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">
                     {isMobileWatchlistAddMode ? 'Add Symbols' : 'My Watchlist'}
@@ -320,10 +375,17 @@ export default function Home() {
             {/* Mobile Terminal Panel - CONDITIONAL RENDER to prevent re-renders when hidden */}
             {activeMobileTab === 'positions' && (
               <div className={cn(
-                "absolute left-0 right-0 bg-background border-t border-border flex flex-col md:hidden shadow-[0_-15px_40px_rgba(0,0,0,0.2)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
-                "bottom-[calc(48px+env(safe-area-inset-bottom))]",
-                isInputFocused ? "h-[80%]" : "h-[29%]"
-              )}>
+                "absolute left-0 right-0 bg-background border-t border-border flex flex-col shadow-[0_-15px_40px_rgba(0,0,0,0.2)] z-[60] transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] transform-gpu will-change-transform translate-y-0 opacity-100",
+                isMobileLayout ? "flex" : "hidden",
+                isInputFocused ? "h-[80%]" : (isCompactMobile ? "h-[45%]" : "h-[29%]")
+              )}
+                style={{
+                  bottom:
+                    enableMiniMode && !showMiniControls
+                      ? "0px"
+                      : `calc(${isCompactMobile ? 52 : 62}px + env(safe-area-inset-bottom))`
+                }}
+              >
                 <div
                   className="h-6 flex items-center justify-center cursor-row-resize active:bg-secondary/20 touch-none shrink-0"
                   onClick={handleClosePanel}
@@ -354,7 +416,7 @@ export default function Home() {
 
             {/* Mobile Strategy Panel - NEW */}
             {activeMobileTab === 'strategy' && (
-              <div className="md:hidden flex-1 flex flex-col min-h-0 bg-background overflow-hidden">
+              <div className={cn("flex-1 flex flex-col min-h-0 bg-background overflow-hidden", isMobileLayout ? "flex" : "hidden")}>
                 <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Strategy Manager</h2>
                   <button
@@ -373,14 +435,14 @@ export default function Home() {
             )}
 
             {activeMobileTab === 'menu' && (
-              <div className="flex-1 bg-background md:hidden overflow-y-auto min-h-0">
+              <div className={cn("flex-1 bg-background overflow-y-auto min-h-0", isMobileLayout ? "block" : "hidden")}>
                 <MobileMenu />
               </div>
             )}
 
             {/* Mobile Indicators Panel */}
             {activeMobileTab === 'indicators' && (
-              <div className="md:hidden absolute inset-0 z-[60] bg-background flex flex-col">
+              <div className={cn("absolute inset-0 z-[60] bg-background flex flex-col", isMobileLayout ? "flex" : "hidden")}>
                 <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Active Indicators</h2>
                   <button
@@ -402,7 +464,8 @@ export default function Home() {
           {/* RIGHT SIDEBAR: 3 Tabs (Market, Indicators, Trade) */}
           <div
             className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0 hidden md:flex",
+              "transition-all duration-300 ease-in-out overflow-hidden flex-col shrink-0",
+              isMobileLayout ? "hidden" : "flex",
               isRightSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
             style={{ width: isRightSidebarOpen ? `${rightSidebarWidth}px` : '0px' }}
@@ -416,7 +479,23 @@ export default function Home() {
         activeTab={activeMobileTab}
         onTabChange={handleMobileTabChange}
         isHidden={isScrollingPanel}
+        compact={isCompactMobile}
+        mini={enableMiniMode}
+        className={cn(isMobileLayout && (!enableMiniMode || showMiniControls) ? "flex" : "hidden")}
       />
+
+      {isMobileLayout && enableMiniMode && activeMobileTab === "chart" && (
+        <button
+          onClick={() => setShowMiniControls((prev) => !prev)}
+          className="absolute right-2 bottom-[max(8px,env(safe-area-inset-bottom))] z-[130] h-8 w-8 rounded-full border border-border/60 bg-background/85 backdrop-blur-md text-foreground shadow-lg flex items-center justify-center"
+          aria-label={showMiniControls ? "Hide controls" : "Show controls"}
+          title={showMiniControls ? "Hide controls" : "Show controls"}
+        >
+          <SlidersHorizontal size={14} />
+        </button>
+      )}
+    </div>
+    </div>
     </div>
   );
 }
