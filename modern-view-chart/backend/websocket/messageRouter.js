@@ -93,6 +93,9 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                 case "subscribeSymbols":
                     handleSubscribeSymbols(context, data);
                     break;
+                case "app_ping":
+                    safeSend(ws, JSON.stringify({ topic: "app_pong", echoedAt: Date.now(), sentAt: data.sentAt || null }));
+                    break;
                 case "mt5_update":
                     handleMt5Update(context, data);
                     break;

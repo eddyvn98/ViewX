@@ -31,6 +31,8 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
 
     socket.onopen = () => {
         wsRuntime.reconnectAttempts = 0;
+        wsRuntime.lastMessageAt = Date.now();
+        wsRuntime.lastAppPongAt = Date.now();
         deps.setConnected(true);
         const userId = 'user_123';
         const symbols = collectActiveSymbolsFromStore();
@@ -47,6 +49,14 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
         deps.setBridgeOnline(false);
         if (wsRuntime.globalSocket === socket) {
             wsRuntime.globalSocket = null;
+        }
+        if (wsRuntime.resumeHealthCheckTimer) {
+            clearTimeout(wsRuntime.resumeHealthCheckTimer);
+            wsRuntime.resumeHealthCheckTimer = null;
+        }
+        if (wsRuntime.heartbeatTimer) {
+            clearInterval(wsRuntime.heartbeatTimer);
+            wsRuntime.heartbeatTimer = null;
         }
         wsRuntime.historyFetched = false;
         const closeReason = String(closeEvent?.reason || '').toLowerCase();

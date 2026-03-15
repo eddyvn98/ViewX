@@ -40,6 +40,7 @@ export function MobileMenu() {
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('auth_access_token');
                 localStorage.removeItem('auth_user');
+                window.dispatchEvent(new Event('auth-state-changed'));
                 window.location.href = '/';
             }
         }

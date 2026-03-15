@@ -74,10 +74,18 @@ export function useChartScaleReset(
         subchartContainer.addEventListener('dblclick', onSubchartDblClick);
         timescaleContainer.addEventListener('dblclick', onTimescaleDblClick);
 
+        const handleForegroundResync = () => {
+            const chart = priceChartRef.current;
+            if (!chart || !isAutoScrollEnabledRef?.current) return;
+            chart.timeScale().scrollToRealTime();
+        };
+        window.addEventListener('chart-foreground-resync', handleForegroundResync as EventListener);
+
         return () => {
             priceContainer.removeEventListener('dblclick', onPriceDblClick);
             subchartContainer.removeEventListener('dblclick', onSubchartDblClick);
             timescaleContainer.removeEventListener('dblclick', onTimescaleDblClick);
+            window.removeEventListener('chart-foreground-resync', handleForegroundResync as EventListener);
         };
     }, [
         priceChartRef,

@@ -20,8 +20,13 @@ export interface MessageHandlerDeps {
 
 export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps: MessageHandlerDeps) {
     try {
+        wsRuntime.lastMessageAt = Date.now();
         const msg = JSON.parse(event.data);
         const msgType = msg.topic || msg.event || msg.type;
+        if (msgType === 'app_pong') {
+            wsRuntime.lastAppPongAt = Date.now();
+            return;
+        }
         if (msgType === 'error' && String(msg?.code || '').toLowerCase() === 'unauthorized') {
             wsRuntime.unauthorizedFrameReceived = true;
             socket.close(1008, 'Unauthorized');

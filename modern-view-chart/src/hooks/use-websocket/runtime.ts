@@ -7,6 +7,9 @@ export const wsRuntime = {
     globalSocket: null as WebSocket | null,
     historyFetched: false,
     reconnectAttempts: 0,
+    lastMessageAt: 0,
+    lastResumeSyncAt: 0,
+    lastAppPongAt: 0,
 
     tickerUpdateBuffer: {} as Record<string, any>,
     tickerUpdateTimer: null as NodeJS.Timeout | null,
@@ -17,6 +20,8 @@ export const wsRuntime = {
 
     subscribeSymbolsTimer: null as NodeJS.Timeout | null,
     foregroundResyncTimer: null as NodeJS.Timeout | null,
+    resumeHealthCheckTimer: null as NodeJS.Timeout | null,
+    heartbeatTimer: null as NodeJS.Timeout | null,
     lastForegroundResyncAtByKey: {} as Record<string, number>,
 
     wsTicketCache: '',

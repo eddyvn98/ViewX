@@ -137,6 +137,7 @@ export function GoogleSignInButton({
 
             localStorage.setItem("auth_access_token", String(data.access_token));
             localStorage.setItem("auth_user", JSON.stringify(data.user || {}));
+            window.dispatchEvent(new Event("auth-state-changed"));
             isAuthenticatedRef.current = true;
             window.location.href = resolveLocalizedRedirectTarget(redirectTo);
           } catch (e) {

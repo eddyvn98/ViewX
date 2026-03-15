@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { RootState, useMarketStore } from '@/lib/store';
 import { RightSidebarTab } from '@/lib/store/types';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
@@ -239,9 +239,9 @@ function getAuthHeaders(clientId: string): Record<string, string> {
     return headers;
 }
 
-function hasAccessToken(): boolean {
-    if (typeof window === 'undefined') return false;
-    return Boolean((localStorage.getItem('auth_access_token') || '').trim());
+function getAccessTokenValue(): string {
+    if (typeof window === 'undefined') return '';
+    return (localStorage.getItem('auth_access_token') || '').trim();
 }
 
 function parseRetryAfterMs(retryAfterHeader: string | null): number {
@@ -581,10 +581,8 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
 export function useUserSetupSync() {
     const { theme, setTheme } = useTheme();
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
-    const isAuthenticated = useMemo(() => {
-        if (typeof window === 'undefined') return false;
-        return hasAccessToken();
-    }, []);
+    const [authToken, setAuthToken] = useState<string>(() => getAccessTokenValue());
+    const isAuthenticated = authToken.length > 0;
     const apiUrl = useMemo(() => {
         if (typeof window === 'undefined') return '/api/user/state';
         return isAuthenticated ? buildApiUrl(clientId) : buildPublicApiUrl(clientId);
@@ -608,6 +606,26 @@ export function useUserSetupSync() {
     useEffect(() => {
         setThemeRef.current = setTheme;
     }, [setTheme]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const syncAuthToken = () => {
+            const nextToken = getAccessTokenValue();
+            setAuthToken((prev) => (prev === nextToken ? prev : nextToken));
+        };
+
+        syncAuthToken();
+        window.addEventListener('storage', syncAuthToken);
+        window.addEventListener('focus', syncAuthToken);
+        window.addEventListener('auth-state-changed', syncAuthToken as EventListener);
+
+        return () => {
+            window.removeEventListener('storage', syncAuthToken);
+            window.removeEventListener('focus', syncAuthToken);
+            window.removeEventListener('auth-state-changed', syncAuthToken as EventListener);
+        };
+    }, []);
 
     useEffect(() => {
         if (hasInitializedRef.current) return;
