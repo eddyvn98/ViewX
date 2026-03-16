@@ -29,6 +29,9 @@ function resolveStateScope(req) {
   if (req.auth?.type === "user" && req.auth?.userId) {
     return { scopeType: "user", scopeId: String(req.auth.userId) };
   }
+  if (req.user?.sub || req.user?._id) {
+    return { scopeType: "user", scopeId: String(req.user.sub || req.user._id) };
+  }
 
   const headerClientId = req.headers["x-client-id"];
   const queryClientId = req.query?.client_id;
@@ -470,6 +473,8 @@ export const updatePublicTradeExit = async (req, res) => {
 
 function requireAuthedUser(req, res) {
   if (req.auth?.type !== "user" || !req.auth?.userId) {
+    const fallbackUserId = req.user?.sub || req.user?._id;
+    if (fallbackUserId) return String(fallbackUserId);
     res.status(401).json({ error: "Unauthorized" });
     return null;
   }

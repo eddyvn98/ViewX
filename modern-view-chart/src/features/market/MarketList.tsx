@@ -325,14 +325,6 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const setSourceTab = useMarketStore((state) => state.setMarketListSourceTab);
     const [binanceUniverse, setBinanceUniverse] = useState<string[]>(() => cachedBinanceUniverse ?? []);
 
-    // FORCE DEFAULT WATCHLIST IF EMPTY
-    React.useEffect(() => {
-        if (watchlist.length === 0) {
-            console.log("Empty watchlist detected, adding defaults...");
-            ['BTCUSDm', 'XAUUSDm', 'EURUSDm'].forEach(s => addToWatchlist(s));
-        }
-    }, [watchlist.length, addToWatchlist]);
-
     const availableSymbols = useMarketStore((state) => state.availableSymbols);
 
     useEffect(() => {

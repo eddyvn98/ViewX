@@ -76,7 +76,7 @@ export const Header = memo(function Header() {
             if (typeof window !== "undefined") {
                 localStorage.removeItem("auth_access_token");
                 localStorage.removeItem("auth_user");
-                window.dispatchEvent(new Event("auth-state-changed"));
+                window.dispatchEvent(new Event("auth-changed"));
                 const localeMatch = window.location.pathname.match(/^\/(vi|en)(?:\/|$)/i);
                 const locale = localeMatch?.[1]?.toLowerCase();
                 window.location.href = locale ? `/${locale}` : "/";

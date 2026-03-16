@@ -239,7 +239,7 @@ function getAuthHeaders(clientId: string): Record<string, string> {
     return headers;
 }
 
-function getAccessTokenValue(): string {
+function readAccessToken(): string {
     if (typeof window === 'undefined') return '';
     return (localStorage.getItem('auth_access_token') || '').trim();
 }
@@ -581,7 +581,7 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
 export function useUserSetupSync() {
     const { theme, setTheme } = useTheme();
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
-    const [authToken, setAuthToken] = useState<string>(() => getAccessTokenValue());
+    const [authToken, setAuthToken] = useState<string>(() => readAccessToken());
     const isAuthenticated = authToken.length > 0;
     const apiUrl = useMemo(() => {
         if (typeof window === 'undefined') return '/api/user/state';
@@ -589,7 +589,6 @@ export function useUserSetupSync() {
     }, [clientId, isAuthenticated]);
 
     const isReadyRef = useRef(false);
-    const hasInitializedRef = useRef(false);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const lastSavedRef = useRef('');
@@ -611,27 +610,29 @@ export function useUserSetupSync() {
         if (typeof window === 'undefined') return;
 
         const syncAuthToken = () => {
-            const nextToken = getAccessTokenValue();
-            setAuthToken((prev) => (prev === nextToken ? prev : nextToken));
+            setAuthToken((current) => {
+                const next = readAccessToken();
+                return current === next ? current : next;
+            });
         };
 
         syncAuthToken();
         window.addEventListener('storage', syncAuthToken);
         window.addEventListener('focus', syncAuthToken);
-        window.addEventListener('auth-state-changed', syncAuthToken as EventListener);
+        window.addEventListener('auth-changed', syncAuthToken as EventListener);
+        document.addEventListener('visibilitychange', syncAuthToken);
 
         return () => {
             window.removeEventListener('storage', syncAuthToken);
             window.removeEventListener('focus', syncAuthToken);
-            window.removeEventListener('auth-state-changed', syncAuthToken as EventListener);
+            window.removeEventListener('auth-changed', syncAuthToken as EventListener);
+            document.removeEventListener('visibilitychange', syncAuthToken);
         };
     }, []);
 
     useEffect(() => {
-        if (hasInitializedRef.current) return;
-        hasInitializedRef.current = true;
-
         let isDisposed = false;
+        isReadyRef.current = false;
 
         const buildSnapshot = () => {
             const snapshot = pickPersistedSetupState(useMarketStore.getState(), themeRef.current);
@@ -713,6 +714,7 @@ export function useUserSetupSync() {
         };
 
         const loadInitialState = async () => {
+            let shouldPersistCurrentSnapshot = false;
             try {
                 const response = await fetch(apiUrl, {
                     method: 'GET',
@@ -726,20 +728,34 @@ export function useUserSetupSync() {
 
                 const data = (await response.json()) as UserStateApiResponse;
                 if (!isDisposed && isPlainObject(data.state)) {
+                    const hasRemoteState = Object.keys(data.state).length > 0;
                     const persistedUi = getPersistedUiState(data.state);
                     const persistedThemeMode = persistedUi?.themeMode;
                     if (persistedThemeMode === 'light' || persistedThemeMode === 'dark' || persistedThemeMode === 'system') {
                         setThemeRef.current(persistedThemeMode);
                     }
-                    applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                    if (hasRemoteState) {
+                        applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                    } else if (isAuthenticated) {
+                        // Logged-in users should not fall back to a blank remote snapshot.
+                        // Persist the current local state immediately so new tabs reload correctly.
+                        shouldPersistCurrentSnapshot = true;
+                    }
                 }
             } catch {
                 // Ignore initial sync errors to avoid blocking UI.
             } finally {
                 if (isDisposed) return;
                 const initialSnapshot = buildSnapshot();
-                lastSavedRef.current = JSON.stringify(initialSnapshot);
                 isReadyRef.current = true;
+                if (shouldPersistCurrentSnapshot) {
+                    const serialized = JSON.stringify(initialSnapshot);
+                    lastSavedRef.current = '';
+                    pendingSaveRef.current = { snapshot: initialSnapshot, serialized };
+                    void flushSave();
+                } else {
+                    lastSavedRef.current = JSON.stringify(initialSnapshot);
+                }
             }
         };
 

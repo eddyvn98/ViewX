@@ -105,7 +105,7 @@ router.route("/symbols").get(async (req, res) => {
       .filter((s) => s.symbol.endsWith("USDT") && s.status === "TRADING")
       .map((s) => s.symbol);
 
-    const mt5Symbols = ["XAUUSDm", "BTCUSDm", "EURUSDm", "GBPUSDm"];
+    const mt5Symbols = ["XAUUSDm", "BTCUSDm", "ETHUSDm", "EURUSDm", "GBPUSDm"];
     const symbols = [...mt5Symbols, ...binanceSymbols].sort();
 
     res.json(symbols);
