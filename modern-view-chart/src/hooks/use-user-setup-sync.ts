@@ -9,16 +9,20 @@ import type { StrategyState } from '@/features/strategy/store/strategy-store.typ
 import type { TradeContext } from '@/features/strategy/types';
 import { useTheme } from 'next-themes';
 import { shallow } from 'zustand/shallow';
+import { clearStoredAuthSession, readStoredAccessToken, refreshStoredAccessToken } from '@/lib/auth/session';
 
 const USER_STATE_SCHEMA_VERSION = 1;
 const SAVE_DEBOUNCE_MS = 1500;
 const MIN_SAVE_INTERVAL_MS = 5000;
 const FALLBACK_SAVE_INTERVAL_MS = 15000;
+const REMOTE_SYNC_POLL_MS = 5000;
 const RATE_LIMIT_BACKOFF_MS = 30000;
 const PUBLIC_STATE_SAVE_PAUSE_MS = 60000;
 const USER_STATE_TARGET_BYTES = 220 * 1024;
 const CLIENT_ID_STORAGE_KEY = 'vivutrade-client-id';
 const LEGACY_CLIENT_ID_STORAGE_KEY = 'viewx-client-id';
+const USER_SETUP_SYNC_CHANNEL_NAME = 'user_setup_sync_channel';
+const USER_SETUP_SYNC_STATUS_EVENT = 'user-setup-sync-status';
 
 type PersistedUiState = {
     isLeftSidebarOpen: boolean;
@@ -79,16 +83,59 @@ type PersistedSetupState = {
 
 type UserStateApiResponse = {
     state?: Partial<PersistedSetupState>;
+    updated_at?: string | null;
 };
 
-function stripViewportFromTabs(tabs: RootState['tabs']): RootState['tabs'] {
+type UserSetupSyncMessage = {
+    type: 'USER_SETUP_STATE_SYNC';
+    sourceId: string;
+    state: PersistedSetupState;
+    serialized: string;
+};
+
+type UserSetupSyncStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+
+function sanitizeViewport(
+    viewport: RootState['tabs'][string]['charts'][string]['viewport'],
+): RootState['tabs'][string]['charts'][string]['viewport'] | undefined {
+    if (!isPlainObject(viewport)) return undefined;
+
+    const toSafeRange = (input: unknown) => {
+        if (!isPlainObject(input)) return undefined;
+        const from = Number(input.from);
+        const to = Number(input.to);
+        if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return undefined;
+        return { from, to };
+    };
+
+    const nextViewport: NonNullable<RootState['tabs'][string]['charts'][string]['viewport']> = {};
+    const contextKey = typeof viewport.contextKey === 'string' ? viewport.contextKey.trim() : '';
+    if (contextKey) nextViewport.contextKey = contextKey;
+
+    const logicalRange = toSafeRange(viewport.logicalRange);
+    const mainPriceRange = toSafeRange(viewport.mainPriceRange);
+    const subPriceRange = toSafeRange(viewport.subPriceRange);
+    const savedAt = Number(viewport.savedAt);
+
+    if (logicalRange) nextViewport.logicalRange = logicalRange;
+    if (mainPriceRange) nextViewport.mainPriceRange = mainPriceRange;
+    if (subPriceRange) nextViewport.subPriceRange = subPriceRange;
+    if (Number.isFinite(savedAt) && savedAt > 0) nextViewport.savedAt = savedAt;
+
+    return Object.keys(nextViewport).length > 0 ? nextViewport : undefined;
+}
+
+function sanitizeTabsForPersistence(tabs: RootState['tabs']): RootState['tabs'] {
     const sanitizedTabs: RootState['tabs'] = {};
 
     for (const [tabId, tab] of Object.entries(tabs || {})) {
         const sanitizedCharts = Object.fromEntries(
             Object.entries(tab.charts || {}).map(([chartId, chart]) => [
                 chartId,
-                chart.viewport ? { ...chart, viewport: undefined } : chart,
+                {
+                    ...chart,
+                    viewport: sanitizeViewport(chart.viewport),
+                },
             ]),
         );
 
@@ -232,16 +279,27 @@ function getAuthHeaders(clientId: string): Record<string, string> {
     const headers: Record<string, string> = {};
     if (clientId) headers['x-client-id'] = clientId;
     if (typeof window === 'undefined') return headers;
-    const accessToken = (localStorage.getItem('auth_access_token') || '').trim();
+    const accessToken = readStoredAccessToken();
     if (accessToken) {
         headers.authorization = `Bearer ${accessToken}`;
     }
     return headers;
 }
 
-function readAccessToken(): string {
-    if (typeof window === 'undefined') return '';
-    return (localStorage.getItem('auth_access_token') || '').trim();
+function clearLocalAuthState() {
+    clearStoredAuthSession();
+}
+
+function emitUserSetupSyncStatus(status: UserSetupSyncStatus, lastSavedAt: number | null = null) {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+        new CustomEvent(USER_SETUP_SYNC_STATUS_EVENT, {
+            detail: {
+                status,
+                lastSavedAt,
+            },
+        }),
+    );
 }
 
 function parseRetryAfterMs(retryAfterHeader: string | null): number {
@@ -376,7 +434,7 @@ function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' 
     const strategyState = useStrategyStore.getState();
     return {
         watchlist: state.watchlist,
-        tabs: stripViewportFromTabs(state.tabs),
+        tabs: sanitizeTabsForPersistence(state.tabs),
         activeTabId: state.activeTabId,
         favoriteTimeframes: state.favoriteTimeframes,
         chartIndicators: state.chartIndicators,
@@ -428,7 +486,7 @@ function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' 
 function selectPersistableMarketState(state: RootState) {
     return {
         watchlist: state.watchlist,
-        tabs: stripViewportFromTabs(state.tabs),
+        tabs: sanitizeTabsForPersistence(state.tabs),
         activeTabId: state.activeTabId,
         favoriteTimeframes: state.favoriteTimeframes,
         chartIndicators: state.chartIndicators,
@@ -473,6 +531,55 @@ function selectPersistableStrategyState(state: StrategyState) {
         showHistoryMarkers: state.showHistoryMarkers,
         lastResetTime: state.lastResetTime,
     };
+}
+
+function hasUsableMatrixScanner(scanners: Partial<PersistedStrategyState['matrixScanners'][number]>[] | undefined): boolean {
+    if (!Array.isArray(scanners)) return false;
+    return scanners.some((scanner) => (
+        Boolean(scanner?.active) &&
+        typeof scanner?.strategyId === 'string' &&
+        scanner.strategyId.trim().length > 0 &&
+        Array.isArray(scanner.symbols) &&
+        scanner.symbols.length > 0 &&
+        Array.isArray(scanner.timeframes) &&
+        scanner.timeframes.length > 0
+    ));
+}
+
+function mergePersistedStrategyState(
+    prev: StrategyState,
+    migrated: Partial<PersistedStrategyState>,
+): StrategyState {
+    const next = {
+        ...prev,
+        ...migrated,
+    } as StrategyState;
+
+    const remoteHasUsableScanner = hasUsableMatrixScanner(migrated.matrixScanners);
+    const localHasUsableScanner = hasUsableMatrixScanner(prev.matrixScanners);
+
+    // When auth state switches from guest -> user, the remote user snapshot can be
+    // older or less complete than the current in-memory matrix setup. In that case
+    // keep the richer local runtime state instead of wiping the active monitor.
+    if (!remoteHasUsableScanner && localHasUsableScanner) {
+        next.matrixScanners = prev.matrixScanners;
+        next.focusedMatrixScannerId = prev.focusedMatrixScannerId;
+        next.scopedLastSignalTimes = prev.scopedLastSignalTimes;
+        next.signals = prev.signals.length >= (Array.isArray(migrated.signals) ? migrated.signals.length : 0) ? prev.signals : next.signals;
+        next.virtualPositions =
+            prev.virtualPositions.length >= (Array.isArray(migrated.virtualPositions) ? migrated.virtualPositions.length : 0)
+                ? prev.virtualPositions
+                : next.virtualPositions;
+    }
+
+    if (Array.isArray(prev.strategies) && prev.strategies.length > 0) {
+        const remoteStrategies = Array.isArray(migrated.strategies) ? migrated.strategies : [];
+        if (remoteStrategies.length < prev.strategies.length) {
+            next.strategies = prev.strategies;
+        }
+    }
+
+    return next;
 }
 
 function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
@@ -571,22 +678,27 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
 
     if (isPlainObject(persisted.strategy)) {
         const migrated = migrateStrategyStoreState(persisted.strategy, 6) as Partial<PersistedStrategyState>;
-        useStrategyStore.setState((prev) => ({
-            ...prev,
-            ...migrated,
-        }));
+        useStrategyStore.setState((prev) => mergePersistedStrategyState(prev, migrated));
     }
 }
 
 export function useUserSetupSync() {
     const { theme, setTheme } = useTheme();
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
-    const [authToken, setAuthToken] = useState<string>(() => readAccessToken());
+    const tabSyncSourceId = useMemo(
+        () => (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
+        [],
+    );
+    const [authToken, setAuthToken] = useState<string>(() => readStoredAccessToken());
+    const [authResolved, setAuthResolved] = useState<boolean>(() => typeof window === 'undefined');
     const isAuthenticated = authToken.length > 0;
     const apiUrl = useMemo(() => {
         if (typeof window === 'undefined') return '/api/user/state';
+        if (!authResolved) return null;
         return isAuthenticated ? buildApiUrl(clientId) : buildPublicApiUrl(clientId);
-    }, [clientId, isAuthenticated]);
+    }, [authResolved, clientId, isAuthenticated]);
 
     const isReadyRef = useRef(false);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -595,8 +707,12 @@ export function useUserSetupSync() {
     const lastSaveAttemptAtRef = useRef(0);
     const pendingSaveRef = useRef<{ snapshot: PersistedSetupState; serialized: string } | null>(null);
     const retryAfterRef = useRef(0);
+    const remotePollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const themeRef = useRef<'light' | 'dark' | 'system' | undefined>(undefined);
     const setThemeRef = useRef(setTheme);
+    const syncChannelRef = useRef<BroadcastChannel | null>(null);
+    const lastSavedAtRef = useRef<number | null>(null);
+    const lastRemoteUpdatedAtRef = useRef<number>(0);
 
     useEffect(() => {
         themeRef.current = (theme === 'light' || theme === 'dark' || theme === 'system') ? theme : undefined;
@@ -607,30 +723,75 @@ export function useUserSetupSync() {
     }, [setTheme]);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
 
-        const syncAuthToken = () => {
-            setAuthToken((current) => {
-                const next = readAccessToken();
-                return current === next ? current : next;
-            });
+        const channel = new BroadcastChannel(USER_SETUP_SYNC_CHANNEL_NAME);
+        syncChannelRef.current = channel;
+
+        channel.onmessage = (event: MessageEvent<UserSetupSyncMessage>) => {
+            const message = event.data;
+            if (message?.type !== 'USER_SETUP_STATE_SYNC') return;
+            if (message.sourceId === tabSyncSourceId) return;
+            if (!isPlainObject(message.state)) return;
+
+            lastSavedRef.current = message.serialized;
+            pendingSaveRef.current = null;
+            applyPersistedSetupState(message.state);
         };
 
-        syncAuthToken();
-        window.addEventListener('storage', syncAuthToken);
-        window.addEventListener('focus', syncAuthToken);
-        window.addEventListener('auth-changed', syncAuthToken as EventListener);
-        document.addEventListener('visibilitychange', syncAuthToken);
+        return () => {
+            channel.close();
+            syncChannelRef.current = null;
+        };
+    }, [tabSyncSourceId]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        let isDisposed = false;
+
+        const syncAuthToken = async () => {
+            const currentToken = readStoredAccessToken();
+            if (currentToken) {
+                setAuthToken((current) => (current === currentToken ? current : currentToken));
+                if (!isDisposed) setAuthResolved(true);
+                return;
+            }
+
+            const refreshedToken = await refreshStoredAccessToken();
+            if (isDisposed) return;
+
+            setAuthToken((current) => {
+                const next = refreshedToken || readStoredAccessToken();
+                return current === next ? current : next;
+            });
+            setAuthResolved(true);
+        };
+
+        void syncAuthToken();
+        const handleAuthSignal = () => {
+            void syncAuthToken();
+        };
+
+        window.addEventListener('storage', handleAuthSignal);
+        window.addEventListener('focus', handleAuthSignal);
+        window.addEventListener('auth-changed', handleAuthSignal);
+        window.addEventListener('auth-state-changed', handleAuthSignal);
+        document.addEventListener('visibilitychange', handleAuthSignal);
 
         return () => {
-            window.removeEventListener('storage', syncAuthToken);
-            window.removeEventListener('focus', syncAuthToken);
-            window.removeEventListener('auth-changed', syncAuthToken as EventListener);
-            document.removeEventListener('visibilitychange', syncAuthToken);
+            isDisposed = true;
+            window.removeEventListener('storage', handleAuthSignal);
+            window.removeEventListener('focus', handleAuthSignal);
+            window.removeEventListener('auth-changed', handleAuthSignal);
+            window.removeEventListener('auth-state-changed', handleAuthSignal);
+            document.removeEventListener('visibilitychange', handleAuthSignal);
         };
     }, []);
 
     useEffect(() => {
+        if (!apiUrl) return;
+
         let isDisposed = false;
         isReadyRef.current = false;
 
@@ -639,11 +800,35 @@ export function useUserSetupSync() {
             return fitPersistedSetupStateToBudget(snapshot);
         };
 
+        const fetchWithAuthRetry = async (url: string, init: RequestInit): Promise<Response> => {
+            let response = await fetch(url, init);
+            if (response.status !== 401 || !isAuthenticated) {
+                return response;
+            }
+
+            const refreshedToken = await refreshStoredAccessToken();
+            if (!refreshedToken) {
+                clearLocalAuthState();
+                return response;
+            }
+
+            setAuthToken((current) => (current === refreshedToken ? current : refreshedToken));
+            const nextHeaders = new Headers(init.headers || {});
+            nextHeaders.set('authorization', `Bearer ${refreshedToken}`);
+            const retryUrl = buildApiUrl(clientId);
+            response = await fetch(retryUrl, {
+                ...init,
+                headers: nextHeaders,
+            });
+            return response;
+        };
+
         const saveState = async (snapshot: PersistedSetupState, serialized: string) => {
             if (Date.now() < retryAfterRef.current) return false;
             lastSaveAttemptAtRef.current = Date.now();
+            emitUserSetupSyncStatus('saving', lastSavedAtRef.current);
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetchWithAuthRetry(apiUrl, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -657,7 +842,20 @@ export function useUserSetupSync() {
                 });
 
                 if (response.ok || response.status === 202) {
+                    const payload = await response.json().catch(() => null) as { updated_at?: string | null } | null;
                     lastSavedRef.current = serialized;
+                    lastSavedAtRef.current = Date.now();
+                    const remoteUpdatedAt = Date.parse(String(payload?.updated_at || ''));
+                    if (Number.isFinite(remoteUpdatedAt)) {
+                        lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                    }
+                    syncChannelRef.current?.postMessage({
+                        type: 'USER_SETUP_STATE_SYNC',
+                        sourceId: tabSyncSourceId,
+                        state: snapshot,
+                        serialized,
+                    } satisfies UserSetupSyncMessage);
+                    emitUserSetupSyncStatus('saved', lastSavedAtRef.current);
                     retryAfterRef.current = response.status === 202 && !isAuthenticated
                         ? Date.now() + PUBLIC_STATE_SAVE_PAUSE_MS
                         : 0;
@@ -670,6 +868,7 @@ export function useUserSetupSync() {
             } catch {
                 // Keep silent and retry on next user change.
             }
+            emitUserSetupSyncStatus('error', lastSavedAtRef.current);
             return false;
         };
 
@@ -715,19 +914,25 @@ export function useUserSetupSync() {
 
         const loadInitialState = async () => {
             let shouldPersistCurrentSnapshot = false;
+            emitUserSetupSyncStatus('loading', lastSavedAtRef.current);
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetchWithAuthRetry(apiUrl, {
                     method: 'GET',
                     headers: getAuthHeaders(clientId),
                     credentials: 'include',
                 });
                 if (!response.ok) {
                     isReadyRef.current = true;
+                    emitUserSetupSyncStatus('error', lastSavedAtRef.current);
                     return;
                 }
 
                 const data = (await response.json()) as UserStateApiResponse;
                 if (!isDisposed && isPlainObject(data.state)) {
+                    const remoteUpdatedAt = Date.parse(String(data.updated_at || ''));
+                    if (Number.isFinite(remoteUpdatedAt)) {
+                        lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                    }
                     const hasRemoteState = Object.keys(data.state).length > 0;
                     const persistedUi = getPersistedUiState(data.state);
                     const persistedThemeMode = persistedUi?.themeMode;
@@ -755,7 +960,47 @@ export function useUserSetupSync() {
                     void flushSave();
                 } else {
                     lastSavedRef.current = JSON.stringify(initialSnapshot);
+                    emitUserSetupSyncStatus('saved', lastSavedAtRef.current);
                 }
+            }
+        };
+
+        const pollRemoteState = async () => {
+            if (isDisposed || !isReadyRef.current || !isAuthenticated) return;
+            if (pendingSaveRef.current) return;
+
+            try {
+                const response = await fetchWithAuthRetry(buildApiUrl(clientId), {
+                    method: 'GET',
+                    headers: getAuthHeaders(clientId),
+                    credentials: 'include',
+                });
+                if (!response.ok) return;
+
+                const data = (await response.json()) as UserStateApiResponse;
+                if (!isPlainObject(data.state)) return;
+
+                const remoteUpdatedAt = Date.parse(String(data.updated_at || ''));
+                if (!Number.isFinite(remoteUpdatedAt) || remoteUpdatedAt <= lastRemoteUpdatedAtRef.current) return;
+
+                const currentSnapshot = fitPersistedSetupStateToBudget(
+                    pickPersistedSetupState(useMarketStore.getState(), themeRef.current),
+                );
+                const currentSerialized = JSON.stringify(currentSnapshot);
+                const remoteSerialized = JSON.stringify(data.state);
+
+                lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                if (remoteSerialized === currentSerialized || remoteSerialized === lastSavedRef.current) return;
+
+                applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                lastSavedRef.current = JSON.stringify(
+                    fitPersistedSetupStateToBudget(
+                        pickPersistedSetupState(useMarketStore.getState(), themeRef.current),
+                    ),
+                );
+                emitUserSetupSyncStatus('saved', lastSavedAtRef.current);
+            } catch {
+                // Ignore polling failures; local runner should continue uninterrupted.
             }
         };
 
@@ -781,6 +1026,9 @@ export function useUserSetupSync() {
         saveIntervalRef.current = setInterval(() => {
             scheduleSave(0);
         }, FALLBACK_SAVE_INTERVAL_MS);
+        remotePollTimerRef.current = setInterval(() => {
+            void pollRemoteState();
+        }, REMOTE_SYNC_POLL_MS);
 
         return () => {
             isDisposed = true;
@@ -793,6 +1041,10 @@ export function useUserSetupSync() {
             if (saveIntervalRef.current) {
                 clearInterval(saveIntervalRef.current);
                 saveIntervalRef.current = null;
+            }
+            if (remotePollTimerRef.current) {
+                clearInterval(remotePollTimerRef.current);
+                remotePollTimerRef.current = null;
             }
         };
     }, [apiUrl, clientId, isAuthenticated]);

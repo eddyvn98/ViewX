@@ -95,13 +95,16 @@ export function useStrategyRunner() {
                     const candles = currentCandleData[`${config.source}:${config.symbol}:${config.interval}`];
                     if (!candles || candles.length < 50) return;
 
+                    const strategy = strategies.find((item) => item.id === config.strategyId);
+                    if (!strategy) return;
+
                     const lastRun = backtestRunRef.current[scopeKey] || 0;
                     const hasActivePos = currentVirtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.status !== 'closed' && !p.isHistorical);
                     const hasHistoricalPos = currentVirtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.isHistorical);
                     if (!shouldTriggerWarmup(lastRun, hasActivePos, hasHistoricalPos)) return;
 
                     backtestRunRef.current[scopeKey] = Date.now();
-                    void runBacktest(config.strategyId, [...candles], config.symbol, config.timeframe, config.source, scopeKey);
+                    void runBacktest(strategy.id, [...candles], config.symbol, config.timeframe, config.source, scopeKey);
                 });
             } else {
                 strategies.forEach((strategy: Strategy) => {
@@ -171,7 +174,7 @@ export function useStrategyRunner() {
 
                     if (!candles || candles.length < 5) continue;
 
-                    const strategy = strategies.find((s) => s.id === strategyId && s.active);
+                    const strategy = strategies.find((s) => s.id === strategyId);
                     if (!strategy) continue;
                     
                     const scopeKey = buildMatrixScopeKey(strategy.id, normalizedSymbol, timeframe || chartIntervalToDashboardTf(interval));

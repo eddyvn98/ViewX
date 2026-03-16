@@ -12,6 +12,11 @@ export function normalizeDashboardTf(tf: string | undefined): string {
     return norm;
 }
 
+export function inferMatrixSymbolSource(symbol: string | undefined): 'MT5' | 'BINANCE' {
+    const normalized = normalizeDashboardSymbol(symbol).toUpperCase();
+    return normalized.includes('USDT') ? 'BINANCE' : 'MT5';
+}
+
 export function timeframeToSeconds(tf: string | undefined): number {
     const norm = normalizeDashboardTf(tf);
     const match = norm.match(TIMEFRAME_RE);

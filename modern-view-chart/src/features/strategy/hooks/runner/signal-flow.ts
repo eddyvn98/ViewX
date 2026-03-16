@@ -41,7 +41,7 @@ export function processStrategySignal(
     currentVirtualPositions: VirtualPosition[],
     store: StoreLike,
     lastTime?: number,
-    source: 'MT5' = 'MT5',
+    source: 'MT5' | 'BINANCE' = 'MT5',
     matrixScopeKey?: string
 ) {
     const realMetrics = ContextCollector.captureEntryContext(strategy, candles, symbol);

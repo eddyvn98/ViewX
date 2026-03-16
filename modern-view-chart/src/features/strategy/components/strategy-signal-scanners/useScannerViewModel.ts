@@ -1,7 +1,7 @@
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useMemo } from 'react';
 import { buildMatrixCellState } from '@/features/strategy/dashboard/matrix-cell-state';
-import { compareTimeframe, normalizeDashboardSymbol, sortSymbols, timeframeToChartInterval } from '@/features/strategy/dashboard/matrix-utils';
+import { compareTimeframe, inferMatrixSymbolSource, normalizeDashboardSymbol, sortSymbols, timeframeToChartInterval } from '@/features/strategy/dashboard/matrix-utils';
 import type { MatrixScannerConfig, MatrixCellState } from '@/features/strategy/dashboard/matrix-types';
 import type { Strategy, StrategySignal, VirtualPosition } from '@/features/strategy/types';
 import type { Candle } from '@/lib/store/types';
@@ -67,7 +67,8 @@ export function useScannerViewModel(input: UseScannerViewModelInput) {
                         matrixConfig: scanner,
                         getCandles: (s, tf) => {
                             const interval = timeframeToChartInterval(tf);
-                            const key = `MT5:${s}:${interval}`;
+                            const source = inferMatrixSymbolSource(s);
+                            const key = `${source}:${s}:${interval}`;
                             return input.candleData[key] || [];
                         },
                         nowMs: now,

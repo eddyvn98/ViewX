@@ -18,10 +18,10 @@ export class BacktestEngine {
         overrideSymbol?: string,
         memory?: LogicMemory,
         overrideTimeframe?: string,
-        source: 'MT5' = 'MT5',
+        source: 'MT5' | 'BINANCE' = 'MT5',
         matrixScopeKey?: string
     ): VirtualPosition[] {
-        if (!strategy.active || rawCandles.length < 50) return [];
+        if (rawCandles.length < 50) return [];
 
         const tradeSymbol = overrideSymbol || strategy.symbol || 'BACKTEST';
         const tradeTimeframe = overrideTimeframe || strategy.timeframe || '1m';

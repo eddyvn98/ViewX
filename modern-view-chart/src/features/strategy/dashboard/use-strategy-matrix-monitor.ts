@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '../store/strategy-store';
 import { normalizeSymbol } from '@/lib/utils/symbol';
-import { normalizeDashboardTf, timeframeToChartInterval, timeframeToSeconds } from './matrix-utils';
+import { inferMatrixSymbolSource, normalizeDashboardTf, timeframeToChartInterval, timeframeToSeconds } from './matrix-utils';
 
 function isCandleSetStale(lastCandleTime: unknown, timeframeSec: number): boolean {
     if (!Number.isFinite(timeframeSec) || timeframeSec <= 0) return true;
@@ -21,9 +21,10 @@ export function useStrategyMatrixMonitor() {
         if (!isConnected) return;
 
         const requestBackfill = (symbol: string, interval: string, count = 300) => {
+            const source = inferMatrixSymbolSource(symbol);
             window.dispatchEvent(new CustomEvent('chart-backfill-request', {
                 detail: {
-                    source: 'MT5',
+                    source,
                     symbol,
                     interval,
                     count,
@@ -45,7 +46,8 @@ export function useStrategyMatrixMonitor() {
                         const tf = normalizeDashboardTf(rawTf);
                         const interval = timeframeToChartInterval(tf);
                         const tfSec = timeframeToSeconds(tf);
-                        const key = `MT5:${symbol}:${interval}`;
+                        const source = inferMatrixSymbolSource(symbol);
+                        const key = `${source}:${symbol}:${interval}`;
                         const candles = useMarketStore.getState().candleData[key] || [];
                         const missing = candles.length < 50;
                         const stale = candles.length > 0 ? isCandleSetStale(candles[candles.length - 1]?.time, tfSec) : true;

@@ -30,7 +30,7 @@ export class RuleEngine {
     }
 
     static run(strategy: Strategy, candles: Candle[], context: EngineContext): StrategySignal | null {
-        if (!strategy.active || candles.length < 2) return null;
+        if (candles.length < 2) return null;
 
         const { activePositions, currentPrice, symbol, lastSignalTime } = context;
         for (const direction of getStrategyDirections(strategy)) {

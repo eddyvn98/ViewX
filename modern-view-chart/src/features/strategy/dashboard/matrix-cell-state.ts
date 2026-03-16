@@ -2,7 +2,7 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { Candle } from '@/lib/store/types';
 import type { Strategy, StrategySignal, VirtualPosition } from '../types';
 import type { MatrixCellState, MatrixScannerConfig } from './matrix-types';
-import { normalizeDashboardTf, resolveCellTTL, timeframeToChartInterval } from './matrix-utils';
+import { inferMatrixSymbolSource, normalizeDashboardTf, resolveCellTTL, timeframeToChartInterval } from './matrix-utils';
 import { RuleEngine } from '../logic/RuleEngine';
 import { getStrategyLeg, strategySupportsDirection } from '../strategy-helpers';
 import { buildMatrixScopeKey } from '../utils/matrix-scope';
@@ -20,7 +20,6 @@ interface BuildCellStateInput {
 }
 
 function matchesCellStrategy(strategy: Strategy, _symbol: string, _timeframe: string): boolean {
-    if (!strategy.active) return false;
     // In matrix mode, symbol and timeframe are driven by scanner, not by strategy default.
     return true;
 }
@@ -144,7 +143,7 @@ export interface MatrixRunnerConfigItem {
     timeframe: string;
     symbol: string;
     interval: string;
-    source: 'MT5';
+    source: 'MT5' | 'BINANCE';
 }
 
 export function buildMatrixRunnerConfigs(scanners: MatrixScannerConfig[]): MatrixRunnerConfigItem[] {
@@ -160,7 +159,8 @@ export function buildMatrixRunnerConfigs(scanners: MatrixScannerConfig[]): Matri
                 const tf = normalizeDashboardTf(rawTf);
                 if (!tf) continue;
                 const interval = timeframeToChartInterval(tf);
-                const key = `${scanner.id}:${scanner.strategyId}:MT5:${symbol}:${interval}`;
+                const source = inferMatrixSymbolSource(symbol);
+                const key = `${scanner.id}:${scanner.strategyId}:${source}:${symbol}:${interval}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
                 list.push({
@@ -169,7 +169,7 @@ export function buildMatrixRunnerConfigs(scanners: MatrixScannerConfig[]): Matri
                     timeframe: tf,
                     symbol,
                     interval,
-                    source: 'MT5',
+                    source,
                 });
             }
         }

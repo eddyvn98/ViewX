@@ -3,14 +3,12 @@ import { useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { timeframeToChartInterval } from '@/features/strategy/dashboard/matrix-utils';
-import { useStrategyMatrixMonitor } from '@/features/strategy/dashboard/use-strategy-matrix-monitor';
 import { BotPicker } from './strategy-signal-scanners/BotPicker';
 import { ScannerCard } from './strategy-signal-scanners/ScannerCard';
 import { useScannerViewModel } from './strategy-signal-scanners/useScannerViewModel';
 
 export function StrategySignalScanners() {
     const t = useTranslations('Signals.matrix');
-    useStrategyMatrixMonitor();
 
     const [isBotPickerOpen, setIsBotPickerOpen] = useState(false);
     const [addingSymbolScannerId, setAddingSymbolScannerId] = useState<string | null>(null);
@@ -82,12 +80,17 @@ export function StrategySignalScanners() {
     const handlePickStrategy = (strategyId: string, strategyName: string) => {
         const existingScannerId = findMatrixScannerByStrategy(strategyId);
         if (existingScannerId) {
+            const existingScanner = matrixScanners.find((scanner) => scanner.id === existingScannerId);
+            if (existingScanner && !existingScanner.active) {
+                toggleMatrixScanner(existingScannerId);
+            }
             focusMatrixScanner(existingScannerId);
             setIsBotPickerOpen(false);
             return;
         }
         const scannerId = addMatrixScannerForStrategy(strategyId);
         setMatrixScannerName(scannerId, strategyName);
+        toggleMatrixScanner(scannerId);
         focusMatrixScanner(scannerId);
         setIsBotPickerOpen(false);
     };

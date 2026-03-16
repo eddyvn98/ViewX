@@ -176,7 +176,7 @@ export interface StrategySignal {
     barTime?: number;
     price: number;
     timeframe?: string;
-    source?: 'MT5';
+    source?: 'MT5' | 'BINANCE';
     matrixScopeKey?: string;
     risk: StrategyRisk;
     direction?: StrategyDirection;
@@ -226,7 +226,7 @@ export interface VirtualPosition {
     strategyId: string;
     symbol: string;
     timeframe?: string;
-    source?: 'MT5';
+    source?: 'MT5' | 'BINANCE';
     matrixScopeKey?: string;
     openedBarTime?: number;
     type: 'BUY' | 'SELL';

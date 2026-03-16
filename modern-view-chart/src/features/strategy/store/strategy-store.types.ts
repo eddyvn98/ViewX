@@ -45,7 +45,7 @@ export interface StrategyState {
         candles: Candle[],
         overrideSymbol?: string,
         overrideTimeframe?: string,
-        source?: 'MT5',
+        source?: 'MT5' | 'BINANCE',
         matrixScopeKey?: string
     ) => Promise<void>;
     addMatrixScanner: () => void;
