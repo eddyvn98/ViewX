@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const file = 'd:/TradingWeb/BE_ViewChart/modern-view-chart/src/features/strategy/components/StrategyBuilder.tsx';
 let content = fs.readFileSync(file, 'utf8');

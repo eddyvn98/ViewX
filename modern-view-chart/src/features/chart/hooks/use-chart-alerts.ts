@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useMarketStore } from '@/lib/store';
+import { Alert, useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket'; // Import
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 
@@ -15,14 +15,11 @@ export function useChartAlerts(
     const updateAlert = useMarketStore((state) => state.updateAlert);
     const removeAlert = useMarketStore((state) => state.removeAlert);
     const addNotification = useMarketStore((state) => state.addNotification);
-    const draftOrder = useMarketStore((state) => state.draftOrder);
 
     // Chart Interaction Logic
     const { sendMessage } = useWebSocket();
 
     // 2. Filter alerts for current symbol
-    const symbolAlerts = alerts.filter(a => a.symbol === symbol);
-
     const handleRemoveAlert = useCallback((id: string) => {
         removeAlert(id);
         addNotification('Alert removed', 'success');
@@ -47,7 +44,7 @@ export function useChartAlerts(
     const handleAddAlertAtPrice = useCallback((price: number) => {
         if (!symbol) return;
         const id = crypto.randomUUID();
-        const alertData: any = {
+        const alertData: Alert = {
             id, symbol, price, active: true, type: 'crossing', note: 'Manual Alert', createdAt: Date.now()
         };
         addAlert(alertData);

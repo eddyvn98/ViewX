@@ -1,16 +1,26 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { ISeriesApi, Time, IChartApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import type { Candle } from '@/lib/store/types';
+
+type RealtimeCandle = Candle & {
+    rawOpen?: number;
+    rawHigh?: number;
+    rawLow?: number;
+    rawClose?: number;
+    ha_open?: number;
+    candleColor?: string;
+};
 
 interface UseChartTickerProps {
     symbol: string | undefined;
     interval: string | undefined;
     source: string | undefined;
-    seriesRef: React.MutableRefObject<ISeriesApi<any> | null>;
+    seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
-    lastCandleRef: React.MutableRefObject<any>;
+    lastCandleRef: React.MutableRefObject<Candle | null>;
     isAutoScrollEnabledRef?: React.RefObject<boolean>;
     chartRef?: React.RefObject<IChartApi | null>;
     theme?: string;
@@ -18,17 +28,17 @@ interface UseChartTickerProps {
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, theme, contextKey,
+    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, contextKey,
 }: UseChartTickerProps) {
 
-    const realTimeCandleRef = useRef<any>(null);
+    const realTimeCandleRef = useRef<RealtimeCandle | null>(null);
     const lastBackfillRequestAtRef = useRef<Record<string, number>>({});
     const activeContextKeyRef = useRef(contextKey);
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
 
-    const getStoreCandles = () => {
+    const getStoreCandles = useCallback(() => {
         if (!source || !normSymbol || !interval) return [];
         const state = useMarketStore.getState();
         const intervalRaw = String(interval).trim();
@@ -49,7 +59,7 @@ export function useChartTicker({
             }
         }
         return [];
-    };
+    }, [source, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
         const unit = intv.slice(-1);
@@ -75,7 +85,7 @@ export function useChartTicker({
         if (lastCandleRef.current) {
             realTimeCandleRef.current = { ...lastCandleRef.current };
         }
-    }, [lastCandleRef.current, symbol]);
+    }, [lastCandleRef, symbol, interval, source, contextKey]);
 
     // Ticker Subscription
     useEffect(() => {
@@ -88,7 +98,7 @@ export function useChartTicker({
         const { updateLastCandle } = useMarketStore.getState();
 
         // Throttled sync to store (for legend accuracy)
-        const syncToStore = (candle: any, force = false) => {
+        const syncToStore = (candle: RealtimeCandle, force = false) => {
             const now = Date.now();
             if (!force && now - lastStoreSync < 250) return;
             lastStoreSync = now;
@@ -158,13 +168,12 @@ export function useChartTicker({
             if (now >= nextBarTime) {
                 const haOpen = isHA ? (base.open + base.close) / 2 : base.close;
                 const newCandle = {
-                    time: nextBarTime as Time,
+                    time: nextBarTime,
                     open: isHA ? haOpen : base.close,
                     high: price, low: price, close: price,
                     rawOpen: base.rawClose || base.close,
                     rawHigh: price, rawLow: price, rawClose: price,
                     ha_open: isHA ? haOpen : undefined,
-                    theme: theme as any
                 };
 
                 realTimeCandleRef.current = newCandle;
@@ -175,18 +184,19 @@ export function useChartTicker({
                         time: nextBarTime as Time,
                         open: haOpen, high: Math.max(price, haOpen),
                         low: Math.min(price, haOpen), close: ((base.rawClose || base.close) + price * 3) / 4,
-                        theme: theme as any
                     });
                 } else {
+                    const seriesNewCandle = {
+                        time: nextBarTime as Time,
+                        open: newCandle.open,
+                        high: newCandle.high,
+                        low: newCandle.low,
+                        close: newCandle.close,
+                    };
                     if (isSmart) {
-                        const color = price >= (newCandle.open as number) ? '#00ff88' : '#ff3366';
-                        seriesRef.current?.update({
-                            ...newCandle,
-                            candleColor: color,
-                            theme: theme as any
-                        });
+                        seriesRef.current?.update(seriesNewCandle);
                     } else {
-                        seriesRef.current?.update(newCandle);
+                        seriesRef.current?.update(seriesNewCandle);
                     }
                 }
 
@@ -218,36 +228,32 @@ export function useChartTicker({
                     time: updateTime as Time,
                     open: haOpen, high: Math.max(rHigh, haOpen, haClose),
                     low: Math.min(rLow, haOpen, haClose), close: haClose,
-                    theme: theme as any
                 };
                 base.open = haOpen; base.close = haClose;
                 base.high = haData.high; base.low = haData.low;
                 seriesRef.current?.update(haData);
                 // Simple Bullish/Bearish Coloring
-                const color = rClose >= rOpen ? '#00ff88' : '#ff3366';
-
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
 
                 seriesRef.current?.update({
                     time: updateTime as Time,
                     open: rOpen, high: rHigh, low: rLow, close: rClose,
-                    candleColor: color,
-                    theme: theme as any
                 });
             } else {
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
 
-                const updateData: any = {
-                    time: updateTime as Time,
+                const updateData: RealtimeCandle = {
+                    time: updateTime,
                     open: base.open, high: base.high, low: base.low, close: base.close,
-                    theme: theme as any
                 };
 
-                if (isSmart) {
-                    updateData.candleColor = base.close >= base.open ? '#00ff88' : '#ff3366';
-                }
-
-                seriesRef.current?.update(updateData);
+                seriesRef.current?.update({
+                    time: updateTime as Time,
+                    open: updateData.open,
+                    high: updateData.high,
+                    low: updateData.low,
+                    close: updateData.close,
+                });
             }
 
             syncToStore(base);
@@ -266,7 +272,7 @@ export function useChartTicker({
         );
 
         return () => unsub();
-    }, [symbol, source, interval, chartType, theme, contextKey]);
+    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef]);
 
     return realTimeCandleRef;
 }

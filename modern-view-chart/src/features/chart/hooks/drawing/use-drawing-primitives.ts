@@ -2,23 +2,25 @@
 import { useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
-import { ManualLinePrimitive, ManualLineData } from '../../logic/manual-line-primitive';
+import { ManualLinePrimitive } from '../../logic/manual-line-primitive';
 import { FibonacciPrimitive } from '../../logic/fibonacci-primitive';
 import { ManualRectanglePrimitive } from '../../logic/manual-rectangle-primitive';
 import { calculateFibLevels } from '../../utils/fib-utils';
+import { Candle } from '@/lib/store/types';
 
-const EMPTY_ARRAY: any[] = [];
+const EMPTY_ARRAY: Candle[] = [];
+export type DrawingPrimitive = ManualLinePrimitive | FibonacciPrimitive | ManualRectanglePrimitive;
 
 export function useDrawingPrimitives(
     chartId: string,
     chart: IChartApi | null,
-    series: ISeriesApi<any> | null,
+    series: ISeriesApi<'Candlestick'> | null,
     isReady: boolean
 ) {
     const chartDrawings = useMarketStore(state => state.chartDrawings[chartId] || EMPTY_ARRAY);
     const selectedDrawingId = useMarketStore(state => state.selectedDrawingId);
 
-    const primitivesRef = useRef<Record<string, any>>({});
+    const primitivesRef = useRef<Record<string, DrawingPrimitive>>({});
 
     // Handle existing drawings
     useEffect(() => {
@@ -58,11 +60,12 @@ export function useDrawingPrimitives(
             }
 
             // Update primitive based on type
+            const primitiveUpdater = primitive as { update: (payload: Record<string, unknown>) => void };
             if (drawing.type.startsWith('fib-')) {
                 const levels = calculateFibLevels(drawing.type, drawing.points, drawing.params, drawing.color);
-                primitive.update({
+                primitiveUpdater.update({
                     points: drawing.points,
-                    type: drawing.type as any,
+                    type: drawing.type,
                     levels,
                     color: drawing.color,
                     lineWidth: drawing.lineWidth,
@@ -70,9 +73,9 @@ export function useDrawingPrimitives(
                     selected: selectedDrawingId === drawing.id
                 });
             } else {
-                primitive.update({
+                primitiveUpdater.update({
                     points: drawing.points,
-                    type: drawing.type as any,
+                    type: drawing.type,
                     color: drawing.color,
                     lineWidth: drawing.lineWidth,
                     lineStyle: drawing.lineStyle,

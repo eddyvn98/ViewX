@@ -28,12 +28,6 @@ export class PerformanceAnalyzer {
         let totalConfidence = 0;
         const sessionMap: Record<string, { wins: number; total: number }> = {};
 
-        // New granular metrics
-        let buyWins = 0, buyTotal = 0;
-        let sellWins = 0, sellTotal = 0;
-        let trendWins = 0, trendTotal = 0;
-        let rangeWins = 0, rangeTotal = 0;
-
         sortedTrades.forEach(p => {
             const pnl = p.pnl || 0;
             const meta = p.metadata;
@@ -47,15 +41,6 @@ export class PerformanceAnalyzer {
                 totalLoss += Math.abs(pnl);
             }
 
-            // Direction stats
-            if (p.type === 'BUY') {
-                buyTotal++;
-                if (isWin) buyWins++;
-            } else {
-                sellTotal++;
-                if (isWin) sellWins++;
-            }
-
             if (meta) {
                 totalMae += meta.mae || 0;
                 totalMfe += meta.mfe || 0;
@@ -66,15 +51,6 @@ export class PerformanceAnalyzer {
                 sessionMap[session].total++;
                 if (isWin) sessionMap[session].wins++;
 
-                // Regime stats (Simple heuristic for now)
-                const trend = meta.mtf?.h1_trend;
-                if (trend && trend !== 'SIDEWAYS') {
-                    trendTotal++;
-                    if (isWin) trendWins++;
-                } else {
-                    rangeTotal++;
-                    if (isWin) rangeWins++;
-                }
             }
 
             currentBalance += pnl;
@@ -89,9 +65,6 @@ export class PerformanceAnalyzer {
         });
 
         const totalTrades = closedTrades.length;
-        const recentTrades = sortedTrades.slice(-10);
-        const recentWins = recentTrades.filter(t => (t.pnl || 0) > 0).length;
-
         const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
         return {
@@ -116,27 +89,20 @@ export class PerformanceAnalyzer {
             // PerformanceAnalyzer is mostly for the dashboard UI.
             memory: calculateLogicMemory(
                 Object.fromEntries(Object.entries(sessionMap).map(([s, d]) => [s, { winRate: (d.wins / d.total) * 100, totalTrades: d.total }])),
-                totalTrades > 0 ? totalMae / totalTrades : 0,
-                totalTrades
+                totalTrades > 0 ? totalMae / totalTrades : 0
             ),
             maxDrawdown,
             equityCurve,
-            // Extended helper for AI (optional enrichment)
-            extra: {
-                buyWinrate: buyTotal > 0 ? (buyWins / buyTotal) * 100 : 0,
-                sellWinrate: sellTotal > 0 ? (sellWins / sellTotal) * 100 : 0,
-                recentWinrate: recentTrades.length > 0 ? (recentWins / recentTrades.length) * 100 : 0,
-                trendWinrate: trendTotal > 0 ? (trendWins / trendTotal) * 100 : 0,
-                rangeWinrate: rangeTotal > 0 ? (rangeWins / rangeTotal) * 100 : 0,
-            }
-        } as any; // Cast as any to allow extra fields for now if types aren't updated everywhere
+        };
     }
 }
 
-function calculateLogicMemory(sessionStats: any, avgMae: number, totalTrades: number): LogicMemory {
+type SessionStat = { winRate: number; totalTrades: number };
+
+function calculateLogicMemory(sessionStats: Record<string, SessionStat>, avgMae: number): LogicMemory {
     const sessionBias: Record<string, number> = {};
 
-    Object.entries(sessionStats).forEach(([session, data]: [string, any]) => {
+    Object.entries(sessionStats).forEach(([session, data]) => {
         // If winrate is > 60%, add bias. If < 40%, subtract bias.
         const winrate = data.winRate;
         if (winrate > 60) sessionBias[session] = 10;

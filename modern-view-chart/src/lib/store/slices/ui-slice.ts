@@ -28,6 +28,7 @@ export interface Notification {
 export interface UISlice {
     isLeftSidebarOpen: boolean;
     isRightSidebarOpen: boolean;
+    isMarketListDialogOpen: boolean;
     activeRightSidebarTab: RightSidebarTab;
     activeMobileTab: string;
     isInputFocused: boolean;
@@ -50,6 +51,7 @@ export interface UISlice {
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
     setRightSidebarOpen: (isOpen: boolean) => void;
+    setMarketListDialogOpen: (isOpen: boolean) => void;
     toggleRightSidebar: () => void;
     toggleDrawingToolbar: () => void;
     setDrawingToolbarVisible: (visible: boolean) => void;
@@ -76,6 +78,7 @@ export interface UISlice {
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
     isLeftSidebarOpen: false,
     isRightSidebarOpen: true,
+    isMarketListDialogOpen: false,
     activeRightSidebarTab: 'strategy',
     activeMobileTab: 'chart',
     isInputFocused: false,
@@ -98,6 +101,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
     setRightSidebarOpen: (isOpen) => set({ isRightSidebarOpen: isOpen }),
+    setMarketListDialogOpen: (isOpen) => set({ isMarketListDialogOpen: isOpen }),
     toggleRightSidebar: () => set((state) => ({ isRightSidebarOpen: !state.isRightSidebarOpen })),
     toggleDrawingToolbar: () => set((state) => ({ isDrawingToolbarVisible: !state.isDrawingToolbarVisible })),
     setDrawingToolbarVisible: (visible) => set({ isDrawingToolbarVisible: visible }),

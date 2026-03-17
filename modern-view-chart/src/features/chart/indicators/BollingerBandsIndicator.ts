@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateBollingerBands } from '../utils/indicator-math';
 
@@ -12,13 +12,27 @@ export class BollingerBandsIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getPeriod(defaultPeriod: number): number {
+        const value = this.config.params.period;
+        return typeof value === 'number' && Number.isFinite(value) ? value : defaultPeriod;
+    }
+
+    private getStdDev(defaultValue: number): number {
+        const value = this.config.params.stdDev;
+        return typeof value === 'number' && Number.isFinite(value) ? value : defaultValue;
+    }
+
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const middleColor = styles.middleLine || '#FFB74D';
-        const upperColor = styles.upperLine || '#2196F3';
-        const lowerColor = styles.lowerLine || '#2196F3';
+        const middleColor = this.getStyleString('middleLine', '#FFB74D');
+        const upperColor = this.getStyleString('upperLine', '#2196F3');
+        const lowerColor = this.getStyleString('lowerLine', '#2196F3');
 
         if (!this.middleSeries) {
             this.middleSeries = this.chart.addSeries(LineSeries, {
@@ -53,8 +67,8 @@ export class BollingerBandsIndicator {
 
         const res = calculateBollingerBands(
             candles.map(c => c.close),
-            this.config.params.period || 20,
-            this.config.params.stdDev || 2
+            this.getPeriod(20),
+            this.getStdDev(2)
         );
 
         const middleData = [];
@@ -62,8 +76,8 @@ export class BollingerBandsIndicator {
         const lowerData = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
-            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
+            const rawTime = Number(candles[i].time);
+            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
 
             if (!isNaN(res.middle[i])) middleData.push({ time, value: res.middle[i] });
             if (!isNaN(res.upper[i])) upperData.push({ time, value: res.upper[i] });
@@ -83,19 +97,20 @@ export class BollingerBandsIndicator {
 
         const res = calculateBollingerBands(
             prices,
-            this.config.params.period || 20,
-            this.config.params.stdDev || 2
+            this.getPeriod(20),
+            this.getStdDev(2)
         );
 
         const lastIdx = res.middle.length - 1;
-        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+        const rawTime = Number(candle.time);
         const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
 
         try {
-            if (!isNaN(res.middle[lastIdx])) this.middleSeries.update({ time: candleTime as any, value: res.middle[lastIdx] });
-            if (!isNaN(res.upper[lastIdx])) this.upperSeries!.update({ time: candleTime as any, value: res.upper[lastIdx] });
-            if (!isNaN(res.lower[lastIdx])) this.lowerSeries!.update({ time: candleTime as any, value: res.lower[lastIdx] });
-        } catch (err) { }
+            const t = candleTime as Time;
+            if (!isNaN(res.middle[lastIdx])) this.middleSeries.update({ time: t, value: res.middle[lastIdx] });
+            if (!isNaN(res.upper[lastIdx])) this.upperSeries!.update({ time: t, value: res.upper[lastIdx] });
+            if (!isNaN(res.lower[lastIdx])) this.lowerSeries!.update({ time: t, value: res.lower[lastIdx] });
+        } catch { }
     }
 
     destroy() {

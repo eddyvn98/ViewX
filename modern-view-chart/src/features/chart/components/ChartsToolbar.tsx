@@ -11,16 +11,31 @@ import { LayoutGridSelector } from './LayoutGridSelector';
 import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
 
+type ChartGroup = 'none' | 'A' | 'B' | 'C' | 'D';
+type ChartType = 'candles' | 'heikin_ashi' | 'smart_candles';
+
+const NEXT_GROUP: Record<ChartGroup, ChartGroup> = {
+    none: 'A',
+    A: 'B',
+    B: 'C',
+    C: 'D',
+    D: 'none',
+};
+
+const NEXT_CHART_TYPE: Record<ChartType, ChartType> = {
+    candles: 'heikin_ashi',
+    heikin_ashi: 'smart_candles',
+    smart_candles: 'candles',
+};
+
 
 
 export function ChartsToolbar() {
-    const { layoutMode, activeChartId, activeChart } = useMarketStore(useShallow((state: RootState) => {
+    const { activeChart } = useMarketStore(useShallow((state: RootState) => {
         const activeTab = state.activeTabId ? state.tabs[state.activeTabId] : null;
         const activeChartId = activeTab?.activeChartId;
         const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
         return {
-            layoutMode: activeTab?.layoutMode || '1x1',
-            activeChartId,
             activeChart
         };
     }));
@@ -33,6 +48,8 @@ export function ChartsToolbar() {
     const addChart = useMarketStore((state) => state.addChart);
     const updateChart = useMarketStore((state) => state.updateChart);
     const setCrosshairSync = useMarketStore((state) => state.setCrosshairSync);
+    const isDrawingToolbarVisible = useMarketStore((state) => state.isDrawingToolbarVisible);
+    const showHistoryMarkers = useStrategyStore((state) => state.showHistoryMarkers);
 
     const handleAddChart = () => {
         const state = useMarketStore.getState();
@@ -58,8 +75,8 @@ export function ChartsToolbar() {
                     <button
                         onClick={() => {
                             if (!activeChart) return;
-                            const groups: any = { 'none': 'A', 'A': 'B', 'B': 'C', 'C': 'D', 'D': 'none' };
-                            updateChart(activeChart.id, { group: groups[activeChart.group || 'none'] });
+                            const currentGroup = (activeChart.group || 'none') as ChartGroup;
+                            updateChart(activeChart.id, { group: NEXT_GROUP[currentGroup] });
                         }}
                         className={cn(
                             "p-1 rounded transition-colors active:scale-95",
@@ -75,8 +92,8 @@ export function ChartsToolbar() {
                     <button
                         onClick={() => {
                             if (!activeChart) return;
-                            const types: any = { 'candles': 'heikin_ashi', 'heikin_ashi': 'smart_candles', 'smart_candles': 'candles' };
-                            const nextType = types[activeChart.chartType] || 'candles';
+                            const currentType = activeChart.chartType as ChartType;
+                            const nextType = NEXT_CHART_TYPE[currentType] || 'candles';
                             useMarketStore.getState().setChartType(activeChart.id, nextType);
                         }}
                         className={cn(
@@ -100,7 +117,7 @@ export function ChartsToolbar() {
                         onClick={() => useMarketStore.getState().toggleDrawingToolbar()}
                         className={cn(
                             "p-1 rounded transition-all active:scale-95",
-                            useMarketStore(state => state.isDrawingToolbarVisible)
+                            isDrawingToolbarVisible
                                 ? "text-primary bg-primary/10 border border-primary/20"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent"
                         )}
@@ -116,7 +133,7 @@ export function ChartsToolbar() {
                         onClick={() => useStrategyStore.getState().toggleShowHistoryMarkers()}
                         className={cn(
                             "p-1 rounded transition-all active:scale-95",
-                            useStrategyStore(state => state.showHistoryMarkers)
+                            showHistoryMarkers
                                 ? "text-primary bg-primary/10"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                         )}

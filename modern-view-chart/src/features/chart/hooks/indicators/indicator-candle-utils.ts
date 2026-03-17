@@ -1,9 +1,15 @@
 import { Candle } from '@/lib/store';
 
+type CandleTimeLike = number | { timestamp?: number };
+type CandleWithTimeLike = Omit<Candle, 'time'> & { time: CandleTimeLike };
+
+const toNumericTime = (time: CandleTimeLike): number =>
+    typeof time === 'object' ? Number(time.timestamp ?? 0) : Number(time);
+
 export const formatCandles = (candles: Candle[]) =>
     candles.map(c => ({
         ...c,
-        time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
+        time: toNumericTime(c.time as CandleTimeLike),
     }));
 
 export function getIntervalSeconds(interval?: string): number {
@@ -18,9 +24,9 @@ export function getIntervalSeconds(interval?: string): number {
     return 60;
 }
 
-export function buildLiveCandle(baseCandle: any, price: number, interval?: string) {
+export function buildLiveCandle(baseCandle: CandleWithTimeLike, price: number, interval?: string): Candle {
     const intervalSeconds = getIntervalSeconds(interval);
-    const lastCandleTime = typeof baseCandle.time === 'object' ? (baseCandle.time as any).timestamp : Number(baseCandle.time);
+    const lastCandleTime = toNumericTime(baseCandle.time);
     const isMillis = lastCandleTime > 10000000000;
     const lastCandleTimeSec = isMillis ? Math.floor(lastCandleTime / 1000) : lastCandleTime;
 
@@ -29,11 +35,12 @@ export function buildLiveCandle(baseCandle: any, price: number, interval?: strin
 
     if (currentIntervalStartSec > lastCandleTimeSec) {
         const newTime = isMillis ? currentIntervalStartSec * 1000 : currentIntervalStartSec;
-        return { time: newTime as any, open: price, high: price, low: price, close: price, volume: 0 };
+        return { time: newTime, open: price, high: price, low: price, close: price, volume: 0 };
     }
 
     return {
         ...baseCandle,
+        time: toNumericTime(baseCandle.time),
         close: price,
         high: Math.max(baseCandle.high || price, price),
         low: Math.min(baseCandle.low || price, price),

@@ -10,18 +10,28 @@ import { toSec } from '../../utils/time-utils';
 import { THEME_COLORS } from '@/lib/constants/colors';
 
 import { findSnapPoint } from '../../utils/snap-utils';
-import { Candle } from '@/lib/store/types';
+import { Candle, DrawingTool } from '@/lib/store/types';
+
+type DraftUpdatePayload = {
+    points: Array<{ time: Time; price: number }>;
+    type: DrawingTool;
+    levels?: unknown;
+    color: string;
+    lineWidth: number;
+    lineStyle: 'dashed';
+};
 
 export function useDrawingCreation(
     chartId: string,
     chart: IChartApi | null,
-    series: ISeriesApi<any> | null,
+    series: ISeriesApi<'Candlestick'> | null,
     isReady: boolean,
-    currentTool: string,
+    currentTool: DrawingTool,
     containerRef: React.RefObject<HTMLDivElement | null>,
-    candles: Candle[]
+    candles: Candle[],
+    context?: { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' }
 ) {
-    const draftPrimitiveRef = useRef<any>(null);
+    const draftPrimitiveRef = useRef<ManualLinePrimitive | FibonacciPrimitive | ManualRectanglePrimitive | null>(null);
     const lastSnappedPointRef = useRef<{ time: Time; price: number } | null>(null);
     const tempPoints = useMarketStore(state => state.tempPoints);
     const snapToCandle = useMarketStore(state => state.snapToCandle); // Get snap state
@@ -79,28 +89,35 @@ export function useDrawingCreation(
 
                 lastSnappedPointRef.current = { time, price };
 
-                const pointsForDraft = [...tempPoints, { time, price }];
+                const baseDraftPoints = tempPoints.map((point) => ({ time: point.time as Time, price: point.price }));
+                const pointsForDraft = [...baseDraftPoints, { time, price }];
                 const color = THEME_COLORS[themeColor] || '#2962FF';
 
                 const draftColor = isSnapped ? '#FFCC00' : color;
                 const lineWidth = isSnapped ? 2 : 1;
 
+                const primitiveUpdater = draftPrimitiveRef.current as { update: (payload: DraftUpdatePayload) => void } | null;
+                if (!primitiveUpdater) {
+                    rafId = requestAnimationFrame(updateDraft);
+                    return;
+                }
+
                 if (currentTool.startsWith('fib-')) {
                     const draftLevels = calculateFibLevels(currentTool, pointsForDraft, {
                         enabledLevels: { "1": true, "0.618": true, "0.5": true, "0.382": true, "0": true }
                     }, color);
-                    draftPrimitiveRef.current?.update({
+                    primitiveUpdater.update({
                         points: pointsForDraft,
-                        type: currentTool as any,
+                        type: currentTool,
                         levels: draftLevels,
                         color: draftColor,
                         lineWidth: lineWidth,
                         lineStyle: 'dashed'
                     });
                 } else {
-                    draftPrimitiveRef.current?.update({
+                    primitiveUpdater.update({
                         points: pointsForDraft,
-                        type: currentTool as any,
+                        type: currentTool,
                         color: draftColor,
                         lineWidth: lineWidth,
                         lineStyle: 'dashed'
@@ -140,7 +157,7 @@ export function useDrawingCreation(
             container.removeEventListener('pointermove', handlePointerMove);
             cancelAnimationFrame(rafId);
         };
-    }, [chart, series, currentTool, tempPoints, themeColor, candles, snapToCandle]);
+    }, [chart, series, currentTool, tempPoints, themeColor, candles, snapToCandle, containerRef]);
 
     // Click Handler (Placement)
     const handleCreationClick = useCallback((param: MouseEventParams) => {
@@ -154,9 +171,9 @@ export function useDrawingCreation(
         const pointsNeeded = (currentTool === 'horizontal-line' || currentTool === 'vertical-line' || currentTool === 'crosshair') ? 1 : 2;
         // tempPoints is BEFORE this click, so +1
         if (tempPoints.length + 1 >= pointsNeeded) {
-            finishDrawing(chartId);
+            finishDrawing(chartId, context);
         }
-    }, [currentTool, addDrawingPoint, tempPoints, finishDrawing, chartId]);
+    }, [currentTool, addDrawingPoint, tempPoints, finishDrawing, chartId, context]);
 
     return { handleCreationClick };
 }

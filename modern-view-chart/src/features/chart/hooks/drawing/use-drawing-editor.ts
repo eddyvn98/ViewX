@@ -6,15 +6,16 @@ import { Candle } from '@/lib/store/types';
 import { createDrawingSelectionHandler } from './editor-selection';
 import { createDrawingDragHandlers } from './editor-actions';
 
-const EMPTY_ARRAY: any[] = [];
+const EMPTY_ARRAY: Candle[] = [];
+type PrimitiveRecord = Record<string, unknown>;
 
 export function useDrawingEditor(
     chartId: string,
     chart: IChartApi | null,
-    series: ISeriesApi<any> | null,
+    series: ISeriesApi<'Candlestick'> | null,
     containerRef: React.RefObject<HTMLDivElement | null>,
     isDrawing: boolean,
-    primitivesRef?: React.MutableRefObject<Record<string, any>>,
+    primitivesRef?: React.MutableRefObject<PrimitiveRecord>,
     candles: Candle[] = EMPTY_ARRAY,
 ) {
     const chartDrawings = useMarketStore(state => state.chartDrawings[chartId] || EMPTY_ARRAY);

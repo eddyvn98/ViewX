@@ -19,6 +19,17 @@ export class TrendLineIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getLineWidth(): number {
+        const styleWidth = this.config.styles?.width;
+        if (typeof styleWidth === 'number' && Number.isFinite(styleWidth)) return styleWidth;
+        return this.config.lineWidth || 2;
+    }
+
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
         if (!this.series) return;
@@ -33,10 +44,9 @@ export class TrendLineIndicator {
             time: toSec(c.time) as any
         }));
 
-        const styles = this.config.styles || {};
-        const supportColor = styles.support || '#00ff88';
-        const resistanceColor = styles.resistance || '#ff3366';
-        const lineWidth = styles.width || 2;
+        const supportColor = this.getStyleString('support', '#00ff88');
+        const resistanceColor = this.getStyleString('resistance', '#ff3366');
+        const lineWidth = this.getLineWidth();
 
         // 1. Use EXACTLY the same depth as Market Structure to match markers
         const markers = calculateDynamicSwingPoints(formattedData, 7, supportColor, resistanceColor);

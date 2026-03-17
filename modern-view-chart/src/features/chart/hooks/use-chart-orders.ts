@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { ISeriesApi, IPriceLine, LineStyle } from 'lightweight-charts';
 import { Order, useMarketStore } from '@/lib/store';
+import { DraggingPosition } from '@/lib/store/slices/terminal-slice';
 
 const SHOW_ORDER_PRICE_LINES = false;
 
@@ -17,7 +18,7 @@ export function useChartOrders(
     const sharedRef = useRef({
         symbol,
         orders,
-        draggingPosition: null as any,
+        draggingPosition: null as DraggingPosition | null,
     });
 
     // Use centralized normalization from symbol.ts
@@ -64,13 +65,13 @@ export function useChartOrders(
 
             // Entry Line
             const finalEntry = (isDraggingThis && dragging.type === 'entry') ? dragging.price : o.price_open;
-            const entryOptions = {
-                price: finalEntry,
-                color: '#FF9800',
-                lineWidth: 2 as any,
-                lineStyle: LineStyle.Dashed,
-                axisLabelVisible: false,
-                title: ''
+                const entryOptions = {
+                    price: finalEntry,
+                    color: '#FF9800',
+                    lineWidth: 2 as 1 | 2 | 3 | 4,
+                    lineStyle: LineStyle.Dashed,
+                    axisLabelVisible: false,
+                    title: ''
             };
             if (!lines.entry) lines.entry = series.createPriceLine(entryOptions);
             else lines.entry.applyOptions(entryOptions);
@@ -81,7 +82,7 @@ export function useChartOrders(
                 const slOptions = {
                     price: finalSL,
                     color: '#ef5350',
-                    lineWidth: 1 as any,
+                    lineWidth: 1 as 1 | 2 | 3 | 4,
                     lineStyle: LineStyle.Dotted,
                     axisLabelVisible: false,
                     title: ''
@@ -99,7 +100,7 @@ export function useChartOrders(
                 const tpOptions = {
                     price: finalTP,
                     color: '#26a69a',
-                    lineWidth: 1 as any,
+                    lineWidth: 1 as 1 | 2 | 3 | 4,
                     lineStyle: LineStyle.Dotted,
                     axisLabelVisible: false,
                     title: ''
@@ -121,7 +122,7 @@ export function useChartOrders(
                 delete priceLinesRef.current[ticket];
             }
         });
-    }, [orders, symbol, draftOrder, focusedTicket, hoveredTicket]);
+    }, [orders, symbol, draftOrder, focusedTicket, hoveredTicket, seriesRef, targetSymbol]);
 
     // EFFECT 2: Fast Drag Sync for Orders
     useEffect(() => {

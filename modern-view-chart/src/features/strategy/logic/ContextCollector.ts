@@ -1,5 +1,5 @@
 import { Candle } from '@/lib/store/types';
-import { Strategy, TradeContext } from '../types';
+import { Condition, ConditionGroup, Indicator, Strategy, TradeContext } from '../types';
 import { IndicatorCalculator } from './IndicatorCalculator';
 
 export class ContextCollector {
@@ -30,7 +30,7 @@ export class ContextCollector {
             volatility_atr: this.calculateATR(candles, 14),
             spread_at_entry: 0, // Placeholder if not available in store
             indicators_snapshot: this.snapshotIndicators(strategy, candles),
-            mtf: this.captureMTFPlaceholder(symbol),
+            mtf: this.captureMTFPlaceholder(),
             volume_analysis: {
                 value: lastCandle.volume || 0,
                 relative_to_avg: this.calculateRelativeVolume(candles),
@@ -45,7 +45,7 @@ export class ContextCollector {
     static capturePostExitContext(
         strategy: Strategy,
         candles: Candle[]
-    ): Record<string, any> {
+    ): Record<string, unknown> {
         return this.snapshotIndicators(strategy, candles);
     }
 
@@ -83,24 +83,27 @@ export class ContextCollector {
         return avgVol > 0 ? lastVol / avgVol : 1;
     }
 
-    private static snapshotIndicators(strategy: Strategy, candles: Candle[]): Record<string, any> {
-        const snapshot: Record<string, any> = {};
+    private static snapshotIndicators(strategy: Strategy, candles: Candle[]): Record<string, unknown> {
+        const snapshot: Record<string, unknown> = {};
 
-        const findIndicators = (group: any) => {
+        const findIndicators = (group: ConditionGroup | undefined) => {
             if (!group || !group.conditions) return;
-            group.conditions.forEach((c: any) => {
+            group.conditions.forEach((c) => {
                 if ('operator' in c) {
                     findIndicators(c);
-                } else if (c.left && c.left.type) {
-                    const label = `${c.left.type}${JSON.stringify(c.left.params)}${c.left.field ? ':' + c.left.field : ''}`;
+                } else if ((c as Condition).left && (c as Condition).left.type) {
+                    const condition = c as Condition;
+                    const left = condition.left as Indicator;
+                    const label = `${left.type}${JSON.stringify(left.params)}${left.field ? ':' + left.field : ''}`;
                     if (!snapshot[label]) {
-                        snapshot[label] = IndicatorCalculator.getLastValue(c.left, candles);
+                        snapshot[label] = IndicatorCalculator.getLastValue(left, candles);
                     }
 
-                    if (c.right && typeof c.right !== 'number' && c.right.type) {
-                        const rLabel = `${c.right.type}${JSON.stringify(c.right.params)}${c.right.field ? ':' + c.right.field : ''}`;
+                    if (condition.right && typeof condition.right !== 'number' && condition.right.type) {
+                        const right = condition.right as Indicator;
+                        const rLabel = `${right.type}${JSON.stringify(right.params)}${right.field ? ':' + right.field : ''}`;
                         if (!snapshot[rLabel]) {
-                            snapshot[rLabel] = IndicatorCalculator.getLastValue(c.right, candles);
+                            snapshot[rLabel] = IndicatorCalculator.getLastValue(right, candles);
                         }
                     }
                 }
@@ -111,7 +114,7 @@ export class ContextCollector {
         return snapshot;
     }
 
-    private static captureMTFPlaceholder(symbol: string): TradeContext['mtf'] {
+    private static captureMTFPlaceholder(): TradeContext['mtf'] {
         // In a real implementation, this would access the global store to find H1 candles for the symbol
         return {
             h1_trend: 'SIDEWAYS',

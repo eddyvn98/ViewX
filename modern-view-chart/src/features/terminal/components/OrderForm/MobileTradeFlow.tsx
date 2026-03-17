@@ -8,11 +8,17 @@ import {
     Plus,
     X,
     TrendingUp,
-    TrendingDown,
-    CheckCircle2
+    TrendingDown
 } from 'lucide-react';
 
 type Step = 'side' | 'type' | 'volume' | 'sl' | 'tp' | 'confirm';
+type LabelProps = { children: React.ReactNode; className?: string };
+
+const CompactLabel = ({ children, className }: LabelProps) => (
+    <span className={cn("text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground", className)}>
+        {children}
+    </span>
+);
 
 interface MobileTradeFlowProps {
     symbol: string;
@@ -44,9 +50,8 @@ export function MobileTradeFlow({
     orderType, setOrderType,
     volume, setVolume,
     sl, setSl, tp, setTp,
-    bid, ask, spread, formatPrice,
     adjustVolume, adjustValue,
-    handleSubmit, setIsDrafting,
+    handleSubmit,
     setInputFocused, onClose,
     calculatePnl
 }: MobileTradeFlowProps) {
@@ -64,12 +69,6 @@ export function MobileTradeFlow({
         if (idx > 0) setStep(flow[idx - 1]);
         else onClose();
     };
-
-    const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-        <span className={cn("text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground", className)}>
-            {children}
-        </span>
-    );
 
     return (
         <div className="relative w-full h-[48px] overflow-x-hidden overflow-y-hidden bg-transparent">
@@ -149,7 +148,7 @@ export function MobileTradeFlow({
                                 onChange={(e) => setVolume(e.target.value)}
                                 className="bg-transparent text-center text-sm font-black text-foreground w-16 focus:outline-none"
                             />
-                            <Label className="absolute -bottom-3 text-[5px] text-muted-foreground/40">LOTS</Label>
+                            <CompactLabel className="absolute -bottom-3 text-[5px] text-muted-foreground/40">LOTS</CompactLabel>
                         </div>
                         <button onClick={() => setVolume(adjustVolume(volume, 0.01))} className="p-2 text-muted-foreground active:text-foreground"><Plus size={14} strokeWidth={3} /></button>
                     </div>
@@ -219,7 +218,7 @@ export function MobileTradeFlow({
                             <div className="w-1 h-1 rounded-full bg-secondary" />
                             <span className="text-[10px] font-black text-foreground">{symbol.replace('m', '')}</span>
                         </div>
-                        <Label className="text-muted-foreground/60 font-bold">{orderType === 'market' ? 'GIÁ THỊ TRƯỜNG' : 'LỆNH CHỜ KHỚP'}</Label>
+                        <CompactLabel className="text-muted-foreground/60 font-bold">{orderType === 'market' ? 'GIÁ THỊ TRƯỜNG' : 'LỆNH CHỜ KHỚP'}</CompactLabel>
                     </div>
                     <button
                         onClick={() => {

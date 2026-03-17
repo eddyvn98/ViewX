@@ -131,7 +131,7 @@ export function useStrategyRunner() {
         // Run warmup/patch check every 5 seconds instead of every candle update
         const timer = setInterval(runWarmup, 5000);
         return () => clearInterval(timer);
-    }, [isStrategyStoreHydrated, strategies.length, matrixScanners.length, activeTabId, lastResetTime, updateStrategy, runBacktest]);
+    }, [isStrategyStoreHydrated, strategies, matrixScanners, activeTabId, lastResetTime, updateStrategy, runBacktest]);
 
     // 2. Effect for background service
     useEffect(() => {
@@ -205,7 +205,16 @@ export function useStrategyRunner() {
                         );
 
                         strategyPositions.forEach((position) => {
-                            managePositionOnTick(strategy, position, symbol, candles, lastCandle, isNewBar, store, sendMessage);
+                            managePositionOnTick(
+                                strategy,
+                                position,
+                                symbol,
+                                candles,
+                                lastCandle,
+                                isNewBar,
+                                store,
+                                sendMessage as (data: unknown) => void
+                            );
                         });
 
                         const latestStore = useStrategyStore.getState();
@@ -217,7 +226,7 @@ export function useStrategyRunner() {
                         }
 
                         const engineCtx: EngineContext = {
-                            activePositions: [...positions, ...latestVirtualPositions],
+                            activePositions: latestVirtualPositions,
                             currentPrice: lastCandle.close,
                             symbol,
                             lastSignalTime: strategy.lastSignalTime

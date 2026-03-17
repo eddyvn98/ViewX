@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { VirtualPosition, PerformanceMetrics } from '../../types';
-import { Sparkles, Send, BrainCircuit, Lightbulb, AlertCircle, Loader2, RefreshCcw, Check, ArrowRight, Wrench } from 'lucide-react';
+import { VirtualPosition, PerformanceMetrics, ConditionGroup, Strategy, Condition } from '../../types';
+import { Sparkles, BrainCircuit, Lightbulb, AlertCircle, Loader2, Check, ArrowRight, Wrench } from 'lucide-react';
 import { AiAnalyzer, AnalysisType } from '../../logic/AiAnalyzer';
 import { StatsService } from '../../logic/StatsService';
 import { useStrategyStore } from '../../store/strategy-store';
@@ -13,29 +13,24 @@ interface Props {
     metrics?: PerformanceMetrics;
 }
 
-export function AIInsightPanel({ position, metrics }: Props) {
+type AiSuggestion = {
+    field: string;
+    value: unknown;
+    reason: string;
+};
+
+const cloneConditionGroup = (group: ConditionGroup): ConditionGroup =>
+    JSON.parse(JSON.stringify(group)) as ConditionGroup;
+
+const isCondition = (value: ConditionGroup['conditions'][number]): value is Condition => !('operator' in value);
+
+export function AIInsightPanel({ position }: Props) {
     const [isLoading, setIsLoading] = useState(false);
     const [insight, setInsight] = useState<string | null>(null);
-    const [suggestion, setSuggestion] = useState<any | null>(null);
+    const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null);
     const updateStrategy = useStrategyStore(state => state.updateStrategy);
     const strategies = useStrategyStore(state => state.strategies);
     const context = position.metadata;
-
-    const generatePrompt = () => {
-        if (!context) return "";
-
-        const currentPnl = position.pnl || 0;
-        const pnlPips = currentPnl * 10; // Simple pipe conversion, ideally should use getPipMultiplier
-        const efficiency = context.mfe && context.mfe > 0 ? (Math.max(0, pnlPips) / context.mfe) * 100 : 0;
-
-        return `
-            [TRADE] ${position.symbol}:${position.type} | PnL:${pnlPips.toFixed(1)} | Exit:${context.exit_reason} | Sess:${context.session} | ATR:${context.volatility_atr?.toFixed(4)}
-            [METRICS] MAE:${context.mae?.toFixed(1)} | MFE:${context.mfe?.toFixed(1)} | Eff:${efficiency.toFixed(0)}%
-            [ENTRY_STATE] ${Object.entries(context.indicators_snapshot || {}).map(([k, v]) => `${k.split('[')[0]}:${typeof v === 'number' ? v.toFixed(2) : v}`).join(', ')}
-            
-            Audit logic: 1. MAE heat too high? 2. Efficiency gap? 3. Volatility fit?
-        `;
-    };
 
     const handleAskAI = async () => {
         if (!context) return;
@@ -43,13 +38,20 @@ export function AIInsightPanel({ position, metrics }: Props) {
         soundService.playAIThinking();
         try {
             const stats = await StatsService.compute(position.strategyId);
-            const strategy = { name: "Manual Inspection", id: position.strategyId } as any; // Fallback or fetch full strat
+            const strategy: Strategy = {
+                id: position.strategyId,
+                name: 'Manual Inspection',
+                active: true,
+                positionMode: 'single_position',
+                executionMode: 'virtual',
+                entryType: 'market',
+            };
 
             const aiMetrics = {
                 spread: context.spread_at_entry || 0,
                 volatility: context.volatility_atr || 0,
                 trendStrength: context.mtf?.h1_trend === 'UP' ? 30 : 10,
-                rsi: context.indicators_snapshot?.['RSI[14]'] || 50,
+                rsi: Number((context.indicators_snapshot?.['RSI[14]'] as number | undefined) ?? 50),
                 session: context.session
             };
 
@@ -61,11 +63,11 @@ export function AIInsightPanel({ position, metrics }: Props) {
                 AnalysisType.POST_TRADE
             );
             setInsight(response.reasoning.join('. '));
-            setSuggestion(response.suggestedFix);
-            toast.success("AI Analysis Complete");
+            setSuggestion((response.suggestedFix ?? null) as AiSuggestion | null);
+            toast.success('AI Analysis Complete');
         } catch (error) {
             console.error('[AIInsight] Analysis failed:', error);
-            toast.error("AI Bridge communication failed");
+            toast.error('AI Bridge communication failed');
         } finally {
             setIsLoading(false);
         }
@@ -74,40 +76,38 @@ export function AIInsightPanel({ position, metrics }: Props) {
     const handleApplyFix = () => {
         if (!suggestion || !position.strategyId) return;
 
-        // Logic to translate suggestion field name to actual strategy object path
-        // For simplicity, we'll handle RSI threshold and SL/TP
         try {
             const strategy = strategies.find(s => s.id === position.strategyId);
             if (!strategy) return;
 
             if (suggestion.field === 'rsi_threshold') {
                 const leg = getStrategyLeg(strategy, position.type);
-                const newEntry = JSON.parse(JSON.stringify(leg.entry));
-                // Find RSI condition and update value
-                const rsiCond = newEntry.conditions.find((c: any) => c.left?.type === 'RSI');
+                const newEntry = cloneConditionGroup(leg.entry);
+                const rsiCond = newEntry.conditions.find((c): c is Condition => isCondition(c) && c.left.type === 'RSI');
                 if (rsiCond) {
-                    rsiCond.right = suggestion.value;
+                    rsiCond.right = typeof suggestion.value === 'number' ? suggestion.value : Number(suggestion.value);
                     updateStrategy(strategy.id, {
                         entry: position.type === 'BUY' ? newEntry : strategy.entry,
                         buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, entry: newEntry } : strategy.buy,
                         sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, entry: newEntry } : strategy.sell,
                     });
-                    toast.success(`Updated RSI threshold to ${suggestion.value}`);
+                    toast.success(`Updated RSI threshold to ${String(suggestion.value)}`);
                 }
             } else if (suggestion.field === 'trailing_stop') {
                 const risk = getPrimaryStrategyRisk(strategy);
+                const isOn = suggestion.value === 'on';
                 updateStrategy(strategy.id, {
-                    risk: { ...risk, trailing: suggestion.value === 'on' },
-                    buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, risk: { ...strategy.buy.risk, trailing: suggestion.value === 'on' } } : strategy.buy,
-                    sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, risk: { ...strategy.sell.risk, trailing: suggestion.value === 'on' } } : strategy.sell,
+                    risk: { ...risk, trailing: isOn },
+                    buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, risk: { ...strategy.buy.risk, trailing: isOn } } : strategy.buy,
+                    sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, risk: { ...strategy.sell.risk, trailing: isOn } } : strategy.sell,
                 });
-                toast.success(`Trailing Stop ${suggestion.value === 'on' ? 'Enabled' : 'Disabled'}`);
+                toast.success(`Trailing Stop ${isOn ? 'Enabled' : 'Disabled'}`);
             } else {
                 toast.info(`Manual update required for: ${suggestion.field}`);
             }
-            setSuggestion(null); // Clear after apply
-        } catch (err) {
-            toast.error("Failed to apply recommendation automatically.");
+            setSuggestion(null);
+        } catch {
+            toast.error('Failed to apply recommendation automatically.');
         }
     };
 
@@ -138,7 +138,6 @@ export function AIInsightPanel({ position, metrics }: Props) {
 
             {insight && (
                 <div className="relative group overflow-hidden">
-                    {/* Glassmorphism Background */}
                     <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 backdrop-blur-md border border-border rounded-xl" />
 
                     <div className="relative p-5 space-y-3">
@@ -148,7 +147,7 @@ export function AIInsightPanel({ position, metrics }: Props) {
                         </div>
 
                         <p className="text-[12px] text-foreground/80 leading-relaxed italic">
-                            "{insight}"
+                            &quot;{insight}&quot;
                         </p>
 
                         {suggestion && (
@@ -185,7 +184,6 @@ export function AIInsightPanel({ position, metrics }: Props) {
                         </div>
                     </div>
 
-                    {/* Animated Border/Glow */}
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
                 </div>
             )}
@@ -193,7 +191,7 @@ export function AIInsightPanel({ position, metrics }: Props) {
             {!insight && !isLoading && (
                 <div className="p-4 bg-secondary/20 border border-dashed border-border rounded-xl flex flex-col items-center gap-2">
                     <p className="text-[10px] text-muted-foreground text-center max-w-[200px]">
-                        Click the button above to generate a deep-dive analysis of this trade's characteristics.
+                        Click the button above to generate a deep-dive analysis of this trade&apos;s characteristics.
                     </p>
                 </div>
             )}

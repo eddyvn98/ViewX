@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
+import type { IndicatorConfig } from '@/lib/store/types';
 import { useLegendDOMUpdater } from '../hooks/use-legend-dom-updater';
 import { useShallow } from 'zustand/react/shallow';
 import { SymbolIcon } from './SymbolIcon';
@@ -20,7 +21,7 @@ interface ChartLegendProps {
     series?: import('lightweight-charts').ISeriesApi<"Candlestick"> | null;
 }
 
-const EMPTY_INDICATORS: any[] = [];
+const EMPTY_INDICATORS: IndicatorConfig[] = [];
 
 export function ChartLegend({ chartId, symbol, interval, source, candles, chartType = 'candles' }: ChartLegendProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -31,7 +32,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
 
     // Get indicators config (stable, rarely changes)
     const indicators = useMarketStore(useShallow(
-        state => (state.chartIndicators[chartId] || EMPTY_INDICATORS).filter((i: any) =>
+        state => (state.chartIndicators[chartId] || EMPTY_INDICATORS).filter((i: IndicatorConfig) =>
             i.visible &&
             i.pane !== 'subchart' &&
             !isSmartAnalysis(i.type)
@@ -111,14 +112,14 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
                     data-indicators
                     className="flex flex-col gap-1 px-1.5 w-[132px] subpixel-antialiased"
                 >
-                    {indicators.map((ind: any) => (
+                    {indicators.map((ind: IndicatorConfig) => (
                         <div
                             key={ind.id}
                             data-indicator-id={ind.id}
                             className="flex flex-col"
                         >
                             <span className="text-[10px] font-extrabold text-muted-foreground/95 uppercase tracking-tight leading-none mb-0.5">
-                                {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${ind.params?.period || 14}`}
+                                {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${Number((ind.params as Record<string, unknown>)?.period ?? 14)}`}
                             </span>
                             <div data-indicator-value className="flex gap-1 text-[12px] font-extrabold leading-none">
                                 {ind.type === 'MACD' ? (

@@ -4,6 +4,16 @@ import { wsRuntime } from './runtime';
 import { parseIntervalSeconds } from './socket-config';
 import { collectActiveSymbolsFromStore, normalizeSymbol } from './symbol-utils';
 
+type ChartLike = {
+    source?: string;
+    symbol?: string;
+    interval?: string;
+};
+
+type TabLike = {
+    charts?: Record<string, ChartLike>;
+};
+
 export function sendSymbolsInterestNow() {
     const socket = wsRuntime.globalSocket;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -91,8 +101,8 @@ export function syncForegroundCharts(force: boolean, reason: string) {
     const tabs = state.tabs;
     const nowSec = Math.floor(Date.now() / 1000);
 
-    Object.values(tabs).forEach((tab: any) => {
-        Object.values(tab.charts || {}).forEach((chart: any) => {
+    Object.values(tabs as Record<string, TabLike>).forEach((tab) => {
+        Object.values(tab.charts || {}).forEach((chart) => {
             const source = String(chart?.source || '').toUpperCase();
             const symbol = String(chart?.symbol || '').trim();
             const interval = String(chart?.interval || '').trim();

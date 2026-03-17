@@ -16,6 +16,23 @@ export class OrderBlockIndicator {
         this.series.attachPrimitive(this.primitive);
     }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getBooleanStyle(key: string, fallback: boolean): boolean {
+        const value = this.config.styles?.[key];
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') return value === 'true';
+        return fallback;
+    }
+
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
 
@@ -24,13 +41,12 @@ export class OrderBlockIndicator {
             return;
         }
 
-        const depth = this.config.params?.depth || 5;
+        const depth = this.getNumberParam('depth', 5);
         const obData = calculateOrderBlocks(candles, depth);
 
-        const styles = this.config.styles || {};
-        const bullColor = styles.bullColor || 'rgba(0, 255, 136, 0.2)';
-        const bearColor = styles.bearColor || 'rgba(255, 51, 102, 0.2)';
-        const showMitigated = styles.showMitigated === 'true';
+        const bullColor = this.getStyleString('bullColor', 'rgba(0, 255, 136, 0.2)');
+        const bearColor = this.getStyleString('bearColor', 'rgba(255, 51, 102, 0.2)');
+        const showMitigated = this.getBooleanStyle('showMitigated', false);
 
         const zones: SMCZone[] = obData
             .filter(ob => showMitigated || !ob.isMitigated)

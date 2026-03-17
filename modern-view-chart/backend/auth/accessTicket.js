@@ -11,7 +11,7 @@ function encodeBase64Url(value) {
     return Buffer.from(value).toString("base64url");
 }
 
-export function createAccessTicket(secret, ttlSec = 300, type = "mobile_access") {
+export function createAccessTicket(secret, ttlSec = 300, type = "ws_auth") {
     const normalizedSecret = (secret || "").trim();
     if (!normalizedSecret) return "";
 
@@ -44,7 +44,7 @@ export function verifyAccessTicket(ticket, secret, nowMs = Date.now()) {
     try {
         const payloadRaw = decodeBase64Url(payloadPart).toString("utf-8");
         const payload = JSON.parse(payloadRaw);
-        if (payload?.typ !== "mobile_access" && payload?.typ !== "ws_auth") return false;
+        if (payload?.typ !== "ws_auth") return false;
 
         const exp = Number(payload?.exp);
         if (!Number.isFinite(exp)) return false;

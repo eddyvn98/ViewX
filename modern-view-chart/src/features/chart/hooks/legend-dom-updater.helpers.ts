@@ -37,7 +37,7 @@ export const getFreshCandles = (
     interval: string,
     source: string,
     chartType: string
-): { raw: Candle[]; display: any[] } => {
+): { raw: Candle[]; display: Candle[] } => {
     const normSym = normalizeSymbol(symbol);
     const key = `${source}:${normSym}:${interval}`;
     const rawCandles = useMarketStore.getState().candleData[key] || [];

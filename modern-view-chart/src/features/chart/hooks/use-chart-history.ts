@@ -1,12 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { IChartApi, ISeriesApi, SeriesMarker, Time } from 'lightweight-charts';
+import { useCallback, useEffect, useRef } from 'react';
+import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { debugLog } from '@/lib/debug';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { toSec } from '@/features/chart/utils/time-utils';
 import { formatCandleData } from '@/features/chart/utils/format-candle-data';
 import { useSeriesSwitcher } from './use-series-switcher';
-import { calculateDynamicSwingPoints } from '@/features/chart/logic/candle-patterns';
 import { ChartInstance } from '@/lib/store/types';
 import {
     buildIntervalCandidates,
@@ -15,6 +14,7 @@ import {
     resolveCandles,
     updateSyncData,
 } from './use-chart-history.helpers';
+import type { Candle } from '@/lib/store/types';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
 
@@ -26,26 +26,24 @@ interface UseChartHistoryProps {
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     chartRef: React.RefObject<IChartApi | null>;
     subchartRef: React.RefObject<IChartApi | null>;
-    seriesRef: React.MutableRefObject<ISeriesApi<any> | null>;
+    seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
     markerSeriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>;
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     isReady: boolean;
     theme: string;
     contextKey?: string;
-    onHistoryLoaded: (lastCandle: any) => void;
+    onHistoryLoaded: (lastCandle: Candle) => void;
 }
 
 export function useChartHistory(props: UseChartHistoryProps) {
-    const { chartId, symbol, interval, source, chartType, chartRef, subchartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, contextKey, onHistoryLoaded } = props;
+    const { chartId, symbol, interval, source, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, contextKey, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
     const lastChartTypeRef = useRef<string>(chartType);
     const chartStateRef = useRef<'idle' | 'loading' | 'ready'>('idle');
     const lastFetchRequestTimeRef = useRef(0);
-    const latestHHRef = useRef<number | undefined>(undefined);
-    const latestLLRef = useRef<number | undefined>(undefined);
     const applyDataRafRef = useRef<number | null>(null);
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
@@ -60,7 +58,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
-    const requestHistory = () => {
+    const requestHistory = useCallback(() => {
         if (!symbol || !interval) return;
         const sourceText = String(source || '').toUpperCase();
         if (sourceText === 'BINANCE') {
@@ -78,7 +76,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
         sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
         sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
-    };
+    }, [symbol, interval, source, sendMessage]);
 
     useEffect(() => {
         if (!isReady || !symbol || !interval || !isConnected) return;
@@ -87,7 +85,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         requestHistory();
         const timer = setInterval(requestHistory, 2500);
         return () => clearInterval(timer);
-    }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage]);
+    }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage, requestHistory]);
 
     const getPersistedViewport = (): ChartInstance['viewport'] | undefined => {
         const state = useMarketStore.getState();
@@ -127,7 +125,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 }
 
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-            } catch (e) {
+            } catch {
                 // Ignore transient errors during init
             }
         });
@@ -217,7 +215,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                         lastTime: last?.time,
                         firstPrice,
                         lastPrice,
-                        seriesType: (seriesRef.current as any)?.seriesType?.(),
+                        seriesType: 'Candlestick',
                     });
                 }
 
@@ -245,7 +243,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 lastDataLength.current = nextCandles.length;
             });
         }
-    }, [isReady, candlesCount, key, chartType, isConnected]);
+    }, [isReady, candlesCount, key, chartType, isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {
@@ -256,12 +254,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
         };
     }, []);
 
-    const currentCandles = getCandles();
-
     return {
-        candles: currentCandles,
-        latestHHPrice: latestHHRef.current,
-        latestLLPrice: latestLLRef.current
+        candles: getCandles(),
+        latestHHPrice: undefined,
+        latestLLPrice: undefined,
     };
 }
 export { toSec };

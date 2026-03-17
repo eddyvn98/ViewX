@@ -1,16 +1,21 @@
 import React, { memo, useState, useRef, useCallback } from "react";
 import { useMarketStore } from "@/lib/store";
-import { useShallow } from "zustand/react/shallow";
 import { DrawingTool } from "@/lib/store/types";
-import { List, Menu, ArrowLeftRight, Briefcase, Brain } from "lucide-react";
+import { List, Menu, ArrowLeftRight, Briefcase, Brain, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import { MobileSymbolCarousel } from "./MobileSymbolCarousel";
 import { MobileTimeframeSlide } from "./MobileTimeframeSlide";
 import { MobileDrawingToolbar } from "./MobileDrawingToolbar";
 
 import { useOrderFormLogic } from "@/features/terminal/components/OrderForm";
 import { MobileTradeFlow } from "@/features/terminal/components/OrderForm/MobileTradeFlow";
+
+const MobileMarketPickerContent = dynamic(
+    () => import("@/features/market/MarketList").then((m) => m.MobileMarketPickerContent),
+    { ssr: false }
+);
 
 interface MobileBottomNavProps {
     activeTab: string;
@@ -29,7 +34,6 @@ const COMPACT_ITEM_HEIGHT = 52;
 const MINI_ITEM_HEIGHT = 44;
 
 const NAV_ITEMS = [
-    { id: 'watchlist', label: 'Watchlist', icon: List },
     { id: 'trade', label: 'Trade', icon: ArrowLeftRight },
     { id: 'strategy', label: 'Strategy', icon: Brain },
     { id: 'positions', label: 'Terminal', icon: Briefcase },
@@ -47,7 +51,8 @@ export const MobileBottomNav = memo(function MobileBottomNav({
     const itemHeight = mini ? MINI_ITEM_HEIGHT : compact ? COMPACT_ITEM_HEIGHT : DEFAULT_ITEM_HEIGHT;
     const [mode, setMode] = useState<NavMode>('symbol');
     const [isTimeframe, setIsTimeframe] = useState(false);
-    const [isAnimating, setIsAnimating] = useState(false);
+    const isAnimating = false;
+    const [isSymbolPickerOpen, setIsSymbolPickerOpen] = useState(false);
 
     const touchState = useRef({
         startY: 0,
@@ -130,6 +135,9 @@ export const MobileBottomNav = memo(function MobileBottomNav({
 
     const handleSymbolTap = useCallback(() => setIsTimeframe(true), []);
     const handleTimeframeSelect = useCallback(() => setIsTimeframe(false), []);
+    const handleSymbolLongPress = useCallback(() => {
+        setIsSymbolPickerOpen(true);
+    }, []);
 
     if (isHidden) return null;
 
@@ -156,7 +164,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({
         switch (targetMode) {
             case 'symbol':
                 return <div className="w-full flex items-center justify-center" style={itemStyle}>
-                    <MobileSymbolCarousel onSymbolTap={handleSymbolTap} />
+                    <MobileSymbolCarousel onSymbolTap={handleSymbolTap} onSymbolLongPress={handleSymbolLongPress} />
                 </div>;
             case 'drawing':
                 return <div className="w-full flex items-center justify-center" style={itemStyle}>
@@ -196,6 +204,54 @@ export const MobileBottomNav = memo(function MobileBottomNav({
 
     return (
         <div className={cn("w-full z-[99] flex flex-col items-center pointer-events-auto shrink-0 relative bg-background overflow-x-hidden", className)}>
+            <AnimatePresence>
+                {isSymbolPickerOpen && (
+                    <motion.div
+                        className="fixed inset-0 z-[160] flex items-center justify-center p-3"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <button
+                            type="button"
+                            aria-label="Close symbol picker"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setIsSymbolPickerOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                            transition={{ duration: 0.18 }}
+                            className="relative z-10 w-full max-w-md h-[min(78vh,680px)] rounded-[28px] border border-white/10 bg-background/95 shadow-2xl overflow-hidden flex flex-col"
+                        >
+                            <div className="px-4 py-3 border-b border-border/60 bg-secondary/30 flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 text-foreground">
+                                        <Search size={15} className="text-primary shrink-0" />
+                                        <h2 className="text-sm font-black uppercase tracking-[0.18em]">Find Symbols</h2>
+                                    </div>
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                        Search in watchlist and market list, tap star to add multiple symbols, tap X to close.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSymbolPickerOpen(false)}
+                                    className="h-9 w-9 shrink-0 rounded-xl border border-border bg-background/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all flex items-center justify-center"
+                                    aria-label="Close symbol picker dialog"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <div className="flex-1 min-h-0">
+                                <MobileMarketPickerContent />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div
                 className="w-full z-[100] backdrop-blur-2xl border-t border-border/10 bg-background/95 supports-[backdrop-filter]:bg-background/80 h-auto overflow-hidden touch-pan-x pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
                 onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}

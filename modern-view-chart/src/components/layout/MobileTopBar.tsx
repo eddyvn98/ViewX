@@ -31,7 +31,6 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
         };
     }));
 
-    const updateChart = useMarketStore((state) => state.updateChart);
     const setChartType = useMarketStore((state) => state.setChartType);
     const isDrawingToolbarVisible = useMarketStore((state) => state.isDrawingToolbarVisible);
     const toggleDrawingToolbar = useMarketStore((state) => state.toggleDrawingToolbar);
@@ -55,7 +54,11 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
     const handleChartTypeClick = () => {
         if (!activeChart) return;
         // Cycle: candles -> heikin_ashi -> smart_candles -> candles
-        const types: any = { 'candles': 'heikin_ashi', 'heikin_ashi': 'smart_candles', 'smart_candles': 'candles' };
+        const types: Record<'candles' | 'heikin_ashi' | 'smart_candles', 'candles' | 'heikin_ashi' | 'smart_candles'> = {
+            candles: 'heikin_ashi',
+            heikin_ashi: 'smart_candles',
+            smart_candles: 'candles',
+        };
         const nextType = types[activeChart.chartType] || 'candles';
         setChartType(activeChart.id, nextType);
     };

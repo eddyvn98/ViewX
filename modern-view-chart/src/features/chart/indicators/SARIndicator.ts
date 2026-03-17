@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateSAR } from '../utils/indicator-math';
 import { safeRemoveSeries } from './utils/safe-remove-series';
@@ -12,12 +12,31 @@ export class SARIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberStyle(key: string, fallback: number): number {
+        const value = this.config.styles?.[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getCandleTime(candle: Candle): Time {
+        const rawTime = Number(candle.time);
+        return (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
+    }
+
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const color = styles.color || '#2196F3';
-        const dotSize = styles.width || 2;
+        const color = this.getStyleString('color', '#2196F3');
+        const dotSize = this.getNumberStyle('width', 2);
 
         if (!this.series) {
             this.series = this.chart.addCustomSeries(new SARSeries(), {
@@ -37,20 +56,17 @@ export class SARIndicator {
             } as any);
         }
 
-        const params = this.config.params || {};
         const sarValues = calculatedValues || calculateSAR(
             candles,
-            params.startAF || 0.02,
-            params.incrementAF || 0.02,
-            params.maxAF || 0.20
+            this.getNumberParam('startAF', 0.02),
+            this.getNumberParam('incrementAF', 0.02),
+            this.getNumberParam('maxAF', 0.20)
         );
 
         const data = candles
             .map((c, i) => {
-                const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
-                const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
                 return {
-                    time: time as any,
+                    time: this.getCandleTime(c),
                     value: sarValues[i]
                 };
             })
@@ -62,27 +78,25 @@ export class SARIndicator {
     updateLastPoint(candle: Candle, candles: Candle[]) {
         if (!this.series || !this.config.visible) return;
 
-        const params = this.config.params || {};
         const prices = [...candles];
         prices[prices.length - 1] = candle;
 
         const sarValues = calculateSAR(
             prices,
-            params.startAF || 0.02,
-            params.incrementAF || 0.02,
-            params.maxAF || 0.20
+            this.getNumberParam('startAF', 0.02),
+            this.getNumberParam('incrementAF', 0.02),
+            this.getNumberParam('maxAF', 0.20)
         );
         const lastVal = sarValues[sarValues.length - 1];
 
         if (!isNaN(lastVal)) {
-            const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-            const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+            const candleTime = this.getCandleTime(candle);
 
             if (!candleTime) return;
 
             try {
                 this.series.update({
-                    time: candleTime as any,
+                    time: candleTime,
                     value: lastVal
                 } as any);
             } catch (err) { }

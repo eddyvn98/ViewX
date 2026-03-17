@@ -3,11 +3,17 @@ import { Bell, BarChart2, Settings, PanelRightClose, LogOut } from 'lucide-react
 import { useMarketStore } from '@/lib/store';
 import { TabContainer } from './TabContainer';
 import { cn } from '@/lib/utils';
-import { MobileAccessButton } from '@/features/chart/components/MobileAccessButton';
 import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { TelegramLinkDialog } from './TelegramLinkDialog';
+
+type UserSetupSyncStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+
+type UserSetupSyncStatusDetail = {
+    status: UserSetupSyncStatus;
+    lastSavedAt: number | null;
+};
 
 export const Header = memo(function Header() {
     const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
@@ -18,6 +24,8 @@ export const Header = memo(function Header() {
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
     const [isAvatarMenuOpen, setIsAvatarMenuOpen] = React.useState(false);
     const [isTelegramDialogOpen, setIsTelegramDialogOpen] = React.useState(false);
+    const [syncStatus, setSyncStatus] = React.useState<UserSetupSyncStatus>('idle');
+    const [lastSavedAt, setLastSavedAt] = React.useState<number | null>(null);
     const avatarMenuRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useEffect(() => {
@@ -46,8 +54,43 @@ export const Header = memo(function Header() {
 
         applyUser();
         window.addEventListener("storage", applyUser);
-        return () => window.removeEventListener("storage", applyUser);
+        window.addEventListener("focus", applyUser);
+        window.addEventListener("auth-changed", applyUser);
+        window.addEventListener("auth-state-changed", applyUser);
+        document.addEventListener("visibilitychange", applyUser);
+        return () => {
+            window.removeEventListener("storage", applyUser);
+            window.removeEventListener("focus", applyUser);
+            window.removeEventListener("auth-changed", applyUser);
+            window.removeEventListener("auth-state-changed", applyUser);
+            document.removeEventListener("visibilitychange", applyUser);
+        };
     }, []);
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const handleSyncStatus = (event: Event) => {
+            const detail = (event as CustomEvent<UserSetupSyncStatusDetail>).detail;
+            if (!detail) return;
+            setSyncStatus(detail.status || 'idle');
+            setLastSavedAt(typeof detail.lastSavedAt === 'number' ? detail.lastSavedAt : null);
+        };
+
+        window.addEventListener("user-setup-sync-status", handleSyncStatus as EventListener);
+        return () => window.removeEventListener("user-setup-sync-status", handleSyncStatus as EventListener);
+    }, []);
+
+    const syncLabel = React.useMemo(() => {
+        if (!isAuthenticated) return '';
+        if (syncStatus === 'loading') return 'Loading latest workspace...';
+        if (syncStatus === 'saving') return 'Saving...';
+        if (syncStatus === 'error') return 'Sync issue';
+        if (syncStatus === 'saved' && lastSavedAt) {
+            return `Saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        }
+        return 'Workspace synced';
+    }, [isAuthenticated, lastSavedAt, syncStatus]);
 
     React.useEffect(() => {
         if (!isAvatarMenuOpen) return;
@@ -90,6 +133,18 @@ export const Header = memo(function Header() {
                 <div className="hidden lg:block h-full border-r border-white/5 pr-4">
                     <TabContainer />
                 </div>
+                {isAuthenticated ? (
+                    <div className={cn(
+                        "hidden lg:flex items-center h-5 px-2 rounded-full border text-[10px] font-semibold tracking-wide",
+                        syncStatus === 'error'
+                            ? "text-amber-300 border-amber-500/30 bg-amber-500/10"
+                            : syncStatus === 'saving' || syncStatus === 'loading'
+                                ? "text-sky-300 border-sky-500/30 bg-sky-500/10"
+                                : "text-emerald-300 border-emerald-500/30 bg-emerald-500/10"
+                    )}>
+                        {syncLabel}
+                    </div>
+                ) : null}
             </div>
 
             <div className="flex items-center gap-3">
@@ -143,10 +198,6 @@ export const Header = memo(function Header() {
                         {isAvatarMenuOpen ? (
                             <div className="absolute right-0 top-8 w-44 rounded-md border border-border dark:border-white/10 bg-background/95 backdrop-blur p-1 shadow-lg z-[140]">
                                 <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">Quick Controls</div>
-                                <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
-                                    <span className="text-xs text-foreground dark:text-white">Mobile Access</span>
-                                    <MobileAccessButton />
-                                </div>
                                 <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
                                     <span className="text-xs text-foreground dark:text-white">Dark Mode</span>
                                     <ThemeToggle />

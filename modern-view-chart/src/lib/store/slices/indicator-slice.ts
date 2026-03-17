@@ -35,7 +35,7 @@ export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlic
 
         // Get Metadata for default styles
         const metadata = INDICATOR_REGISTRY[indicator.type as keyof typeof INDICATOR_REGISTRY];
-        const defaultStyles: Record<string, any> = {};
+        const defaultStyles: Record<string, unknown> = {};
         if (metadata) {
             Object.keys(metadata.styles).forEach(key => {
                 defaultStyles[key] = metadata.styles[key].default;
@@ -83,7 +83,7 @@ export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlic
 
             // Get Metadata for default styles
             const metadata = INDICATOR_REGISTRY[ind.type as keyof typeof INDICATOR_REGISTRY];
-            const defaultStyles: Record<string, any> = {};
+            const defaultStyles: Record<string, unknown> = {};
             if (metadata) {
                 Object.keys(metadata.styles).forEach(key => {
                     defaultStyles[key] = metadata.styles[key].default;

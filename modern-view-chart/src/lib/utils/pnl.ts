@@ -23,7 +23,7 @@ export function calculatePnL({ type, openPrice, currentPrice, volume, symbolInfo
         // it might be per-volume-unit instead of per-lot.
         // Standard MT5 tick_value is per 1.0 lot.
         const ticks = diff / symbolInfo.tick_size;
-        let pnl = ticks * symbolInfo.tick_value * volume;
+        const pnl = ticks * symbolInfo.tick_value * volume;
 
         // Custom correction for common misconfigurations (e.g. Gold showing 100x less)
         const sym = (symbolParam || symbolInfo.symbol || '').toUpperCase();

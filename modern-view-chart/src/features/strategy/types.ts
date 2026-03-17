@@ -163,7 +163,7 @@ export interface AiResponse {
     reasoning: string[];
     suggestedFix?: {
         field: string;
-        value: any;
+        value: unknown;
         reason: string;
     };
 }
@@ -208,7 +208,7 @@ export interface TradeContext {
 
     // 4. Pre-Trade Snapshot (The "Trigger")
     // Stores actual values of indicators used in rules at the moment of entry
-    indicators_snapshot: Record<string, any>;
+    indicators_snapshot: Record<string, unknown>;
 
     // 5. In-Trade Metrics (The "Journey")
     mae?: number; // Max Adverse Excursion (Max drawdown in pips/points)
@@ -218,7 +218,7 @@ export interface TradeContext {
     // 6. Post-Trade Analysis
     post_exit_price_10c?: number; // Price after 10 candles
     exit_reason?: 'SL' | 'TP' | 'SIGNAL' | 'MANUAL';
-    post_exit?: Record<string, any>;
+    post_exit?: Record<string, unknown>;
 }
 
 export interface VirtualPosition {

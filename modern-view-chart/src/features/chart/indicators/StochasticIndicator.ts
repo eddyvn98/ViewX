@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi, LineSeries, LineStyle } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineData, LineSeries, LineStyle, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateStochastic } from '../utils/indicator-math';
 
@@ -13,12 +13,26 @@ export class StochasticIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getCandleTime(candle: Candle): Time {
+        const rawTime = Number(candle.time);
+        return (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
+    }
+
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const kColor = styles.kLine || '#2196F3';
-        const dColor = styles.dLine || '#FF6D00';
+        const kColor = this.getStyleString('kLine', '#2196F3');
+        const dColor = this.getStyleString('dLine', '#FF6D00');
 
         if (!this.kSeries) {
             this.kSeries = this.chart.addSeries(LineSeries, {
@@ -47,7 +61,7 @@ export class StochasticIndicator {
             // Set Price Lines (80/20 or custom)
             this.upperLine = this.kSeries.createPriceLine({
                 price: 80,
-                color: styles.upperBand || '#ef5350',
+                color: this.getStyleString('upperBand', '#ef5350'),
                 lineWidth: 1,
                 lineStyle: LineStyle.Dashed,
                 axisLabelVisible: false,
@@ -55,7 +69,7 @@ export class StochasticIndicator {
 
             this.lowerLine = this.kSeries.createPriceLine({
                 price: 20,
-                color: styles.lowerBand || '#26a69a',
+                color: this.getStyleString('lowerBand', '#26a69a'),
                 lineWidth: 1,
                 lineStyle: LineStyle.Dashed,
                 axisLabelVisible: false,
@@ -69,17 +83,16 @@ export class StochasticIndicator {
             candles.map(c => c.high),
             candles.map(c => c.low),
             candles.map(c => c.close),
-            this.config.params.periodK || 14,
-            this.config.params.smoothK || 3,
-            this.config.params.periodD || 3
+            this.getNumberParam('periodK', 14),
+            this.getNumberParam('smoothK', 3),
+            this.getNumberParam('periodD', 3)
         );
 
-        const kData = [];
-        const dData = [];
+        const kData: LineData<Time>[] = [];
+        const dData: LineData<Time>[] = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
-            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
+            const time = this.getCandleTime(candles[i]);
 
             if (!isNaN(res.k[i])) kData.push({ time, value: res.k[i] });
             if (!isNaN(res.d[i])) dData.push({ time, value: res.d[i] });
@@ -104,18 +117,17 @@ export class StochasticIndicator {
             pricesHigh,
             pricesLow,
             pricesClose,
-            this.config.params.periodK || 14,
-            this.config.params.smoothK || 3,
-            this.config.params.periodD || 3
+            this.getNumberParam('periodK', 14),
+            this.getNumberParam('smoothK', 3),
+            this.getNumberParam('periodD', 3)
         );
 
         const lastIdx = res.k.length - 1;
-        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-        const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+        const candleTime = this.getCandleTime(candle);
 
         try {
-            if (!isNaN(res.k[lastIdx])) this.kSeries.update({ time: candleTime as any, value: res.k[lastIdx] });
-            if (!isNaN(res.d[lastIdx])) this.dSeries!.update({ time: candleTime as any, value: res.d[lastIdx] });
+            if (!isNaN(res.k[lastIdx])) this.kSeries.update({ time: candleTime, value: res.k[lastIdx] });
+            if (!isNaN(res.d[lastIdx])) this.dSeries!.update({ time: candleTime, value: res.d[lastIdx] });
         } catch (err) { }
     }
 

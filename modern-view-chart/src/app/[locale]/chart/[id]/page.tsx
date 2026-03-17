@@ -5,7 +5,6 @@ import { ChartContainer } from '@/features/chart/ChartContainer';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useMarketStore } from '@/lib/store';
 import { useEffect } from 'react';
-import { useCrossWindowSync } from '@/hooks/use-cross-window-sync';
 
 function resolvePriceDigits(symbol?: string, digits?: number): number {
     if (Number.isFinite(digits)) return Number(digits);
@@ -24,6 +23,16 @@ function formatTabPrice(price: number, digits: number): string {
     });
 }
 
+const VALID_SOURCES = ['MT5', 'BINANCE'] as const;
+type ChartSource = (typeof VALID_SOURCES)[number];
+
+const parseChartSource = (value: string | null): ChartSource => {
+    if (value && VALID_SOURCES.includes(value as ChartSource)) {
+        return value as ChartSource;
+    }
+    return 'MT5';
+};
+
 export default function StandaloneChartPage() {
     const params = useParams();
     const searchParams = useSearchParams();
@@ -32,7 +41,7 @@ export default function StandaloneChartPage() {
     // Extract initial config from URL
     const symbol = searchParams.get('symbol') || 'XAUUSDm';
     const interval = searchParams.get('interval') || '1';
-    const source = (searchParams.get('source') || 'MT5') as any;
+    const source = parseChartSource(searchParams.get('source'));
 
     const chart = useMarketStore((state) => {
         for (const tab of Object.values(state.tabs)) {

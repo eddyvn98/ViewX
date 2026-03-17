@@ -12,7 +12,7 @@ export function useChartInteraction(
     alerts: Alert[] = [],
     handleUpdateAlert: (id: string, price: number) => void = () => {},
     handleRemoveAlert: (id: string) => void = () => {},
-    sendMessage?: (data: any) => void,
+    sendMessage?: (data: Record<string, unknown>) => void,
 ) {
     void handleRemoveAlert;
 
@@ -33,13 +33,13 @@ export function useChartInteraction(
     useEffect(() => {
         if (!symbol) return;
         return useMarketStore.subscribe(
-            (state: any) => state.tickers[symbol]?.price,
+            (state) => state.tickers[symbol]?.price,
             (price: number) => { if (price) stateRef.current.currentPrice = price; },
         );
     }, [symbol]);
 
     const isDragging = useRef(false);
-    const dragState = useRef<any>(null);
+    const dragState = useRef<Record<string, unknown> | null>(null);
     const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -76,5 +76,5 @@ export function useChartInteraction(
             window.removeEventListener('pointerup', handlePointerUp);
             window.removeEventListener('pointercancel', handlePointerUp);
         };
-    }, [isReady, symbol, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage]);
+    }, [isReady, symbol, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage, chartRef, containerRef, seriesRef]);
 }

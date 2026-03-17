@@ -89,6 +89,48 @@ const HistoryRow = memo(({
 });
 HistoryRow.displayName = 'HistoryRow';
 
+function SortIcon({
+    field,
+    sortField,
+    sortDirection,
+}: {
+    field: SortField;
+    sortField: SortField;
+    sortDirection: SortDirection;
+}) {
+    if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
+    return sortDirection === 'asc'
+        ? <ArrowUp size={12} className="ml-1 text-blue-500" />
+        : <ArrowDown size={12} className="ml-1 text-blue-500" />;
+}
+
+function HeaderCell({
+    field,
+    label,
+    width,
+    sortField,
+    sortDirection,
+    onSort,
+}: {
+    field: SortField;
+    label: string;
+    width: string;
+    sortField: SortField;
+    sortDirection: SortDirection;
+    onSort: (field: SortField) => void;
+}) {
+    return (
+        <div
+            className="p-2 font-medium cursor-pointer hover:bg-secondary/40 transition-colors flex items-center overflow-hidden"
+            style={{ width }}
+            onClick={() => onSort(field)}
+        >
+            <span className="truncate">{label}</span>
+            <SortIcon field={field} sortField={sortField} sortDirection={sortDirection} />
+        </div>
+    );
+}
+
 export function HistoryTable({ history, onSymbolClick, onAnalyze, analyzeEnabled = true }: HistoryTableProps) {
     const [sortField, setSortField] = useState<SortField>('time');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -119,35 +161,19 @@ export function HistoryTable({ history, onSymbolClick, onAnalyze, analyzeEnabled
         }
     };
 
-    const SortIcon = ({ field }: { field: SortField }) => {
-        if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
-        return sortDirection === 'asc' ? <ArrowUp size={12} className="ml-1 text-blue-500" /> : <ArrowDown size={12} className="ml-1 text-blue-500" />;
-    };
-
-    const HeaderCell = ({ field, label, width }: { field: SortField, label: string, width: string }) => (
-        <div
-            className="p-2 font-medium cursor-pointer hover:bg-secondary/40 transition-colors flex items-center overflow-hidden"
-            style={{ width }}
-            onClick={() => handleSort(field)}
-        >
-            <span className="truncate">{label}</span>
-            <SortIcon field={field} />
-        </div>
-    );
-
     return (
         <div className="flex flex-col h-full w-full min-w-[1000px] text-left text-[11px]">
             {/* Header cố định */}
             <div className="flex bg-secondary/10 text-muted-foreground border-b border-border transition-colors shrink-0 font-medium h-9 items-center sticky top-0 z-10">
-                <HeaderCell field="time" label="Time" width="15%" />
-                <HeaderCell field="symbol" label="Symbol" width="8%" />
-                <HeaderCell field="ticket" label="Ticket" width="10%" />
-                <HeaderCell field="type" label="Type" width="10%" />
-                <HeaderCell field="volume" label="Volume" width="7%" />
-                <HeaderCell field="price" label="Price" width="10%" />
-                <HeaderCell field="profit" label="Profit" width="10%" />
+                <HeaderCell field="time" label="Time" width="15%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <HeaderCell field="symbol" label="Symbol" width="8%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <HeaderCell field="ticket" label="Ticket" width="10%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <HeaderCell field="type" label="Type" width="10%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <HeaderCell field="volume" label="Volume" width="7%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <HeaderCell field="price" label="Price" width="10%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                <HeaderCell field="profit" label="Profit" width="10%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <div className="p-2 flex items-center overflow-hidden" style={{ width: "8%" }}>Swap</div>
-                <HeaderCell field="magic" label="Magic" width="8%" />
+                <HeaderCell field="magic" label="Magic" width="8%" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                 <div className="p-2 flex items-center overflow-hidden text-muted-foreground/60" style={{ width: "9%" }}>Comment</div>
                 <div className="p-2 flex items-center justify-center" style={{ width: "5%" }}>AI</div>
             </div>

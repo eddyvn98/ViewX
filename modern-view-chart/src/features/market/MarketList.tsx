@@ -4,7 +4,7 @@ import { useMarketStore } from '@/lib/store';
 import { useCrossWindowSync } from '@/hooks/use-cross-window-sync';
 import { cn } from '@/lib/utils';
 import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
-import { Trash2, Search, Star } from 'lucide-react';
+import { Trash2, Search, Star, PanelsTopLeft, X } from 'lucide-react';
 import React, { useMemo, useState, memo, useCallback, useRef, useEffect, useDeferredValue } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { AutoSizer } from 'react-virtualized-auto-sizer';
@@ -269,6 +269,16 @@ interface MarketListProps {
     mode?: 'discovery' | 'watchlist';
 }
 
+interface MarketListContentProps {
+    mode: 'discovery' | 'watchlist';
+    showSearchHeader?: boolean;
+    showOpenDialogButton?: boolean;
+    prioritizeWatched?: boolean;
+    closeDialogOnSelect?: boolean;
+    watchlistSearchIncludesDiscovery?: boolean;
+    addToWatchlistOnSelect?: boolean;
+}
+
 interface RowData {
     items: { symbol: string; source: DataSource }[];
     mode: 'discovery' | 'watchlist';
@@ -299,10 +309,20 @@ function VirtualRow({ index, style, ...data }: RowComponentProps<RowData>): Reac
     );
 }
 
-function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
+function MarketListContent({
+    mode,
+    showSearchHeader = true,
+    showOpenDialogButton = false,
+    prioritizeWatched = false,
+    closeDialogOnSelect = true,
+    watchlistSearchIncludesDiscovery = true,
+    addToWatchlistOnSelect = true,
+}: MarketListContentProps) {
     const watchlist = useMarketStore((state) => state.watchlist);
     const addToWatchlist = useMarketStore((state) => state.addToWatchlist);
     const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);
+    const isMarketListDialogOpen = useMarketStore((state) => state.isMarketListDialogOpen);
+    const setMarketListDialogOpen = useMarketStore((state) => state.setMarketListDialogOpen);
 
     // âš¡ PERFORMANCE FIX: Only subscribe to symbol NAMES, not ticker data
     // Prices are updated via RAF in each TickerRow
@@ -326,9 +346,11 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     const [binanceUniverse, setBinanceUniverse] = useState<string[]>(() => cachedBinanceUniverse ?? []);
 
     const availableSymbols = useMarketStore((state) => state.availableSymbols);
+    const shouldLoadDiscoveryUniverse =
+        mode === 'discovery' || (watchlistSearchIncludesDiscovery && mode === 'watchlist' && deferredSearch.trim().length > 0);
 
     useEffect(() => {
-        if (mode !== 'discovery') return;
+        if (!shouldLoadDiscoveryUniverse) return;
         if (cachedBinanceUniverse || binanceUniverse.length > 0) {
             return;
         }
@@ -351,53 +373,92 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
         return () => {
             isMounted = false;
         };
-    }, [mode, binanceUniverse.length]);
+    }, [shouldLoadDiscoveryUniverse, binanceUniverse.length]);
 
     // Memoized symbol list - never includes ticker DATA, only names
     const symbolList = useMemo(() => {
+        const discoveryMap = new Map<string, DataSource>();
+
+        // MT5 symbol universe from bridge
+        availableSymbols.forEach((s) => {
+            const symbol = String(s?.symbol || '').trim();
+            if (!symbol) return;
+            discoveryMap.set(symbol, resolveDataSource(symbol));
+        });
+
+        // Live symbols from websocket tickers (includes Binance)
+        allSymbols.forEach((symbol) => {
+            const normalized = String(symbol || '').trim();
+            if (!normalized) return;
+            discoveryMap.set(normalized, resolveDataSource(normalized));
+        });
+
+        // Keep core Binance symbols visible even before first WS ticker batch arrives
+        DEFAULT_BINANCE_SYMBOLS.forEach((symbol) => {
+            if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
+        });
+        binanceUniverse.forEach((symbol) => {
+            if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
+        });
+
         let symbols: { symbol: string; source: DataSource }[] = [];
 
         if (mode === 'watchlist') {
-            symbols = watchlist.map(symbol => {
-                return { symbol, source: resolveDataSource(symbol) };
-            });
+            symbols = watchlist.map((symbol) => ({
+                symbol,
+                source: discoveryMap.get(symbol) ?? resolveDataSource(symbol),
+            }));
         } else {
-            const map = new Map<string, DataSource>();
-
-            // MT5 symbol universe from bridge
-            availableSymbols.forEach((s) => {
-                const symbol = String(s?.symbol || '').trim();
-                if (!symbol) return;
-                map.set(symbol, resolveDataSource(symbol));
-            });
-
-            // Live symbols from websocket tickers (includes Binance)
-            allSymbols.forEach((symbol) => {
-                const normalized = String(symbol || '').trim();
-                if (!normalized) return;
-                map.set(normalized, resolveDataSource(normalized));
-            });
-
-            // Keep core Binance symbols visible even before first WS ticker batch arrives
-            DEFAULT_BINANCE_SYMBOLS.forEach((symbol) => {
-                if (!map.has(symbol)) map.set(symbol, 'BINANCE');
-            });
-            binanceUniverse.forEach((symbol) => {
-                if (!map.has(symbol)) map.set(symbol, 'BINANCE');
-            });
-
-            symbols = Array.from(map.entries()).map(([symbol, source]) => ({ symbol, source }));
+            symbols = Array.from(discoveryMap.entries()).map(([symbol, source]) => ({ symbol, source }));
         }
 
-        return symbols
+        const filtered = symbols
             .filter(t => {
                 const s = t.symbol.toLowerCase();
                 const matchesSearch = s.includes(deferredSearch.toLowerCase());
                 const matchesTab = sourceTab === 'ALL' || t.source === sourceTab;
                 return matchesSearch && matchesTab;
             })
-            .sort((a, b) => a.symbol.localeCompare(b.symbol));
-    }, [allSymbols, availableSymbols, deferredSearch, sourceTab, watchlist, mode, binanceUniverse]);
+            .sort((a, b) => {
+                if (prioritizeWatched) {
+                    const aWatched = watchlist.includes(a.symbol);
+                    const bWatched = watchlist.includes(b.symbol);
+                    if (aWatched !== bWatched) return aWatched ? -1 : 1;
+                }
+                return a.symbol.localeCompare(b.symbol);
+            });
+
+        if (mode === 'watchlist' && watchlistSearchIncludesDiscovery && deferredSearch.trim()) {
+            const merged = new Map<string, { symbol: string; source: DataSource }>();
+            watchlist.forEach((symbol) => {
+                const normalized = String(symbol || '').trim();
+                if (!normalized) return;
+                if (normalized.toLowerCase().includes(deferredSearch.toLowerCase())) {
+                    merged.set(normalized, {
+                        symbol: normalized,
+                        source: discoveryMap.get(normalized) ?? resolveDataSource(normalized),
+                    });
+                }
+            });
+
+            Array.from(discoveryMap.entries()).forEach(([symbol, source]) => {
+                if (symbol.toLowerCase().includes(deferredSearch.toLowerCase())) {
+                    merged.set(symbol, { symbol, source });
+                }
+            });
+
+            filtered.forEach((item) => merged.set(item.symbol, item));
+
+            return Array.from(merged.values()).sort((a, b) => {
+                const aWatched = watchlist.includes(a.symbol);
+                const bWatched = watchlist.includes(b.symbol);
+                if (aWatched !== bWatched) return aWatched ? -1 : 1;
+                return a.symbol.localeCompare(b.symbol);
+            });
+        }
+
+        return filtered;
+    }, [allSymbols, availableSymbols, deferredSearch, sourceTab, watchlist, mode, binanceUniverse, prioritizeWatched, watchlistSearchIncludesDiscovery]);
 
     const watchedSet = useMemo(() => new Set(watchlist), [watchlist]);
 
@@ -412,11 +473,14 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
                 broadcastSymbolChange(activeChartId, symbol, source);
             }
 
-            if (mode === 'discovery' && !watchlist.includes(symbol)) {
+            if (addToWatchlistOnSelect && !watchlist.includes(symbol)) {
                 addToWatchlist(symbol);
             }
+            if (closeDialogOnSelect && isMarketListDialogOpen) {
+                setMarketListDialogOpen(false);
+            }
         }
-    }, [activeChartId, charts, mode, setChartSymbol, watchlist, addToWatchlist, broadcastGroupSymbolChange, broadcastSymbolChange]);
+    }, [activeChartId, charts, setChartSymbol, watchlist, addToWatchlist, broadcastGroupSymbolChange, broadcastSymbolChange, addToWatchlistOnSelect, closeDialogOnSelect, isMarketListDialogOpen, setMarketListDialogOpen]);
 
     const rowData = useMemo<RowData>(() => ({
         items: symbolList,
@@ -430,36 +494,50 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-transparent min-h-0 h-full">
-            {/* Premium Header: Search & Filters */}
-            <div className="px-3 py-2 border-b border-border dark:border-white/[0.03] flex items-center justify-between shrink-0 bg-secondary/50 dark:bg-white/[0.02]">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30 dark:text-white/10 group-focus-within:text-primary transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Quick search..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-secondary/50 dark:bg-white/[0.03] border border-border dark:border-white/5 rounded-lg pl-8 pr-3 py-1 text-[11px] text-foreground font-medium transition-all h-7 focus:bg-background outline-none"
-                    />
-                </div>
+            {showSearchHeader && (
+                <div className="px-3 py-2 border-b border-border dark:border-white/[0.03] flex items-center justify-between shrink-0 bg-secondary/50 dark:bg-white/[0.02] gap-2">
+                    <div className="relative flex-1 group flex items-center gap-2">
+                        {showOpenDialogButton && (
+                            <button
+                                type="button"
+                                onClick={() => setMarketListDialogOpen(true)}
+                                className="h-7 w-7 shrink-0 rounded-lg border border-border dark:border-white/5 bg-secondary/50 dark:bg-white/[0.03] text-muted-foreground hover:text-foreground hover:bg-background transition-all flex items-center justify-center"
+                                aria-label="Open market list"
+                                title="Open market list"
+                            >
+                                <PanelsTopLeft size={14} />
+                            </button>
+                        )}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30 dark:text-white/10 group-focus-within:text-primary transition-colors" />
+                            <input
+                                type="text"
+                                placeholder={mode === 'watchlist' ? 'Search watchlist + market...' : 'Quick search...'}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full bg-secondary/50 dark:bg-white/[0.03] border border-border dark:border-white/5 rounded-lg pl-8 pr-3 py-1 text-[11px] text-foreground font-medium transition-all h-7 focus:bg-background outline-none"
+                            />
+                        </div>
+                    </div>
 
-                <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-0.5 rounded-xl border border-border dark:border-white/5 h-7 ml-2 shadow-sm">
-                    {SOURCE_TABS.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setSourceTab(tab)}
-                            className={cn(
-                                "px-2.5 text-[9px] font-bold rounded-lg transition-all flex items-center justify-center tracking-wide",
-                                sourceTab === tab
-                                    ? "bg-primary text-primary-foreground shadow-sm"
-                                    : "text-muted-foreground/60 hover:text-foreground"
-                            )}
-                        >
-                            {tab === 'BINANCE' ? 'CRYPTO' : tab === 'MT5' ? 'FOREX' : 'ALL'}
-                        </button>
-                    ))}
+                    <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-0.5 rounded-xl border border-border dark:border-white/5 h-7 shadow-sm">
+                        {SOURCE_TABS.map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setSourceTab(tab)}
+                                className={cn(
+                                    "px-2.5 text-[9px] font-bold rounded-lg transition-all flex items-center justify-center tracking-wide",
+                                    sourceTab === tab
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "text-muted-foreground/60 hover:text-foreground"
+                                )}
+                            >
+                                {tab === 'BINANCE' ? 'CRYPTO' : tab === 'MT5' ? 'FOREX' : 'ALL'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* List Header */}
             {mode === 'watchlist' && (
@@ -474,7 +552,11 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
             <div className="flex-1 min-h-0 bg-background/5">
                 {symbolList.length === 0 ? (
                     <div className="p-10 text-center text-muted-foreground text-xs italic">
-                        {mode === 'watchlist' ? 'Your watchlist is empty' : 'No tickers found'}
+                        {mode === 'watchlist'
+                            ? deferredSearch.trim()
+                                ? 'No symbols matched your watchlist or market list search'
+                                : 'Your watchlist is empty'
+                            : 'No tickers found'}
                     </div>
                 ) : (
                     <AutoSizer
@@ -496,5 +578,76 @@ function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
     );
 }
 
+function MarketListInternal({ mode = 'discovery' }: MarketListProps) {
+    const isMarketListDialogOpen = useMarketStore((state) => state.isMarketListDialogOpen);
+    const setMarketListDialogOpen = useMarketStore((state) => state.setMarketListDialogOpen);
+
+    if (mode === 'discovery') {
+        return (
+            <MarketListContent
+                mode="discovery"
+                showSearchHeader
+                prioritizeWatched
+            />
+        );
+    }
+
+    return (
+        <>
+            <MarketListContent
+                mode="watchlist"
+                showSearchHeader
+                showOpenDialogButton
+            />
+
+            {isMarketListDialogOpen && (
+                <div className="fixed inset-0 z-[140] flex items-center justify-center p-4">
+                    <button
+                        type="button"
+                        aria-label="Close market list"
+                        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+                        onClick={() => setMarketListDialogOpen(false)}
+                    />
+                    <div className="relative z-10 w-full max-w-4xl h-[min(78vh,760px)] rounded-3xl border border-white/10 bg-background/95 shadow-2xl overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-secondary/40">
+                            <div>
+                                <h2 className="text-sm font-black uppercase tracking-[0.18em] text-foreground/90">Market List</h2>
+                                <p className="text-xs text-muted-foreground mt-1">Watched symbols stay on top. Click a symbol to open it, or use the star to save it.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setMarketListDialogOpen(false)}
+                                className="h-9 w-9 rounded-xl border border-border bg-background/70 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all flex items-center justify-center"
+                                aria-label="Close market list dialog"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="flex-1 min-h-0">
+                            <MarketListContent
+                                mode="discovery"
+                                showSearchHeader
+                                prioritizeWatched
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 export const MarketList = memo(MarketListInternal);
+
+export const MobileMarketPickerContent = memo(function MobileMarketPickerContent() {
+    return (
+        <MarketListContent
+            mode="discovery"
+            showSearchHeader
+            prioritizeWatched
+            closeDialogOnSelect={false}
+            addToWatchlistOnSelect={false}
+        />
+    );
+});
 

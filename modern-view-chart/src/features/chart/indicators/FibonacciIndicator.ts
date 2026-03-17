@@ -1,9 +1,11 @@
 
-import { ISeriesApi, SeriesMarker, Time } from 'lightweight-charts';
+import { ISeriesApi, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateDynamicSwingPoints } from '../logic/candle-patterns';
 import { toSec } from '../utils/time-utils';
 import { FibonacciPrimitive, FibonacciData } from '../logic/fibonacci-primitive';
+
+type SwingPoint = { time: Time; price: number; markerType: 'high' | 'low' };
 
 export class FibonacciIndicator {
     private primitive: FibonacciPrimitive | null = null;
@@ -25,16 +27,17 @@ export class FibonacciIndicator {
 
         const formattedData = candles.map(c => ({
             ...c,
-            time: toSec(c.time) as any
+            time: toSec(c.time) as Time
         }));
 
-        const styles = this.config.styles || {};
-        const globalLineColor = styles.lineColor || '#ffffff';
-        const globalLabelColor = styles.labelColor || '#ffffff';
-        const bgOpacity = styles.opacity ?? 0.1;
+        const globalLineColor = typeof this.config.styles?.lineColor === 'string' ? this.config.styles.lineColor : '#ffffff';
+        const globalLabelColor = typeof this.config.styles?.labelColor === 'string' ? this.config.styles.labelColor : '#ffffff';
+        const bgOpacity = typeof this.config.styles?.opacity === 'number' ? this.config.styles.opacity : 0.1;
 
         // 1. Calculate Swing Points (consistent depth)
-        const markers = calculateDynamicSwingPoints(formattedData, this.config.params.depth || 7, '#00ff88', '#ff3366');
+        const depthValue = this.config.params.depth;
+        const depth = typeof depthValue === 'number' && Number.isFinite(depthValue) ? depthValue : 7;
+        const markers = calculateDynamicSwingPoints(formattedData, depth, '#00ff88', '#ff3366') as unknown as SwingPoint[];
         if (markers.length < 2) {
             console.warn('[Fibonacci] Not enough swing points:', markers.length);
             this.clear();
@@ -42,11 +45,11 @@ export class FibonacciIndicator {
         }
 
         // 2. Find the most recent High and Low
-        let lastHigh: any = null;
-        let lastLow: any = null;
+        let lastHigh: SwingPoint | null = null;
+        let lastLow: SwingPoint | null = null;
 
         for (let i = markers.length - 1; i >= 0; i--) {
-            const m = markers[i] as any;
+            const m = markers[i];
             if (!lastHigh && m.markerType === 'high') lastHigh = m;
             if (!lastLow && m.markerType === 'low') lastLow = m;
             if (lastHigh && lastLow) break;
@@ -59,8 +62,9 @@ export class FibonacciIndicator {
         }
 
         // 3. Prepare Fibonacci Data
-        let p1, p2;
-        if ((lastHigh as any).time < (lastLow as any).time) {
+        let p1: SwingPoint;
+        let p2: SwingPoint;
+        if (Number(lastHigh.time) < Number(lastLow.time)) {
             p1 = lastHigh;
             p2 = lastLow;
         } else {
@@ -68,11 +72,13 @@ export class FibonacciIndicator {
             p2 = lastHigh;
         }
 
-        const p1Price = (p1 as any).price;
-        const p2Price = (p2 as any).price;
+        const p1Price = p1.price;
+        const p2Price = p2.price;
         const diff = p2Price - p1Price;
 
-        const levelSettings = this.config.params.levels || {};
+        const rawLevels = this.config.params.levels;
+        const levelSettings: Record<string, boolean> =
+            rawLevels && typeof rawLevels === 'object' ? (rawLevels as Record<string, boolean>) : {};
         const showPercent = this.config.params.showPercent !== false;
         const showPrice = this.config.params.showPrice !== false;
 

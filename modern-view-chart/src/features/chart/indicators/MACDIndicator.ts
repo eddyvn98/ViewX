@@ -1,6 +1,7 @@
-import { IChartApi, ISeriesApi, LineSeries, HistogramSeries } from 'lightweight-charts';
+import { HistogramData, IChartApi, ISeriesApi, LineData, LineSeries, HistogramSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateMACD } from '../utils/indicator-math';
+import { MACDResult } from '@/features/strategy/types';
 import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class MACDIndicator {
@@ -13,18 +14,46 @@ export class MACDIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: any) {
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getLineWidth(): 1 | 2 | 3 | 4 {
+        const styleWidth = this.config.styles?.width;
+        const width = typeof styleWidth === 'number' && Number.isFinite(styleWidth)
+            ? styleWidth
+            : this.config.lineWidth;
+
+        if (width >= 4) return 4;
+        if (width <= 1) return 1;
+        return Math.round(width) as 1 | 2 | 3 | 4;
+    }
+
+    private getCandleTime(candle: Candle): Time {
+        const rawTime = Number(candle.time);
+        return (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
+    }
+
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: MACDResult) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const macdColor = styles.macdLine || '#2962FF';
-        const signalColor = styles.signalLine || '#FF6D00';
+        const macdColor = this.getStyleString('macdLine', '#2962FF');
+        const signalColor = this.getStyleString('signalLine', '#FF6D00');
+        const histogramBullColor = this.getStyleString('histogramBull', '#26a69a');
+        const histogramBearColor = this.getStyleString('histogramBear', '#ef5350');
+        const lineWidth = this.getLineWidth();
 
         // Initialize Series if not exists
         if (!this.macdSeries) {
             // Histogram (Background)
             this.histogramSeries = this.chart.addSeries(HistogramSeries, {
-                color: styles.histogramBull || '#26a69a',
+                color: histogramBullColor,
                 priceScaleId: 'right',
                 priceFormat: { type: 'volume' },
                 visible: this.config.visible,
@@ -41,7 +70,7 @@ export class MACDIndicator {
             // MACD Line (Fast)
             this.macdSeries = this.chart.addSeries(LineSeries, {
                 color: macdColor,
-                lineWidth: 2,
+                lineWidth,
                 priceScaleId: 'right',
                 visible: this.config.visible,
                 crosshairMarkerVisible: false,
@@ -50,33 +79,34 @@ export class MACDIndicator {
             // Signal Line (Slow)
             this.signalSeries = this.chart.addSeries(LineSeries, {
                 color: signalColor,
-                lineWidth: 2,
+                lineWidth,
                 priceScaleId: 'right',
                 visible: this.config.visible,
                 crosshairMarkerVisible: false,
             });
         } else {
             // Update visibility and styles
-            this.macdSeries.applyOptions({ visible: this.config.visible, color: macdColor });
-            this.signalSeries!.applyOptions({ visible: this.config.visible, color: signalColor });
+            this.macdSeries.applyOptions({ visible: this.config.visible, color: macdColor, lineWidth });
+            this.signalSeries!.applyOptions({ visible: this.config.visible, color: signalColor, lineWidth });
             this.histogramSeries!.applyOptions({
                 visible: this.config.visible,
-                color: styles.histogramBull || '#26a69a'
+                color: histogramBullColor
             });
         }
 
         // Calculate Data
-        const { fast = 12, slow = 26, signal = 9 } = this.config.params;
+        const fast = this.getNumberParam('fast', 12);
+        const slow = this.getNumberParam('slow', 26);
+        const signal = this.getNumberParam('signal', 9);
         const { macd, signal: sig, histogram } = calculatedValues || calculateMACD(candles.map(c => c.close), fast, slow, signal);
 
         // Format Data
-        const macdData = [];
-        const signalData = [];
-        const histogramData = [];
+        const macdData: LineData<Time>[] = [];
+        const signalData: LineData<Time>[] = [];
+        const histogramData: HistogramData<Time>[] = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
-            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
+            const time = this.getCandleTime(candles[i]);
 
             if (!isNaN(macd[i])) {
                 macdData.push({ time, value: macd[i] });
@@ -88,7 +118,7 @@ export class MACDIndicator {
                 histogramData.push({
                     time,
                     value: histogram[i],
-                    color: histogram[i] >= 0 ? '#26a69a' : '#ef5350' // Green if > 0, Red if < 0
+                    color: histogram[i] >= 0 ? histogramBullColor : histogramBearColor
                 });
             }
         }
@@ -100,10 +130,15 @@ export class MACDIndicator {
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
-        if (!this.macdSeries || !this.config.visible || candles.length < this.config.params.slow) return;
+        if (!this.macdSeries || !this.signalSeries || !this.histogramSeries || !this.config.visible) return;
 
-        const { fast = 12, slow = 26, signal = 9 } = this.config.params;
-        const lastIdx = candles.length - 1;
+        const fast = this.getNumberParam('fast', 12);
+        const slow = this.getNumberParam('slow', 26);
+        const signal = this.getNumberParam('signal', 9);
+        if (candles.length < slow) return;
+
+        const histogramBullColor = this.getStyleString('histogramBull', '#26a69a');
+        const histogramBearColor = this.getStyleString('histogramBear', '#ef5350');
 
         const prices = candles.map(c => c.close);
         prices[prices.length - 1] = candle.close;
@@ -111,21 +146,20 @@ export class MACDIndicator {
         const { macd, signal: sig, histogram } = calculateMACD(prices, fast, slow, signal);
 
         const lastIdxMACD = macd.length - 1;
-        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-        const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+        const candleTime = this.getCandleTime(candle);
 
         try {
             if (!isNaN(macd[lastIdxMACD])) {
-                this.macdSeries.update({ time: candleTime as any, value: macd[lastIdxMACD] });
+                this.macdSeries.update({ time: candleTime, value: macd[lastIdxMACD] });
             }
             if (!isNaN(sig[lastIdxMACD])) {
-                this.signalSeries!.update({ time: candleTime as any, value: sig[lastIdxMACD] });
+                this.signalSeries.update({ time: candleTime, value: sig[lastIdxMACD] });
             }
             if (!isNaN(histogram[lastIdxMACD])) {
-                this.histogramSeries!.update({
-                    time: candleTime as any,
+                this.histogramSeries.update({
+                    time: candleTime,
                     value: histogram[lastIdxMACD],
-                    color: histogram[lastIdxMACD] >= 0 ? '#26a69a' : '#ef5350'
+                    color: histogram[lastIdxMACD] >= 0 ? histogramBullColor : histogramBearColor
                 });
             }
         } catch (err) {

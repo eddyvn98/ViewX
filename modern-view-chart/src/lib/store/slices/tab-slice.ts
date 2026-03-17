@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { ChartTab } from '../types';
+import { RootState } from '../index';
 
 export interface TabSlice {
     tabs: Record<string, ChartTab>;
@@ -11,13 +12,13 @@ export interface TabSlice {
     setLayoutMode: (mode: string, r?: number, c?: number) => void;
 }
 
-export const createTabSlice: StateCreator<TabSlice> = (set) => ({
+export const createTabSlice: StateCreator<RootState, [], [], TabSlice> = (set) => ({
     tabs: {
         'default-tab': {
             id: 'default-tab',
             name: 'Workspace 1',
             charts: {
-                'default': { id: 'default', symbol: 'XAUUSDm', interval: '1', source: 'MT5', group: 'A', chartType: 'smart_candles', timezone: 'Asia/Ho_Chi_Minh' }
+                'default': { id: 'default', symbol: 'BTCUSDT', interval: '1', source: 'BINANCE', group: 'A', chartType: 'smart_candles', timezone: 'Asia/Ho_Chi_Minh' }
             },
             activeChartId: 'default',
             maximizedChartId: null,
@@ -34,7 +35,7 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
             id,
             name: name || `Workspace ${Object.keys(state.tabs).length + 1}`,
             charts: {
-                [`chart-${id}-1`]: { id: `chart-${id}-1`, symbol: 'XAUUSDm', interval: '1', source: 'MT5', group: 'A', chartType: 'smart_candles', timezone: 'Asia/Ho_Chi_Minh' }
+                [`chart-${id}-1`]: { id: `chart-${id}-1`, symbol: 'BTCUSDT', interval: '1', source: 'BINANCE', group: 'A', chartType: 'smart_candles', timezone: 'Asia/Ho_Chi_Minh' }
             },
             activeChartId: `chart-${id}-1`,
             maximizedChartId: null,
@@ -68,7 +69,7 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
         }
     })),
 
-    setLayoutMode: (mode: string, r?: number, c?: number) => set((state: any) => {
+    setLayoutMode: (mode: string, r?: number, c?: number) => set((state) => {
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab) return state;
 
@@ -90,7 +91,7 @@ export const createTabSlice: StateCreator<TabSlice> = (set) => ({
             for (let i = existingCount + 1; i <= needed; i++) {
                 const newId = `chart-${activeTab.id}-${i}`;
                 newCharts[newId] = { ...protoChart, id: newId, group: 'none' };
-                newChartIndicators[newId] = protoIndicators.map((ind: any) => ({
+                newChartIndicators[newId] = protoIndicators.map((ind) => ({
                     ...ind,
                     id: Math.random().toString(36).substring(7)
                 }));

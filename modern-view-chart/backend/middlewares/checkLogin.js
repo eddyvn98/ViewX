@@ -1,11 +1,5 @@
-import Express from "express";
-import jwt from "jsonwebtoken";
-import cookieParser from "cookie-parser";
 import { normalizeUserRole } from "../auth/roles.js";
-
-const router = Express.Router();
-
-router.use(cookieParser());
+import { verifyAccessToken } from "../auth/userJwt.js";
 
 const checkLogin = (req, res, next) => {
   try {
@@ -15,7 +9,7 @@ const checkLogin = (req, res, next) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const result = jwt.verify(token, process.env.JWT);
+    const result = verifyAccessToken(token);
     const userId = String(result?.sub || result?._id || "").trim();
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });

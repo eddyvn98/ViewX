@@ -28,7 +28,15 @@ export function useScannerViewModel(input: UseScannerViewModelInput) {
 
     const scannerViewMap = useMemo(() => {
         const map = new Map<string, ScannerViewModel>();
-        const now = Date.now();
+        const now = input.signals.reduce((latest, signal) => {
+            const candidates = [
+                Number((signal as unknown as { timestamp?: unknown }).timestamp),
+                Number((signal as unknown as { createdAt?: unknown }).createdAt),
+                Number((signal as unknown as { time?: unknown }).time),
+            ];
+            const best = candidates.find(Number.isFinite) ?? latest;
+            return Math.max(latest, best);
+        }, 0);
 
         // Optimization: Create a lookup for signals by symbol to avoid O(N) filtering per cell
         const signalsBySymbol = new Map<string, StrategySignal[]>();

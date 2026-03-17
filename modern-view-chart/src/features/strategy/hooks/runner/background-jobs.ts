@@ -56,16 +56,22 @@ export function runAiAuditAndTradeLogging(
                 spread: metrics.spread_at_entry || 0,
                 volatility: metrics.volatility_atr || 0,
                 trendStrength: metrics.mtf?.h1_trend === 'UP' ? 30 : 10,
-                rsi: metrics.indicators_snapshot['RSI[14]'] || 50,
+                rsi: typeof metrics.indicators_snapshot['RSI[14]'] === 'number' ? metrics.indicators_snapshot['RSI[14]'] : 50,
                 session: metrics.session
             };
 
-            let aiResult = null;
+            let aiResult: Awaited<ReturnType<typeof AiAnalyzer.analyzeSignal>> | undefined;
             if (strategy.aiGuard) {
                 toast.info(`AI is auditing ${strategy.name} signal...`, { icon: '🧠' });
                 soundService.playAIThinking();
 
-                const ai = await AiAnalyzer.analyzeSignal(strategy, signal, aiMetrics, stats, AnalysisType.PRE_TRADE);
+                const ai = await AiAnalyzer.analyzeSignal(
+                    strategy,
+                    signal as unknown as Record<string, unknown>,
+                    aiMetrics as unknown as Record<string, unknown>,
+                    stats,
+                    AnalysisType.PRE_TRADE
+                );
                 aiResult = ai;
 
                 const store = useStrategyStore.getState();
@@ -88,7 +94,7 @@ export function runAiAuditAndTradeLogging(
                 }
             }
 
-            await TradeLogger.logEntry({ ...signal, aiAnalysis: aiResult }, aiMetrics as MarketMetrics);
+            await TradeLogger.logEntry({ ...signal, aiAnalysis: aiResult }, aiMetrics as MarketMetrics & Record<string, unknown>);
         } catch (err) {
             console.error('[Runner] Background tasks failed:', err);
             toast.error('AI Audit failed for live signal');

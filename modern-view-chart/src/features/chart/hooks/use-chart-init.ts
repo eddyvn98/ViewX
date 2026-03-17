@@ -15,6 +15,7 @@ import { setupCrosshairListeners } from './init/setup-crosshair-listeners';
 import { ChartInstance } from '@/lib/store/types';
 import { readPersistedViewportForChart } from './init/chart-init-helpers';
 import { setupChartSyncRuntime } from './init/setup-chart-sync-runtime';
+import type { ChartTab } from '@/lib/store/types';
 
 export function useChartInit(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
@@ -29,7 +30,7 @@ export function useChartInit(
     const priceChartRef = useRef<IChartApi | null>(null);
     const subchartChartRef = useRef<IChartApi | null>(null);
     const timescaleChartRef = useRef<IChartApi | null>(null);
-    const seriesRef = useRef<ISeriesApi<any> | null>(null);
+    const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const markerSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const subSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
     const timescaleSyncRef = useRef<ISeriesApi<'Line'> | null>(null);
@@ -41,7 +42,7 @@ export function useChartInit(
     const updateChart = useMarketStore(state => state.updateChart);
 
     const getPersistedViewport = useCallback((): ChartInstance['viewport'] | undefined => {
-        return readPersistedViewportForChart(useMarketStore.getState().tabs as any, chartId);
+        return readPersistedViewportForChart(useMarketStore.getState().tabs as Record<string, ChartTab>, chartId);
     }, [chartId]);
 
     useEffect(() => {
@@ -51,7 +52,7 @@ export function useChartInit(
     useEffect(() => {
         persistedViewportRef.current = getPersistedViewport();
         const unsubscribe = useMarketStore.subscribe(
-            (state) => readPersistedViewportForChart(state.tabs as any, chartId),
+            (state) => readPersistedViewportForChart(state.tabs as Record<string, ChartTab>, chartId),
             (viewport) => {
                 persistedViewportRef.current = viewport;
             }
@@ -100,8 +101,6 @@ export function useChartInit(
         const priceContainer = priceContainerRef.current;
         const subchartContainer = subchartContainerRef.current;
         const timescaleContainer = timescaleContainerRef.current;
-        let isDisposed = false;
-
         const applyTouchAction = (container: HTMLDivElement | null) => {
             if (!container) return;
             container.style.touchAction = 'none';
@@ -160,8 +159,8 @@ export function useChartInit(
             priceLineWidth: 1,
             priceLineStyle: 2,
         });
-        const subSyncSeries = subchartChart.addSeries(LineSeries as any, { visible: false });
-        const footSyncSeries = timescaleChart.addSeries(LineSeries as any, { visible: false });
+        const subSyncSeries = subchartChart.addSeries(LineSeries, { visible: false });
+        const footSyncSeries = timescaleChart.addSeries(LineSeries, { visible: false });
         const markerSeries = priceChart.addSeries(CandlestickSeries, {
             visible: true,
             wickVisible: false,
@@ -238,19 +237,21 @@ export function useChartInit(
         subchartChartRef.current = subchartChart;
         timescaleChartRef.current = timescaleChart;
         seriesRef.current = candleSeries;
-        markerSeriesRef.current = markerSeries as any;
-        subSyncRef.current = subSyncSeries as any;
-        timescaleSyncRef.current = footSyncSeries as any;
+        markerSeriesRef.current = markerSeries;
+        subSyncRef.current = subSyncSeries;
+        timescaleSyncRef.current = footSyncSeries;
 
-        setIsReady(true);
+        const readyTimeoutId = setTimeout(() => setIsReady(true), 0);
+        const viewportTimer = viewportSaveTimeoutRef.current;
 
         return () => {
-            setIsReady(false);
+            clearTimeout(readyTimeoutId);
+            setTimeout(() => setIsReady(false), 0);
             cleanupCrosshair();
             clearTimeout(initTimeoutId);
             clearTimeout(restoreTimeoutId);
             cancelAnimationFrame(initRafId);
-            if (viewportSaveTimeoutRef.current) clearTimeout(viewportSaveTimeoutRef.current);
+            if (viewportTimer) clearTimeout(viewportTimer);
             resizeObserver.disconnect();
             window.removeEventListener('resize', runtime.syncChartSizes);
             window.visualViewport?.removeEventListener('resize', runtime.syncChartSizes);

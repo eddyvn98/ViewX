@@ -14,6 +14,10 @@ interface AlertLineTagsProps {
 }
 
 export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, priceChartRef, isReady }: AlertLineTagsProps) {
+    type EditingState = { id: string; ticket: string; type: string; price: number; value: number; x?: number };
+    type StartTagEditDetail = { ticket: string | number; type: string; price: number; x?: number };
+    type CachedTagData = { price: number };
+
     const containerRef = useRef<HTMLDivElement>(null);
     const tagElementsMap = useRef<Map<string, TagElements>>(new Map());
 
@@ -22,11 +26,7 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
     const removeAlert = useMarketStore(state => state.removeAlert);
     const updateAlert = useMarketStore(state => state.updateAlert);
     const [overlaySeries, setOverlaySeries] = useState<ISeriesApi<'Candlestick'> | null>(null);
-    const [editingState, setEditingState] = useState<{ id: string, ticket: any, type: string, price: number, value: number, x?: number } | null>(null);
-
-    useEffect(() => {
-        setOverlaySeries(editingState ? seriesRef.current : null);
-    }, [editingState, seriesRef]);
+    const [editingState, setEditingState] = useState<EditingState | null>(null);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -69,7 +69,7 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
             syncRafId = requestAnimationFrame(() => {
                 syncRafId = null;
                 tagElementsMap.current.forEach((cached) => {
-                    const td = (cached.el as any)._tagData;
+                    const td = (cached.el as HTMLElement & { _tagData?: CachedTagData })._tagData;
                     if (td && seriesRef.current) updateTagPosition(cached, seriesRef.current, td.price);
                 });
             });
@@ -130,18 +130,23 @@ export const AlertLineTags = memo(function AlertLineTags({ symbol, seriesRef, pr
 
         if (save && state && !isDeletingRef.current) updateAlert(state.ticket, { price: val });
         setEditingState(null);
+        setOverlaySeries(null);
     }, [updateAlert]);
 
     useEffect(() => {
-        const handleStartEdit = (e: any) => {
-            const { ticket, type, price, x } = e.detail;
+        const handleStartEdit = (e: Event) => {
+            const detail = (e as CustomEvent<StartTagEditDetail>).detail;
+            if (!detail) return;
+            const { ticket, type, price, x } = detail;
             if (type !== 'alert') return;
+            const ticketId = String(ticket);
             isDeletingRef.current = false;
-            setEditingState({ id: `${ticket}-${type}-${Date.now()}`, ticket, type, price, value: price, x });
+            setOverlaySeries(seriesRef.current);
+            setEditingState({ id: `${ticketId}-${type}-${Date.now()}`, ticket: ticketId, type, price, value: price, x });
         };
         window.addEventListener('start-tag-edit', handleStartEdit);
         return () => window.removeEventListener('start-tag-edit', handleStartEdit);
-    }, []);
+    }, [seriesRef]);
 
     return (
         <div ref={containerRef} className="absolute inset-0 pointer-events-none z-[5] overflow-hidden touch-none">

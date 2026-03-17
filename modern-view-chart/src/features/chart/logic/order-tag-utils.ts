@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 export type { TagData } from './order-tags/types';
 
 export { norm } from './order-tags/symbol-utils';

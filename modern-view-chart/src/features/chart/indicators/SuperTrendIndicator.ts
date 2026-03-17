@@ -1,6 +1,7 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineData, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateSuperTrend } from '../utils/indicator-math';
+import { SuperTrendResult } from '../utils/indicators/supertrend';
 import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class SuperTrendIndicator {
@@ -11,13 +12,38 @@ export class SuperTrendIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: any) {
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getLineWidth(): 1 | 2 | 3 | 4 {
+        const styleWidth = this.config.styles?.width;
+        const width = typeof styleWidth === 'number' && Number.isFinite(styleWidth)
+            ? styleWidth
+            : this.config.lineWidth;
+
+        if (width >= 4) return 4;
+        if (width <= 1) return 1;
+        return Math.round(width) as 1 | 2 | 3 | 4;
+    }
+
+    private getCandleTime(candle: Candle): Time {
+        const rawTime = Number(candle.time);
+        return (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
+    }
+
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: SuperTrendResult) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const bullColor = styles.bullColor || '#00ff88';
-        const bearColor = styles.bearColor || '#ff4444';
-        const lineWidth = styles.width || this.config.lineWidth || 2;
+        const bullColor = this.getStyleString('bullColor', '#00ff88');
+        const bearColor = this.getStyleString('bearColor', '#ff4444');
+        const lineWidth = this.getLineWidth();
 
         if (!this.series) {
             this.series = this.chart.addSeries(LineSeries, {
@@ -29,22 +55,20 @@ export class SuperTrendIndicator {
             });
         } else {
             this.series.applyOptions({
-                lineWidth: lineWidth as any,
+                lineWidth,
                 visible: this.config.visible,
             });
         }
 
         const res = calculatedValues || calculateSuperTrend(
             candles,
-            this.config.params.period || 10,
-            this.config.params.multiplier || 3
+            this.getNumberParam('period', 10),
+            this.getNumberParam('multiplier', 3)
         );
 
-        const data = candles.map((c, i) => {
-            const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
-            const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+        const data: LineData<Time>[] = candles.map((c, i) => {
             return {
-                time: time as any,
+                time: this.getCandleTime(c),
                 value: res.superTrend[i],
                 color: res.trend[i] === 1 ? bullColor : bearColor
             };
@@ -61,22 +85,19 @@ export class SuperTrendIndicator {
 
         const res = calculateSuperTrend(
             prices,
-            this.config.params.period || 10,
-            this.config.params.multiplier || 3
+            this.getNumberParam('period', 10),
+            this.getNumberParam('multiplier', 3)
         );
 
         const lastIdx = res.superTrend.length - 1;
-        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-        const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
-
-        const styles = this.config.styles || {};
-        const bullColor = styles.bullColor || '#00ff88';
-        const bearColor = styles.bearColor || '#ff4444';
+        const candleTime = this.getCandleTime(candle);
+        const bullColor = this.getStyleString('bullColor', '#00ff88');
+        const bearColor = this.getStyleString('bearColor', '#ff4444');
 
         if (!isNaN(res.superTrend[lastIdx])) {
             try {
                 this.series.update({
-                    time: candleTime as any,
+                    time: candleTime,
                     value: res.superTrend[lastIdx],
                     color: res.trend[lastIdx] === 1 ? bullColor : bearColor
                 });

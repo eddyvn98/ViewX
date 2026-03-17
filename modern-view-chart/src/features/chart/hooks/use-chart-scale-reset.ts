@@ -93,7 +93,8 @@ export function useChartScaleReset(
         timescaleChartRef,
         priceContainerRef,
         subchartContainerRef,
-        timescaleContainerRef
+        timescaleContainerRef,
+        isAutoScrollEnabledRef,
     ]);
 }
 

@@ -2,6 +2,7 @@
 
 import { useMarketStore } from '@/lib/store';
 import { debugLog } from '@/lib/debug';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -16,8 +17,23 @@ import { MobileHistoryTable } from './components/MobileHistoryTable';
 import { OrdersTable } from './components/OrdersTable';
 import { HistoryTable } from './components/HistoryTable';
 
+declare global {
+    interface Window {
+        _terminalTouchStart?: number;
+    }
+}
+
+type Mt5ModifyPayload = {
+    topic: 'mt5_command';
+    command: 'modify';
+    ticket: number;
+    sl?: number;
+    tp?: number;
+};
+
 export const Terminal = memo(function Terminal({ forceExpanded = false }: { forceExpanded?: boolean }) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
+    const isProUser = getClientEntitlements().isPro;
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
 
@@ -27,13 +43,11 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         if (!tab?.activeChartId) return 'MT5';
         return tab.charts[tab.activeChartId]?.source || 'MT5';
     });
-    const accounts = useMarketStore((state) => state.accounts);
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
     const history = useMarketStore((state) => state.history);
 
     const { sendMessage } = useWebSocket();
-    const [isMounted, setIsMounted] = useState(false);
     const [terminalTab, setTerminalTab] = useState<'positions' | 'orders' | 'history'>('positions');
 
     useEffect(() => {
@@ -59,7 +73,11 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5';
     // Select specific account based on source
-    const account = useMarketStore((state) => state.accounts[accountSource] || state.accounts['MT5']);
+    const account = useMarketStore((state) => state.accounts[accountSource] || state.accounts['MT5'] || null);
+    const visibleAccount = isProUser ? account : null;
+    const visiblePositions = isProUser ? positions : [];
+    const visibleOrders = isProUser ? orders : [];
+    const visibleHistory = isProUser ? history : [];
 
     // Wrap in useCallback to ensure stable references
     const handleClosePosition = useCallback((ticket: number) => {
@@ -77,7 +95,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
     const handleUpdatePosition = useCallback((ticket: number, sl: number | undefined, tp: number | undefined) => {
         // Only send fields that are defined/changed
-        const payload: any = {
+        const payload: Mt5ModifyPayload = {
             topic: "mt5_command",
             command: "modify",
             ticket: ticket
@@ -100,13 +118,10 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         }
     }, [setChartSymbol]);
 
-    const handleAnalyze = useCallback((deal: any) => {
+    const handleAnalyze = useCallback((deal: unknown) => {
         debugLog('[TERMINAL][analyze]', deal);
-        sendMessage({
-            topic: "request_analysis",
-            deal: deal
-        });
-    }, [sendMessage]);
+        useMarketStore.getState().addNotification('AI is temporarily disabled', 'warning');
+    }, []);
 
     const setIsScrollingPanel = useMarketStore(state => state.setIsScrollingPanel);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -120,18 +135,12 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         }, 1500);
     };
 
-    // Hydration fix: only render content on client
     useEffect(() => {
-        setIsMounted(true);
         return () => {
             if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
             if (setIsScrollingPanel) setIsScrollingPanel(false);
         };
     }, [setIsScrollingPanel]);
-
-    if (!isMounted) {
-        return <div className="h-full bg-background" />;
-    }
 
     return (
         <div className="flex flex-col h-full bg-background/30 backdrop-blur-xl relative shadow-[0_-20px_50px_-20px_rgba(0,0,0,0.2)] border-t border-border/20">
@@ -154,7 +163,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                     )}
                     onClick={toggleCollapse}
                 >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div
                             className={cn(
                                 "w-1.5 h-1.5 rounded-full shadow-lg shrink-0",
@@ -164,9 +173,9 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                         />
                         <div className="flex-1 min-w-0 overflow-hidden">
                             {forceExpanded ? (
-                                <MobileAccountSummary account={account} />
+                                <MobileAccountSummary account={visibleAccount} />
                             ) : (
-                                <AccountSummary account={account} />
+                                <AccountSummary account={visibleAccount} />
                             )}
                         </div>
                     </div>
@@ -188,6 +197,11 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
             {!effectiveCollapsed && (
                 <div className="flex-1 flex flex-col min-h-0">
+                    {!isProUser ? (
+                        <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-amber-400 border-b border-amber-500/20 bg-amber-500/10">
+                            Terminal data is available for Pro. You can explore the layout in Free mode.
+                        </div>
+                    ) : null}
 
 
                     {/* Scrollable Area - ANIMATED SLIDING TABS */}
@@ -196,11 +210,11 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                         onTouchStart={(e) => {
                             if (!forceExpanded) return;
                             const touch = e.touches[0];
-                            (window as any)._terminalTouchStart = touch.clientX;
+                            window._terminalTouchStart = touch.clientX;
                         }}
                         onTouchEnd={(e) => {
                             if (!forceExpanded) return;
-                            const touchStart = (window as any)._terminalTouchStart;
+                            const touchStart = window._terminalTouchStart;
                             if (touchStart === undefined) return;
 
                             const touchEnd = e.changedTouches[0].clientX;
@@ -217,7 +231,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                     setTerminalTab(tabs[currentIndex - 1]);
                                 }
                             }
-                            delete (window as any)._terminalTouchStart;
+                            delete window._terminalTouchStart;
                         }}
                     >
                         <div
@@ -239,14 +253,14 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                 )}>
                                 {forceExpanded ? (
                                     <MobilePositionsTable
-                                        positions={positions}
+                                        positions={visiblePositions}
                                         onClosePosition={handleClosePosition}
                                         onUpdatePosition={handleUpdatePosition}
                                         onSymbolClick={handleSymbolClick}
                                     />
                                 ) : (
                                     <PositionsTable
-                                        positions={positions}
+                                        positions={visiblePositions}
                                         onClosePosition={handleClosePosition}
                                         onUpdatePosition={handleUpdatePosition}
                                         onSymbolClick={handleSymbolClick}
@@ -264,13 +278,13 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                 )}>
                                 {forceExpanded ? (
                                     <MobileOrdersTable
-                                        orders={orders}
+                                        orders={visibleOrders}
                                         onCancelOrder={handleClosePosition}
                                         onSymbolClick={handleSymbolClick}
                                     />
                                 ) : (
                                     <OrdersTable
-                                        orders={orders}
+                                        orders={visibleOrders}
                                         onCancelOrder={handleClosePosition}
                                         onSymbolClick={handleSymbolClick}
                                     />
@@ -287,14 +301,14 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                 )}>
                                 {forceExpanded ? (
                                     <MobileHistoryTable
-                                        history={history}
+                                        history={visibleHistory}
                                         onSymbolClick={handleSymbolClick}
                                         onAnalyze={strategyEngineEnabled ? handleAnalyze : undefined}
                                         analyzeEnabled={strategyEngineEnabled}
                                     />
                                 ) : (
                                     <HistoryTable
-                                        history={history}
+                                        history={visibleHistory}
                                         onSymbolClick={handleSymbolClick}
                                         onAnalyze={strategyEngineEnabled ? handleAnalyze : undefined}
                                         analyzeEnabled={strategyEngineEnabled}
@@ -312,7 +326,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                             {['positions', 'orders', 'history'].map((tab) => (
                                 <button
                                     key={tab}
-                                    onClick={() => setTerminalTab(tab as any)}
+                                    onClick={() => setTerminalTab(tab as 'positions' | 'orders' | 'history')}
                                     className={cn(
                                         "pt-0.5 pb-0.5 text-[10px] font-black uppercase tracking-widest transition-all relative group",
                                         terminalTab === tab
@@ -321,8 +335,8 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                                     )}
                                 >
                                     <span className="relative z-10">
-                                        {tab === 'positions' ? `Positions (${positions.length})` :
-                                            tab === 'orders' ? `Orders (${orders.length})` :
+                                        {tab === 'positions' ? `Positions (${visiblePositions.length})` :
+                                            tab === 'orders' ? `Orders (${visibleOrders.length})` :
                                                 'History'}
                                     </span>
                                     {terminalTab === tab && (

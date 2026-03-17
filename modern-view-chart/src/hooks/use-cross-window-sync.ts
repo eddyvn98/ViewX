@@ -10,6 +10,8 @@ type SyncMessage =
     | { type: 'GROUP_SYMBOL_CHANGE'; group: string; symbol: string; source: string }
     | { type: 'CROSSHAIR_SYNC'; point: { time: number | null; price: number | null; sourceId: string | null } | null };
 
+type CrosshairPoint = Extract<SyncMessage, { type: 'CROSSHAIR_SYNC' }>['point'];
+
 export function useCrossWindowSync() {
     const channelRef = useRef<BroadcastChannel | null>(null);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
@@ -81,7 +83,7 @@ export function useCrossWindowSync() {
     };
 
     // Function to broadcast crosshair updates
-    const broadcastCrosshair = (point: any) => {
+    const broadcastCrosshair = (point: CrosshairPoint) => {
         channelRef.current?.postMessage({
             type: 'CROSSHAIR_SYNC',
             point

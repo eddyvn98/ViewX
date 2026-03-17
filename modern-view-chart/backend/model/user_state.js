@@ -22,6 +22,19 @@ const schema = new Schema(
             type: Number,
             default: 1,
         },
+        revision: {
+            type: Number,
+            default: 0,
+        },
+        clientUpdatedAt: {
+            type: Date,
+            default: null,
+        },
+        lastSourceClientId: {
+            type: String,
+            default: "",
+            trim: true,
+        },
         lastSyncedAt: {
             type: Date,
             default: Date.now,

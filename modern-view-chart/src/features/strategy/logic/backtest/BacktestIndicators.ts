@@ -1,6 +1,6 @@
 import { Candle } from '@/lib/store/types';
 import { IndicatorCalculator } from '@/features/strategy/logic/IndicatorCalculator';
-import { Strategy } from '@/features/strategy/types';
+import { Condition, ConditionGroup, Indicator, Strategy } from '@/features/strategy/types';
 import { getStrategyDirections, getStrategyLeg } from '@/features/strategy/strategy-helpers';
 
 export class BacktestIndicators {
@@ -12,9 +12,9 @@ export class BacktestIndicators {
         // Always calculate ATR for metrics
         this.getOrCalculate({ type: 'ATR', params: [14] });
 
-        const scanGroup = (group: any) => {
+        const scanGroup = (group: ConditionGroup | undefined) => {
             if (!group || !group.conditions) return;
-            group.conditions.forEach((cond: any) => {
+            group.conditions.forEach((cond) => {
                 if ('operator' in cond) {
                     scanGroup(cond);
                 } else {
@@ -32,7 +32,7 @@ export class BacktestIndicators {
         }
     }
 
-    private cacheIndicator(cond: any) {
+    private cacheIndicator(cond: Condition) {
         if (cond.left && cond.left.type) {
             this.getOrCalculate(cond.left);
         }
@@ -41,7 +41,7 @@ export class BacktestIndicators {
         }
     }
 
-    public getOrCalculate(indicatorDef: any): number[] {
+    public getOrCalculate(indicatorDef: Indicator): number[] {
         const key = `${indicatorDef.type}-${indicatorDef.params?.join('-') || ''}`;
         if (!this.indicators[key]) {
             this.indicators[key] = IndicatorCalculator.getValues(indicatorDef, this.candles);

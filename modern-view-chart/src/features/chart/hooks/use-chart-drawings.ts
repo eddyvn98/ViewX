@@ -2,13 +2,14 @@
 import { useEffect, useCallback } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
+import { Candle } from '@/lib/store/types';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrawingPrimitives } from './drawing/use-drawing-primitives';
 import { useDrawingCreation } from './drawing/use-drawing-creation';
 import { useDrawingEditor } from './drawing/use-drawing-editor';
 
 export function useChartDrawings(
-    chartId: string, chart: IChartApi | null, series: ISeriesApi<any> | null, isReady: boolean, containerRef: React.RefObject<HTMLDivElement | null>, symbol: string | undefined, interval: string | undefined, source: string | undefined, candles: any[]) {
+    chartId: string, chart: IChartApi | null, series: ISeriesApi<'Candlestick'> | null, isReady: boolean, containerRef: React.RefObject<HTMLDivElement | null>, symbol: string | undefined, interval: string | undefined, source: string | undefined, candles: Candle[]) {
     const {
         currentDrawingTool,
         isDrawing
@@ -28,7 +29,12 @@ export function useChartDrawings(
         isReady,
         currentDrawingTool,
         containerRef,
-        candles // Pass candles for snapping
+        candles, // Pass candles for snapping
+        {
+            symbol,
+            interval,
+            source: source === 'BINANCE' || source === 'MT5' ? source : undefined,
+        }
     );
 
     // 3. Editor Layer (Select, Drag, Delete)
@@ -67,12 +73,12 @@ export function useChartDrawings(
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            const param = {
-                point: { x: x as any, y: y as any },
+            const param = ({
+                point: { x, y },
                 time: chart.timeScale().coordinateToTime(x) || undefined,
                 seriesData: new Map(),
-                sourceEvent: { ...e, localX: x, localY: y } as any
-            } as MouseEventParams;
+                sourceEvent: e
+            } as unknown) as MouseEventParams;
 
             handleDragStart(param);
         };
@@ -82,12 +88,12 @@ export function useChartDrawings(
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            const param = {
-                point: { x: x as any, y: y as any },
+            const param = ({
+                point: { x, y },
                 time: chart.timeScale().coordinateToTime(x) || undefined,
                 seriesData: new Map(),
-                sourceEvent: { ...e, localX: x, localY: y } as any
-            } as MouseEventParams;
+                sourceEvent: e
+            } as unknown) as MouseEventParams;
 
             handleDragMove(param);
         };

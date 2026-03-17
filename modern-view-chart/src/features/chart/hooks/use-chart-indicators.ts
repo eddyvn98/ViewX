@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { Candle, useMarketStore } from '@/lib/store';
+import { Candle, IndicatorConfig, useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { chartWorkerClient } from '@/workers/worker-client';
 import { normalizeSymbol } from '@/lib/utils/symbol';
@@ -8,14 +8,21 @@ import { DEFAULT_CHART_INDICATORS } from './indicators/default-indicators';
 import { formatCandles, buildLiveCandle } from './indicators/indicator-candle-utils';
 import { createIndicatorInstance } from './indicators/sync-indicator-series';
 
-const EMPTY_INDICATORS: any[] = [];
+const EMPTY_INDICATORS: IndicatorConfig[] = [];
+type BatchResult = { id: string; values: unknown };
+type IndicatorInstance = {
+    update: (candles: Candle[], config: IndicatorConfig, values?: unknown) => void;
+    updateLastPoint?: (candle: Candle, candles: Candle[]) => void;
+    destroy: () => void;
+    _lastConfigJson?: string;
+};
 
 export function useChartIndicators(
     chartId: string,
     priceChartRef: React.RefObject<IChartApi | null>,
     subchartChartRef: React.RefObject<IChartApi | null>,
-    seriesRef: React.RefObject<ISeriesApi<any> | null>,
-    markerSeriesRef: React.RefObject<ISeriesApi<any> | null>,
+    seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
+    markerSeriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     candles: Candle[],
     symbol: string | undefined,
     interval: string | undefined,
@@ -31,22 +38,22 @@ export function useChartIndicators(
     const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
     const addIndicators = useMarketStore(state => state.addIndicators);
 
-    const instancesRef = useRef<Record<string, any>>({});
+    const instancesRef = useRef<Record<string, IndicatorInstance>>({});
     const defaultsAppliedRef = useRef(false);
     const batchVersionRef = useRef(0);
 
     const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
-    const getCandles = () => (key ? (useMarketStore.getState().candleData[key] || []) : []);
+    const getCandles = useCallback(() => (key ? (useMarketStore.getState().candleData[key] || []) : []), [key]);
 
     useEffect(() => {
         if (!symbol || defaultsAppliedRef.current || indicators.length > 0) return;
-        addIndicators(chartId, DEFAULT_CHART_INDICATORS as any);
+        addIndicators(chartId, DEFAULT_CHART_INDICATORS);
         defaultsAppliedRef.current = true;
     }, [chartId, symbol, indicators.length, addIndicators]);
 
     const lastBarTimeRef = useRef<number>(0);
-    const stableCandlesRef = useRef<any[]>([]);
+    const stableCandlesRef = useRef<Candle[]>([]);
     const lastKeyRef = useRef<string>('');
 
     useEffect(() => {
@@ -74,7 +81,9 @@ export function useChartIndicators(
             const lastBar = candles[candles.length - 1];
             if (!lastBar) return;
 
-            const lastTime = (typeof lastBar.time === 'object' ? (lastBar.time as any).timestamp : Number(lastBar.time)) || 0;
+            const lastTime = (typeof lastBar.time === 'object'
+                ? Number((lastBar.time as { timestamp?: number }).timestamp ?? 0)
+                : Number(lastBar.time)) || 0;
             const isNewBar = lastTime !== lastBarTimeRef.current;
 
             if (isNewBar || stableCandlesRef.current.length === 0) {
@@ -93,17 +102,17 @@ export function useChartIndicators(
 
             const visibleIndicators = indicators.filter(i => i.visible);
             const needsUpdate = isNewBar || stableCandlesRef.current.length === candles.length;
-            const indicatorsToCalculate: any[] = [];
+            const indicatorsToCalculate: IndicatorConfig[] = [];
 
             visibleIndicators.forEach(config => {
-                let instance = instancesRef.current[config.id];
+                let instance: IndicatorInstance | null = instancesRef.current[config.id] ?? null;
                 if (!instance) {
-                    instance = createIndicatorInstance(config, {
-                        priceChart: priceChartRef.current!,
-                        subchartChart: subchartChartRef.current!,
-                        series: seriesRef.current!,
-                        markerSeries: markerSeriesRef.current!,
-                    });
+                        instance = createIndicatorInstance(config, {
+                            priceChart: priceChartRef.current!,
+                            subchartChart: subchartChartRef.current!,
+                            series: seriesRef.current!,
+                            markerSeries: markerSeriesRef.current!,
+                        }) as IndicatorInstance | null;
                     if (instance) {
                         instancesRef.current[config.id] = instance;
                         instance._lastConfigJson = JSON.stringify(config);
@@ -126,9 +135,11 @@ export function useChartIndicators(
                 const batchCandles = stableCandlesRef.current;
 
                 chartWorkerClient.calculateBatch(indicatorsToCalculate, batchCandles)
-                    .then(results => {
+                    .then((results) => {
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
-                        const resultsMap = new Map(results.map((r: any) => [r.id, r.values]));
+                        if (!Array.isArray(results)) return;
+                        const typedResults = results as BatchResult[];
+                        const resultsMap = new Map(typedResults.map((result) => [result.id, result.values]));
                         indicatorsToCalculate.forEach(config => {
                             const instance = instancesRef.current[config.id];
                             if (instance) instance.update(batchCandles, config, resultsMap.get(config.id));
@@ -149,7 +160,7 @@ export function useChartIndicators(
         return () => {
             if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
         };
-    }, [isReady, candles.length, key, indicators, symbol, interval, priceChartRef, subchartChartRef, seriesRef, markerSeriesRef, syncRange]);
+    }, [isReady, candles, key, indicators, symbol, interval, priceChartRef, subchartChartRef, seriesRef, markerSeriesRef, syncRange]);
 
     const chartInstance = useMarketStore(useShallow(state => {
         for (const tab of Object.values(state.tabs)) {
@@ -196,7 +207,7 @@ export function useChartIndicators(
             unsub();
             if (rafId) cancelAnimationFrame(rafId);
         };
-    }, [isReady, symbol, tickerKey, chartId, interval]);
+    }, [isReady, symbol, tickerKey, chartId, interval, getCandles, normSymbol]);
 
     useEffect(() => {
         return () => {

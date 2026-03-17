@@ -150,6 +150,7 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
                 source,
                 matrixScopeKey
             );
+            const typedBacktestPositions = backtestPositions as VirtualPosition[];
 
             set((state) => {
                 const livePositions = state.virtualPositions.filter((p) => !p.isHistorical);
@@ -163,7 +164,7 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
                             ? p.matrixScopeKey !== scopeKey
                             : p.strategyId !== strategyId || normalizeSymbol(p.symbol) !== tradeSymbol || normalizeTF(p.timeframe) !== tradeTimeframe)
                 );
-                const scopedBacktestPositions = (backtestPositions as VirtualPosition[]).map((p) => ({
+                const scopedBacktestPositions = typedBacktestPositions.map((p) => ({
                     ...p,
                     symbol: normalizeSymbol(p.symbol),
                     timeframe: normalizeTF(p.timeframe || tradeTimeframe),
@@ -171,12 +172,12 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
                     matrixScopeKey: p.matrixScopeKey || scopeKey,
                 }));
                 const mergedPositions = [...livePositions, ...otherHistorical, ...scopedBacktestPositions];
-                const backtestPnL = backtestPositions.reduce((sum: number, p: VirtualPosition) => sum + (p.pnl || 0), 0);
+                const backtestPnL = typedBacktestPositions.reduce((sum: number, p: VirtualPosition) => sum + (p.pnl || 0), 0);
 
                 return {
                     virtualPositions: mergedPositions,
                     lastBacktestPnL: backtestPnL,
-                    backtestCount: backtestPositions.length,
+                    backtestCount: typedBacktestPositions.length,
                 };
             });
         } catch (err) {

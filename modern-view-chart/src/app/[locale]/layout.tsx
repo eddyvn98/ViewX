@@ -3,18 +3,12 @@ import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
 import "../globals.css";
 import { getSiteOrigin, getSiteUrl } from "@/lib/site-url";
 import { Toaster } from 'sonner';
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import NextTopLoader from 'nextjs-toploader';
 import React from 'react';
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const siteOrigin = getSiteOrigin();
 export const viewport: Viewport = {
@@ -108,7 +102,7 @@ export default async function RootLayout({
 }) {
   const { locale } = await params;
 
-  if (!routing.locales.includes(locale as any)) {
+  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
     notFound();
   }
 
@@ -117,7 +111,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} antialiased`}
+        className="antialiased"
         suppressHydrationWarning
       >
         <NextTopLoader

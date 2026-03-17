@@ -5,11 +5,17 @@ import { ISeriesApi, IChartApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 
+type RealtimeCandleLike = {
+    open?: number;
+    close?: number;
+    time?: number | { timestamp?: number };
+};
+
 interface CandleCountdownProps {
     chart: IChartApi | null;
     series: ISeriesApi<'Candlestick'> | null;
     interval: string | undefined;
-    realTimeRef: React.MutableRefObject<any> | undefined;
+    realTimeRef: React.MutableRefObject<RealtimeCandleLike | null> | undefined;
 }
 
 export function CandleCountdown({ chart, series, interval, realTimeRef }: CandleCountdownProps) {
@@ -47,7 +53,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             const symbolInfo = state.symbolInfo[normSymbol];
             const currentPrice = realTimeRef?.current?.close ?? state.tickers[normSymbol]?.price;
             const candles = state.candleData[key] || [];
-            let lastCandle = realTimeRef?.current || candles[candles.length - 1];
+            const lastCandle = realTimeRef?.current || candles[candles.length - 1];
 
             if (!lastCandle || currentPrice === null || currentPrice === undefined) {
                 containerRef.current.style.display = 'none';
@@ -88,7 +94,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             }
 
             const lastCandleTime = typeof lastCandle.time === 'object'
-                ? (lastCandle.time as any).timestamp
+                ? Number((lastCandle.time as { timestamp?: number }).timestamp ?? 0)
                 : Number(lastCandle.time);
 
             const nextCandleTime = lastCandleTime + timeframeSeconds;

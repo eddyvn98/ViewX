@@ -2,8 +2,16 @@ import { useEffect, useRef } from 'react';
 import { ISeriesApi, IPriceLine, LineStyle } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { DraggingPosition } from '@/lib/store/slices/terminal-slice';
 
 const SHOW_DRAFT_PRICE_LINES = false;
+
+type OrderLineDragDetail = {
+    ticket: string;
+    type: DraggingPosition['type'];
+    price: number;
+    symbol?: string;
+};
 
 export function useChartDraftOrder(
     symbol: string | undefined,
@@ -40,7 +48,7 @@ export function useChartDraftOrder(
 
             if (!linesRef.current[type]) {
                 linesRef.current[type] = series.createPriceLine({
-                    price, color, lineWidth: 2, lineStyle: style,
+                    price, color, lineWidth: 2 as 1 | 2 | 3 | 4, lineStyle: style,
                     axisLabelVisible: false, title: '',
                 });
             } else {
@@ -80,13 +88,15 @@ export function useChartDraftOrder(
             unsub();
             cleanup();
         };
-    }, [symbol, isReady]);
+    }, [symbol, isReady, seriesRef]);
 
     // ⚡ FAST-PATH: Instant response to mouse drag without waiting for store update
     useEffect(() => {
         if (!SHOW_DRAFT_PRICE_LINES) return;
-        const handleFastDrag = (e: any) => {
-            const { ticket, type, price, symbol: eventSymbol } = e.detail;
+        const handleFastDrag = (e: Event) => {
+            const detail = (e as CustomEvent<OrderLineDragDetail>).detail;
+            if (!detail) return;
+            const { ticket, type, price, symbol: eventSymbol } = detail;
             if (eventSymbol !== symbol || ticket !== 'draft' || !seriesRef.current) return;
             const series = seriesRef.current;
 
@@ -94,19 +104,19 @@ export function useChartDraftOrder(
             if (type === 'entry') {
                 if (!linesRef.current.entry) {
                     linesRef.current.entry = series.createPriceLine({
-                        price, color: '#3b82f6', lineWidth: 2, lineStyle: LineStyle.Dashed, axisLabelVisible: false, title: ''
+                        price, color: '#3b82f6', lineWidth: 2 as 1 | 2 | 3 | 4, lineStyle: LineStyle.Dashed, axisLabelVisible: false, title: ''
                     });
                 } else linesRef.current.entry.applyOptions({ price });
             } else if (type === 'sl') {
                 if (!linesRef.current.sl) {
                     linesRef.current.sl = series.createPriceLine({
-                        price, color: '#ef4444', lineWidth: 2, lineStyle: LineStyle.Dotted, axisLabelVisible: false, title: ''
+                        price, color: '#ef4444', lineWidth: 2 as 1 | 2 | 3 | 4, lineStyle: LineStyle.Dotted, axisLabelVisible: false, title: ''
                     });
                 } else linesRef.current.sl.applyOptions({ price });
             } else if (type === 'tp') {
                 if (!linesRef.current.tp) {
                     linesRef.current.tp = series.createPriceLine({
-                        price, color: '#22c55e', lineWidth: 2, lineStyle: LineStyle.Dotted, axisLabelVisible: false, title: ''
+                        price, color: '#22c55e', lineWidth: 2 as 1 | 2 | 3 | 4, lineStyle: LineStyle.Dotted, axisLabelVisible: false, title: ''
                     });
                 } else linesRef.current.tp.applyOptions({ price });
             }
@@ -114,5 +124,5 @@ export function useChartDraftOrder(
 
         window.addEventListener('order-line-drag', handleFastDrag);
         return () => window.removeEventListener('order-line-drag', handleFastDrag);
-    }, [symbol]);
+    }, [symbol, seriesRef]);
 }

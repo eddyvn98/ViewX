@@ -28,6 +28,22 @@ export interface FibonacciExtensionData {
     showPrice: boolean;
 }
 
+type BitmapScope = {
+    context: CanvasRenderingContext2D;
+    horizontalPixelRatio: number;
+    verticalPixelRatio: number;
+    bitmapSize: { width: number; height: number };
+};
+
+type BitmapTarget = {
+    useBitmapCoordinateSpace: (cb: (scope: BitmapScope) => void) => void;
+};
+
+type PrimitiveAttachParams = {
+    chart: IChartApi;
+    series: ISeriesApi<'Candlestick'>;
+};
+
 class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
     _data: FibonacciExtensionData | null = null;
     _source: FibonacciExtensionPrimitive;
@@ -37,10 +53,11 @@ class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
         this._source = source;
     }
 
-    draw(target: any) {
+    draw(target: unknown) {
         if (!this._data || this._data.levels.length === 0) return;
+        if (!target || typeof target !== 'object' || !('useBitmapCoordinateSpace' in target)) return;
 
-        target.useBitmapCoordinateSpace((scope: any) => {
+        (target as BitmapTarget).useBitmapCoordinateSpace((scope) => {
             const ctx = scope.context;
             const horizontalPixelRatio = scope.horizontalPixelRatio;
             const verticalPixelRatio = scope.verticalPixelRatio;
@@ -60,7 +77,6 @@ class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
             const phyXEnd = xEnd !== null ? xEnd * horizontalPixelRatio : 0;
 
             levels.forEach((level) => {
-                // @ts-ignore
                 const y = series.priceToCoordinate(level.price);
                 if (y === null) return;
 
@@ -88,7 +104,7 @@ class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'middle';
 
-                let labelParts = [];
+                const labelParts = [];
                 if (this._data!.showPercent) labelParts.push(level.label);
                 if (this._data!.showPrice) labelParts.push(level.price.toFixed(2));
 
@@ -132,7 +148,7 @@ class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
 export class FibonacciExtensionPrimitive implements ISeriesPrimitive {
     _data: FibonacciExtensionData | null = null;
     _paneViews: FibonacciExtensionPaneView[] = [];
-    _series: ISeriesApi<any> | null = null;
+    _series: ISeriesApi<'Candlestick'> | null = null;
     _chart: IChartApi | null = null;
 
     constructor(data: FibonacciExtensionData | null) {
@@ -145,7 +161,10 @@ export class FibonacciExtensionPrimitive implements ISeriesPrimitive {
         this._paneViews.forEach(v => v.update(data));
     }
 
-    attached({ chart, series }: any) {
+    attached(param: unknown) {
+        if (!param || typeof param !== 'object') return;
+        const { chart, series } = param as Partial<PrimitiveAttachParams>;
+        if (!chart || !series) return;
         this._series = series;
         this._chart = chart;
     }

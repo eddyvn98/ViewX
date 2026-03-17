@@ -11,6 +11,11 @@ export class SignalIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
@@ -41,7 +46,7 @@ export class SignalIndicator {
 
             const candleTime = toSec(candles[i].time) as any;
 
-            if (prev > (this.config.params.upperLimit || 60)) {
+            if (prev > this.getNumberParam('upperLimit', 60)) {
                 markers.push({
                     time: candleTime,
                     position: 'belowBar',
@@ -49,7 +54,7 @@ export class SignalIndicator {
                     shape: 'arrowUp',
                     text: 'HBULL'
                 });
-            } else if (prev < (this.config.params.lowerLimit || 40)) {
+            } else if (prev < this.getNumberParam('lowerLimit', 40)) {
                 markers.push({
                     time: candleTime,
                     position: 'aboveBar',

@@ -79,13 +79,21 @@ function buildEmptySetupStateResponse(scope) {
     scope_type: scope.scopeType,
     scope_id: scope.scopeId,
     schema_version: 1,
+    revision: 0,
     updated_at: null,
+    client_updated_at: null,
     state: {},
   };
 }
 
 function sanitizeStrategyId(input) {
   return String(input || "").trim().slice(0, 128);
+}
+
+function parseBaseRevision(input) {
+  const value = Number.parseInt(String(input ?? ""), 10);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return value;
 }
 
 /**
@@ -98,7 +106,7 @@ export const getListUsers = async (req, res) => {
   try {
     const userList = await Users.find({});
     res.status(200).json({ success: true, data: userList });
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: "Đã xảy ra lỗi" });
   }
 };
@@ -126,7 +134,7 @@ export const createUser = async (req, res) => {
       process.env.KEY_CRYPTO
     ).toString();
 
-    const newUser = await Users.create({
+    await Users.create({
       username,
       encryptedPassword,
     });
@@ -249,24 +257,28 @@ export const getUserSetupState = async (req, res) => {
     const scope = resolveStateScope(req);
     const doc = await userStateModel
       .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
-      .select("state schemaVersion updatedAt")
+      .select("state schemaVersion revision updatedAt clientUpdatedAt lastSourceClientId")
       .lean();
 
     if (!doc) {
       return res.status(200).json({
         scope_type: scope.scopeType,
-        scope_id: scope.scopeId,
-        schema_version: 1,
-        updated_at: null,
-        state: {},
-      });
-    }
+      scope_id: scope.scopeId,
+      schema_version: 1,
+      revision: 0,
+      updated_at: null,
+      client_updated_at: null,
+      state: {},
+    });
+  }
 
     return res.status(200).json({
       scope_type: scope.scopeType,
       scope_id: scope.scopeId,
       schema_version: doc.schemaVersion || 1,
+      revision: Number.isFinite(Number(doc.revision)) ? Number(doc.revision) : 0,
       updated_at: doc.updatedAt || null,
+      client_updated_at: doc.clientUpdatedAt || null,
       state: isPlainObject(doc.state) ? doc.state : {},
     });
   } catch (error) {
@@ -284,7 +296,7 @@ export const getPublicUserSetupState = async (req, res) => {
 
     const doc = await userStateModel
       .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
-      .select("state schemaVersion updatedAt")
+      .select("state schemaVersion revision updatedAt clientUpdatedAt lastSourceClientId")
       .lean();
 
     if (!doc) {
@@ -295,7 +307,9 @@ export const getPublicUserSetupState = async (req, res) => {
       scope_type: scope.scopeType,
       scope_id: scope.scopeId,
       schema_version: doc.schemaVersion || 1,
+      revision: Number.isFinite(Number(doc.revision)) ? Number(doc.revision) : 0,
       updated_at: doc.updatedAt || null,
+      client_updated_at: doc.clientUpdatedAt || null,
       state: isPlainObject(doc.state) ? doc.state : {},
     });
   } catch (error) {
@@ -307,6 +321,7 @@ export const getPublicUserSetupState = async (req, res) => {
 export const upsertUserSetupState = async (req, res) => {
   try {
     const scope = resolveStateScope(req);
+    const sourceClientId = sanitizeClientId(req.headers["x-client-id"] || req.query?.client_id || req.body?.source_client_id);
     const state = req.body?.state;
     if (!isPlainObject(state)) {
       return res.status(400).json({ error: "state must be an object" });
@@ -320,29 +335,124 @@ export const upsertUserSetupState = async (req, res) => {
 
     const schemaVersionRaw = Number.parseInt(String(req.body?.schema_version || "1"), 10);
     const schemaVersion = Number.isFinite(schemaVersionRaw) && schemaVersionRaw > 0 ? schemaVersionRaw : 1;
+    const baseRevision = parseBaseRevision(req.body?.base_revision);
+    const clientUpdatedAtValue = Date.parse(String(req.body?.client_updated_at || ""));
+    const clientUpdatedAt = Number.isFinite(clientUpdatedAtValue) ? new Date(clientUpdatedAtValue) : new Date();
 
-    const doc = await userStateModel.findOneAndUpdate(
-      { scopeType: scope.scopeType, scopeId: scope.scopeId },
-      {
-        $set: {
+    const existing = await userStateModel
+      .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
+      .select("state schemaVersion revision updatedAt clientUpdatedAt")
+      .lean();
+
+    const existingRevision = Number.isFinite(Number(existing?.revision)) ? Number(existing.revision) : 0;
+    const existingClientUpdatedAtValue = Date.parse(String(existing?.clientUpdatedAt || ""));
+    if (
+      Number.isFinite(baseRevision) &&
+      baseRevision !== existingRevision
+    ) {
+      return res.status(409).json({
+        message: "state_conflict_revision_mismatch",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: existing?.schemaVersion || 1,
+        revision: existingRevision,
+        updated_at: existing?.updatedAt || null,
+        client_updated_at: existing?.clientUpdatedAt || null,
+        state: isPlainObject(existing?.state) ? existing.state : {},
+      });
+    }
+
+    if (
+      !Number.isFinite(baseRevision) &&
+      Number.isFinite(existingClientUpdatedAtValue) &&
+      existingClientUpdatedAtValue > clientUpdatedAt.getTime()
+    ) {
+      return res.status(409).json({
+        message: "state_ignored_stale_client",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: existing?.schemaVersion || 1,
+        revision: existingRevision,
+        updated_at: existing?.updatedAt || null,
+        client_updated_at: existing?.clientUpdatedAt || null,
+        state: isPlainObject(existing?.state) ? existing.state : {},
+      });
+    }
+
+    let doc = null;
+    if (!existing) {
+      try {
+        doc = await userStateModel.create({
+          scopeType: scope.scopeType,
+          scopeId: scope.scopeId,
           state,
           schemaVersion,
+          revision: 1,
+          clientUpdatedAt,
+          lastSourceClientId: sourceClientId,
           lastSyncedAt: new Date(),
+        });
+      } catch (error) {
+        // Another writer likely created the row first; fallback to conditional update path.
+        if (error?.code !== 11000) throw error;
+      }
+    }
+
+    if (!doc) {
+      const updateFilter = { scopeType: scope.scopeType, scopeId: scope.scopeId };
+      if (Number.isFinite(baseRevision)) {
+        updateFilter.revision = baseRevision;
+      } else {
+        updateFilter.$or = [
+          { clientUpdatedAt: { $exists: false } },
+          { clientUpdatedAt: null },
+          { clientUpdatedAt: { $lte: clientUpdatedAt } },
+        ];
+      }
+
+      doc = await userStateModel.findOneAndUpdate(
+        updateFilter,
+        {
+          $set: {
+            state,
+            schemaVersion,
+            clientUpdatedAt,
+            lastSourceClientId: sourceClientId,
+            lastSyncedAt: new Date(),
+          },
+          $inc: { revision: 1 },
         },
-      },
-      {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      },
-    );
+        {
+          new: true,
+        },
+      );
+    }
+
+    if (!doc) {
+      const latest = await userStateModel
+        .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
+        .select("state schemaVersion revision updatedAt clientUpdatedAt")
+        .lean();
+      return res.status(409).json({
+        message: Number.isFinite(baseRevision) ? "state_conflict_revision_mismatch" : "state_ignored_stale_client",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: latest?.schemaVersion || 1,
+        revision: Number.isFinite(Number(latest?.revision)) ? Number(latest.revision) : 0,
+        updated_at: latest?.updatedAt || null,
+        client_updated_at: latest?.clientUpdatedAt || null,
+        state: isPlainObject(latest?.state) ? latest.state : {},
+      });
+    }
 
     return res.status(200).json({
       message: "state_saved",
       scope_type: scope.scopeType,
       scope_id: scope.scopeId,
       schema_version: doc.schemaVersion || schemaVersion,
+      revision: Number.isFinite(Number(doc.revision)) ? Number(doc.revision) : 0,
       updated_at: doc.updatedAt || new Date().toISOString(),
+      client_updated_at: doc.clientUpdatedAt || clientUpdatedAt.toISOString(),
     });
   } catch (error) {
     console.error(error);
@@ -353,6 +463,7 @@ export const upsertUserSetupState = async (req, res) => {
 export const upsertPublicUserSetupState = async (req, res) => {
   try {
     const scope = resolvePublicStateScope(req);
+    const sourceClientId = sanitizeClientId(req.headers["x-client-id"] || req.query?.client_id || req.body?.source_client_id);
     if (!isDatabaseReadyForUserState()) {
       return res.status(202).json({
         message: "state_skipped_db_unavailable",
@@ -360,6 +471,7 @@ export const upsertPublicUserSetupState = async (req, res) => {
         scope_id: scope.scopeId,
         schema_version: 1,
         updated_at: null,
+        client_updated_at: null,
       });
     }
 
@@ -376,29 +488,123 @@ export const upsertPublicUserSetupState = async (req, res) => {
 
     const schemaVersionRaw = Number.parseInt(String(req.body?.schema_version || "1"), 10);
     const schemaVersion = Number.isFinite(schemaVersionRaw) && schemaVersionRaw > 0 ? schemaVersionRaw : 1;
+    const baseRevision = parseBaseRevision(req.body?.base_revision);
+    const clientUpdatedAtValue = Date.parse(String(req.body?.client_updated_at || ""));
+    const clientUpdatedAt = Number.isFinite(clientUpdatedAtValue) ? new Date(clientUpdatedAtValue) : new Date();
 
-    const doc = await userStateModel.findOneAndUpdate(
-      { scopeType: scope.scopeType, scopeId: scope.scopeId },
-      {
-        $set: {
+    const existing = await userStateModel
+      .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
+      .select("state schemaVersion revision updatedAt clientUpdatedAt")
+      .lean();
+
+    const existingRevision = Number.isFinite(Number(existing?.revision)) ? Number(existing.revision) : 0;
+    const existingClientUpdatedAtValue = Date.parse(String(existing?.clientUpdatedAt || ""));
+    if (
+      Number.isFinite(baseRevision) &&
+      baseRevision !== existingRevision
+    ) {
+      return res.status(409).json({
+        message: "state_conflict_revision_mismatch",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: existing?.schemaVersion || 1,
+        revision: existingRevision,
+        updated_at: existing?.updatedAt || null,
+        client_updated_at: existing?.clientUpdatedAt || null,
+        state: isPlainObject(existing?.state) ? existing.state : {},
+      });
+    }
+
+    if (
+      !Number.isFinite(baseRevision) &&
+      Number.isFinite(existingClientUpdatedAtValue) &&
+      existingClientUpdatedAtValue > clientUpdatedAt.getTime()
+    ) {
+      return res.status(409).json({
+        message: "state_ignored_stale_client",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: existing?.schemaVersion || 1,
+        revision: existingRevision,
+        updated_at: existing?.updatedAt || null,
+        client_updated_at: existing?.clientUpdatedAt || null,
+        state: isPlainObject(existing?.state) ? existing.state : {},
+      });
+    }
+
+    let doc = null;
+    if (!existing) {
+      try {
+        doc = await userStateModel.create({
+          scopeType: scope.scopeType,
+          scopeId: scope.scopeId,
           state,
           schemaVersion,
+          revision: 1,
+          clientUpdatedAt,
+          lastSourceClientId: sourceClientId,
           lastSyncedAt: new Date(),
+        });
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+      }
+    }
+
+    if (!doc) {
+      const updateFilter = { scopeType: scope.scopeType, scopeId: scope.scopeId };
+      if (Number.isFinite(baseRevision)) {
+        updateFilter.revision = baseRevision;
+      } else {
+        updateFilter.$or = [
+          { clientUpdatedAt: { $exists: false } },
+          { clientUpdatedAt: null },
+          { clientUpdatedAt: { $lte: clientUpdatedAt } },
+        ];
+      }
+
+      doc = await userStateModel.findOneAndUpdate(
+        updateFilter,
+        {
+          $set: {
+            state,
+            schemaVersion,
+            clientUpdatedAt,
+            lastSourceClientId: sourceClientId,
+            lastSyncedAt: new Date(),
+          },
+          $inc: { revision: 1 },
         },
-      },
-      {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      },
-    );
+        {
+          new: true,
+        },
+      );
+    }
+
+    if (!doc) {
+      const latest = await userStateModel
+        .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
+        .select("state schemaVersion revision updatedAt clientUpdatedAt")
+        .lean();
+      return res.status(409).json({
+        message: Number.isFinite(baseRevision) ? "state_conflict_revision_mismatch" : "state_ignored_stale_client",
+        scope_type: scope.scopeType,
+        scope_id: scope.scopeId,
+        schema_version: latest?.schemaVersion || 1,
+        revision: Number.isFinite(Number(latest?.revision)) ? Number(latest.revision) : 0,
+        updated_at: latest?.updatedAt || null,
+        client_updated_at: latest?.clientUpdatedAt || null,
+        state: isPlainObject(latest?.state) ? latest.state : {},
+      });
+    }
 
     return res.status(200).json({
       message: "state_saved",
       scope_type: scope.scopeType,
       scope_id: scope.scopeId,
       schema_version: doc.schemaVersion || schemaVersion,
+      revision: Number.isFinite(Number(doc.revision)) ? Number(doc.revision) : 0,
       updated_at: doc.updatedAt || new Date().toISOString(),
+      client_updated_at: doc.clientUpdatedAt || clientUpdatedAt.toISOString(),
     });
   } catch (error) {
     console.error(error);

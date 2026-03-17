@@ -1,4 +1,4 @@
-import { ISeriesApi, IChartApi } from 'lightweight-charts';
+import { ISeriesApi, IChartApi, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateFVG } from '../utils/indicators/smc';
 import { SMCPrimitive, SMCZone } from '../logic/smc-primitive';
@@ -25,13 +25,16 @@ export class FVGIndicator {
         }
 
         const fvgData = calculateFVG(candles);
-        const styles = this.config.styles || {};
-        const bullColor = styles.bullColor || 'rgba(0, 255, 136, 0.15)';
-        const bearColor = styles.bearColor || 'rgba(255, 51, 102, 0.15)';
+        const bullColor = typeof this.config.styles?.bullColor === 'string'
+            ? this.config.styles.bullColor
+            : 'rgba(0, 255, 136, 0.15)';
+        const bearColor = typeof this.config.styles?.bearColor === 'string'
+            ? this.config.styles.bearColor
+            : 'rgba(255, 51, 102, 0.15)';
 
         const zones: SMCZone[] = fvgData.map((fvg, i) => ({
             id: `fvg-${i}`,
-            startTime: toSec(fvg.time) as any,
+            startTime: toSec(fvg.time) as Time,
             endTime: null, // FVGs extend until filled, but for simplicity we can just show them
             top: fvg.top,
             bottom: fvg.bottom,

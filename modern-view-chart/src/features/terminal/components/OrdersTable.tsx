@@ -11,6 +11,39 @@ interface OrdersTableProps {
 type SortField = 'symbol' | 'ticket' | 'type' | 'volume' | 'price_open' | 'current_price' | 'sl' | 'tp' | 'time' | 'magic';
 type SortDirection = 'asc' | 'desc';
 
+function SortIcon({ field, sortField, sortDirection }: { field: SortField; sortField: SortField; sortDirection: SortDirection }) {
+    if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
+    return sortDirection === 'asc' ? <ArrowUp size={12} className="ml-1 text-blue-500" /> : <ArrowDown size={12} className="ml-1 text-blue-500" />;
+}
+
+function HeaderCell({
+    field,
+    label,
+    className = "",
+    onSort,
+    sortField,
+    sortDirection,
+}: {
+    field: SortField;
+    label: string;
+    className?: string;
+    onSort: (field: SortField) => void;
+    sortField: SortField;
+    sortDirection: SortDirection;
+}) {
+    return (
+        <th
+            className={`p-2 font-medium border-b border-border cursor-pointer hover:bg-secondary/40 transition-colors ${className}`}
+            onClick={() => onSort(field)}
+        >
+            <div className="flex items-center">
+                {label}
+                <SortIcon field={field} sortField={sortField} sortDirection={sortDirection} />
+            </div>
+        </th>
+    );
+}
+
 export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTableProps) {
     const [sortField, setSortField] = useState<SortField>('time');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -46,37 +79,20 @@ export function OrdersTable({ orders, onCancelOrder, onSymbolClick }: OrdersTabl
         }
     });
 
-    const SortIcon = ({ field }: { field: SortField }) => {
-        if (sortField !== field) return <ArrowUpDown size={12} className="opacity-30 ml-1" />;
-        return sortDirection === 'asc' ? <ArrowUp size={12} className="ml-1 text-blue-500" /> : <ArrowDown size={12} className="ml-1 text-blue-500" />;
-    };
-
-    const HeaderCell = ({ field, label, className = "" }: { field: SortField, label: string, className?: string }) => (
-        <th
-            className={`p-2 font-medium border-b border-border cursor-pointer hover:bg-secondary/40 transition-colors ${className}`}
-            onClick={() => handleSort(field)}
-        >
-            <div className="flex items-center">
-                {label}
-                <SortIcon field={field} />
-            </div>
-        </th>
-    );
-
     return (
         <table className="w-full text-[11px] text-left border-collapse min-w-[1000px]">
             <thead className="sticky top-0 bg-secondary/10 text-muted-foreground z-10 transition-colors">
                 <tr>
-                    <HeaderCell field="symbol" label="Symbol" />
-                    <HeaderCell field="ticket" label="Ticket" />
-                    <HeaderCell field="time" label="Time" />
-                    <HeaderCell field="type" label="Type" />
-                    <HeaderCell field="volume" label="Volume" />
-                    <HeaderCell field="price_open" label="Price" />
-                    <HeaderCell field="sl" label="S / L" />
-                    <HeaderCell field="tp" label="T / P" />
-                    <HeaderCell field="current_price" label="Price" />
-                    <HeaderCell field="magic" label="Magic" />
+                    <HeaderCell field="symbol" label="Symbol" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="ticket" label="Ticket" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="time" label="Time" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="type" label="Type" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="volume" label="Volume" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="price_open" label="Price" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="sl" label="S / L" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="tp" label="T / P" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="current_price" label="Price" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
+                    <HeaderCell field="magic" label="Magic" onSort={handleSort} sortField={sortField} sortDirection={sortDirection} />
                     <th className="p-2 font-medium border-b border-border">Comment</th>
                     <th className="p-2 font-medium border-b border-border text-center">Actions</th>
                 </tr>

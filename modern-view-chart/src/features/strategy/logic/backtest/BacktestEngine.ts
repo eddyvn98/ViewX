@@ -9,6 +9,7 @@ import { getTradingSession } from '@/features/strategy/utils/time-utils';
 import { getStrategyDirections, getStrategyLeg } from '@/features/strategy/strategy-helpers';
 import { buildMatrixScopeKey } from '../../utils/matrix-scope';
 import { createPositionId } from '../../utils/position-id';
+import type { Condition, ConditionGroup, Indicator } from '@/features/strategy/types';
 
 export class BacktestEngine {
     static run(
@@ -51,7 +52,6 @@ export class BacktestEngine {
         for (let i = warmupCount; i < candles.length; i++) {
             const candle = candles[i];
             const timestamp = BacktestData.getTimestamp(candle);
-            const openPositions = positionManager.getPositions().filter(p => p.status === 'open');
 
             // A. Manage Open Positions
             positionManager.updateTrailingStops(strategy, candles, i, tradeSymbol);
@@ -91,20 +91,23 @@ export class BacktestEngine {
                         // to save space, or just loop relevant indicators.
                         // Let's do a simplified snapshot of what we have cached.
                         // (Original code recursively walked the group to pick specific values)
-                        const fillSnapshot = (group: any) => {
+                        const fillSnapshot = (group: ConditionGroup | undefined) => {
                             if (!group || !group.conditions) return;
-                            group.conditions.forEach((c: any) => {
+                            group.conditions.forEach((c) => {
                                 if ('operator' in c) {
                                     fillSnapshot(c);
-                                } else if (c.left && c.left.type) {
-                                    const key = `${c.left.type}-${c.left.params?.join('-') || ''}`;
-                                    const label = `${c.left.type}${JSON.stringify(c.left.params)}${c.left.field ? ':' + c.left.field : ''}`;
+                                } else if ((c as Condition).left && (c as Condition).left.type) {
+                                    const condition = c as Condition;
+                                    const leftIndicator = condition.left as Indicator;
+                                    const key = `${leftIndicator.type}-${leftIndicator.params?.join('-') || ''}`;
+                                    const label = `${leftIndicator.type}${JSON.stringify(leftIndicator.params)}${leftIndicator.field ? ':' + leftIndicator.field : ''}`;
                                     const val = indicatorManager.getValue(key, i);
                                     if (val !== undefined) snapshot[label] = val;
 
-                                    if (c.right && typeof c.right !== 'number' && c.right.type) {
-                                        const rKey = `${c.right.type}-${c.right.params?.join('-') || ''}`;
-                                        const rLabel = `${c.right.type}${JSON.stringify(c.right.params)}${c.right.field ? ':' + c.right.field : ''}`;
+                                    if (condition.right && typeof condition.right !== 'number' && condition.right.type) {
+                                        const rightIndicator = condition.right as Indicator;
+                                        const rKey = `${rightIndicator.type}-${rightIndicator.params?.join('-') || ''}`;
+                                        const rLabel = `${rightIndicator.type}${JSON.stringify(rightIndicator.params)}${rightIndicator.field ? ':' + rightIndicator.field : ''}`;
                                         const rVal = indicatorManager.getValue(rKey, i);
                                         if (rVal !== undefined) snapshot[rLabel] = rVal;
                                     }

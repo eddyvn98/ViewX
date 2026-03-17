@@ -1,12 +1,13 @@
-import { SLTPConfig, LotConfig, IndicatorType } from '../types';
+import { SLTPConfig, LotConfig } from '../types';
 import { IndicatorCalculator } from './IndicatorCalculator';
+import type { Candle } from '@/lib/store/types';
 
 export class RiskCalculator {
     static calculateLevel(
         config: number | SLTPConfig | undefined,
         type: 'sl' | 'tp',
         side: 'BUY' | 'SELL',
-        candles: any[],
+        candles: Candle[],
         currentPrice: number,
         pipSize: number,
         entryPrice?: number
@@ -58,7 +59,7 @@ export class RiskCalculator {
                 const targetCandle = candles[candles.length - 1 - lookback];
                 if (!targetCandle) return currentPrice;
 
-                const field = candleField || (type === 'sl' ? (side === 'BUY' ? 'low' : 'high') : (side === 'BUY' ? 'high' : 'low'));
+                const field = (candleField || (type === 'sl' ? (side === 'BUY' ? 'low' : 'high') : (side === 'BUY' ? 'high' : 'low'))) as 'open' | 'high' | 'low' | 'close';
                 basePrice = targetCandle[field] || currentPrice;
                 const finalOffset = offset * pipSize;
                 return type === 'sl'
@@ -79,7 +80,6 @@ export class RiskCalculator {
                 // If it's SL, it should probably fallback to fixed or candle
                 // For now, let's treat it as a multiplier for TP
                 if (type === 'tp' && entryPrice) {
-                    const slDistance = Math.abs(entryPrice - (typeof config === 'object' ? currentPrice : currentPrice)); // This needs the SL price
                     // We'll need to pass the calculated SL price if we want to support RR properly
                     // For now, fallback to a simple 1:2 calculation if no SL provided
                     const rr = value || 2;
@@ -96,7 +96,7 @@ export class RiskCalculator {
     static calculateEntry(
         config: SLTPConfig | undefined,
         side: 'BUY' | 'SELL',
-        candles: any[],
+        candles: Candle[],
         currentPrice: number,
         pipSize: number
     ): number {
@@ -124,7 +124,7 @@ export class RiskCalculator {
                 if (!targetCandle) return currentPrice;
 
                 const defaultField = side === 'BUY' ? 'high' : 'low';
-                const field = candleField || defaultField;
+                const field = (candleField || defaultField) as 'open' | 'high' | 'low' | 'close';
                 basePrice = targetCandle[field] || currentPrice;
                 const finalOffset = offset * pipSize;
                 

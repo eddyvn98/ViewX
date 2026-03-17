@@ -3,8 +3,10 @@
 import { useMarketStore } from '@/lib/store';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useMemo, useState, useEffect } from 'react';
+import type { Candle } from '@/lib/store/types';
 
-const EMPTY_ARRAY: any[] = [];
+const EMPTY_ARRAY: Candle[] = [];
+type CrosshairEvent = Event & { detail?: { time?: number | null } };
 
 export function useChartOHLC(symbol: string | undefined, interval: string | undefined, source: string | undefined) {
     const normSymbol = useMemo(() => normalizeSymbol(symbol), [symbol]);
@@ -26,9 +28,9 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
     const [crosshairTime, setCrosshairTime] = useState<number | null>(null);
 
     useEffect(() => {
-        const handler = (e: any) => {
+        const handler = (e: CrosshairEvent) => {
             if (e.detail?.time !== crosshairTime) {
-                setCrosshairTime(e.detail?.time);
+                setCrosshairTime(e.detail?.time ?? null);
             }
         };
         window.addEventListener('chart-crosshair', handler);
@@ -47,7 +49,7 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
             while (low <= high) {
                 const mid = Math.floor((low + high) / 2);
                 const midTime = typeof candles[mid].time === 'object'
-                    ? (candles[mid].time as any).timestamp
+                    ? Number((candles[mid].time as { timestamp?: number }).timestamp ?? 0)
                     : Number(candles[mid].time);
 
                 if (midTime === crosshairTime) {
@@ -64,13 +66,13 @@ export function useChartOHLC(symbol: string | undefined, interval: string | unde
         const activeCandle = candles[activeIndex];
         const lastCandle = candles[candles.length - 1];
         const lastT = typeof lastCandle.time === 'object'
-            ? (lastCandle.time as any).timestamp
+            ? Number((lastCandle.time as { timestamp?: number }).timestamp ?? 0)
             : Number(lastCandle.time);
 
         const isLive = !crosshairTime || crosshairTime === lastT;
 
         // Determine price and changes
-        let open = activeCandle.open;
+        const open = activeCandle.open;
         let high = activeCandle.high;
         let low = activeCandle.low;
         let close = activeCandle.close;

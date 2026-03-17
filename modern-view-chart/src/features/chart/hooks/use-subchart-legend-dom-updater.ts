@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
 import { calculateIndicators, IndicatorCache } from '../logic/indicator-calculations';
 import { getIndicatorRefs, renderIndicators } from '../logic/legend-renderer';
 import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { IndicatorConfig } from '@/lib/store/types';
 
 interface SubchartLegendDOMUpdaterProps {
     chartId: string;
@@ -15,10 +16,10 @@ interface SubchartLegendDOMUpdaterProps {
     candles: Candle[];
 }
 
-function buildIndicatorSeeds(indicators: any[]): IndicatorCache[] {
+function buildIndicatorSeeds(indicators: IndicatorConfig[]): IndicatorCache[] {
     return indicators
-        .filter((config: any) => config.visible)
-        .map((config: any) => ({
+        .filter((config) => config.visible)
+        .map((config) => ({
             type: config.type,
             id: config.id,
             period: Number(config.params?.period || 14),
@@ -60,14 +61,14 @@ export function useSubchartLegendDOMUpdater(
             }
             lastCalcLengthRef.current = candles.length;
         }
-    }, [candles.length, chartId, containerRef]);
+    }, [candles, chartId, containerRef]);
 
-    const getFreshCandles = () => {
+    const getFreshCandles = useCallback(() => {
         if (!symbol || !interval || !source) return [];
         const normSym = normalizeSymbol(symbol);
         const key = `${source}:${normSym}:${interval}`;
         return useMarketStore.getState().candleData[key] || [];
-    };
+    }, [symbol, interval, source]);
 
     useEffect(() => {
         if (!containerRef.current || !symbol || !interval || !source) return;
@@ -132,8 +133,9 @@ export function useSubchartLegendDOMUpdater(
         const tickerKey = `${source}:${normSym}`;
         const lastPosRef = { time: null as number | null, sourceId: null as string | null };
 
-        const handleCrosshair = (e: CustomEvent) => {
-            const { time, sourceId } = e.detail || {};
+        const handleCrosshair = (e: Event) => {
+            const detail = (e as CustomEvent<{ time?: number; sourceId?: string }>).detail;
+            const { time, sourceId } = detail || {};
 
             if (sourceId === chartId && time) {
                 isCrosshairActiveRef.current = true;
@@ -142,8 +144,8 @@ export function useSubchartLegendDOMUpdater(
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             crosshairRafRef.current = requestAnimationFrame(() => {
                 if (time === lastPosRef.time && sourceId === lastPosRef.sourceId) return;
-                lastPosRef.time = time;
-                lastPosRef.sourceId = sourceId;
+                lastPosRef.time = time ?? null;
+                lastPosRef.sourceId = sourceId ?? null;
 
                 const freshCandles = getFreshCandles();
 
@@ -233,5 +235,5 @@ export function useSubchartLegendDOMUpdater(
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
         };
-    }, [chartId, symbol, interval, source, containerRef]);
+    }, [chartId, symbol, interval, source, containerRef, getFreshCandles]);
 }

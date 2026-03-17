@@ -130,17 +130,24 @@ export function createApp() {
         legacyHeaders: false,
     });
 
-    const authLimiter = rateLimit({
+    const authEntryLimiter = rateLimit({
         windowMs: 60 * 1000,
         limit: 10,
         standardHeaders: true,
         legacyHeaders: false,
     });
 
+    const authRefreshLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        limit: 60,
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+
     app.use("/api", apiLimiter);
-    app.use("/api/auth/login", authLimiter);
-    app.use("/api/auth/google", authLimiter);
-    app.use("/api/auth/refresh", authLimiter);
+    app.use("/api/auth/login", authEntryLimiter);
+    app.use("/api/auth/google", authEntryLimiter);
+    app.use("/api/auth/refresh", authRefreshLimiter);
     app.use("/api/ai/bridge", aiLimiter);
     app.use("/api/ai/bridge/task", aiTaskLimiter);
     app.use("/api/user/state/public", publicStateLimiter);

@@ -5,6 +5,13 @@ import checkAdmin from "../../middlewares/checkAdmin.js";
 import { calcBollingerBands, calcRSI } from "../../services/indicators.js";
 
 const router = new Router();
+const telegramTemporarilyDisabled = (req, res) => {
+  return res.status(503).json({
+    ok: false,
+    error: "Telegram integration is temporarily disabled",
+    code: "telegram_temporarily_disabled",
+  });
+};
 
 //Get all users
 router.route("/").get(checkLogin, User.getListUsers);
@@ -24,11 +31,11 @@ router.route("/state").get(checkLogin, User.getUserSetupState).put(checkLogin, U
 router.route("/state/public").get(User.getPublicUserSetupState).put(User.upsertPublicUserSetupState);
 router.route("/trade-logs/public").post(User.createPublicTradeLog).patch(User.updatePublicTradeExit);
 router.route("/trade-stats/public").get(User.getPublicTradeStats);
-router.route("/telegram/status").get(User.getTelegramStatus);
-router.route("/telegram/link/start").post(User.startTelegramLink);
-router.route("/telegram/preferences").put(User.updateTelegramPreferences);
-router.route("/telegram/test").post(User.sendTelegramTest);
-router.route("/telegram/unlink").post(User.unlinkTelegram);
+router.route("/telegram/status").get(telegramTemporarilyDisabled);
+router.route("/telegram/link/start").post(telegramTemporarilyDisabled);
+router.route("/telegram/preferences").put(telegramTemporarilyDisabled);
+router.route("/telegram/test").post(telegramTemporarilyDisabled);
+router.route("/telegram/unlink").post(telegramTemporarilyDisabled);
 
 router.route("/data").post(async (req, res) => {
   const { symbol, interval } = req.body;
@@ -67,7 +74,7 @@ router.route("/prices").get(async (req, res) => {
       symbols = parsed.filter(s => !s.endsWith('m') && !s.endsWith('M'));
       // Merge defaults if needed, or just replace. Let's merge to ensure defaults always show
       symbols = [...new Set([...defaultSymbols, ...symbols])];
-    } catch (e) { }
+    } catch { }
   }
 
   try {

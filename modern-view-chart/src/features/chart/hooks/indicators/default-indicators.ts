@@ -1,4 +1,6 @@
-export const DEFAULT_CHART_INDICATORS = [
+import type { IndicatorConfig } from '@/lib/store/types';
+
+export const DEFAULT_CHART_INDICATORS: Array<Omit<IndicatorConfig, 'id'>> = [
     { type: 'EMA', params: { period: 25 }, color: '#9c27b0', visible: true, lineWidth: 1, pane: 'main' },
     { type: 'HMA', params: { period: 25 }, color: '#00bcd4', visible: true, lineWidth: 2, pane: 'main' },
     { type: 'RSI', params: { period: 14 }, color: '#f06292', visible: true, lineWidth: 2, pane: 'subchart' },

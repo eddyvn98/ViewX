@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { Candle } from '@/lib/store';
 import { useChartHistory } from './use-chart-history';
 import { useChartTicker } from './use-chart-ticker';
 
@@ -11,7 +12,7 @@ export function useChartData(
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles',
     chartRef: React.RefObject<IChartApi | null>,
     subchartRef: React.RefObject<IChartApi | null>,
-    seriesRef: React.RefObject<ISeriesApi<any> | null>,
+    seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     markerSeriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     subSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>,
@@ -21,7 +22,7 @@ export function useChartData(
     contextKey?: string
 ) {
     // Shared reference to the trusted "Current Candle" (from Store/History)
-    const lastCandleRef = useRef<any>(null);
+    const lastCandleRef = useRef<Candle | null>(null);
 
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store

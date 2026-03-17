@@ -7,10 +7,11 @@ import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
 
 interface MobileSymbolCarouselProps {
     onSymbolTap?: () => void;
+    onSymbolLongPress?: () => void;
     isDimmed?: boolean;
 }
 
-export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ onSymbolTap, isDimmed = false }: MobileSymbolCarouselProps) {
+export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ onSymbolTap, onSymbolLongPress, isDimmed = false }: MobileSymbolCarouselProps) {
     const watchlist = useMarketStore(state => state.watchlist);
     const activeTabId = useMarketStore(state => state.activeTabId);
     const activeTab = useMarketStore(state => state.tabs[activeTabId]);
@@ -23,6 +24,9 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
     const lastEmittedSymbol = useRef(currentSymbol);
     const initialCentered = useRef(false);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressTriggeredRef = useRef(false);
+    const pressStartRef = useRef({ x: 0, y: 0 });
 
     const infiniteSymbols = [...watchlist, ...watchlist, ...watchlist];
 
@@ -107,6 +111,19 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         }
     }, [currentSymbol, watchlist]);
 
+    useEffect(() => {
+        return () => {
+            if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        };
+    }, []);
+
+    const clearLongPress = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+
     return (
         <div
             className={cn(
@@ -129,6 +146,10 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                             style={{ scrollSnapAlign: 'center' }}
                             onClick={(e) => {
                                 e.stopPropagation();
+                                if (longPressTriggeredRef.current) {
+                                    longPressTriggeredRef.current = false;
+                                    return;
+                                }
                                 if (isActive) {
                                     if (window.navigator.vibrate) window.navigator.vibrate(10);
                                     onSymbolTap?.();
@@ -140,6 +161,34 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                                     const targetScroll = item.offsetLeft - (container.clientWidth / 2) + (item.clientWidth / 2);
                                     container.scrollTo({ left: targetScroll, behavior: 'smooth' });
                                 }
+                            }}
+                            onTouchStart={(e) => {
+                                if (!isActive) return;
+                                const touch = e.touches[0];
+                                if (!touch) return;
+                                longPressTriggeredRef.current = false;
+                                pressStartRef.current = { x: touch.clientX, y: touch.clientY };
+                                clearLongPress();
+                                longPressTimerRef.current = setTimeout(() => {
+                                    longPressTriggeredRef.current = true;
+                                    if (window.navigator.vibrate) window.navigator.vibrate(12);
+                                    onSymbolLongPress?.();
+                                }, 450);
+                            }}
+                            onTouchMove={(e) => {
+                                const touch = e.touches[0];
+                                if (!touch) return;
+                                const dx = Math.abs(touch.clientX - pressStartRef.current.x);
+                                const dy = Math.abs(touch.clientY - pressStartRef.current.y);
+                                if (dx > 10 || dy > 10) {
+                                    clearLongPress();
+                                }
+                            }}
+                            onTouchEnd={() => {
+                                clearLongPress();
+                            }}
+                            onTouchCancel={() => {
+                                clearLongPress();
                             }}
                         >
                             <div className={cn(

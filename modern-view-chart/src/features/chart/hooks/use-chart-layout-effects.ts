@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { IChartApi } from 'lightweight-charts';
 
+type TimeScaleWithOptions = {
+    applyOptions: (options: { tickMarkFormatter: (time: number) => string }) => void;
+};
+
 export function useChartLayoutEffects(
     priceChartRef: React.MutableRefObject<IChartApi | null>,
     subchartChartRef: React.MutableRefObject<IChartApi | null>,
@@ -66,7 +70,7 @@ export function useChartLayoutEffects(
 
         try {
             priceChartRef.current.applyOptions(localizationOptions);
-            (priceChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+            (priceChartRef.current.timeScale() as unknown as TimeScaleWithOptions).applyOptions(timeScaleOptions.timeScale);
         } catch {
             // Ignore transient layout errors while chart instances are being recreated.
         }
@@ -74,7 +78,7 @@ export function useChartLayoutEffects(
         if (subchartChartRef.current) {
             try {
                 subchartChartRef.current.applyOptions(localizationOptions);
-                (subchartChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+                (subchartChartRef.current.timeScale() as unknown as TimeScaleWithOptions).applyOptions(timeScaleOptions.timeScale);
             } catch {
                 // Ignore transient layout errors while chart instances are being recreated.
             }
@@ -83,7 +87,7 @@ export function useChartLayoutEffects(
         if (timescaleChartRef.current) {
             try {
                 timescaleChartRef.current.applyOptions(localizationOptions);
-                (timescaleChartRef.current.timeScale() as any).applyOptions(timeScaleOptions.timeScale);
+                (timescaleChartRef.current.timeScale() as unknown as TimeScaleWithOptions).applyOptions(timeScaleOptions.timeScale);
             } catch {
                 // Ignore transient layout errors while chart instances are being recreated.
             }

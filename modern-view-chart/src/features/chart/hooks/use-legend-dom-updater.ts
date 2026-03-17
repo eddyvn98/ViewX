@@ -70,7 +70,7 @@ export function useLegendDOMUpdater(
             getSymbolDigits(symbol),
             false
         );
-    }, [candles, chartId]);
+    }, [candles, chartId, chartType, containerRef, interval, source, symbol]);
 
     useEffect(() => {
         if (!containerRef.current || !symbol || !interval || !source) return;

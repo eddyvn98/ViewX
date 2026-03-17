@@ -15,6 +15,16 @@ export class MarketStructureIndicator {
         this.series = series;
     }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
     update(candles: Candle[], config: IndicatorConfig) {
         this.config = config;
         if (!this.series) return;
@@ -26,13 +36,12 @@ export class MarketStructureIndicator {
             time: toSec(c.time) as any
         }));
 
-        const styles = this.config.styles || {};
-        const bullColor = styles.bullColor || '#00ff88';
-        const bearColor = styles.bearColor || '#ff3366';
+        const bullColor = this.getStyleString('bullColor', '#00ff88');
+        const bearColor = this.getStyleString('bearColor', '#ff3366');
 
         const markers = calculateDynamicSwingPoints(
             formattedData,
-            this.config.params.depth || 7,
+            this.getNumberParam('depth', 7),
             bullColor,
             bearColor
         );

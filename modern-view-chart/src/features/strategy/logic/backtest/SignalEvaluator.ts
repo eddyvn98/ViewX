@@ -1,4 +1,4 @@
-import { ConditionGroup } from '@/features/strategy/types';
+import { Condition, ConditionGroup } from '@/features/strategy/types';
 import { BacktestEvaluator } from '@/features/strategy/logic/BacktestEvaluator';
 
 export class SignalEvaluator {
@@ -10,14 +10,14 @@ export class SignalEvaluator {
         if (!group || !group.conditions || group.conditions.length === 0) return false;
 
         if (group.operator === "AND") {
-            return group.conditions.every((c: any) => {
+            return group.conditions.every((c) => {
                 if ('operator' in c) return this.evaluate(c, index, indicators);
-                return BacktestEvaluator.evaluate(c, index, indicators);
+                return BacktestEvaluator.evaluate(c as Condition, index, indicators);
             });
         } else {
-            return group.conditions.some((c: any) => {
+            return group.conditions.some((c) => {
                 if ('operator' in c) return this.evaluate(c, index, indicators);
-                return BacktestEvaluator.evaluate(c, index, indicators);
+                return BacktestEvaluator.evaluate(c as Condition, index, indicators);
             });
         }
     }

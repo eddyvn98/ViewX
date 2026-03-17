@@ -1,127 +1,148 @@
-import { BacktestEngine } from '@/features/strategy/logic/backtest/BacktestEngine';
-import { IndicatorCalculator } from '@/features/strategy/logic/IndicatorCalculator';
 import { calculateMACD } from '@/features/chart/utils/indicator-math';
+import { calculateADX } from '@/features/chart/utils/indicators/adx';
+import { calculateBollingerBands } from '@/features/chart/utils/indicators/bollinger-bands';
+import { calculateIchimoku } from '@/features/chart/utils/indicators/ichimoku';
+import { calculateSAR } from '@/features/chart/utils/indicators/sar';
+import { calculateFVG, calculateOrderBlocks } from '@/features/chart/utils/indicators/smc';
+import { calculateStochastic } from '@/features/chart/utils/indicators/stochastic';
+import { calculateSuperTrend } from '@/features/chart/utils/indicators/supertrend';
+import { calculateVWAP } from '@/features/chart/utils/indicators/vwap';
+import { IndicatorCalculator } from '@/features/strategy/logic/IndicatorCalculator';
+import { BacktestEngine } from '@/features/strategy/logic/backtest/BacktestEngine';
+import type { Candle, IndicatorConfig } from '@/lib/store/types';
+import type { WorkerJob, WorkerResponse } from './worker-client';
 
-self.onmessage = async (event: MessageEvent) => {
+type WorkerRequest = {
+    id: string;
+} & WorkerJob;
+
+type WorkerError = Error & { message: string };
+
+const toNumber = (value: unknown, fallback: number): number => {
+    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+};
+
+const toIndicatorParams = (indicator: IndicatorConfig): Record<string, unknown> => {
+    const params = indicator.params;
+    return params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
+};
+
+const mapMacdValues = (candles: Candle[], params: Record<string, unknown>) => {
+    const fast = toNumber(params.fast, 12);
+    const slow = toNumber(params.slow, 26);
+    const signal = toNumber(params.signal, 9);
+    const prices = candles.map((candle) => candle.close);
+    return calculateMACD(prices, fast, slow, signal);
+};
+
+self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const { id, type, payload } = event.data;
 
     try {
-        let result;
+        let result: unknown;
+
         switch (type) {
-            case 'RUN_BACKTEST':
+            case 'RUN_BACKTEST': {
                 const { strategy, candles, initialBalance, overrideSymbol, overrideTimeframe, source, matrixScopeKey } = payload;
                 result = BacktestEngine.run(strategy, candles, initialBalance, overrideSymbol, undefined, overrideTimeframe, source, matrixScopeKey);
                 break;
+            }
 
-            case 'CALCULATE_INDICATORS':
-                const { indicator, candles: indicatorCandles } = payload;
-                result = IndicatorCalculator.getValues(indicator, indicatorCandles);
+            case 'CALCULATE_INDICATORS': {
+                const { indicator, candles } = payload;
+                result = IndicatorCalculator.getValues(
+                    indicator as unknown as Parameters<typeof IndicatorCalculator.getValues>[0],
+                    candles,
+                );
                 break;
+            }
 
-            case 'CALCULATE_BATCH':
-                const { indicators, candles: batchCandles } = payload;
-                result = indicators.map((ind: any) => {
-                    // Normalize params for IndicatorCalculator (it expects array, but chart store uses object)
-                    const normalizedInd = { ...ind };
-                    if (ind.params && typeof ind.params === 'object' && !Array.isArray(ind.params)) {
-                        normalizedInd.params = Object.values(ind.params);
+            case 'CALCULATE_BATCH': {
+                const { indicators, candles } = payload;
+                result = indicators.map((indicator) => {
+                    const params = toIndicatorParams(indicator);
+
+                    if (indicator.type === 'MACD') {
+                        return { id: indicator.id, values: mapMacdValues(candles, params) };
                     }
-                    if (ind.type === 'MACD' && !ind.field) {
-                        const { fast = 12, slow = 26, signal = 9 } = normalizedInd.params;
-                        const prices = batchCandles.map((c: any) => c.close);
-                        return {
-                            id: ind.id,
-                            values: calculateMACD(prices, fast, slow, signal)
-                        };
+
+                    if (indicator.type === 'BollingerBands' || indicator.type === 'BOLLINGER_BANDS') {
+                        const period = toNumber(params.period, 20);
+                        const stdDev = toNumber(params.stdDev, 2);
+                        const prices = candles.map((candle) => candle.close);
+                        return { id: indicator.id, values: calculateBollingerBands(prices, period, stdDev) };
                     }
-                    if (ind.type === 'BollingerBands' || ind.type === 'BOLLINGER_BANDS') {
-                        const { period = 20, stdDev = 2 } = ind.params;
-                        const prices = batchCandles.map((c: any) => c.close);
-                        const { calculateBollingerBands } = require('../features/chart/utils/indicators/bollinger-bands');
-                        return {
-                            id: ind.id,
-                            values: calculateBollingerBands(prices, period, stdDev)
-                        };
+
+                    if (indicator.type === 'Stochastic' || indicator.type === 'STOCHASTIC') {
+                        const periodK = toNumber(params.periodK, 14);
+                        const smoothK = toNumber(params.smoothK, 3);
+                        const periodD = toNumber(params.periodD, 3);
+                        const high = candles.map((candle) => candle.high);
+                        const low = candles.map((candle) => candle.low);
+                        const close = candles.map((candle) => candle.close);
+                        return { id: indicator.id, values: calculateStochastic(high, low, close, periodK, smoothK, periodD) };
                     }
-                    if (ind.type === 'Stochastic' || ind.type === 'STOCHASTIC') {
-                        const { periodK = 14, smoothK = 3, periodD = 3 } = ind.params;
-                        const high = batchCandles.map((c: any) => c.high);
-                        const low = batchCandles.map((c: any) => c.low);
-                        const close = batchCandles.map((c: any) => c.close);
-                        const { calculateStochastic } = require('../features/chart/utils/indicators/stochastic');
-                        return {
-                            id: ind.id,
-                            values: calculateStochastic(high, low, close, periodK, smoothK, periodD)
-                        };
+
+                    if (indicator.type === 'SuperTrend' || indicator.type === 'SUPERTREND') {
+                        const period = toNumber(params.period, 10);
+                        const multiplier = toNumber(params.multiplier, 3);
+                        return { id: indicator.id, values: calculateSuperTrend(candles, period, multiplier) };
                     }
-                    if (ind.type === 'SuperTrend' || ind.type === 'SUPERTREND') {
-                        const { period = 10, multiplier = 3 } = ind.params;
-                        const { calculateSuperTrend } = require('../features/chart/utils/indicators/supertrend');
-                        return {
-                            id: ind.id,
-                            values: calculateSuperTrend(batchCandles, period, multiplier)
-                        };
+
+                    if (indicator.type === 'VWAP') {
+                        return { id: indicator.id, values: calculateVWAP(candles) };
                     }
-                    if (ind.type === 'VWAP') {
-                        const { calculateVWAP } = require('../features/chart/utils/indicators/vwap');
-                        return {
-                            id: ind.id,
-                            values: calculateVWAP(batchCandles)
-                        };
+
+                    if (indicator.type === 'Ichimoku' || indicator.type === 'ICHIMOKU') {
+                        const tenkan = toNumber(params.tenkan, 9);
+                        const kijun = toNumber(params.kijun, 26);
+                        const spanB = toNumber(params.spanB, 52);
+                        const displacement = toNumber(params.displacement, 26);
+                        return { id: indicator.id, values: calculateIchimoku(candles, tenkan, kijun, spanB, displacement) };
                     }
-                    if (ind.type === 'Ichimoku' || ind.type === 'ICHIMOKU') {
-                        const { tenkan = 9, kijun = 26, spanB = 52, displacement = 26 } = ind.params;
-                        const { calculateIchimoku } = require('../features/chart/utils/indicators/ichimoku');
-                        return {
-                            id: ind.id,
-                            values: calculateIchimoku(batchCandles, tenkan, kijun, spanB, displacement)
-                        };
+
+                    if (indicator.type === 'ADX') {
+                        const period = toNumber(params.period, 14);
+                        return { id: indicator.id, values: calculateADX(candles, period) };
                     }
-                    if (ind.type === 'ADX') {
-                        const { period = 14 } = ind.params;
-                        const { calculateADX } = require('../features/chart/utils/indicators/adx');
-                        return {
-                            id: ind.id,
-                            values: calculateADX(batchCandles, period)
-                        };
+
+                    if (indicator.type === 'OrderBlock') {
+                        const depth = toNumber(params.depth, 5);
+                        return { id: indicator.id, values: calculateOrderBlocks(candles, depth) };
                     }
-                    if (ind.type === 'OrderBlock') {
-                        const { depth = 5 } = ind.params;
-                        const { calculateOrderBlocks } = require('../features/chart/utils/indicators/smc');
-                        return {
-                            id: ind.id,
-                            values: calculateOrderBlocks(batchCandles, depth)
-                        };
+
+                    if (indicator.type === 'FVG') {
+                        return { id: indicator.id, values: calculateFVG(candles) };
                     }
-                    if (ind.type === 'FVG') {
-                        const { calculateFVG } = require('../features/chart/utils/indicators/smc');
-                        return {
-                            id: ind.id,
-                            values: calculateFVG(batchCandles)
-                        };
+
+                    if (indicator.type === 'SAR') {
+                        const startAF = toNumber(params.startAF, 0.02);
+                        const incrementAF = toNumber(params.incrementAF, 0.02);
+                        const maxAF = toNumber(params.maxAF, 0.2);
+                        return { id: indicator.id, values: calculateSAR(candles, startAF, incrementAF, maxAF) };
                     }
-                    if (ind.type === 'SAR') {
-                        const { startAF = 0.02, incrementAF = 0.02, maxAF = 0.2 } = ind.params;
-                        const { calculateSAR } = require('../features/chart/utils/indicators/sar');
-                        return {
-                            id: ind.id,
-                            values: calculateSAR(batchCandles, startAF, incrementAF, maxAF)
-                        };
-                    }
+
                     return {
-                        id: ind.id,
-                        values: IndicatorCalculator.getValues(normalizedInd, batchCandles)
+                        id: indicator.id,
+                        values: IndicatorCalculator.getValues(
+                            indicator as unknown as Parameters<typeof IndicatorCalculator.getValues>[0],
+                            candles,
+                        ),
                     };
                 });
                 break;
+            }
 
             default:
-                throw new Error(`Unknown job type: ${type}`);
+                throw new Error(`Unknown job type: ${String(type)}`);
         }
 
-        self.postMessage({ id, success: true, data: result });
-    } catch (error: any) {
-        console.error(`[Worker] Error in job ${type}:`, error);
-        self.postMessage({ id, success: false, error: error.message });
+        const response: WorkerResponse = { id, success: true, data: result };
+        self.postMessage(response);
+    } catch (error) {
+        const err = error as WorkerError;
+        console.error(`[Worker] Error in job ${type}:`, err);
+        const response: WorkerResponse = { id, success: false, error: err.message };
+        self.postMessage(response);
     }
 };

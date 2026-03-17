@@ -1,9 +1,6 @@
+import { clearStoredAuthSession, readStoredAccessToken, refreshStoredAccessToken } from '@/lib/auth/session';
 import { wsRuntime } from './runtime';
-
-function getStoredAccessToken(): string {
-    if (typeof window === 'undefined') return '';
-    return (localStorage.getItem('auth_access_token') || '').trim();
-}
+import { WS_URL_FROM_ENV } from './constants';
 
 export function parseIntervalSeconds(interval: string): number {
     const text = String(interval || '').trim();
@@ -26,7 +23,8 @@ export function deriveDefaultSocketUrl(): string {
         window.location.hostname === 'localhost' ||
         window.location.hostname === '127.0.0.1';
     if (isLocalHost) {
-        // In local development, always prefer the local backend websocket.
+        // In local development, prefer configured public WS if provided.
+        if (WS_URL_FROM_ENV) return WS_URL_FROM_ENV;
         return 'ws://127.0.0.1:8091';
     }
     if (wsRuntime.socketUrl) return wsRuntime.socketUrl;
@@ -90,7 +88,8 @@ export function buildSocketConfig(options?: { ignoreUrlCredential?: boolean }): 
 
 export async function fetchWsTicketFromApi(): Promise<string> {
     if (typeof window === 'undefined') return '';
-    if (!getStoredAccessToken()) return '';
+    let accessToken = readStoredAccessToken();
+    if (!accessToken) return '';
 
     const nowSec = Math.floor(Date.now() / 1000);
     if (wsRuntime.wsTicketCache && wsRuntime.wsTicketExpiresAt > nowSec + 10) {
@@ -101,8 +100,27 @@ export async function fetchWsTicketFromApi(): Promise<string> {
     wsRuntime.wsTicketPromise = fetch('/api/auth/ws-ticket', {
         method: 'GET',
         credentials: 'include',
+        headers: {
+            authorization: `Bearer ${accessToken}`,
+        },
     })
         .then(async (response) => {
+            if (response.status === 401) {
+                const refreshedToken = await refreshStoredAccessToken();
+                if (!refreshedToken) {
+                    clearStoredAuthSession();
+                    return '';
+                }
+
+                accessToken = refreshedToken;
+                response = await fetch('/api/auth/ws-ticket', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                });
+            }
             if (!response.ok) return '';
             const data = await response.json().catch(() => null);
             const ticket = typeof data?.access_ticket === 'string' ? data.access_ticket.trim() : '';

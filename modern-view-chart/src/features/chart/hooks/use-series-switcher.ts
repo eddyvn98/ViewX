@@ -4,17 +4,27 @@ import { DiamondSeries } from '../logic/diamond-series';
 
 interface UseSeriesSwitcherProps {
     chartRef: React.RefObject<IChartApi | null>;
-    seriesRef: React.MutableRefObject<ISeriesApi<any> | null>;
+    seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
     chartType: string;
 }
 
+type SeriesWithType = ISeriesApi<'Candlestick'> & {
+    seriesType?: () => unknown;
+};
+
 export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesSwitcherProps) {
+    const getSeriesTypeName = (series: ISeriesApi<'Candlestick'> | null): string => {
+        const fn = (series as SeriesWithType | null)?.seriesType;
+        if (typeof fn !== 'function') return '';
+        return String(fn.call(series));
+    };
+
     const handleSwitch = (isContextChange: boolean, lastChartType: string) => {
         const chart = chartRef.current;
         if (!chart || !seriesRef.current) return;
 
         const isTypeChange = chartType !== lastChartType;
-        const currentIsDiamond = (seriesRef.current as any)?.seriesType?.() === 'Custom';
+        const currentIsDiamond = getSeriesTypeName(seriesRef.current) === 'Custom';
         const needsDiamond = chartType === 'smart_candles';
         const hasTypeMismatch = currentIsDiamond !== needsDiamond;
 
@@ -22,14 +32,14 @@ export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesS
 
         const latestSeries = seriesRef.current;
         if (!latestSeries) return;
-        const latestIsDiamond = (latestSeries as any)?.seriesType?.() === 'Custom';
+        const latestIsDiamond = getSeriesTypeName(latestSeries) === 'Custom';
         const latestMismatch = latestIsDiamond !== needsDiamond;
 
         if (!isTypeChange && !latestMismatch) return;
 
         debugLog(`[SeriesSwitcher] Switching to ${needsDiamond ? 'Diamond' : 'Candlestick'} Series`);
         try {
-            chart.removeSeries(latestSeries as any);
+            chart.removeSeries(latestSeries);
         } catch {
             // Error ignored during chart remount
         }
@@ -39,7 +49,7 @@ export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesS
                 priceLineVisible: true,
                 priceLineWidth: 1,
                 priceLineStyle: 2,
-            });
+            }) as unknown as ISeriesApi<'Candlestick'>;
         } else {
             seriesRef.current = chart.addSeries(CandlestickSeries, {
                 borderVisible: false,

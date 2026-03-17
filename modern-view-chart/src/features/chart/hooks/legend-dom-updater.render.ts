@@ -8,7 +8,7 @@ export function updateLegendDirect(
     isLive: boolean,
     currentPrice: number | undefined,
     rawCandles: Candle[],
-    displayCandles: any[],
+    displayCandles: Candle[],
     indicators: IndicatorCache[],
     ohlcRefs: OHLCRefs | null,
     lastUpdateAtRef: React.MutableRefObject<number>,
@@ -71,14 +71,22 @@ export function updateLegendDirect(
             const res = match.results;
             const lastValue = Array.isArray(res)
                 ? res[res.length - 1]
-                : (res as any).macd?.[(res as any).macd.length - 1];
+                : getLastMacdValue(res);
+            if (typeof lastValue !== 'number') return cache;
             return {
                 ...cache,
                 results: [...(Array.isArray(cache.results) ? cache.results.slice(0, -1) : []), lastValue]
             };
         });
-        renderIndicators(activeIndex, tempCaches as any, indicatorRefs);
+        renderIndicators(activeIndex, tempCaches, indicatorRefs);
     } else {
         renderIndicators(activeIndex, indicators, indicatorRefs);
     }
 }
+    const getLastMacdValue = (value: unknown): number | undefined => {
+        if (!value || typeof value !== 'object') return undefined;
+        const macd = (value as { macd?: unknown }).macd;
+        if (!Array.isArray(macd) || macd.length === 0) return undefined;
+        const candidate = macd[macd.length - 1];
+        return typeof candidate === 'number' ? candidate : undefined;
+    };

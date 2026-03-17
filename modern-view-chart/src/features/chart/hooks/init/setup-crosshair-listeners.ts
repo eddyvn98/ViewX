@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, MouseEventParams, Time } from 'lightweight-charts';
 import { normalizeCrosshairTime } from './normalize-crosshair-time';
 import { syncVerticalLines } from '../../logic/chart-sync';
 import { useMarketStore } from '@/lib/store';
@@ -8,17 +8,27 @@ interface CrosshairSetupArgs {
     subchartChart: IChartApi;
     timescaleChart: IChartApi;
     chartId: string;
-    candleSeries: ISeriesApi<any>;
-    subSyncSeries: ISeriesApi<any>;
-    footSyncSeries: ISeriesApi<any>;
-    markerSeries: ISeriesApi<any>;
+    candleSeries: ISeriesApi<'Candlestick'>;
+    subSyncSeries: ISeriesApi<'Line'>;
+    footSyncSeries: ISeriesApi<'Line'>;
+    markerSeries: ISeriesApi<'Candlestick'>;
     priceLineEl: HTMLDivElement | null;
     subLineEl: HTMLDivElement | null;
     footLineEl: HTMLDivElement | null;
     footTimeLabelEl: HTMLDivElement | null;
-    seriesRef: { current: ISeriesApi<any> | null };
+    seriesRef: { current: ISeriesApi<'Candlestick'> | null };
     formatTimeLabel: (timestampSec: number) => string;
 }
+
+type CrosshairEventLike = MouseEventParams<Time> & {
+    sourceEvent?: {
+        clientX?: number;
+        clientY?: number;
+        pointerType?: string;
+        touches?: ArrayLike<unknown>;
+        changedTouches?: ArrayLike<unknown>;
+    };
+};
 
 export function setupCrosshairListeners(args: CrosshairSetupArgs) {
     const {
@@ -111,7 +121,7 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         return fallbackX;
     };
 
-    const handleCrosshairMove = (sourceChart: IChartApi, param: any, hasY: boolean) => {
+    const handleCrosshairMove = (sourceChart: IChartApi, param: CrosshairEventLike, hasY: boolean) => {
         const sourcePane = sourceChart === priceChart
             ? 'price'
             : sourceChart === subchartChart
@@ -124,7 +134,7 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
             sourceChart,
             charts,
             elements,
-            series as any,
+            series,
             snappedX,
             normalizedTime,
             logical !== null && Number.isFinite(Number(logical)) ? Number(logical) : null,
@@ -206,9 +216,9 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         }
     };
 
-    const onPrice = (p: any) => handleCrosshairMove(priceChart, p, true);
-    const onSub = (p: any) => handleCrosshairMove(subchartChart, p, true);
-    const onFoot = (p: any) => handleCrosshairMove(timescaleChart, p, false);
+    const onPrice = (p: MouseEventParams<Time>) => handleCrosshairMove(priceChart, p, true);
+    const onSub = (p: MouseEventParams<Time>) => handleCrosshairMove(subchartChart, p, true);
+    const onFoot = (p: MouseEventParams<Time>) => handleCrosshairMove(timescaleChart, p, false);
 
     priceChart.subscribeCrosshairMove(onPrice);
     subchartChart.subscribeCrosshairMove(onSub);

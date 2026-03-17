@@ -5,7 +5,9 @@ import { connectSocket } from './connection';
 import { useBackfillEventEffect, useInitialHistoryAndForegroundResyncEffect, useSymbolInterestEffect } from './effects';
 import { wsRuntime } from './runtime';
 
-export function useWebSocket(): { sendMessage: (data: any) => void } {
+type WsMessage = Record<string, unknown>;
+
+export function useWebSocket(): { sendMessage: (data: WsMessage) => void } {
     const setConnected = useMarketStore((state) => state.setConnected);
     const setBridgeOnline = useMarketStore((state) => state.setBridgeOnline);
     const updateTickers = useMarketStore((state) => state.updateTickers);
@@ -23,19 +25,30 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
         if (typeof window === 'undefined') return;
         if (wsRuntime.globalSocket) return;
 
-        void connectSocket({
-            appendHistory,
-            setAccount,
-            setAvailableSymbols,
+        const deps = {
+            appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean) =>
+                appendHistory(items as unknown as Parameters<typeof appendHistory>[0], isReset),
+            setAccount: (source: string, account: Record<string, unknown>) =>
+                setAccount(source, account as unknown as Parameters<typeof setAccount>[1]),
+            setAvailableSymbols: (symbols: string[]) =>
+                setAvailableSymbols(symbols as unknown as Parameters<typeof setAvailableSymbols>[0]),
             setBridgeOnline,
-            setCandles,
+            setCandles: (source: string, symbol: string, interval: string, data: Array<Record<string, unknown>>) =>
+                setCandles(source, symbol, interval, data as unknown as Parameters<typeof setCandles>[3]),
             setConnected,
-            setOrders,
-            setPositions,
-            setSymbolInfo,
-            updateLastCandle,
-            updateTickers,
-        });
+            setOrders: (orders: Array<Record<string, unknown>>) =>
+                setOrders(orders as unknown as Parameters<typeof setOrders>[0]),
+            setPositions: (positions: Array<Record<string, unknown>>) =>
+                setPositions(positions as unknown as Parameters<typeof setPositions>[0]),
+            setSymbolInfo: (info: Record<string, unknown>) =>
+                setSymbolInfo(info as unknown as Parameters<typeof setSymbolInfo>[0]),
+            updateLastCandle: (source: string, symbol: string, interval: string, candle: Record<string, unknown>) =>
+                updateLastCandle(source, symbol, interval, candle as unknown as Parameters<typeof updateLastCandle>[3]),
+            updateTickers: (tickers: Record<string, unknown>) =>
+                updateTickers(tickers as unknown as Parameters<typeof updateTickers>[0]),
+        };
+
+        void connectSocket(deps);
     }, [
         appendHistory,
         setAccount,
@@ -54,7 +67,7 @@ export function useWebSocket(): { sendMessage: (data: any) => void } {
     useBackfillEventEffect(isConnected);
     useSymbolInterestEffect(isConnected);
 
-    const sendMessage = useCallback((data: any) => {
+    const sendMessage = useCallback((data: WsMessage) => {
         const socket = wsRuntime.globalSocket;
         if (socket?.readyState === WebSocket.OPEN) {
             if (data?.command === 'get_candles') {

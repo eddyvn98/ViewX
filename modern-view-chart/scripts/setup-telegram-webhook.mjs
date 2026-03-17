@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+ 
 
 function readEnv(name, fallback = "") {
   return String(process.env[name] || fallback).trim();

@@ -1,9 +1,18 @@
 import { Time } from 'lightweight-charts';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { Candle } from '@/lib/store/types';
 
-const EMPTY_CANDLES: any[] = [];
+type ChartPoint = {
+    time: Time;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+};
 
-export type CandleLookup = { key: string; candles: any[] };
+const EMPTY_CANDLES: Candle[] = [];
+
+export type CandleLookup = { key: string; candles: Candle[] };
 
 export const parseIntervalSeconds = (interval: string): number => {
     const raw = String(interval || '').trim();
@@ -39,7 +48,7 @@ export const buildIntervalCandidates = (interval: string | undefined): string[] 
 };
 
 export const resolveCandles = (
-    state: { candleData: Record<string, any[]> },
+    state: { candleData: Record<string, Candle[]> },
     source: string | undefined,
     normSymbol: string,
     intervalCandidates: string[]
@@ -79,7 +88,7 @@ export const resolveCandles = (
 export const getNormalizedSymbol = (symbol: string | undefined) => normalizeSymbol(symbol);
 
 export const updateSyncData = (
-    formatted: any[],
+    formatted: ChartPoint[],
     subRef: { current: { setData: (data: Array<{ time: Time; value: number }>) => void } | null },
     timeRef: { current: { setData: (data: Array<{ time: Time; value: number }>) => void } | null }
 ) => {

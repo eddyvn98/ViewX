@@ -138,8 +138,8 @@ export type RightSidebarTab = 'market' | 'layer' | 'strategy' | 'trade';
 export interface IndicatorConfig {
     id: string;
     type: string;
-    params: Record<string, any>;
-    styles?: Record<string, any>; // Flexible styling (e.g., macd: { color: 'red' })
+    params: Record<string, unknown>;
+    styles?: Record<string, unknown>; // Flexible styling (e.g., macd: { color: 'red' })
     color: string; // Primary/Legacy color
     visible: boolean;
     lineWidth: number; // Legacy, move to styles soon
@@ -157,12 +157,15 @@ export interface DrawingConfig {
     id: string;
     type: DrawingTool;
     points: DrawingPoint[];
+    symbol?: string;
+    interval?: string;
+    source?: 'BINANCE' | 'MT5';
     color: string;
     visible: boolean;
     locked?: boolean;
     lineWidth: number;
     lineStyle: 'solid' | 'dashed' | 'dotted';
-    params?: Record<string, any>;
+    params?: Record<string, unknown>;
 }
 
 export interface Alert {

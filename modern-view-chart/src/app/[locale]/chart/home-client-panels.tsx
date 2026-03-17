@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import React from "react";
 import { cn } from "@/lib/utils";
 
@@ -19,27 +19,11 @@ export function DesktopLeftPanel({
   toggleLeftSidebar: () => void;
   MarketList: React.ComponentType<{ mode?: "discovery" | "watchlist" }>;
 }) {
-  return (
-    <div
-      className={cn(
-        "border-r border-border bg-background flex-col overflow-hidden transition-all duration-300 ease-in-out shrink-0",
-        showDesktopLayout ? "flex" : "hidden",
-        showDesktopLeftPanel ? "w-72 opacity-100" : "w-0 opacity-0 pointer-events-none"
-      )}
-    >
-      <div className="w-72 h-full flex flex-col">
-        <div className="p-3 border-b border-border flex justify-between items-center bg-secondary/20 shrink-0">
-          <span className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Market Selection</span>
-          <button onClick={toggleLeftSidebar} className="text-muted-foreground hover:text-foreground p-1 transition-colors">
-            <X size={14} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          {showDesktopLeftPanel ? <MarketList mode="discovery" /> : null}
-        </div>
-      </div>
-    </div>
-  );
+  void showDesktopLayout;
+  void showDesktopLeftPanel;
+  void toggleLeftSidebar;
+  void MarketList;
+  return null;
 }
 
 export function ChartCenterPane({
@@ -102,14 +86,11 @@ export function ChartCenterPane({
 export function MobilePanels({
   showMobileLayout,
   activeMobileTab,
-  isMobileWatchlistAddMode,
-  setIsMobileWatchlistAddMode,
   isInputFocused,
   handleClosePanel,
   handleScroll,
   setActiveMobileTab,
   panelTouchStartYRef,
-  MarketList,
   Terminal,
   StrategyPanel,
   MobileMenu,
@@ -117,14 +98,11 @@ export function MobilePanels({
 }: {
   showMobileLayout: boolean;
   activeMobileTab: string;
-  isMobileWatchlistAddMode: boolean;
-  setIsMobileWatchlistAddMode: React.Dispatch<React.SetStateAction<boolean>>;
   isInputFocused: boolean;
   handleClosePanel: () => void;
   handleScroll: () => void;
   setActiveMobileTab: (tab: string) => void;
   panelTouchStartYRef: React.RefObject<number | null>;
-  MarketList: React.ComponentType<{ mode?: "discovery" | "watchlist" }>;
   Terminal: React.ComponentType<{ forceExpanded?: boolean }>;
   StrategyPanel: React.ComponentType;
   MobileMenu: React.ComponentType;
@@ -132,42 +110,6 @@ export function MobilePanels({
 }) {
   return (
     <>
-      {showMobileLayout && activeMobileTab === "watchlist" && (
-        <div className="flex-1 flex flex-col bg-background h-full min-h-0">
-          <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/20">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">
-              {isMobileWatchlistAddMode ? "Add Symbols" : "My Watchlist"}
-            </h2>
-            <button
-              onClick={() => setIsMobileWatchlistAddMode(!isMobileWatchlistAddMode)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-                isMobileWatchlistAddMode
-                  ? "bg-secondary text-muted-foreground hover:text-foreground"
-                  : "bg-primary text-primary-foreground shadow-lg shadow-primary/20 active:scale-95"
-              )}
-            >
-              {isMobileWatchlistAddMode ? (
-                <>
-                  <X size={14} />
-                  <span>Close</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={14} />
-                  <span>Add</span>
-                </>
-              )}
-            </button>
-          </div>
-          <div className="flex-1 min-h-0 bg-background flex flex-col">
-            <React.Suspense fallback={<PanelFallback />}>
-              <MarketList mode={isMobileWatchlistAddMode ? "discovery" : "watchlist"} />
-            </React.Suspense>
-          </div>
-        </div>
-      )}
-
       {showMobileLayout && activeMobileTab === "positions" && (
         <div
           className={cn(

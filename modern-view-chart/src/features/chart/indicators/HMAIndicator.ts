@@ -1,12 +1,12 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateHullMA } from '../utils/indicator-math';
 
-type IndicatorPoint = { time: any; value: number; color: string };
+type IndicatorPoint = { time: Time; value: number; color: string };
 type SegmentMeta = {
     series: ISeriesApi<'Line'>;
     color: string;
-    data: Array<{ time: any; value: number }>;
+    data: Array<{ time: Time; value: number }>;
 };
 
 export class HMAIndicator {
@@ -17,6 +17,19 @@ export class HMAIndicator {
         private chart: IChartApi,
         private config: IndicatorConfig
     ) { }
+
+    private getStyleString(keys: string[], fallback: string): string {
+        for (const key of keys) {
+            const value = this.config.styles?.[key];
+            if (typeof value === 'string') return value;
+        }
+        return fallback;
+    }
+
+    private getPeriod(defaultPeriod: number): number {
+        const value = this.config.params.period;
+        return typeof value === 'number' && Number.isFinite(value) ? value : defaultPeriod;
+    }
 
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
@@ -50,7 +63,7 @@ export class HMAIndicator {
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
-        if (!this.config.visible || candles.length < this.config.params.period) return;
+        if (!this.config.visible || candles.length < this.getPeriod(14)) return;
         if (this.points.length === 0 || this.segments.length === 0) {
             this.update(candles, this.config);
             return;
@@ -117,23 +130,22 @@ export class HMAIndicator {
     }
 
     private buildPoints(candles: Candle[], calculatedValues?: number[], lastCandleOverride?: Candle): IndicatorPoint[] {
-        const styles = this.config.styles || {};
-        const aboveLineColor = styles.aboveLine || styles.aboveColor || '#06b6d4';
-        const belowLineColor = styles.belowLine || styles.belowColor || '#a855f7';
+        const aboveLineColor = this.getStyleString(['aboveLine', 'aboveColor'], '#06b6d4');
+        const belowLineColor = this.getStyleString(['belowLine', 'belowColor'], '#a855f7');
         const inputCandles = lastCandleOverride
             ? candles.map((entry, index) => (index === candles.length - 1 ? lastCandleOverride : entry))
             : candles;
 
-        const hmaValues = calculatedValues || calculateHullMA(inputCandles.map(c => c.close), this.config.params.period);
+        const hmaValues = calculatedValues || calculateHullMA(inputCandles.map(c => c.close), this.getPeriod(14));
 
         return inputCandles
             .map((c, index) => {
-                const rawTime = typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time);
+                const rawTime = Number(c.time);
                 const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
                 const value = hmaValues[index];
                 if (isNaN(value)) return null;
                 return {
-                    time: time as any,
+                    time: time as Time,
                     value,
                     color: c.close >= value ? aboveLineColor : belowLineColor,
                 };
@@ -142,20 +154,21 @@ export class HMAIndicator {
     }
 
     private getLineWidth() {
-        const styles = this.config.styles || {};
-        return styles.width || this.config.lineWidth || 2;
+        const styleWidth = this.config.styles?.width;
+        if (typeof styleWidth === 'number' && Number.isFinite(styleWidth)) return styleWidth;
+        return this.config.lineWidth || 2;
     }
 
-    private createSegment(data: Array<{ time: any; value: number }>, color: string, width: number) {
+    private createSegment(data: Array<{ time: Time; value: number }>, color: string, width: number) {
         const series = this.chart.addSeries(LineSeries, {
             color,
-            lineWidth: width as any,
+            lineWidth: width as 1 | 2 | 3 | 4,
             priceLineVisible: false,
             lastValueVisible: false,
             crosshairMarkerVisible: false,
             visible: true,
         });
-        series.setData(data as any);
+        series.setData(data);
         this.segments.push({
             series,
             color,

@@ -5,6 +5,8 @@ import { calculateDynamicSwingPoints } from '../logic/candle-patterns';
 import { toSec } from '../utils/time-utils';
 import { FibonacciExtensionPrimitive, FibonacciExtensionData } from '../logic/fibonacci-extension-primitive';
 
+type SwingPoint = { time: Time; price: number };
+
 export class FibonacciExtensionIndicator {
     private primitive: FibonacciExtensionPrimitive | null = null;
     private lastDataJson: string = '';
@@ -25,11 +27,13 @@ export class FibonacciExtensionIndicator {
 
         const formattedData = candles.map(c => ({
             ...c,
-            time: toSec(c.time) as any
+            time: toSec(c.time) as Time
         }));
 
         // 1. Calculate Swing Points
-        const markers = calculateDynamicSwingPoints(formattedData, this.config.params.depth || 7);
+        const depthValue = this.config.params.depth;
+        const depth = typeof depthValue === 'number' && Number.isFinite(depthValue) ? depthValue : 7;
+        const markers = calculateDynamicSwingPoints(formattedData, depth);
         if (markers.length < 3) {
             console.warn('[Fibonacci Extension] Not enough swing points:', markers.length);
             this.clear();
@@ -38,15 +42,17 @@ export class FibonacciExtensionIndicator {
 
         // 2. Find the 3 most recent points (P1, P2, P3)
         // P1: Start of trend, P2: End of trend move, P3: Retracement point
-        const recentMarkers = markers.slice(-3).sort((a: any, b: any) => (a.time as number) - (b.time as number));
-        const [p1, p2, p3] = recentMarkers as any[];
+        const recentMarkers = (markers.slice(-3) as SwingPoint[]).sort((a, b) => Number(a.time) - Number(b.time));
+        const [p1, p2, p3] = recentMarkers;
 
         const p1Price = p1.price;
         const p2Price = p2.price;
         const p3Price = p3.price;
         const moveRange = p2Price - p1Price;
 
-        const levelSettings = this.config.params.levels || {};
+        const rawLevels = this.config.params.levels;
+        const levelSettings: Record<string, boolean> =
+            rawLevels && typeof rawLevels === 'object' ? (rawLevels as Record<string, boolean>) : {};
         const showPercent = this.config.params.showPercent !== false;
         const showPrice = this.config.params.showPrice !== false;
 

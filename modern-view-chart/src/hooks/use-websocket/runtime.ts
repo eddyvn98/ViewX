@@ -11,12 +11,12 @@ export const wsRuntime = {
     lastResumeSyncAt: 0,
     lastAppPongAt: 0,
 
-    tickerUpdateBuffer: {} as Record<string, any>,
+    tickerUpdateBuffer: {} as Record<string, unknown>,
     tickerUpdateTimer: null as NodeJS.Timeout | null,
-    candleUpdateBuffer: {} as Record<string, any>,
+    candleUpdateBuffer: {} as Record<string, unknown>,
     candleUpdateTimer: null as NodeJS.Timeout | null,
     positionUpdateTimer: null as NodeJS.Timeout | null,
-    positionUpdateBuffer: null as any,
+    positionUpdateBuffer: null as Record<string, unknown> | null,
 
     subscribeSymbolsTimer: null as NodeJS.Timeout | null,
     foregroundResyncTimer: null as NodeJS.Timeout | null,

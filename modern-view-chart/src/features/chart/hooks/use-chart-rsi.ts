@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { IChartApi, ISeriesApi, LineSeries, LineStyle } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, LineStyle, Time } from 'lightweight-charts';
 import { Candle } from '@/lib/store';
 import { calculateRSI } from '../utils/indicator-math';
 
@@ -58,7 +58,7 @@ export function useChartRSI(
 
         // 3. Set Data
         const rsiChartData = candles.map((c, i) => ({
-            time: (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time)) as any,
+            time: Number(c.time) as Time,
             value: rsiData[i]
         })).filter(d => !isNaN(d.value));
 

@@ -2,8 +2,16 @@ import { useEffect, useRef } from 'react';
 import { ISeriesApi, IPriceLine, LineStyle } from 'lightweight-charts';
 import { Position, useMarketStore } from '@/lib/store';
 import { calculatePnL } from '@/lib/utils/pnl';
+import { DraggingPosition } from '@/lib/store/slices/terminal-slice';
 
 const SHOW_POSITION_PRICE_LINES = false;
+
+type OrderLineDragDetail = {
+    ticket: string;
+    type: DraggingPosition['type'];
+    price: number;
+    symbol?: string;
+};
 
 export function useChartPositions(
     symbol: string | undefined,
@@ -25,7 +33,7 @@ export function useChartPositions(
         symbol,
         positions,
         symbolInfo,
-        draggingPosition: null as any,
+        draggingPosition: null as DraggingPosition | null,
         focusedTicket
     });
 
@@ -80,13 +88,13 @@ export function useChartPositions(
 
             // Entry Line
             const finalEntry = (isDraggingThis && dragging.type === 'entry') ? dragging.price : p.open_price;
-            const entryOptions = {
-                price: finalEntry,
-                color: '#71717a',
-                lineWidth: (isFoc ? 2 : 1) as any,
-                lineStyle: LineStyle.Solid,
-                axisLabelVisible: false,
-                title: ''
+                const entryOptions = {
+                    price: finalEntry,
+                    color: '#71717a',
+                    lineWidth: (isFoc ? 2 : 1) as 1 | 2 | 3 | 4,
+                    lineStyle: LineStyle.Solid,
+                    axisLabelVisible: false,
+                    title: ''
             };
             if (!lines.entry) lines.entry = series.createPriceLine(entryOptions);
             else lines.entry.applyOptions(entryOptions);
@@ -97,7 +105,7 @@ export function useChartPositions(
                 const slOptions = {
                     price: finalSL,
                     color: '#ef5350',
-                    lineWidth: 1 as any,
+                    lineWidth: 1 as 1 | 2 | 3 | 4,
                     lineStyle: isFoc ? LineStyle.Solid : LineStyle.Dashed,
                     axisLabelVisible: false,
                     title: ''
@@ -115,7 +123,7 @@ export function useChartPositions(
                 const tpOptions = {
                     price: finalTP,
                     color: '#26a69a',
-                    lineWidth: 1 as any,
+                    lineWidth: 1 as 1 | 2 | 3 | 4,
                     lineStyle: isFoc ? LineStyle.Solid : LineStyle.Dashed,
                     axisLabelVisible: false,
                     title: ''
@@ -138,7 +146,7 @@ export function useChartPositions(
                 delete priceLinesRef.current[t];
             }
         });
-    }, [positions, symbol, draftOrder, focusedTicket, hoveredTicket]);
+    }, [positions, symbol, draftOrder, focusedTicket, hoveredTicket, seriesRef, targetNorm]);
 
     // EFFECT 2: High-frequency updates (Dragging & Price)
     // Uses manual subscription for maximum smoothness
@@ -180,8 +188,10 @@ export function useChartPositions(
     // ⚡ FAST-PATH: Listen to direct drag events for instant sync
     useEffect(() => {
         if (!SHOW_POSITION_PRICE_LINES) return;
-        const handleFastDrag = (e: any) => {
-            const { ticket, type, price, symbol: eventSymbol } = e.detail;
+        const handleFastDrag = (e: Event) => {
+            const detail = (e as CustomEvent<OrderLineDragDetail>).detail;
+            if (!detail) return;
+            const { ticket, type, price, symbol: eventSymbol } = detail;
             if (eventSymbol !== symbol || ticket === 'draft') return;
 
             const lines = priceLinesRef.current[ticket];
@@ -206,7 +216,8 @@ export function useChartPositions(
             if (!param.point || !param.time) return;
 
             // 🛡️ Safeguard: Only block IF the target isn't a tag/draggable
-            const target = (param.sourceEvent as any)?.target as HTMLElement;
+            const sourceEvent = param.sourceEvent as Event | undefined;
+            const target = sourceEvent?.target instanceof HTMLElement ? sourceEvent.target : null;
             const isTag = target?.closest('[data-is-tag="true"]') || target?.closest('.tag-body');
 
             if (!isTag && (document.querySelector('.delete-btn') || document.activeElement?.tagName === 'INPUT')) {

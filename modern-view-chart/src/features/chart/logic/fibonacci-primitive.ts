@@ -25,7 +25,25 @@ export interface FibonacciData {
     lineColor?: string;
     labelColor?: string;
     backgroundOpacity?: number;
+    selected?: boolean;
 }
+
+type BitmapScope = {
+    context: CanvasRenderingContext2D;
+    horizontalPixelRatio: number;
+    verticalPixelRatio: number;
+    bitmapSize: { width: number; height: number };
+};
+
+type BitmapTarget = {
+    useBitmapCoordinateSpace: (cb: (scope: BitmapScope) => void) => void;
+};
+
+type PrimitiveAttachParams = {
+    chart: IChartApi;
+    series: ISeriesApi<'Candlestick'>;
+    requestUpdate: () => void;
+};
 
 class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
     _data: FibonacciData | null = null;
@@ -36,10 +54,11 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
         this._source = source;
     }
 
-    draw(target: any) {
+    draw(target: unknown) {
         if (!this._data || this._data.levels.length === 0) return;
+        if (!target || typeof target !== 'object' || !('useBitmapCoordinateSpace' in target)) return;
 
-        target.useBitmapCoordinateSpace((scope: any) => {
+        (target as BitmapTarget).useBitmapCoordinateSpace((scope) => {
             const ctx = scope.context;
             const horizontalPixelRatio = scope.horizontalPixelRatio;
             const verticalPixelRatio = scope.verticalPixelRatio;
@@ -59,18 +78,15 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
             // If both points are to the left of the visible range, xStart and xEnd are null.
             // We should still draw if the prices are within or relevant to the current view.
 
-            let phyXStart = xStart !== null ? xStart * horizontalPixelRatio : 0;
+            const phyXStart = xStart !== null ? xStart * horizontalPixelRatio : 0;
             // If xStart is null, it means it's likely off-screen to the left. 
             // We'll just start from the left edge of the visible range.
-
-            const phyXEnd = xEnd !== null ? xEnd * horizontalPixelRatio : canvasWidth;
 
             const globalLineColor = this._data?.lineColor;
             const globalLabelColor = this._data?.labelColor;
             const bgOpacity = this._data?.backgroundOpacity ?? 0.15;
 
             levels.forEach((level, index) => {
-                // @ts-ignore
                 const y = series.priceToCoordinate(level.price);
                 if (y === null) return;
 
@@ -80,7 +96,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 ctx.save();
                 ctx.beginPath();
                 ctx.strokeStyle = globalLineColor || level.color;
-                ctx.lineWidth = Math.max(1, ((this._source._data as any)?.selected ? 2 : 1) * verticalPixelRatio);
+                ctx.lineWidth = Math.max(1, (this._source._data?.selected ? 2 : 1) * verticalPixelRatio);
 
                 // Solid for 0 and 1, dashed for others
                 if (level.ratio !== 0 && level.ratio !== 1) {
@@ -99,7 +115,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 // Position above the line
                 ctx.textBaseline = 'bottom';
 
-                let labelParts = [];
+                const labelParts = [];
                 if (this._data!.showPercent) labelParts.push(level.label);
                 if (this._data!.showPrice) labelParts.push(level.price.toFixed(2));
 
@@ -115,7 +131,6 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                         (prevLevel.ratio >= 0.382 && prevLevel.ratio <= 0.618);
 
                     if (isGoldenZone) {
-                        // @ts-ignore
                         const yPrev = series.priceToCoordinate(prevLevel.price);
                         if (yPrev !== null) {
                             const phyYPrev = yPrev * verticalPixelRatio;
@@ -131,7 +146,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
             });
 
             // Draw handles and delete button if selected
-            const selected = (this._source._data as any)?.selected;
+            const selected = this._source._data?.selected;
             if (selected) {
                 const p1Price = levels.find(l => l.ratio === 0)?.price ?? levels[0].price;
                 const p2Price = levels.find(l => l.ratio === 1)?.price ?? levels[levels.length - 1].price;
@@ -185,7 +200,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
 export class FibonacciPrimitive implements ISeriesPrimitive {
     _data: FibonacciData | null = null;
     _paneViews: FibonacciPaneView[] = [];
-    _series: ISeriesApi<any> | null = null;
+    _series: ISeriesApi<'Candlestick'> | null = null;
     _chart: IChartApi | null = null;
     _requestUpdate: (() => void) | null = null;
 
@@ -200,7 +215,7 @@ export class FibonacciPrimitive implements ISeriesPrimitive {
         this._requestUpdate?.();
     }
 
-    update(data: any) {
+    update(data: { points?: Array<{ time: Time; price: number }>; levels?: FibonacciLevel[]; selected?: boolean }) {
         if (!data.points || data.points.length < 2) {
             this.setData(null);
             return;
@@ -211,13 +226,17 @@ export class FibonacciPrimitive implements ISeriesPrimitive {
             startTime: data.points[0].time as Time,
             endTime: data.points[1].time as Time,
             showPercent: false, // Default to false as requested
-            showPrice: true
+            showPrice: true,
+            selected: data.selected
         };
 
         this.setData(fibData);
     }
 
-    attached({ chart, series, requestUpdate }: any) {
+    attached(param: unknown) {
+        if (!param || typeof param !== 'object') return;
+        const { chart, series, requestUpdate } = param as Partial<PrimitiveAttachParams>;
+        if (!chart || !series || !requestUpdate) return;
         this._series = series;
         this._chart = chart;
         this._requestUpdate = requestUpdate;

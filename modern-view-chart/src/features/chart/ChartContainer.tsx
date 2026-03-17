@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable react-hooks/refs */
 
-import React, { memo, useState } from 'react';
+import React, { memo, useCallback } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useChartPositions } from './hooks/use-chart-positions';
 import { useChartOrders } from './hooks/use-chart-orders';
@@ -58,6 +58,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         filteredOrders
     } = useChartRuntime(chartId);
 
+    const sendMessageUnknown = useCallback((data: unknown) => {
+        sendMessage(data as Parameters<typeof sendMessage>[0]);
+    }, [sendMessage]);
+
     useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef);
     useChartOrders(symbol, seriesRef, filteredOrders);
     useChartDraftOrder(symbol, seriesRef, isReady);
@@ -106,7 +110,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         alerts,
         handleUpdateAlertPrice,
         handleRemoveAlert,
-        sendMessage
+        sendMessageUnknown
     );
 
     useChartScaleReset(
@@ -138,7 +142,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         alerts,
         handleAddAlertAtPrice,
         handleRemoveAlert,
-        sendMessage
+        sendMessage: sendMessageUnknown
     });
 
     const isSubchartVisible = useMarketStore(state => {

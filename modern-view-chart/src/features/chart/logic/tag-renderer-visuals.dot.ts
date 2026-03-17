@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
 import { TagData } from './order-tag-utils';
 import { TagElements, TagRenderContext } from './tag-renderer.types';

@@ -7,14 +7,14 @@ export interface DataSlice {
     candleData: Record<string, Candle[]>;
     isCrosshairSyncEnabled: boolean;
     setCrosshairSync: (enabled: boolean) => void;
-    syncCrosshair: (point: any) => void;
+    syncCrosshair: (point: unknown) => void;
     setCandles: (source: string, symbol: string, interval: string, data: Candle[]) => void;
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Candle) => void;
 }
 
 // Normalize time to seconds for consistent comparison (supports numeric and date-string input)
-const toSeconds = (t: any): number => {
-    const raw = typeof t === 'object' ? (t as any)?.timestamp : t;
+const toSeconds = (t: unknown): number => {
+    const raw = typeof t === 'object' && t !== null ? (t as { timestamp?: unknown }).timestamp : t;
     const n = Number(raw);
     if (Number.isFinite(n)) {
         return n > 10000000000 ? Math.floor(n / 1000) : n;
@@ -31,17 +31,18 @@ const toSeconds = (t: any): number => {
 };
 
 const normalizeCandle = (candle: Candle): Candle | null => {
-    const time = toSeconds((candle as any).time);
+    const rawCandle = candle as unknown as Record<string, unknown>;
+    const time = toSeconds(rawCandle.time);
     if (!Number.isFinite(time)) return null;
 
     return {
-        ...(candle as any),
+        ...(rawCandle as object),
         time,
-        open: Number((candle as any).open),
-        high: Number((candle as any).high),
-        low: Number((candle as any).low),
-        close: Number((candle as any).close),
-        volume: Number((candle as any).volume ?? 0),
+        open: Number(rawCandle.open),
+        high: Number(rawCandle.high),
+        low: Number(rawCandle.low),
+        close: Number(rawCandle.close),
+        volume: Number(rawCandle.volume ?? 0),
     } as Candle;
 };
 

@@ -1,10 +1,9 @@
 import React from 'react';
 import { useMarketStore } from '@/lib/store';
-import { Trash2, Eye, EyeOff, Settings2, ChevronDown, ChevronUp, Magnet, TrendingUp, Minus, Square, Lock, Unlock, MoveVertical, Crosshair } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Settings2, Lock, Unlock } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { DrawingTool, DrawingConfig } from '@/lib/store/types';
 
 export function DrawingLayer() {
     const activeTabId = useMarketStore(state => state.activeTabId);
@@ -176,15 +175,16 @@ export function DrawingLayer() {
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-1.5">
                                                     {[0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0, 1.618, 2.618].map(ratio => {
-                                                        const isEnabled = drawing.params?.enabledLevels?.[ratio.toString()] !== false;
+                                                        const enabledLevels = (drawing.params?.enabledLevels as Record<string, boolean> | undefined) || {};
+                                                        const isEnabled = enabledLevels[ratio.toString()] !== false;
                                                         return (
                                                             <button
                                                                 key={ratio}
                                                                 onClick={() => {
-                                                                    const enabledLevels = { ...(drawing.params?.enabledLevels || {}) };
-                                                                    enabledLevels[ratio.toString()] = !isEnabled;
+                                                                    const nextEnabledLevels: Record<string, boolean> = { ...enabledLevels };
+                                                                    nextEnabledLevels[ratio.toString()] = !isEnabled;
                                                                     updateDrawing(chartId, drawing.id, {
-                                                                        params: { ...drawing.params, enabledLevels }
+                                                                        params: { ...drawing.params, enabledLevels: nextEnabledLevels }
                                                                     });
                                                                 }}
                                                                 className={cn(

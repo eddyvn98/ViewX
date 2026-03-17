@@ -84,6 +84,9 @@ type PersistedSetupState = {
 type UserStateApiResponse = {
     state?: Partial<PersistedSetupState>;
     updated_at?: string | null;
+    client_updated_at?: string | null;
+    revision?: number;
+    message?: string;
 };
 
 type UserSetupSyncMessage = {
@@ -146,6 +149,106 @@ function sanitizeTabsForPersistence(tabs: RootState['tabs']): RootState['tabs'] 
     }
 
     return sanitizedTabs;
+}
+
+function buildChartContextKey(input: { symbol?: unknown; interval?: unknown; source?: unknown }): string {
+    const symbol = typeof input.symbol === 'string' ? input.symbol.trim() : '';
+    const interval = typeof input.interval === 'string' ? input.interval.trim() : '';
+    const source = input.source === 'BINANCE' || input.source === 'MT5' ? input.source : '';
+    return `${symbol}|${interval}|${source}`;
+}
+
+function mapLocalChartIdsByContext(tabs: RootState['tabs']): Map<string, string[]> {
+    const map = new Map<string, string[]>();
+    for (const tab of Object.values(tabs || {})) {
+        for (const chart of Object.values(tab.charts || {})) {
+            const key = buildChartContextKey(chart);
+            if (!key || key === '||') continue;
+            const current = map.get(key) || [];
+            if (!current.includes(chart.id)) current.push(chart.id);
+            map.set(key, current);
+        }
+    }
+    return map;
+}
+
+function resolveRemoteChartContextById(tabsInput: unknown): Map<string, { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' }> {
+    const map = new Map<string, { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' }>();
+    if (!isPlainObject(tabsInput)) return map;
+
+    for (const rawTab of Object.values(tabsInput)) {
+        if (!isPlainObject(rawTab)) continue;
+        const charts = isPlainObject(rawTab.charts) ? rawTab.charts : {};
+        for (const [remoteChartId, rawChart] of Object.entries(charts)) {
+            if (!isPlainObject(rawChart)) continue;
+            const symbol = typeof rawChart.symbol === 'string' ? rawChart.symbol : undefined;
+            const interval = typeof rawChart.interval === 'string' ? rawChart.interval : undefined;
+            const source = rawChart.source === 'BINANCE' || rawChart.source === 'MT5' ? rawChart.source : undefined;
+            map.set(remoteChartId, { symbol, interval, source });
+        }
+    }
+    return map;
+}
+
+function remapRemoteDrawingsToLocalCharts(
+    remoteDrawingsInput: unknown,
+    persistedTabsInput: unknown,
+    localTabs: RootState['tabs'],
+): RootState['chartDrawings'] | null {
+    if (!isPlainObject(remoteDrawingsInput)) return null;
+
+    const remoteDrawings = remoteDrawingsInput as Record<string, unknown>;
+    const localIdsByContext = mapLocalChartIdsByContext(localTabs);
+    const remoteContextByChartId = resolveRemoteChartContextById(persistedTabsInput);
+    const next: RootState['chartDrawings'] = {};
+
+    for (const [remoteChartId, rawItems] of Object.entries(remoteDrawings)) {
+        if (!Array.isArray(rawItems)) continue;
+        const remoteChartContext = remoteContextByChartId.get(remoteChartId);
+        const targetChartIds = new Set<string>();
+
+        if (localTabs[remoteChartId]) targetChartIds.add(remoteChartId);
+        if (remoteChartContext) {
+            const contextKey = buildChartContextKey(remoteChartContext);
+            for (const localChartId of localIdsByContext.get(contextKey) || []) {
+                targetChartIds.add(localChartId);
+            }
+        }
+
+        if (targetChartIds.size === 0) continue;
+
+        for (const localChartId of targetChartIds) {
+            next[localChartId] = rawItems as RootState['chartDrawings'][string];
+        }
+    }
+
+    // Fallback: when chartId mapping misses (different tab/layout ids), map each drawing
+    // by its own symbol/interval/source context so manual lines survive cross-tab sync.
+    if (Object.keys(next).length === 0) {
+        for (const rawItems of Object.values(remoteDrawings)) {
+            if (!Array.isArray(rawItems)) continue;
+            for (const rawDrawing of rawItems) {
+                if (!isPlainObject(rawDrawing)) continue;
+                const contextKey = buildChartContextKey({
+                    symbol: rawDrawing.symbol,
+                    interval: rawDrawing.interval,
+                    source: rawDrawing.source,
+                });
+                if (!contextKey || contextKey === '||') continue;
+                const localIds = localIdsByContext.get(contextKey) || [];
+                if (localIds.length === 0) continue;
+
+                for (const localChartId of localIds) {
+                    const current = next[localChartId] || [];
+                    const drawingId = typeof rawDrawing.id === 'string' ? rawDrawing.id : '';
+                    if (drawingId && current.some((item) => item.id === drawingId)) continue;
+                    next[localChartId] = [...current, rawDrawing as unknown as RootState['chartDrawings'][string][number]];
+                }
+            }
+        }
+    }
+
+    return next;
 }
 
 function getPersistedUiState(state: Partial<PersistedSetupState> | undefined): Partial<PersistedUiState> | null {
@@ -582,8 +685,16 @@ function mergePersistedStrategyState(
     return next;
 }
 
-function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
+type ApplyPersistedSetupStateOptions = {
+    includeTabs?: boolean;
+};
+
+function applyPersistedSetupState(
+    persisted: Partial<PersistedSetupState>,
+    options: ApplyPersistedSetupStateOptions = {},
+) {
     if (!isPlainObject(persisted)) return;
+    const includeTabs = options.includeTabs ?? true;
 
     useMarketStore.setState((prev) => {
         const next: Partial<RootState> = {};
@@ -594,28 +705,41 @@ function applyPersistedSetupState(persisted: Partial<PersistedSetupState>) {
         }
         if (Array.isArray(persisted.alerts)) next.alerts = persisted.alerts;
 
-        const sanitizedTabs = sanitizeTabsInput(persisted.tabs);
-        if (sanitizedTabs) {
-            next.tabs = sanitizedTabs;
-            if (typeof persisted.activeTabId === 'string' && sanitizedTabs[persisted.activeTabId]) {
+        if (includeTabs) {
+            const sanitizedTabs = sanitizeTabsInput(persisted.tabs);
+            if (sanitizedTabs) {
+                next.tabs = sanitizedTabs;
+                if (typeof persisted.activeTabId === 'string' && sanitizedTabs[persisted.activeTabId]) {
+                    next.activeTabId = persisted.activeTabId;
+                } else {
+                    next.activeTabId = Object.keys(sanitizedTabs)[0];
+                }
+            } else if (isPlainObject(persisted.tabs)) {
+                // Persisted tabs payload exists but is invalid/empty; keep app usable.
+                const fallbackTabs = createFallbackTabs();
+                next.tabs = fallbackTabs;
+                next.activeTabId = 'default-tab';
+            } else if (typeof persisted.activeTabId === 'string' && (next.tabs || prev.tabs)[persisted.activeTabId]) {
                 next.activeTabId = persisted.activeTabId;
-            } else {
-                next.activeTabId = Object.keys(sanitizedTabs)[0];
             }
-        } else if (isPlainObject(persisted.tabs)) {
-            // Persisted tabs payload exists but is invalid/empty; keep app usable.
-            const fallbackTabs = createFallbackTabs();
-            next.tabs = fallbackTabs;
-            next.activeTabId = 'default-tab';
-        } else if (typeof persisted.activeTabId === 'string' && (next.tabs || prev.tabs)[persisted.activeTabId]) {
-            next.activeTabId = persisted.activeTabId;
         }
 
         if (isPlainObject(persisted.chartIndicators)) {
             next.chartIndicators = persisted.chartIndicators as RootState['chartIndicators'];
         }
         if (isPlainObject(persisted.chartDrawings)) {
-            next.chartDrawings = persisted.chartDrawings as RootState['chartDrawings'];
+            if (includeTabs) {
+                next.chartDrawings = persisted.chartDrawings as RootState['chartDrawings'];
+            } else {
+                const mapped = remapRemoteDrawingsToLocalCharts(
+                    persisted.chartDrawings,
+                    persisted.tabs,
+                    next.tabs || prev.tabs,
+                );
+                if (mapped && Object.keys(mapped).length > 0) {
+                    next.chartDrawings = mapped;
+                }
+            }
         }
 
         if (isPlainObject(persisted.ui)) {
@@ -713,6 +837,9 @@ export function useUserSetupSync() {
     const syncChannelRef = useRef<BroadcastChannel | null>(null);
     const lastSavedAtRef = useRef<number | null>(null);
     const lastRemoteUpdatedAtRef = useRef<number>(0);
+    const lastRemoteRevisionRef = useRef<number>(0);
+    const lastLocalMutationAtRef = useRef<number>(0);
+    const lastAcceptedClientUpdatedAtRef = useRef<number>(0);
 
     useEffect(() => {
         themeRef.current = (theme === 'light' || theme === 'dark' || theme === 'system') ? theme : undefined;
@@ -736,7 +863,8 @@ export function useUserSetupSync() {
 
             lastSavedRef.current = message.serialized;
             pendingSaveRef.current = null;
-            applyPersistedSetupState(message.state);
+            lastAcceptedClientUpdatedAtRef.current = Math.max(lastAcceptedClientUpdatedAtRef.current, lastLocalMutationAtRef.current);
+            applyPersistedSetupState(message.state, { includeTabs: false });
         };
 
         return () => {
@@ -823,7 +951,7 @@ export function useUserSetupSync() {
             return response;
         };
 
-        const saveState = async (snapshot: PersistedSetupState, serialized: string) => {
+        const saveState = async (snapshot: PersistedSetupState, serialized: string, clientUpdatedAt: number) => {
             if (Date.now() < retryAfterRef.current) return false;
             lastSaveAttemptAtRef.current = Date.now();
             emitUserSetupSyncStatus('saving', lastSavedAtRef.current);
@@ -837,17 +965,30 @@ export function useUserSetupSync() {
                     credentials: 'include',
                     body: JSON.stringify({
                         schema_version: USER_STATE_SCHEMA_VERSION,
+                        base_revision: lastRemoteRevisionRef.current,
+                        client_updated_at: new Date(clientUpdatedAt).toISOString(),
+                        source_client_id: clientId,
                         state: snapshot,
                     }),
                 });
 
+                const payload = await response.json().catch(() => null) as UserStateApiResponse | null;
                 if (response.ok || response.status === 202) {
-                    const payload = await response.json().catch(() => null) as { updated_at?: string | null } | null;
                     lastSavedRef.current = serialized;
                     lastSavedAtRef.current = Date.now();
                     const remoteUpdatedAt = Date.parse(String(payload?.updated_at || ''));
                     if (Number.isFinite(remoteUpdatedAt)) {
                         lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                    }
+                    const remoteRevision = Number(payload?.revision);
+                    if (Number.isFinite(remoteRevision) && remoteRevision >= 0) {
+                        lastRemoteRevisionRef.current = remoteRevision;
+                    }
+                    const remoteClientUpdatedAt = Date.parse(String(payload?.client_updated_at || ''));
+                    if (Number.isFinite(remoteClientUpdatedAt)) {
+                        lastAcceptedClientUpdatedAtRef.current = remoteClientUpdatedAt;
+                    } else {
+                        lastAcceptedClientUpdatedAtRef.current = Math.max(lastAcceptedClientUpdatedAtRef.current, clientUpdatedAt);
                     }
                     syncChannelRef.current?.postMessage({
                         type: 'USER_SETUP_STATE_SYNC',
@@ -859,6 +1000,32 @@ export function useUserSetupSync() {
                     retryAfterRef.current = response.status === 202 && !isAuthenticated
                         ? Date.now() + PUBLIC_STATE_SAVE_PAUSE_MS
                         : 0;
+                    return true;
+                }
+
+                if (response.status === 409) {
+                    const remoteClientUpdatedAt = Date.parse(String(payload?.client_updated_at || ''));
+                    if (Number.isFinite(remoteClientUpdatedAt)) {
+                        lastAcceptedClientUpdatedAtRef.current = remoteClientUpdatedAt;
+                    }
+                    const remoteUpdatedAt = Date.parse(String(payload?.updated_at || ''));
+                    if (Number.isFinite(remoteUpdatedAt)) {
+                        lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                    }
+                    const remoteRevision = Number(payload?.revision);
+                    if (Number.isFinite(remoteRevision) && remoteRevision >= 0) {
+                        lastRemoteRevisionRef.current = remoteRevision;
+                    }
+                    const hasNewerLocalMutation = lastLocalMutationAtRef.current > (remoteClientUpdatedAt || 0);
+                    if (!hasNewerLocalMutation && isPlainObject(payload?.state)) {
+                        applyPersistedSetupState(payload.state as Partial<PersistedSetupState>, { includeTabs: false });
+                        lastSavedRef.current = JSON.stringify(
+                            fitPersistedSetupStateToBudget(
+                                pickPersistedSetupState(useMarketStore.getState(), themeRef.current),
+                            ),
+                        );
+                    }
+                    emitUserSetupSyncStatus('saved', lastSavedAtRef.current);
                     return true;
                 }
 
@@ -890,7 +1057,7 @@ export function useUserSetupSync() {
             }
 
             pendingSaveRef.current = null;
-            const didSave = await saveState(pending.snapshot, pending.serialized);
+            const didSave = await saveState(pending.snapshot, pending.serialized, lastLocalMutationAtRef.current || Date.now());
             if (!didSave && pendingSaveRef.current === null) {
                 pendingSaveRef.current = pending;
             }
@@ -898,11 +1065,13 @@ export function useUserSetupSync() {
 
         const scheduleSave = (delayMs = SAVE_DEBOUNCE_MS) => {
             if (!isReadyRef.current) return;
+            lastLocalMutationAtRef.current = Date.now();
             const snapshot = buildSnapshot();
             const serialized = JSON.stringify(snapshot);
             if (serialized === lastSavedRef.current) return;
 
             pendingSaveRef.current = { snapshot, serialized };
+            emitUserSetupSyncStatus('saving', lastSavedAtRef.current);
             if (saveTimerRef.current) {
                 clearTimeout(saveTimerRef.current);
             }
@@ -929,9 +1098,17 @@ export function useUserSetupSync() {
 
                 const data = (await response.json()) as UserStateApiResponse;
                 if (!isDisposed && isPlainObject(data.state)) {
-                    const remoteUpdatedAt = Date.parse(String(data.updated_at || ''));
-                    if (Number.isFinite(remoteUpdatedAt)) {
-                        lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                const remoteUpdatedAt = Date.parse(String(data.updated_at || ''));
+                if (Number.isFinite(remoteUpdatedAt)) {
+                    lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                }
+                const remoteRevision = Number(data.revision);
+                if (Number.isFinite(remoteRevision) && remoteRevision >= 0) {
+                    lastRemoteRevisionRef.current = remoteRevision;
+                }
+                const remoteClientUpdatedAt = Date.parse(String(data.client_updated_at || ''));
+                if (Number.isFinite(remoteClientUpdatedAt)) {
+                    lastAcceptedClientUpdatedAtRef.current = remoteClientUpdatedAt;
                     }
                     const hasRemoteState = Object.keys(data.state).length > 0;
                     const persistedUi = getPersistedUiState(data.state);
@@ -940,7 +1117,12 @@ export function useUserSetupSync() {
                         setThemeRef.current(persistedThemeMode);
                     }
                     if (hasRemoteState) {
-                        applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                        const hasNewerLocalMutation = lastLocalMutationAtRef.current > (remoteClientUpdatedAt || 0);
+                        if (!hasNewerLocalMutation) {
+                            applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                        } else {
+                            shouldPersistCurrentSnapshot = true;
+                        }
                     } else if (isAuthenticated) {
                         // Logged-in users should not fall back to a blank remote snapshot.
                         // Persist the current local state immediately so new tabs reload correctly.
@@ -982,6 +1164,8 @@ export function useUserSetupSync() {
 
                 const remoteUpdatedAt = Date.parse(String(data.updated_at || ''));
                 if (!Number.isFinite(remoteUpdatedAt) || remoteUpdatedAt <= lastRemoteUpdatedAtRef.current) return;
+                const remoteRevision = Number(data.revision);
+                const remoteClientUpdatedAt = Date.parse(String(data.client_updated_at || ''));
 
                 const currentSnapshot = fitPersistedSetupStateToBudget(
                     pickPersistedSetupState(useMarketStore.getState(), themeRef.current),
@@ -990,9 +1174,19 @@ export function useUserSetupSync() {
                 const remoteSerialized = JSON.stringify(data.state);
 
                 lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
+                if (Number.isFinite(remoteRevision) && remoteRevision >= 0) {
+                    lastRemoteRevisionRef.current = remoteRevision;
+                }
                 if (remoteSerialized === currentSerialized || remoteSerialized === lastSavedRef.current) return;
+                if (Number.isFinite(remoteClientUpdatedAt) && lastLocalMutationAtRef.current > remoteClientUpdatedAt) {
+                    scheduleSave(0);
+                    return;
+                }
 
-                applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                applyPersistedSetupState(data.state as Partial<PersistedSetupState>, { includeTabs: false });
+                if (Number.isFinite(remoteClientUpdatedAt)) {
+                    lastAcceptedClientUpdatedAtRef.current = remoteClientUpdatedAt;
+                }
                 lastSavedRef.current = JSON.stringify(
                     fitPersistedSetupStateToBudget(
                         pickPersistedSetupState(useMarketStore.getState(), themeRef.current),
@@ -1047,5 +1241,5 @@ export function useUserSetupSync() {
                 remotePollTimerRef.current = null;
             }
         };
-    }, [apiUrl, clientId, isAuthenticated]);
+    }, [apiUrl, clientId, isAuthenticated, tabSyncSourceId]);
 }

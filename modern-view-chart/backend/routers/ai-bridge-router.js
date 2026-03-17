@@ -2,6 +2,20 @@ import { Router } from "express";
 import crypto from "crypto";
 
 const router = Router();
+const AI_ENABLED = ((process.env.AI_ENABLED || "0").trim() === "1");
+
+function aiDisabledResponse(res) {
+    return res.status(503).json({
+        status: "disabled",
+        error: "AI is temporarily unavailable",
+        code: "ai_temporarily_disabled",
+    });
+}
+
+router.use((req, res, next) => {
+    if (!AI_ENABLED) return aiDisabledResponse(res);
+    return next();
+});
 
 // --- Startup Diagnostic ---
 if (process.env.GEMINI_API_KEY) {

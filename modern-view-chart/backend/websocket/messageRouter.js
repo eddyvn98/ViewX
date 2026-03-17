@@ -12,12 +12,14 @@ import { handleAlertCommand } from "./handlers/alertCommandHandler.js";
 import { handleAlertTriggered } from "./handlers/alertTriggeredHandler.js";
 import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
 import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
+import { handleVirtualTradeCommand } from "./handlers/virtualTradeHandler.js";
 import { safeSend } from "./wsSend.js";
 import { logInfo } from "../logger.js";
 import { hasRequiredRole } from "../auth/roles.js";
 import { emergencyConfig } from "../config/emergency.js";
 
 const STRATEGY_ENGINE_ENABLED = ((process.env.STRATEGY_ENGINE_ENABLED || "0").trim() === "1");
+const AI_ENABLED = ((process.env.AI_ENABLED || "0").trim() === "1");
 const REQUIRED_TRADE_ROLE = (process.env.WS_REQUIRE_ROLE_FOR_TRADING || "trader").trim().toLowerCase();
 const BRIDGE_TOPICS = new Set([
     "mt5_update",
@@ -110,6 +112,10 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     break;
                 case "request_analysis":
                 case "request_optimization": {
+                    if (!AI_ENABLED) {
+                        emitWsError(ws, "service_unavailable", "ai_temporarily_disabled");
+                        break;
+                    }
                     if (!STRATEGY_ENGINE_ENABLED) {
                         logInfo("strategy_engine.disabled_topic_ignored", { topic: msgTopic });
                         break;
@@ -130,7 +136,7 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                         return;
                     }
                     if (!isReadOnlyMt5Command(data.command) && !isTradingCommandAllowed(senderMeta)) {
-                        emitWsError(ws, "forbidden", "trading_role_required");
+                        handleVirtualTradeCommand(context, data);
                         return;
                     }
                     handleMt5Command(context, data);
@@ -158,7 +164,7 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                         return;
                     }
                     if (!isReadOnlyBinanceCommand(data.command) && !isTradingCommandAllowed(senderMeta)) {
-                        emitWsError(ws, "forbidden", "trading_role_required");
+                        handleVirtualTradeCommand(context, data);
                         return;
                     }
                     handleBinanceCommand(context.ws, data);

@@ -49,7 +49,7 @@ export function processStrategySignal(
         spread: realMetrics.spread_at_entry || 2,
         volatility: realMetrics.volatility_atr || 0,
         trendStrength: realMetrics.mtf?.h1_trend === 'UP' ? 30 : 10,
-        rsi: realMetrics.indicators_snapshot['RSI[14]'] || 50,
+        rsi: typeof realMetrics.indicators_snapshot['RSI[14]'] === 'number' ? realMetrics.indicators_snapshot['RSI[14]'] : 50,
         session: realMetrics.session
     };
 
@@ -186,7 +186,7 @@ export function processStrategySignal(
         const activePos = currentVirtualPositions.find(
             (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === finalSignal.direction && p.status !== 'closed' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)
         );
-        TradeLogger.updateExit(strategy.id, symbol, finalSignal.price, activePos?.metadata).catch((err) => console.error(err));
+        TradeLogger.updateExit(strategy.id, symbol, finalSignal.price, activePos?.metadata as unknown as Record<string, unknown> | undefined).catch((err) => console.error(err));
 
         const pending = currentVirtualPositions.find(
             (p) => p.strategyId === strategy.id && p.symbol === symbol && p.type === finalSignal.direction && p.status === 'pending' && (!matrixScopeKey || p.matrixScopeKey === matrixScopeKey)

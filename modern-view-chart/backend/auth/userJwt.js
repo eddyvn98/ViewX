@@ -126,6 +126,7 @@ export function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
         accessToken,
         refreshToken,
         accessExpiresAt: toNumericDate(decodedAccess.exp),
+        refreshExpiresAt: toNumericDate(decodedRefresh.exp),
     };
 }
 

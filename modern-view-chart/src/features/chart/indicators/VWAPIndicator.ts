@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineData, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateVWAP } from '../utils/indicator-math';
 import { safeRemoveSeries } from './utils/safe-remove-series';
@@ -11,17 +11,37 @@ export class VWAPIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getLineWidth(): 1 | 2 | 3 | 4 {
+        const styleWidth = this.config.styles?.width;
+        const width = typeof styleWidth === 'number' && Number.isFinite(styleWidth)
+            ? styleWidth
+            : this.config.lineWidth || 1;
+
+        if (width >= 4) return 4;
+        if (width <= 1) return 1;
+        return Math.round(width) as 1 | 2 | 3 | 4;
+    }
+
+    private getCandleTime(candle: Candle): Time {
+        const rawTime = Number(candle.time);
+        return (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
+    }
+
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const lineColor = styles.line || '#FFEB3B';
-        const lineWidth = styles.width || 1;
+        const lineColor = this.getStyleString('line', '#FFEB3B');
+        const lineWidth = this.getLineWidth();
 
         if (!this.series) {
             this.series = this.chart.addSeries(LineSeries, {
                 color: lineColor,
-                lineWidth: lineWidth as any,
+                lineWidth,
                 priceLineVisible: false,
                 lastValueVisible: true,
                 crosshairMarkerVisible: false,
@@ -30,23 +50,21 @@ export class VWAPIndicator {
         } else {
             this.series.applyOptions({
                 color: lineColor,
-                lineWidth: lineWidth as any,
+                lineWidth,
                 visible: this.config.visible,
             });
         }
 
         const vwapValues = calculatedValues || calculateVWAP(candles);
 
-        const data = candles.map((c, i) => {
-            const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
-            const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
+        const data: LineData<Time>[] = candles.map((c, i) => {
             return {
-                time: time as any,
+                time: this.getCandleTime(c),
                 value: vwapValues[i]
             };
         }).filter(d => !isNaN(d.value));
 
-        this.series.setData(data as any);
+        this.series.setData(data);
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
@@ -59,11 +77,9 @@ export class VWAPIndicator {
         const lastVal = vwapValues[vwapValues.length - 1];
 
         if (!isNaN(lastVal)) {
-            const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
-            const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             try {
                 this.series.update({
-                    time: candleTime as any,
+                    time: this.getCandleTime(candle),
                     value: lastVal
                 });
             } catch (err) { }

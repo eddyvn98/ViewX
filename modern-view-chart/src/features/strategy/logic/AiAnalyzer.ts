@@ -1,4 +1,4 @@
-import { SignalStats, AiResponse, Strategy, Condition, ConditionGroup } from '../types';
+import { SignalStats, AiResponse, Strategy, ConditionGroup } from '../types';
 import { getStrategyLeg } from '../strategy-helpers';
 
 interface CacheEntry {
@@ -16,8 +16,8 @@ export enum AnalysisType {
 export class AiAnalyzer {
     static async analyzeSignal(
         strategy: Strategy,
-        signal: any,
-        metrics: any,
+        signal: Record<string, unknown>,
+        metrics: Record<string, unknown>,
         stats: SignalStats,
         type: AnalysisType = AnalysisType.PRE_TRADE
     ): Promise<AiResponse> {
@@ -49,13 +49,33 @@ export class AiAnalyzer {
         }
     }
 
-    private static buildPrompt(strategy: Strategy, signal: any, metrics: any, stats: SignalStats, type: AnalysisType) {
+    private static buildPrompt(
+        strategy: Strategy,
+        signal: Record<string, unknown>,
+        metrics: Record<string, unknown>,
+        stats: SignalStats,
+        type: AnalysisType,
+    ) {
         const direction = (signal.type === 'BUY' || signal.type === 'SELL' ? signal.type : signal.direction || 'BUY') as 'BUY' | 'SELL';
         const leg = getStrategyLeg(strategy, direction);
         const rules = this.stringifyRules(leg.entry);
+        const toNumber = (value: unknown, fallback = 0): number => {
+            return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+        };
+        const toText = (value: unknown, fallback: string): string => {
+            return typeof value === 'string' && value.length > 0 ? value : fallback;
+        };
+        const signalTimestamp = toNumber(signal.timestamp, Date.now());
+        const metadata = (signal.metadata as Record<string, unknown> | undefined) || {};
+        const mae = toNumber(metadata.mae, 0);
+        const mfe = toNumber(metadata.mfe, 0);
+        const metricsRsi = toNumber(metrics.rsi, 0);
+        const metricsVolatility = toNumber(metrics.volatility, 0);
+        const metricsTrendStrength = toNumber(metrics.trendStrength, 0);
+        const metricsSession = toText(metrics.session, 'Unknown');
 
         if (type === AnalysisType.POST_TRADE) {
-            const pnl = signal.pnl || 0;
+            const pnl = toNumber(signal.pnl, 0);
             const status = signal.status || 'closed';
 
             return `
@@ -69,14 +89,14 @@ export class AiAnalyzer {
       Symbol: ${signal.symbol}
       Status: ${status}
       PnL: ${pnl.toFixed(2)}
-      Entry Time: ${new Date(signal.timestamp).toISOString()}
-      MAE (Max Adverse Excursion): ${signal.metadata?.mae?.toFixed(1) || 0} pips
-      MFE (Max Favorable Excursion): ${signal.metadata?.mfe?.toFixed(1) || 0} pips
+      Entry Time: ${new Date(signalTimestamp).toISOString()}
+      MAE (Max Adverse Excursion): ${mae.toFixed(1)} pips
+      MFE (Max Favorable Excursion): ${mfe.toFixed(1)} pips
 
       [MARKET CONTEXT AT ENTRY]
-      RSI: ${metrics.rsi || 'N/A'}
-      Volatility: ${metrics.volatility > 50 ? 'High' : 'Low'}
-      Session: ${metrics.session || 'Unknown'}
+      RSI: ${metricsRsi || 'N/A'}
+      Volatility: ${metricsVolatility > 50 ? 'High' : 'Low'}
+      Session: ${metricsSession}
 
       Return JSON only:
       {
@@ -99,11 +119,11 @@ export class AiAnalyzer {
 
       [MARKET CONTEXT AT SIGNAL]
       Symbol: ${signal.symbol}
-      Time: ${new Date(signal.timestamp).toISOString()}
-      RSI: ${metrics.rsi || 'N/A'} (oversold/overbought context)
-      Trend: ${metrics.trendStrength > 20 ? 'Strong' : 'Weak'}
-      Volatility: ${metrics.volatility > 50 ? 'High' : 'Low'} (vs historical average)
-      Session: ${metrics.session || 'Unknown'}
+      Time: ${new Date(signalTimestamp).toISOString()}
+      RSI: ${metricsRsi || 'N/A'} (oversold/overbought context)
+      Trend: ${metricsTrendStrength > 20 ? 'Strong' : 'Weak'}
+      Volatility: ${metricsVolatility > 50 ? 'High' : 'Low'} (vs historical average)
+      Session: ${metricsSession}
 
       [HISTORICAL PERFORMANCE STATS]
       Overall Winrate: ${(stats.overallWinrate * 100).toFixed(1)}%
@@ -114,7 +134,7 @@ export class AiAnalyzer {
       - Trend Market: ${(stats.trendWinrate * 100).toFixed(1)}%
       - Range Market: ${(stats.rangeWinrate * 100).toFixed(1)}%
       
-      Volatility-specific Winrate: ${((stats.winrateByVolatility[metrics.volatility] || 0) * 100).toFixed(1)}%
+      Volatility-specific Winrate: ${((stats.winrateByVolatility[metricsVolatility] || 0) * 100).toFixed(1)}%
       
       Risk/Reward Reality (Averages):
       - Average MAE (Max Adverse Excursion): ${stats.avgMae.toFixed(1)} pips
@@ -150,6 +170,10 @@ export class AiAnalyzer {
     }
 
     private static async callBridgeAi(prompt: string): Promise<AiResponse> {
+        const aiEnabled = false;
+        if (!aiEnabled) {
+            throw new Error("AI is temporarily disabled");
+        }
         try {
             const res = await fetch('/api/ai/bridge/task', {
                 method: 'POST',

@@ -1,12 +1,12 @@
 import { Candle } from '@/lib/store/types';
-import { Strategy, ConditionGroup, StrategySignal, Condition } from '../types';
+import { Strategy, ConditionGroup, StrategySignal, Condition, VirtualPosition } from '../types';
 import { ConditionEvaluator as Eval } from './ConditionEvaluator';
 import { ContextCollector } from './ContextCollector';
 import { getStrategyDirections, getStrategyLeg } from '../strategy-helpers';
 
 export interface EngineContext {
     // ... existing interface
-    activePositions: any[];
+    activePositions: VirtualPosition[];
     currentPrice: number;
     symbol: string;
     lastSignalTime?: number; // Last time a signal was generated for this strategy

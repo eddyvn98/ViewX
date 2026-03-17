@@ -6,22 +6,29 @@ import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 
 export interface MessageHandlerDeps {
-    updateTickers: (tickers: Record<string, any>) => void;
-    setCandles: (source: string, symbol: string, interval: string, data: any[]) => void;
-    updateLastCandle: (source: string, symbol: string, interval: string, candle: any) => void;
+    updateTickers: (tickers: Record<string, unknown>) => void;
+    setCandles: (source: string, symbol: string, interval: string, data: Array<Record<string, unknown>>) => void;
+    updateLastCandle: (source: string, symbol: string, interval: string, candle: Record<string, unknown>) => void;
     setBridgeOnline: (online: boolean) => void;
-    setAccount: (source: string, account: any) => void;
-    setPositions: (positions: any[]) => void;
-    setOrders: (orders: any[]) => void;
-    appendHistory: (items: any[], isReset: boolean) => void;
-    setSymbolInfo: (info: any) => void;
+    setAccount: (source: string, account: Record<string, unknown>) => void;
+    setPositions: (positions: Array<Record<string, unknown>>) => void;
+    setOrders: (orders: Array<Record<string, unknown>>) => void;
+    appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean) => void;
+    setSymbolInfo: (info: Record<string, unknown>) => void;
     setAvailableSymbols: (symbols: string[]) => void;
 }
+
+type CandleBufferItem = {
+    source: string;
+    symbol: string;
+    interval: string;
+    candle: Record<string, unknown>;
+};
 
 export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps: MessageHandlerDeps) {
     try {
         wsRuntime.lastMessageAt = Date.now();
-        const msg = JSON.parse(event.data);
+        const msg = JSON.parse(event.data) as Record<string, unknown>;
         const msgType = msg.topic || msg.event || msg.type;
         if (msgType === 'app_pong') {
             wsRuntime.lastAppPongAt = Date.now();
@@ -37,18 +44,19 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const state = useMarketStore.getState();
             const activeSymbols = buildActiveSymbolSet(state);
 
-            const incomingData = msgType === 'priceUpdate' ? msg.data : [msg];
+            const incomingData = msgType === 'priceUpdate' ? (msg.data as Array<Record<string, unknown>>) : [msg];
             let usefulUpdate = false;
-            incomingData.forEach((item: any) => {
-                if (activeSymbols.has(item.symbol)) {
-                    wsRuntime.tickerUpdateBuffer[item.symbol] = {
-                        symbol: item.symbol,
-                        price: item.price,
-                        change: item.change || 0,
-                        changeValue: item.changeValue || 0,
+            incomingData.forEach((item) => {
+                const symbol = String(item?.symbol || '');
+                if (activeSymbols.has(symbol)) {
+                    wsRuntime.tickerUpdateBuffer[symbol] = {
+                        symbol,
+                        price: Number(item?.price || 0),
+                        change: Number(item?.change || 0),
+                        changeValue: Number(item?.changeValue || 0),
                         volume: 0,
-                        source: item.source || 'MT5',
-                        serverTime: item.time,
+                        source: String(item?.source || 'MT5'),
+                        serverTime: item?.time,
                     };
                     usefulUpdate = true;
                 }
@@ -64,9 +72,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_candles' && Array.isArray(msg.candles)) {
-            const targetSymbol = msg.symbol;
-            const targetInterval = msg.interval;
-            const normalizedCandles = msg.candles.map((c: any) => ({
+            const targetSymbol = String(msg.symbol || '');
+            const targetInterval = String(msg.interval || '');
+            const normalizedCandles = (msg.candles as Array<Record<string, unknown>>).map((c) => ({
                 ...c,
                 time: c.time ?? c.t ?? c.timestamp ?? c.datetime,
                 open: c.open ?? c.o ?? c.open_price ?? c.price_open,
@@ -80,25 +88,28 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 symbol: targetSymbol,
                 interval: targetInterval,
                 count: normalizedCandles.length,
-                source: msg.source,
+                source: String(msg.source || 'MT5'),
                 sampleTime: sample?.time,
                 sampleOpen: sample?.open,
             });
             if (targetSymbol && targetInterval) {
-                const source = msg.source || 'MT5';
+                const source = String(msg.source || 'MT5');
                 deps.setCandles(source, targetSymbol, targetInterval, normalizedCandles);
             }
         }
 
         if (msgType === 'candleUpdate' && msg.data) {
-            const c = msg.data;
-            const source = c.symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5';
-            const key = `${source}:${c.symbol}:${c.interval}`;
-            wsRuntime.candleUpdateBuffer[key] = { source, symbol: c.symbol, interval: c.interval, candle: c };
+            const c = msg.data as Record<string, unknown>;
+            const symbol = String(c.symbol || '');
+            const interval = String(c.interval || '');
+            const source = symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5';
+            const key = `${source}:${symbol}:${interval}`;
+            wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
 
             if (!wsRuntime.candleUpdateTimer) {
                 wsRuntime.candleUpdateTimer = setTimeout(() => {
-                    Object.values(wsRuntime.candleUpdateBuffer).forEach((item: any) => {
+                    const bufferedItems = Object.values(wsRuntime.candleUpdateBuffer) as CandleBufferItem[];
+                    bufferedItems.forEach((item) => {
                         deps.updateLastCandle(item.source, item.symbol, item.interval, item.candle);
                     });
                     wsRuntime.candleUpdateBuffer = {};
@@ -108,8 +119,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'bridgeStatus') {
-            deps.setBridgeOnline(msg.online);
-            if (msg.online) wsRuntime.historyFetched = false;
+            const online = Boolean(msg.online);
+            deps.setBridgeOnline(online);
+            if (online) wsRuntime.historyFetched = false;
         }
 
         if (msgType === 'mt5_positions_update') {
@@ -117,18 +129,22 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             if (!wsRuntime.positionUpdateTimer) {
                 wsRuntime.positionUpdateTimer = setTimeout(() => {
                     const data = wsRuntime.positionUpdateBuffer;
-                    if (data.account) {
+                    if (!data) {
+                        wsRuntime.positionUpdateTimer = null;
+                        return;
+                    }
+                    if (data?.account) {
                         deps.setAccount('MT5', {
-                            balance: Number(data.account.balance) || 0,
-                            equity: Number(data.account.equity) || 0,
-                            margin: Number(data.account.margin) || 0,
-                            free_margin: Number(data.account.free_margin) || 0,
-                            margin_level: Number(data.account.margin_level) || 0,
-                            profit: Number(data.account.profit) || 0,
+                            balance: Number((data.account as Record<string, unknown>).balance) || 0,
+                            equity: Number((data.account as Record<string, unknown>).equity) || 0,
+                            margin: Number((data.account as Record<string, unknown>).margin) || 0,
+                            free_margin: Number((data.account as Record<string, unknown>).free_margin) || 0,
+                            margin_level: Number((data.account as Record<string, unknown>).margin_level) || 0,
+                            profit: Number((data.account as Record<string, unknown>).profit) || 0,
                         });
                     }
                     if (data.positions && Array.isArray(data.positions)) {
-                        const mappedPositions = data.positions.map((p: any) => ({
+                        const mappedPositions = data.positions.map((p: Record<string, unknown>) => ({
                             ticket: p.ticket,
                             symbol: p.symbol,
                             type: p.type || 'buy',
@@ -145,7 +161,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         deps.setPositions(mappedPositions);
                     }
                     if (data.orders && Array.isArray(data.orders)) {
-                        const mappedOrders = data.orders.map((o: any) => ({
+                        const mappedOrders = data.orders.map((o: Record<string, unknown>) => ({
                             ticket: o.ticket,
                             symbol: o.symbol,
                             type: o.type,
@@ -170,20 +186,20 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const result = msg.data;
             const setOptimizationResult = useMarketStore.getState().setOptimizationResult;
             if (setOptimizationResult) {
-                setOptimizationResult(result);
+                setOptimizationResult(result as Parameters<typeof setOptimizationResult>[0]);
             }
         }
 
         if (msgType === 'binance_positions_update') {
             if (msg.account) {
-                deps.setAccount('BINANCE_DEMO', msg.account);
+                deps.setAccount('BINANCE_DEMO', msg.account as Record<string, unknown>);
             }
             if (msg.positions && Array.isArray(msg.positions)) {
-                const mapped = msg.positions.map((p: any) => ({ ...p, source: 'BINANCE_DEMO' }));
+                const mapped = msg.positions.map((p: Record<string, unknown>) => ({ ...p, source: 'BINANCE_DEMO' }));
                 deps.setPositions(mapped);
             }
             if (msg.history && Array.isArray(msg.history)) {
-                const mapped = msg.history.map((h: any) => ({ ...h, source: 'BINANCE_DEMO' }));
+                const mapped = msg.history.map((h: Record<string, unknown>) => ({ ...h, source: 'BINANCE_DEMO' }));
                 deps.appendHistory(mapped, true);
             }
         }
@@ -207,20 +223,27 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_symbol_info') {
-            deps.setSymbolInfo(msg.data);
+            deps.setSymbolInfo(msg.data as Record<string, unknown>);
         }
 
         if (msgType === 'mt5_available_symbols') {
-            deps.setAvailableSymbols(msg.symbols || []);
+            const symbols = Array.isArray(msg.symbols) ? msg.symbols.map((symbol) => String(symbol)) : [];
+            deps.setAvailableSymbols(symbols);
         }
 
         if (msgType === 'alert_triggered') {
-            const { alert, message, direction } = msg as any;
-            useMarketStore.getState().updateAlert(alert.id, { active: false, direction });
+            const alert = msg.alert as Record<string, unknown>;
+            const message = String(msg.message || '');
+            const direction = String(msg.direction || '');
+            const normalizedDirection =
+                direction === 'bullish' || direction === 'bearish'
+                    ? direction
+                    : undefined;
+            useMarketStore.getState().updateAlert(String(alert.id || ''), { active: false, direction: normalizedDirection });
             useMarketStore.getState().addNotification(
                 message,
                 direction === 'bullish' ? 'success' : 'warning',
-                alert.id,
+                String(alert.id || ''),
             );
             soundService.playAlert();
         }
@@ -229,10 +252,10 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             if (!STRATEGY_ENGINE_ENABLED) {
                 // Strategy engine is intentionally disabled in public endpoint release.
             } else {
-                const { signal } = msg;
-                const direction = signal.signal === 'BUY' ? 'bullish' : 'bearish';
+                const signal = msg.signal as Record<string, unknown>;
+                const direction = String(signal.signal || '') === 'BUY' ? 'bullish' : 'bearish';
                 useMarketStore.getState().addNotification(
-                    `STRATEGY: ${signal.signal} ${signal.symbol} - ${signal.params.reason}`,
+                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String((signal.params as Record<string, unknown>)?.reason || '')}`,
                     direction === 'bullish' ? 'success' : 'warning',
                 );
                 soundService.playAlert();

@@ -12,7 +12,7 @@ import { SignalHistoryList } from '@/features/strategy/components/signals-view/S
 import { SignalRangeTabs } from '@/features/strategy/components/signals-view/SignalRangeTabs';
 import type { SignalRange } from '@/features/strategy/components/signals-view/types';
 import { useSignalHistoryFilters } from '@/features/strategy/hooks/useSignalHistoryFilters';
-import type { StrategySignal, VirtualPosition } from '@/features/strategy/types';
+import type { StrategySignal, TradeContext, VirtualPosition } from '@/features/strategy/types';
 import { AiAnalyzer, AnalysisType } from '../logic/AiAnalyzer';
 import { ContextCollector } from '../logic/ContextCollector';
 import { StatsService } from '../logic/StatsService';
@@ -91,7 +91,13 @@ export function SignalsView() {
                 session: metrics.session,
             };
 
-            const ai = await AiAnalyzer.analyzeSignal(strategy, signal, aiMetrics, stats, AnalysisType.PRE_TRADE);
+            const ai = await AiAnalyzer.analyzeSignal(
+                strategy,
+                signal as unknown as Record<string, unknown>,
+                aiMetrics as unknown as Record<string, unknown>,
+                stats,
+                AnalysisType.PRE_TRADE
+            );
             updateSignal(signalIndex, { ...signal, aiAnalysis: ai });
             toast.success(t('aiAuditComplete', { confidence: ai.confidence.toFixed(0) }));
         } catch (error) {
@@ -113,7 +119,7 @@ export function SignalsView() {
                 price: currentPrice,
                 risk: { trailing: false, lotSize: position.lotSize, sl: position.sl, tp: position.tp },
                 direction: position.type,
-                context: { exit_reason: 'MANUAL', session: 'Close' } as any,
+                context: { exit_reason: 'MANUAL', session: 'Close' } as TradeContext,
                 source: position.source,
                 matrixScopeKey: position.matrixScopeKey,
             });
@@ -128,7 +134,7 @@ export function SignalsView() {
             price: currentPrice,
             risk: { trailing: false, lotSize: position.lotSize, sl: position.sl, tp: position.tp },
             direction: position.type,
-            context: { exit_reason: 'MANUAL', session: 'Close' } as any,
+            context: { exit_reason: 'MANUAL', session: 'Close' } as TradeContext,
             source: position.source,
             matrixScopeKey: position.matrixScopeKey,
         });

@@ -1,8 +1,9 @@
 import { Candle } from '@/lib/store/types';
 import { IndicatorCalculator as Calc } from './IndicatorCalculator';
+import type { Condition } from '../types';
 
 export class ConditionEvaluator {
-    static evaluate(condition: any, candles: Candle[]): boolean {
+    static evaluate(condition: Condition, candles: Candle[]): boolean {
         const { left, comparator, right } = condition;
 
         const leftVal = Calc.getLastValue(left, candles);

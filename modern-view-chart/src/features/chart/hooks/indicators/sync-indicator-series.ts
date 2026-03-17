@@ -1,4 +1,5 @@
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { IndicatorConfig } from '@/lib/store/types';
 import { EMAIndicator } from '../../indicators/EMAIndicator';
 import { HMAIndicator } from '../../indicators/HMAIndicator';
 import { RSIIndicator } from '../../indicators/RSIIndicator';
@@ -22,11 +23,13 @@ import { SARIndicator } from '../../indicators/SARIndicator';
 interface IndicatorRefs {
     priceChart: IChartApi;
     subchartChart: IChartApi;
-    series: ISeriesApi<any>;
-    markerSeries: ISeriesApi<any>;
+    series: ISeriesApi<'Candlestick'>;
+    markerSeries: ISeriesApi<'Candlestick'>;
 }
 
-export function createIndicatorInstance(config: any, refs: IndicatorRefs): any {
+type IndicatorInstance = object | null;
+
+export function createIndicatorInstance(config: IndicatorConfig, refs: IndicatorRefs): IndicatorInstance {
     const { priceChart, subchartChart, series, markerSeries } = refs;
 
     switch (config.type) {
@@ -36,15 +39,15 @@ export function createIndicatorInstance(config: any, refs: IndicatorRefs): any {
         case 'RSI': return new RSIIndicator(subchartChart, config);
         case 'MACD': return new MACDIndicator(subchartChart, config);
         case 'BREAKOUT_RAYS':
-        case 'BreakoutRays': return new BreakoutRaysIndicator(markerSeries as any, config);
+        case 'BreakoutRays': return new BreakoutRaysIndicator(markerSeries, config);
         case 'TREND_LINES':
-        case 'TrendLines': return new TrendLineIndicator(markerSeries as any, config);
+        case 'TrendLines': return new TrendLineIndicator(markerSeries, config);
         case 'MARKET_STRUCTURE':
-        case 'MarketStructure': return new MarketStructureIndicator(markerSeries as any, config);
+        case 'MarketStructure': return new MarketStructureIndicator(markerSeries, config);
         case 'FIBONACCI':
-        case 'Fibonacci': return new FibonacciIndicator(markerSeries as any, config);
+        case 'Fibonacci': return new FibonacciIndicator(markerSeries, config);
         case 'FIBONACCI_EXTENSION':
-        case 'FibonacciExtension': return new FibonacciExtensionIndicator(markerSeries as any, config);
+        case 'FibonacciExtension': return new FibonacciExtensionIndicator(markerSeries, config);
         case 'ATR': return new ATRIndicator(subchartChart, config);
         case 'BollingerBands':
         case 'BOLLINGER_BANDS': return new BollingerBandsIndicator(priceChart, config);

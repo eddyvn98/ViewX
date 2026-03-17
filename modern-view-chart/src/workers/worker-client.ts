@@ -1,25 +1,24 @@
-import { Strategy } from '@/features/strategy/types';
-import { Candle } from '@/lib/store/types';
+import type { Strategy } from '@/features/strategy/types';
+import type { Candle, IndicatorConfig } from '@/lib/store/types';
 
 export type WorkerJob =
     | { type: 'RUN_BACKTEST'; payload: { strategy: Strategy; candles: Candle[]; initialBalance: number; overrideSymbol?: string; overrideTimeframe?: string; source?: 'MT5' | 'BINANCE'; matrixScopeKey?: string } }
-    | { type: 'CALCULATE_INDICATORS'; payload: { indicator: any; candles: Candle[] } }
-    | { type: 'CALCULATE_BATCH'; payload: { indicators: any[]; candles: Candle[] } };
+    | { type: 'CALCULATE_INDICATORS'; payload: { indicator: IndicatorConfig; candles: Candle[] } }
+    | { type: 'CALCULATE_BATCH'; payload: { indicators: IndicatorConfig[]; candles: Candle[] } };
 
-export type WorkerResponse = {
+export type WorkerResponse<T = unknown> = {
     id: string;
     success: boolean;
-    data?: any;
+    data?: T;
     error?: string;
 };
 
-// Simple ID counter for mapping requests to responses
 let jobId = 0;
 
 class ChartWorkerClient {
     private worker: Worker | null = null;
-    private resolvers = new Map<string, (value: any) => void>();
-    private rejecters = new Map<string, (reason: any) => void>();
+    private resolvers = new Map<string, (value: unknown) => void>();
+    private rejecters = new Map<string, (reason: unknown) => void>();
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -29,7 +28,6 @@ class ChartWorkerClient {
 
     private init() {
         try {
-            // Using Next.js worker pattern
             this.worker = new Worker(new URL('./chart-worker.ts', import.meta.url));
 
             this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
@@ -41,12 +39,13 @@ class ChartWorkerClient {
                         resolve(data);
                         this.cleanup(id);
                     }
-                } else {
-                    const reject = this.rejecters.get(id);
-                    if (reject) {
-                        reject(new Error(error));
-                        this.cleanup(id);
-                    }
+                    return;
+                }
+
+                const reject = this.rejecters.get(id);
+                if (reject) {
+                    reject(new Error(error ?? 'Unknown worker error'));
+                    this.cleanup(id);
                 }
             };
 
@@ -63,14 +62,16 @@ class ChartWorkerClient {
         this.rejecters.delete(id);
     }
 
-    private sendJob(type: string, payload: any): Promise<any> {
-        if (!this.worker) return Promise.reject(new Error('Worker not initialized'));
+    private sendJob<T = unknown>(job: WorkerJob): Promise<T> {
+        if (!this.worker) {
+            return Promise.reject(new Error('Worker not initialized'));
+        }
 
         const id = `${Date.now()}-${++jobId}`;
-        return new Promise((resolve, reject) => {
-            this.resolvers.set(id, resolve);
+        return new Promise<T>((resolve, reject) => {
+            this.resolvers.set(id, (value) => resolve(value as T));
             this.rejecters.set(id, reject);
-            this.worker!.postMessage({ id, type, payload });
+            this.worker?.postMessage({ id, type: job.type, payload: job.payload });
         });
     }
 
@@ -83,17 +84,25 @@ class ChartWorkerClient {
         source?: 'MT5' | 'BINANCE',
         matrixScopeKey?: string
     ) {
-        return this.sendJob('RUN_BACKTEST', { strategy, candles, initialBalance, overrideSymbol, overrideTimeframe, source, matrixScopeKey });
+        return this.sendJob({
+            type: 'RUN_BACKTEST',
+            payload: { strategy, candles, initialBalance, overrideSymbol, overrideTimeframe, source, matrixScopeKey },
+        });
     }
 
-    async calculateIndicators(indicator: any, candles: Candle[]) {
-        return this.sendJob('CALCULATE_INDICATORS', { indicator, candles });
+    async calculateIndicators(indicator: IndicatorConfig, candles: Candle[]) {
+        return this.sendJob({
+            type: 'CALCULATE_INDICATORS',
+            payload: { indicator, candles },
+        });
     }
 
-    async calculateBatch(indicators: any[], candles: Candle[]) {
-        return this.sendJob('CALCULATE_BATCH', { indicators, candles });
+    async calculateBatch(indicators: IndicatorConfig[], candles: Candle[]) {
+        return this.sendJob({
+            type: 'CALCULATE_BATCH',
+            payload: { indicators, candles },
+        });
     }
 }
 
-// Export a singleton instance
 export const chartWorkerClient = new ChartWorkerClient();

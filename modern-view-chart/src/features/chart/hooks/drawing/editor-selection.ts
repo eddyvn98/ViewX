@@ -2,14 +2,15 @@ import { IChartApi, ISeriesApi, MouseEventParams, Time } from 'lightweight-chart
 import { distanceToSegment, getDeleteButtonPosition } from '../../utils/geometry-utils';
 import { calculateFibLevels } from '../../utils/fib-utils';
 import { ManualLineData } from '../../logic/manual-line-primitive';
+import { DrawingConfig } from '@/lib/store/types';
 
 interface SelectionArgs {
     chartId: string;
     chart: IChartApi;
-    series: ISeriesApi<any>;
+    series: ISeriesApi<'Candlestick'>;
     isDrawing: boolean;
     selectedDrawingId: string | null;
-    chartDrawings: any[];
+    chartDrawings: DrawingConfig[];
     removeDrawing: (chartId: string, id: string) => void;
     setSelectedDrawing: (id: string | null) => void;
     containerRef: React.RefObject<HTMLDivElement | null>;
@@ -124,4 +125,3 @@ export function createDrawingSelectionHandler(args: SelectionArgs) {
         setSelectedDrawing(clickedId);
     };
 }
-

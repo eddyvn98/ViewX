@@ -77,7 +77,7 @@ export function PriceConfigRow({
                             <div className="flex items-center gap-1.5">
                                 <select
                                     value={config.candleField}
-                                    onChange={(e) => onChange({ ...config, candleField: e.target.value as any })}
+                                    onChange={(e) => onChange({ ...config, candleField: e.target.value as 'high' | 'low' | 'close' | 'open' })}
                                     className="bg-transparent text-[10px] font-black text-blue-400 outline-none w-12 appearance-none cursor-pointer"
                                 >
                                     <option value="high">High</option>

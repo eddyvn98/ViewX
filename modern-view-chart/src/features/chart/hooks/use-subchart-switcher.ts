@@ -96,5 +96,5 @@ export function useSubchartSwitcher(
             container.removeEventListener('touchstart', handleTouchStart);
             container.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [chartId, toggleIndicatorVisibility]);
+    }, [chartId, toggleIndicatorVisibility, subchartContainerRef]);
 }

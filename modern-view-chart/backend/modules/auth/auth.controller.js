@@ -6,6 +6,7 @@ import {
     issueAuthTokens,
     revokeRefreshToken,
     rotateRefreshToken,
+    verifyAccessToken,
 } from "../../auth/userJwt.js";
 import { createAccessTicket } from "../../auth/accessTicket.js";
 import { normalizeUserRole } from "../../auth/roles.js";
@@ -66,12 +67,15 @@ function getRefreshTokenFromRequest(req) {
     return "";
 }
 
-function setRefreshCookie(res, refreshToken) {
+function setRefreshCookie(res, refreshToken, refreshExpiresAt) {
+    const expiresAtMs = Number.isFinite(Number(refreshExpiresAt)) ? Number(refreshExpiresAt) * 1000 : 0;
+    const maxAgeMs = expiresAtMs > Date.now() ? expiresAtMs - Date.now() : undefined;
     res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/api/auth",
+        maxAge: maxAgeMs,
     });
 }
 
@@ -105,7 +109,7 @@ export async function login(req, res) {
             role: normalizedRole,
             sessionVersion,
         });
-        setRefreshCookie(res, tokens.refreshToken);
+        setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
         if (normalizedRole !== user.role) {
             await userModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
         }
@@ -183,7 +187,7 @@ export async function googleLogin(req, res) {
             role: normalizedRole,
             sessionVersion,
         });
-        setRefreshCookie(res, tokens.refreshToken);
+        setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
 
         if (normalizedRole !== user.role) {
             await userModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
@@ -213,14 +217,22 @@ export async function refresh(req, res) {
 
     try {
         const tokens = await rotateRefreshToken(refreshToken);
-        setRefreshCookie(res, tokens.refreshToken);
+        setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
+
+        const payload = verifyAccessToken(tokens.accessToken);
+        const user = payload?.sub ? await userModel.findById(payload.sub) : null;
+        if (user?._id) {
+            const normalizedRole = normalizeUserRole(user.role);
+            return res.status(200).json(toAuthResponse(user, tokens, normalizedRole));
+        }
+
         return res.status(200).json({
             token_type: "Bearer",
             access_token: tokens.accessToken,
             refresh_token: tokens.refreshToken,
             expires_at: tokens.accessExpiresAt,
         });
-    } catch (error) {
+    } catch {
         clearRefreshCookie(res);
         return res.status(401).json({ error: "Invalid refresh token" });
     }

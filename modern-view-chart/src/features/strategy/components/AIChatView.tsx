@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Terminal, MessageSquare, BrainCircuit, Loader2, Clock, ShieldCheck, History } from 'lucide-react';
 
 interface ChatMessage {
@@ -10,6 +10,7 @@ interface ChatMessage {
 }
 
 export function AIChatView() {
+    const aiEnabled = false;
     const [mode, setMode] = useState<'chat' | 'logs'>('chat');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -21,8 +22,8 @@ export function AIChatView() {
         Boolean((localStorage.getItem('auth_access_token') || '').trim());
 
     // Fetch history on mount and when switching to logs
-    const fetchHistory = async () => {
-        if (!hasAccessToken) {
+    const fetchHistory = useCallback(async () => {
+        if (!hasAccessToken || !aiEnabled) {
             setIsLoading(false);
             return;
         }
@@ -37,7 +38,7 @@ export function AIChatView() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [hasAccessToken, aiEnabled]);
 
     useEffect(() => {
         if (!hasAccessToken) {
@@ -47,7 +48,7 @@ export function AIChatView() {
         fetchHistory();
         const interval = setInterval(fetchHistory, 5000); // Polling logs
         return () => clearInterval(interval);
-    }, [hasAccessToken]);
+    }, [hasAccessToken, fetchHistory]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -56,7 +57,7 @@ export function AIChatView() {
     }, [messages, mode]);
 
     const handleSend = async () => {
-        if (!hasAccessToken || !inputValue.trim() || isSending) return;
+        if (!hasAccessToken || !aiEnabled || !inputValue.trim() || isSending) return;
 
         const prompt = inputValue;
         setInputValue('');
@@ -89,6 +90,9 @@ export function AIChatView() {
                 <div className="flex items-center gap-2">
                     <BrainCircuit size={16} className="text-blue-500 animate-pulse" />
                     <span className="text-[11px] font-black uppercase tracking-wider text-foreground">AI Assistant</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-amber-500/40 text-amber-400 bg-amber-500/10">
+                        Coming Soon
+                    </span>
                 </div>
                 <div className="flex bg-secondary/80 p-0.5 rounded-md border border-border">
                     <button
@@ -117,6 +121,11 @@ export function AIChatView() {
                     <div className="flex-1 flex flex-col items-center justify-center opacity-40 gap-3 text-center">
                         <ShieldCheck size={36} />
                         <span className="text-[11px] uppercase font-black max-w-[220px]">Sign in to use AI Assistant</span>
+                    </div>
+                ) : !aiEnabled ? (
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-70 gap-3 text-center">
+                        <ShieldCheck size={36} />
+                        <span className="text-[11px] uppercase font-black max-w-[260px]">AI is temporarily disabled while we finish implementation.</span>
                     </div>
                 ) : (
                     <>
@@ -164,7 +173,7 @@ export function AIChatView() {
                                             </div>
                                         </div>
                                         <div className="text-[11px] text-muted-foreground font-medium pl-2 border-l border-border italic">
-                                            "{msg.prompt.substring(0, 100)}..."
+                                            &quot;{msg.prompt.substring(0, 100)}...&quot;
                                         </div>
                                         <div className="text-[11px] text-blue-400/80 bg-blue-500/5 p-2 rounded border border-blue-500/10 font-mono leading-tight">
                                             {msg.response.substring(0, 200)}...
@@ -191,7 +200,7 @@ export function AIChatView() {
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!hasAccessToken || isSending || !inputValue.trim()}
+                            disabled={!hasAccessToken || !aiEnabled || isSending || !inputValue.trim()}
                             className="absolute right-1 w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-30 disabled:hover:bg-blue-600 transition-all shadow-lg active:scale-90"
                         >
                             {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

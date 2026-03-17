@@ -1,16 +1,21 @@
-
 /**
  * SoundService - Synthesizes high-quality trading sounds using Web Audio API.
  * This avoids network latency and reliance on external assets.
  */
+type AudioContextCtor = typeof AudioContext;
+type WindowWithWebkitAudio = Window & {
+    AudioContext?: AudioContextCtor;
+    webkitAudioContext?: AudioContextCtor;
+};
+
 class SoundService {
     private ctx: AudioContext | null = null;
-    private keepAliveTimer: any = null;
+    private keepAliveTimer: ReturnType<typeof setTimeout> | null = null;
 
     private getContext() {
         if (!this.ctx) {
-            // @ts-ignore
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const windowRef = window as WindowWithWebkitAudio;
+            const AudioContextClass = windowRef.AudioContext || windowRef.webkitAudioContext;
             if (AudioContextClass) {
                 this.ctx = new AudioContextClass();
             }
@@ -22,7 +27,7 @@ class SoundService {
         const ctx = this.getContext();
         if (ctx && ctx.state === 'suspended') {
             await ctx.resume();
-            console.log('🔊 [SoundService] Audio Context Resumed');
+            console.log('[SoundService] Audio Context Resumed');
         }
     }
 
@@ -31,7 +36,7 @@ class SoundService {
         if (!ctx) return;
 
         if (ctx.state === 'suspended') {
-            ctx.resume().catch(() => { });
+            void ctx.resume().catch(() => undefined);
         }
 
         const now = ctx.currentTime;
@@ -40,7 +45,7 @@ class SoundService {
         masterGain.gain.setValueAtTime(volume, now);
         masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-        freqs.forEach((freq, i) => {
+        freqs.forEach((freq) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
@@ -60,60 +65,36 @@ class SoundService {
         });
     }
 
-    /**
-     * Sweet upward harmonic for BUY signals
-     */
     playBuy() {
-        this.playTone([440, 554.37, 659.25], 0.3, 'sine', 0.25); // A4 Major
+        this.playTone([440, 554.37, 659.25], 0.3, 'sine', 0.25);
     }
 
-    /**
-     * Solid downward harmonic for SELL signals
-     */
     playSell() {
-        this.playTone([349.23, 261.63, 174.61], 0.4, 'sine', 0.25); // F downward
+        this.playTone([349.23, 261.63, 174.61], 0.4, 'sine', 0.25);
     }
 
-    /**
-     * High pitched single ping for TP targets
-     */
     playTP() {
         this.playTone([880, 1760], 0.5, 'sine', 0.2);
     }
 
-    /**
-     * Low, dull double-tap for Stop Losses
-     */
     playSL() {
         this.playTone([110], 0.1, 'square', 0.15);
         setTimeout(() => this.playTone([82.41], 0.2, 'square', 0.15), 100);
     }
 
-    /**
-     * Soft, modern "thinking" sound for AI audits
-     */
     playAIThinking() {
-        this.playTone([523.25, 783.99], 0.1, 'sine', 0.15); // C5 G5
+        this.playTone([523.25, 783.99], 0.1, 'sine', 0.15);
     }
 
-    /**
-     * Alert sound for generic triggers
-     */
     playAlert() {
         this.playTone([660, 880], 0.2, 'triangle', 0.2);
     }
 
-    /**
-     * Silent Heartbeat - Keeps JavaScript execution high-priority in background tabs.
-     * Generates a nearly-inaudible sound at regular intervals.
-     */
     enableKeepAlive() {
         if (this.keepAliveTimer) return;
 
-        console.log('💓 [SoundService] Silent Heartbeat Enabled');
+        console.log('[SoundService] Silent Heartbeat Enabled');
         const pulse = () => {
-            // Play a very quiet, short tone every 25 seconds
-            // Browser limit is usually 30s for background execution without activity
             this.playTone([20], 0.1, 'sine', 0.001);
             this.keepAliveTimer = setTimeout(pulse, 25000);
         };
@@ -125,7 +106,7 @@ class SoundService {
         if (this.keepAliveTimer) {
             clearTimeout(this.keepAliveTimer);
             this.keepAliveTimer = null;
-            console.log('💔 [SoundService] Silent Heartbeat Disabled');
+            console.log('[SoundService] Silent Heartbeat Disabled');
         }
     }
 }

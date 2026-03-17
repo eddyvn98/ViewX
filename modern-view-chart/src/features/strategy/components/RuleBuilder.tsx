@@ -3,6 +3,8 @@ import { ConditionGroup, Condition, IndicatorType, Comparator } from '../types';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+const isCondition = (value: Condition | ConditionGroup): value is Condition => !('operator' in value);
+
 interface RuleSectionProps {
     title: string;
     group: ConditionGroup;
@@ -54,7 +56,7 @@ function RuleSection({ title, group, onChange, accentColor, stepNumber }: RuleSe
                     <span className={`text-[12px] font-black uppercase tracking-wide ${accentColor}`}>{title}</span>
                     <select
                         value={group.operator}
-                        onChange={(e) => onChange({ ...group, operator: e.target.value as any })}
+                        onChange={(e) => onChange({ ...group, operator: e.target.value as ConditionGroup['operator'] })}
                         className="bg-secondary/60 text-[10px] font-black px-1.5 py-0.5 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer hover:border-blue-500/30"
                     >
                         <option value="AND">AND</option>
@@ -75,7 +77,7 @@ function RuleSection({ title, group, onChange, accentColor, stepNumber }: RuleSe
                         {t('builder.noRules')}
                     </div>
                 ) : (
-                    group.conditions.filter(c => !('operator' in c)).map((c: any) => (
+                    group.conditions.filter(isCondition).map((c) => (
                         <div key={c.id} className="flex items-center gap-1.5 group animate-in slide-in-from-left-2 duration-200">
                             <select
                                 value={c.left.type}
@@ -111,7 +113,7 @@ function RuleSection({ title, group, onChange, accentColor, stepNumber }: RuleSe
 
                             <input
                                 type="number"
-                                value={c.right}
+                                value={typeof c.right === 'number' ? c.right : ''}
                                 onChange={(e) => updateCondition(c.id, { right: parseFloat(e.target.value) })}
                                 className="w-[64px] h-6 bg-secondary/80 text-center text-[11px] rounded border border-border outline-none font-mono font-bold text-foreground px-1 focus:border-blue-500/40"
                             />

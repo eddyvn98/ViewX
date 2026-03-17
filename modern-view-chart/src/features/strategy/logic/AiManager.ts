@@ -1,4 +1,4 @@
-import { StrategySignal } from '../types';
+import { StrategySignal, VirtualPosition } from '../types';
 
 export interface MarketMetrics {
     spread: number;
@@ -64,7 +64,7 @@ export class AiManager {
     /**
      * Calculates weighted average entry price for multiple positions
      */
-    static calculateAveragePrice(positions: any[]): number {
+    static calculateAveragePrice(positions: VirtualPosition[]): number {
         if (positions.length === 0) return 0;
         const totalVolume = positions.reduce((sum, p) => sum + (p.lotSize || 0), 0);
         const weightedSum = positions.reduce((sum, p) => sum + (p.entryPrice * (p.lotSize || 0)), 0);
@@ -75,7 +75,12 @@ export class AiManager {
      * AI-based Dynamic SL logic
      * Moves SL to Break Even or Trailing based on market behavior
      */
-    static suggestRiskModification(position: any, currentPrice: number, metrics: MarketMetrics, siblingPositions: any[] = []): any | null {
+    static suggestRiskModification(
+        position: VirtualPosition,
+        currentPrice: number,
+        metrics: MarketMetrics,
+        siblingPositions: VirtualPosition[] = [],
+    ): { type: "MOVE_SL"; newPrice: number } | { type: "TRAIL_SL"; distance: number } | null {
         const avgPrice = siblingPositions.length > 0
             ? this.calculateAveragePrice(siblingPositions)
             : position.entryPrice;
@@ -102,7 +107,7 @@ export class AiManager {
     /**
      * Predictive Early Exit
      */
-    static predictEarlyExit(position: any, metrics: MarketMetrics): boolean {
+    static predictEarlyExit(position: VirtualPosition, metrics: MarketMetrics): boolean {
         // If RSI is extremely overbought/oversold against the position
         if (position.type === "BUY" && metrics.rsi && metrics.rsi > 80) return true;
         if (position.type === "SELL" && metrics.rsi && metrics.rsi < 20) return true;

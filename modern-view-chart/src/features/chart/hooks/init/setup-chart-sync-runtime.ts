@@ -1,6 +1,6 @@
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { autoSyncLayout } from '../../logic/chart-sync';
-import { ChartInstance } from '@/lib/store/types';
+import { Candle, ChartInstance } from '@/lib/store/types';
 import {
   buildStableTimeScaleViewport,
   LogicalRangeSource,
@@ -18,7 +18,7 @@ type RuntimeParams = {
   subchartContainer: HTMLDivElement;
   timescaleContainer: HTMLDivElement;
   chartId: string;
-  seriesRef: React.MutableRefObject<ISeriesApi<any> | null>;
+  seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
   persistedViewportRef: React.MutableRefObject<ChartInstance['viewport'] | undefined>;
   currentContextKeyRef: React.MutableRefObject<string | undefined>;
   viewportSaveTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
@@ -64,8 +64,16 @@ export function setupChartSyncRuntime({
 
   const persistViewport = () => {
     const logicalRange = sanitizeRange(priceTS.getVisibleLogicalRange() as PersistedRange | null);
-    const mainPriceRange = sanitizeRange((priceChart.priceScale('right') as any)?.getVisibleRange?.() as PersistedRange | null);
-    const subPriceRange = sanitizeRange((subchartChart.priceScale('right') as any)?.getVisibleRange?.() as PersistedRange | null);
+    const mainPriceScale = priceChart.priceScale('right') as {
+      getVisibleRange?: () => PersistedRange | null;
+      setVisibleRange?: (range: PersistedRange) => void;
+    };
+    const subPriceScale = subchartChart.priceScale('right') as {
+      getVisibleRange?: () => PersistedRange | null;
+      setVisibleRange?: (range: PersistedRange) => void;
+    };
+    const mainPriceRange = sanitizeRange(mainPriceScale.getVisibleRange?.() ?? null);
+    const subPriceRange = sanitizeRange(subPriceScale.getVisibleRange?.() ?? null);
 
     const nextViewport: NonNullable<ChartInstance['viewport']> = {
       contextKey: currentContextKeyRef.current,
@@ -134,7 +142,7 @@ export function setupChartSyncRuntime({
     logicalRangeSyncRafId = requestAnimationFrame(flushLogicalRangeSync);
   };
 
-  const handleScrollPosition = (range: any) => {
+  const handleScrollPosition = (range: PersistedRange | null) => {
     if (!range) return;
     const dataCount = seriesRef.current?.data().length || 0;
     if (dataCount === 0) return;
@@ -183,7 +191,7 @@ export function setupChartSyncRuntime({
   };
 
   const resetToStableTimeScaleViewport = () => {
-    const dataCount = seriesRef.current?.data().length || 0;
+    const dataCount = (seriesRef.current?.data() as Candle[] | undefined)?.length || 0;
     if (dataCount <= 0) return;
     const nextRange = buildStableTimeScaleViewport(dataCount, window.innerWidth);
     syncing = true;
@@ -305,8 +313,10 @@ export function setupChartSyncRuntime({
         applyLogicalRangeToTargets(logicalRange, null);
         lastAppliedLogicalRange = logicalRange;
       }
-      if (mainPriceRange) (priceChart.priceScale('right') as any)?.setVisibleRange?.(mainPriceRange);
-      if (subPriceRange) (subchartChart.priceScale('right') as any)?.setVisibleRange?.(subPriceRange);
+      const mainPriceScale = priceChart.priceScale('right') as { setVisibleRange?: (range: PersistedRange) => void };
+      const subPriceScale = subchartChart.priceScale('right') as { setVisibleRange?: (range: PersistedRange) => void };
+      if (mainPriceRange) mainPriceScale.setVisibleRange?.(mainPriceRange);
+      if (subPriceRange) subPriceScale.setVisibleRange?.(subPriceRange);
     } catch {
       // Ignore restore races while charts are still initializing.
     }

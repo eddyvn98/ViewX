@@ -127,7 +127,6 @@ export default function Home() {
     return state.symbolInfo[chart.symbol]?.digits;
   });
 
-  const [isMobileWatchlistAddMode, setIsMobileWatchlistAddMode] = React.useState(false);
   const panelTouchStartYRef = React.useRef<number | null>(null);
   const viewport = useViewportState();
   useKeyboardDismissOnViewportReset(isInputFocused, setInputFocused);
@@ -155,6 +154,12 @@ export default function Home() {
     setInputFocused(false);
     (document.activeElement as HTMLElement | null)?.blur();
   };
+
+  React.useEffect(() => {
+    if (activeMobileTab === "watchlist") {
+      setActiveMobileTab("chart");
+    }
+  }, [activeMobileTab, setActiveMobileTab]);
 
   const {
     isScaledDesktopMode,
@@ -231,14 +236,11 @@ export default function Home() {
                 <MobilePanels
                   showMobileLayout={showMobileLayout}
                   activeMobileTab={activeMobileTab}
-                  isMobileWatchlistAddMode={isMobileWatchlistAddMode}
-                  setIsMobileWatchlistAddMode={setIsMobileWatchlistAddMode}
                   isInputFocused={isInputFocused}
                   handleClosePanel={handleClosePanel}
                   handleScroll={handleScroll}
                   setActiveMobileTab={setActiveMobileTab}
                   panelTouchStartYRef={panelTouchStartYRef}
-                  MarketList={MarketList}
                   Terminal={Terminal}
                   StrategyPanel={StrategyPanel}
                   MobileMenu={MobileMenu}

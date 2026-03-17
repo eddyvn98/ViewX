@@ -12,18 +12,37 @@ export function MobileMenu() {
 
     React.useEffect(() => {
         if (typeof window === "undefined") return;
-        const raw = localStorage.getItem("auth_user") || "";
-        const token = (localStorage.getItem("auth_access_token") || "").trim();
-        setIsAuthenticated(Boolean(token));
-        if (!raw) return;
-        try {
-            const parsed = JSON.parse(raw);
-            const email = String(parsed?.username || "").trim() || "guest@vivutrade.io.vn";
-            const name = String(parsed?.display_name || "").trim() || email.split("@")[0] || "Guest";
-            setUser((prev) => ({ ...prev, name, email }));
-        } catch {
-            // Keep default guest profile.
-        }
+        const applyUser = () => {
+            const raw = localStorage.getItem("auth_user") || "";
+            const token = (localStorage.getItem("auth_access_token") || "").trim();
+            setIsAuthenticated(Boolean(token));
+            if (!raw) {
+                setUser((prev) => ({ ...prev, name: "Guest", email: "guest@vivutrade.io.vn" }));
+                return;
+            }
+            try {
+                const parsed = JSON.parse(raw);
+                const email = String(parsed?.username || "").trim() || "guest@vivutrade.io.vn";
+                const name = String(parsed?.display_name || "").trim() || email.split("@")[0] || "Guest";
+                setUser((prev) => ({ ...prev, name, email }));
+            } catch {
+                setUser((prev) => ({ ...prev, name: "Guest", email: "guest@vivutrade.io.vn" }));
+            }
+        };
+
+        applyUser();
+        window.addEventListener("storage", applyUser);
+        window.addEventListener("focus", applyUser);
+        window.addEventListener("auth-changed", applyUser);
+        window.addEventListener("auth-state-changed", applyUser);
+        document.addEventListener("visibilitychange", applyUser);
+        return () => {
+            window.removeEventListener("storage", applyUser);
+            window.removeEventListener("focus", applyUser);
+            window.removeEventListener("auth-changed", applyUser);
+            window.removeEventListener("auth-state-changed", applyUser);
+            document.removeEventListener("visibilitychange", applyUser);
+        };
     }, []);
 
     const handleLogout = React.useCallback(async () => {

@@ -5,19 +5,20 @@ import { findSnapPoint } from '../../utils/snap-utils';
 import { Candle } from '@/lib/store/types';
 import { distanceToSegment } from '../../utils/geometry-utils';
 import { useMarketStore } from '@/lib/store';
+import { DrawingConfig, DrawingPoint } from '@/lib/store/types';
 
 interface DragArgs {
     chartId: string;
     chart: IChartApi;
-    series: ISeriesApi<any>;
+    series: ISeriesApi<'Candlestick'>;
     containerRef: React.RefObject<HTMLDivElement | null>;
     isDrawing: boolean;
     selectedDrawingId: string | null;
-    chartDrawings: any[];
-    primitivesRef?: React.MutableRefObject<Record<string, any>>;
+    chartDrawings: DrawingConfig[];
+    primitivesRef?: React.MutableRefObject<Record<string, unknown>>;
     candles: Candle[];
     snapToCandle: boolean;
-    updateDrawing: (chartId: string, drawingId: string, changes: any) => void;
+    updateDrawing: (chartId: string, drawingId: string, changes: Partial<DrawingConfig>) => void;
 }
 
 export function createDrawingDragHandlers(args: DragArgs) {
@@ -31,8 +32,8 @@ export function createDrawingDragHandlers(args: DragArgs) {
         draggedPointIndex: -1,
         draggedDrawingId: null as string | null,
         dragStartPos: null as { x: number; y: number } | null,
-        dragStartPoints: null as { time: number; price: number }[] | null,
-        draggedFinalPoints: null as { time: number; price: number }[] | null,
+        dragStartPoints: null as DrawingPoint[] | null,
+        draggedFinalPoints: null as DrawingPoint[] | null,
         lastLogicalDelta: 0,
         lastPriceDelta: 0,
     };
@@ -140,6 +141,7 @@ export function createDrawingDragHandlers(args: DragArgs) {
 
         if (hitDrawingId) {
             const drawing = chartDrawings.find(d => d.id === hitDrawingId);
+            if (!drawing) return;
             state.isDragging = true;
             state.isDraggingBody = true;
             state.draggedDrawingId = hitDrawingId;
@@ -171,6 +173,7 @@ export function createDrawingDragHandlers(args: DragArgs) {
         const drawing = chartDrawings.find(d => d.id === drawingId);
         const primitive = primitivesRef?.current?.[drawingId];
         if (!drawing || !primitive) return;
+        const primitiveUpdater = primitive as { update: (payload: Record<string, unknown>) => void };
 
         if (state.isDraggingBody) {
             if (!state.dragStartPos || !state.dragStartPoints) return;
@@ -191,7 +194,7 @@ export function createDrawingDragHandlers(args: DragArgs) {
                     if (pLogical === null) return p;
 
                     const movedLogical = pLogical + logicalDelta;
-                    const movedTime = (timeScale as any).logicalToTime(movedLogical);
+                    const movedTime = (timeScale as { logicalToTime?: (logical: number) => Time | null }).logicalToTime?.(movedLogical);
 
                     return {
                         time: movedTime ? toSec(movedTime) : p.time,
@@ -202,9 +205,9 @@ export function createDrawingDragHandlers(args: DragArgs) {
                 state.draggedFinalPoints = newPoints;
                 if (drawing.type.startsWith('fib-')) {
                     const levels = calculateFibLevels(drawing.type, newPoints, drawing.params, drawing.color);
-                    primitive.update({ points: newPoints, type: drawing.type as any, levels, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
+                    primitiveUpdater.update({ points: newPoints, type: drawing.type, levels, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
                 } else {
-                    primitive.update({ points: newPoints, type: drawing.type as any, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
+                    primitiveUpdater.update({ points: newPoints, type: drawing.type, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
                 }
             }
         } else {
@@ -223,9 +226,9 @@ export function createDrawingDragHandlers(args: DragArgs) {
 
                 if (drawing.type.startsWith('fib-')) {
                     const levels = calculateFibLevels(drawing.type, newPoints, drawing.params, drawing.color);
-                    primitive.update({ points: newPoints, type: drawing.type as any, levels, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
+                    primitiveUpdater.update({ points: newPoints, type: drawing.type, levels, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
                 } else {
-                    primitive.update({ points: newPoints, type: drawing.type as any, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
+                    primitiveUpdater.update({ points: newPoints, type: drawing.type, color: drawing.color, lineWidth: drawing.lineWidth, lineStyle: drawing.lineStyle, selected: true });
                 }
             }
         }

@@ -1,6 +1,7 @@
-import { IChartApi, ISeriesApi, LineSeries, AreaSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateIchimoku } from '../utils/indicator-math';
+import { IchimokuResult } from '../utils/indicators/ichimoku';
 
 export class IchimokuIndicator {
     private tenkanSeries: ISeriesApi<"Line"> | null = null;
@@ -8,25 +9,29 @@ export class IchimokuIndicator {
     private spanASeries: ISeriesApi<"Line"> | null = null;
     private spanBSeries: ISeriesApi<"Line"> | null = null;
     private chikouSeries: ISeriesApi<"Line"> | null = null;
-    private cloudSeries: ISeriesApi<"Area"> | null = null; // Lightweight charts Area handles spans well, but cloud is tricky without custom primitive.
-    // For now, we use standard series. Fills between Spans might require a custom primitive for best result.
-    // However, we can use an AreaSeries for Span A vs Span B if we only want one color.
-    // Better: use multiple series.
-
     constructor(
         private chart: IChartApi,
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: any) {
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getNumberParam(key: string, fallback: number): number {
+        const value = this.config.params[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: IchimokuResult) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const tenkanColor = styles.tenkanLine || '#2196F3';
-        const kijunColor = styles.kijunLine || '#FF6D00';
-        const spanAColor = styles.spanALine || '#26a69a';
-        const spanBColor = styles.spanBLine || '#ef5350';
-        const chikouColor = styles.chikouLine || '#9c27b0';
+        const tenkanColor = this.getStyleString('tenkanLine', '#2196F3');
+        const kijunColor = this.getStyleString('kijunLine', '#FF6D00');
+        const spanAColor = this.getStyleString('spanALine', '#26a69a');
+        const spanBColor = this.getStyleString('spanBLine', '#ef5350');
+        const chikouColor = this.getStyleString('chikouLine', '#9c27b0');
 
         if (!this.tenkanSeries) {
             this.tenkanSeries = this.chart.addSeries(LineSeries, { color: tenkanColor, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: this.config.visible });
@@ -44,10 +49,10 @@ export class IchimokuIndicator {
 
         const res = calculatedValues || calculateIchimoku(
             candles,
-            this.config.params.tenkan || 9,
-            this.config.params.kijun || 26,
-            this.config.params.spanB || 52,
-            this.config.params.displacement || 26
+            this.getNumberParam('tenkan', 9),
+            this.getNumberParam('kijun', 26),
+            this.getNumberParam('spanB', 52),
+            this.getNumberParam('displacement', 26)
         );
 
         const tData = [];
@@ -57,8 +62,8 @@ export class IchimokuIndicator {
         const cData = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
-            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
+            const rawTime = Number(candles[i].time);
+            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as Time;
 
             if (!isNaN(res.tenkan[i])) tData.push({ time, value: res.tenkan[i] });
             if (!isNaN(res.kijun[i])) kData.push({ time, value: res.kijun[i] });
@@ -82,23 +87,24 @@ export class IchimokuIndicator {
 
         const res = calculateIchimoku(
             prices,
-            this.config.params.tenkan || 9,
-            this.config.params.kijun || 26,
-            this.config.params.spanB || 52,
-            this.config.params.displacement || 26
+            this.getNumberParam('tenkan', 9),
+            this.getNumberParam('kijun', 26),
+            this.getNumberParam('spanB', 52),
+            this.getNumberParam('displacement', 26)
         );
 
         const lastIdx = res.tenkan.length - 1;
-        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+        const rawTime = Number(candle.time);
         const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
 
         try {
-            if (!isNaN(res.tenkan[lastIdx])) this.tenkanSeries.update({ time: candleTime as any, value: res.tenkan[lastIdx] });
-            if (!isNaN(res.kijun[lastIdx])) this.kijunSeries!.update({ time: candleTime as any, value: res.kijun[lastIdx] });
-            if (!isNaN(res.spanA[lastIdx])) this.spanASeries!.update({ time: candleTime as any, value: res.spanA[lastIdx] });
-            if (!isNaN(res.spanB[lastIdx])) this.spanBSeries!.update({ time: candleTime as any, value: res.spanB[lastIdx] });
-            if (!isNaN(res.chikou[lastIdx])) this.chikouSeries!.update({ time: candleTime as any, value: res.chikou[lastIdx] });
-        } catch (err) { }
+            const t = candleTime as Time;
+            if (!isNaN(res.tenkan[lastIdx])) this.tenkanSeries.update({ time: t, value: res.tenkan[lastIdx] });
+            if (!isNaN(res.kijun[lastIdx])) this.kijunSeries!.update({ time: t, value: res.kijun[lastIdx] });
+            if (!isNaN(res.spanA[lastIdx])) this.spanASeries!.update({ time: t, value: res.spanA[lastIdx] });
+            if (!isNaN(res.spanB[lastIdx])) this.spanBSeries!.update({ time: t, value: res.spanB[lastIdx] });
+            if (!isNaN(res.chikou[lastIdx])) this.chikouSeries!.update({ time: t, value: res.chikou[lastIdx] });
+        } catch { }
     }
 
     destroy() {

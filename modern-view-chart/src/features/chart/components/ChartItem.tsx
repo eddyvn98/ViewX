@@ -27,7 +27,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
         if (!containerRef.current) return;
 
         const observer = new ResizeObserver((entries) => {
-            for (let entry of entries) {
+            for (const entry of entries) {
                 // Determine if width is narrow (e.g., < 450px)
                 setIsNarrow(entry.contentRect.width < 450);
             }
@@ -60,7 +60,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                const groups: any = { 'none': 'A', 'A': 'B', 'B': 'C', 'C': 'D', 'D': 'none' };
+                                const groups: Record<'none' | 'A' | 'B' | 'C' | 'D', 'none' | 'A' | 'B' | 'C' | 'D'> = { 'none': 'A', 'A': 'B', 'B': 'C', 'C': 'D', 'D': 'none' };
                                 updateChart(chart.id, { group: groups[chart.group || 'none'] });
                             }}
                             className={cn(

@@ -1,4 +1,4 @@
-import { ConditionGroup, StrategyDirection, StrategyRisk, SLTPConfig, PositionMode } from '../types';
+import { Condition, ConditionGroup, StrategyDirection, StrategyRisk, SLTPConfig, PositionMode } from '../types';
 import { useTranslations } from 'next-intl';
 
 interface StrategyPreviewProps {
@@ -20,11 +20,13 @@ function formatComparator(op: string): string {
 function summarizeGroup(group?: ConditionGroup): string[] {
     if (!group || group.conditions.length === 0) return [];
     return group.conditions
-        .filter((c) => !('operator' in c))
-        .map((c: any) => `${c.left?.type || 'Rule'} (${c.left?.params?.[0] ?? '-'}) ${formatComparator(c.comparator)} ${typeof c.right === 'number' ? c.right : 'value'}`);
+        .filter((c): c is Condition => !('operator' in c))
+        .map((c) => `${c.left?.type || 'Rule'} (${c.left?.params?.[0] ?? '-'}) ${formatComparator(c.comparator)} ${typeof c.right === 'number' ? c.right : 'value'}`);
 }
 
-function formatOffset(offset: number | undefined, t: any): string {
+type Translator = (key: string) => string;
+
+function formatOffset(offset: number | undefined, t: Translator): string {
     const val = offset ?? 0;
     if (val === 0) return t('builder.candle'); // Or 'Signal' from prev, let's keep Signal logic but translate
     // We'll use specific keys if needed, but for now let's keep logic simple
@@ -33,7 +35,7 @@ function formatOffset(offset: number | undefined, t: any): string {
     return `${val} ago`;
 }
 
-function summarizeSL(risk: StrategyRisk, t: any): string {
+function summarizeSL(risk: StrategyRisk, t: Translator): string {
     if (!risk.sl) return t('preview.disabled');
     if (typeof risk.sl === 'number') return `${risk.sl} pts`;
     if (risk.sl.mode === 'candle') return `${t('builder.candle')} ${risk.sl.candleField || 'low'} (${formatOffset(risk.sl.candleOffset, t)})`;
@@ -41,7 +43,7 @@ function summarizeSL(risk: StrategyRisk, t: any): string {
     return risk.sl.mode;
 }
 
-function summarizeTP(risk: StrategyRisk, t: any): string {
+function summarizeTP(risk: StrategyRisk, t: Translator): string {
     if (risk.trailing) return t('preview.trailing');
     if (!risk.tp) return t('preview.disabled');
     if (typeof risk.tp === 'number') return `${risk.tp} pts`;
@@ -50,7 +52,7 @@ function summarizeTP(risk: StrategyRisk, t: any): string {
     return risk.tp.mode;
 }
 
-function summarizeEntryPrice(entryPrice: SLTPConfig | undefined, direction: StrategyDirection | undefined, t: any): string {
+function summarizeEntryPrice(entryPrice: SLTPConfig | undefined, direction: StrategyDirection | undefined, t: Translator): string {
     if (!entryPrice) {
         if (!direction) return 'Auto';
         return `${t('builder.candle')} ${direction === 'BUY' ? 'high' : 'low'} (Signal) + 0`;
@@ -60,7 +62,7 @@ function summarizeEntryPrice(entryPrice: SLTPConfig | undefined, direction: Stra
     return entryPrice.mode;
 }
 
-function summarizeLot(risk: StrategyRisk, t: any): string {
+function summarizeLot(risk: StrategyRisk, t: Translator): string {
     if (typeof risk.lotSize === 'number') return `${risk.lotSize} ${t('builder.volume')}`; // Lot/Volume
     const unit = risk.lotSize.mode === 'fixed' ? 'Lot' : (risk.lotSize.mode === 'percentage' ? '%' : '$');
     return `${risk.lotSize.value} ${unit}`;

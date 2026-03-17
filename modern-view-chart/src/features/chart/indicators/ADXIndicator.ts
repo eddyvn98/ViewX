@@ -1,6 +1,7 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateADX } from '../utils/indicator-math';
+import { ADXResult } from '../utils/indicators/adx';
 
 export class ADXIndicator {
     private adxSeries: ISeriesApi<"Line"> | null = null;
@@ -12,19 +13,33 @@ export class ADXIndicator {
         private config: IndicatorConfig
     ) { }
 
-    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: any) {
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getStyleNumber(key: string, fallback: number): number {
+        const value = this.config.styles?.[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getPeriod(defaultPeriod: number): number {
+        const value = this.config.params.period;
+        return typeof value === 'number' && Number.isFinite(value) ? value : defaultPeriod;
+    }
+
+    update(candles: Candle[], config: IndicatorConfig, calculatedValues?: ADXResult) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const adxColor = styles.adxLine || '#FFB74D';
-        const plusColor = styles.plusDI || '#26a69a';
-        const minusColor = styles.minusDI || '#ef5350';
-        const lineWidth = styles.width || 2;
+        const adxColor = this.getStyleString('adxLine', '#FFB74D');
+        const plusColor = this.getStyleString('plusDI', '#26a69a');
+        const minusColor = this.getStyleString('minusDI', '#ef5350');
+        const lineWidth = this.getStyleNumber('width', 2) as 1 | 2 | 3 | 4;
 
         if (!this.adxSeries) {
             this.adxSeries = this.chart.addSeries(LineSeries, {
                 color: adxColor,
-                lineWidth: lineWidth as any,
+                lineWidth,
                 priceScaleId: 'right',
                 visible: this.config.visible,
                 lastValueVisible: true,
@@ -55,24 +70,25 @@ export class ADXIndicator {
                 crosshairMarkerVisible: false,
             });
         } else {
-            this.adxSeries.applyOptions({ color: adxColor, lineWidth: lineWidth as any, visible: this.config.visible });
+            this.adxSeries.applyOptions({ color: adxColor, lineWidth, visible: this.config.visible });
             this.plusSeries!.applyOptions({ color: plusColor, visible: this.config.visible });
             this.minusSeries!.applyOptions({ color: minusColor, visible: this.config.visible });
         }
 
-        const res = calculatedValues || calculateADX(candles, this.config.params.period || 14);
+        const res = calculatedValues || calculateADX(candles, this.getPeriod(14));
 
         const adxData = [];
         const plusData = [];
         const minusData = [];
 
         for (let i = 0; i < candles.length; i++) {
-            const rawTime = (typeof candles[i].time === 'object' ? (candles[i].time as any).timestamp : Number(candles[i].time));
-            const time = (rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime) as any;
+            const rawTime = Number(candles[i].time);
+            const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
 
-            if (!isNaN(res.adx[i])) adxData.push({ time, value: res.adx[i] });
-            if (!isNaN(res.plusDI[i])) plusData.push({ time, value: res.plusDI[i] });
-            if (!isNaN(res.minusDI[i])) minusData.push({ time, value: res.minusDI[i] });
+            const t = time as Time;
+            if (!isNaN(res.adx[i])) adxData.push({ time: t, value: res.adx[i] });
+            if (!isNaN(res.plusDI[i])) plusData.push({ time: t, value: res.plusDI[i] });
+            if (!isNaN(res.minusDI[i])) minusData.push({ time: t, value: res.minusDI[i] });
         }
 
         this.adxSeries.setData(adxData);
@@ -86,16 +102,17 @@ export class ADXIndicator {
         const prices = [...candles];
         prices[prices.length - 1] = candle;
 
-        const res = calculateADX(prices, this.config.params.period || 14);
+        const res = calculateADX(prices, this.getPeriod(14));
         const lastIdx = res.adx.length - 1;
-        const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+        const rawTime = Number(candle.time);
         const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
 
         try {
-            if (!isNaN(res.adx[lastIdx])) this.adxSeries.update({ time: candleTime as any, value: res.adx[lastIdx] });
-            if (!isNaN(res.plusDI[lastIdx])) this.plusSeries!.update({ time: candleTime as any, value: res.plusDI[lastIdx] });
-            if (!isNaN(res.minusDI[lastIdx])) this.minusSeries!.update({ time: candleTime as any, value: res.minusDI[lastIdx] });
-        } catch (err) { }
+            const t = candleTime as Time;
+            if (!isNaN(res.adx[lastIdx])) this.adxSeries.update({ time: t, value: res.adx[lastIdx] });
+            if (!isNaN(res.plusDI[lastIdx])) this.plusSeries!.update({ time: t, value: res.plusDI[lastIdx] });
+            if (!isNaN(res.minusDI[lastIdx])) this.minusSeries!.update({ time: t, value: res.minusDI[lastIdx] });
+        } catch { }
     }
 
     destroy() {

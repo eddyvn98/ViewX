@@ -1,5 +1,5 @@
 import { Candle } from '@/lib/store/types';
-import { Strategy, VirtualPosition } from '../types';
+import { ConditionGroup, Strategy, VirtualPosition } from '../types';
 import { BacktestEngine } from './backtest/BacktestEngine';
 import { SignalEvaluator } from './backtest/SignalEvaluator';
 
@@ -15,7 +15,7 @@ export class BacktestRunner {
     /**
      * @deprecated Use SignalEvaluator.evaluate directly if possible
      */
-    static evaluateGroup(group: any, index: number, indicators: Record<string, number[]>): boolean {
+    static evaluateGroup(group: ConditionGroup | undefined, index: number, indicators: Record<string, number[]>): boolean {
         return SignalEvaluator.evaluate(group, index, indicators);
     }
 }

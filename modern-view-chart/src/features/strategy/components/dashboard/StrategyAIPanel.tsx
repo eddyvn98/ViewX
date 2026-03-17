@@ -1,37 +1,21 @@
 import React, { useState } from 'react';
 import { PerformanceMetrics } from '../../logic/PerformanceAnalyzer';
-import { Sparkles, BrainCircuit, Lightbulb, Target, TrendingUp, Zap, Loader2, BarChart2 } from 'lucide-react';
+import { Sparkles, BrainCircuit, Target, Zap, Loader2 } from 'lucide-react';
 
 interface Props {
     metrics: PerformanceMetrics;
 }
 
 export function StrategyAIPanel({ metrics }: Props) {
+    const aiEnabled = false;
     const [isLoading, setIsLoading] = useState(false);
     const [analysis, setAnalysis] = useState<string | null>(null);
 
     const bestSession = Object.entries(metrics.sessionStats).sort((a, b) => b[1].winRate - a[1].winRate)[0];
     const avgConfidence = metrics.avgConfidence || 0;
 
-    const generateMacroPrompt = () => {
-
-        return `
-            Bot Systematic Performance Audit:
-            - Net Profit: $${metrics.netProfit.toFixed(2)}
-            - Win Rate: ${metrics.winRate.toFixed(1)}%
-            - Profit Factor: ${metrics.profitFactor.toFixed(2)}
-            - Logic Heat (Avg MAE): ${metrics.avgMae.toFixed(2)} pips
-            - Capture Ratio (Avg MFE): ${metrics.avgMfe.toFixed(2)} pips
-            - Optimal Session: ${bestSession ? `${bestSession[0]}` : 'N/A'}
-            
-            Optimization Audit:
-            1. Is the entry logic statistically premature (MAE too high)?
-            2. Is the Exit engine failing to lock in profit (Efficiency gap)?
-            3. Should we disable the bot during specific low-winrate sessions?
-        `;
-    };
-
     const handleMacroAnalyze = async () => {
+        if (!aiEnabled) return;
         setIsLoading(true);
         setTimeout(() => {
             let mockAnalysis = "";
@@ -68,7 +52,8 @@ export function StrategyAIPanel({ metrics }: Props) {
                     {!analysis && !isLoading && (
                         <button
                             onClick={handleMacroAnalyze}
-                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all shadow-lg shadow-blue-500/25 active:scale-95 group"
+                            disabled={!aiEnabled}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all shadow-lg shadow-blue-500/25 active:scale-95 group disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <Sparkles size={14} className="group-hover:animate-pulse" />
                             Perform System Audit
@@ -96,7 +81,7 @@ export function StrategyAIPanel({ metrics }: Props) {
                                 <div className="flex flex-col gap-1">
                                     <span className="text-[10px] font-black text-muted-foreground uppercase">System Strength</span>
                                     <p className="text-[11px] text-foreground/80 leading-relaxed italic">
-                                        "{analysis}"
+                                        &quot;{analysis}&quot;
                                     </p>
                                 </div>
                             </div>
@@ -126,7 +111,7 @@ export function StrategyAIPanel({ metrics }: Props) {
                                 onClick={() => setAnalysis(null)}
                                 className="text-[10px] font-black text-muted-foreground hover:text-blue-500 uppercase tracking-widest transition-colors flex items-center gap-2"
                             >
-                                <RefreshCcw size={12} />
+                                <RefreshCcw width={12} height={12} />
                                 Recalculate with New Data
                             </button>
                         </div>
@@ -155,7 +140,7 @@ function MacroChip({ label, value, color }: { label: string; value: string; colo
     );
 }
 
-function RefreshCcw(props: any) {
+function RefreshCcw(props: React.SVGProps<SVGSVGElement>) {
     return (
         <svg
             {...props}
@@ -176,3 +161,4 @@ function RefreshCcw(props: any) {
         </svg>
     )
 }
+

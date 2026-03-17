@@ -14,6 +14,8 @@ const themes = [
     { id: 'amber', color: 'bg-amber-500', label: 'Thổ (Earth)' },
 ] as const;
 
+type ThemeId = (typeof themes)[number]['id'];
+
 export function ThemeColorSwitcher() {
     const [isOpen, setIsOpen] = useState(false);
     const themeColor = useMarketStore(state => state.themeColor);
@@ -22,8 +24,9 @@ export function ThemeColorSwitcher() {
 
     // Initial load sync
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme-color') as any;
-        if (savedTheme && themes.some(t => t.id === savedTheme)) {
+        const savedTheme = localStorage.getItem('theme-color');
+        const isThemeId = (value: string): value is ThemeId => themes.some((theme) => theme.id === value);
+        if (savedTheme && isThemeId(savedTheme)) {
             setThemeColor(savedTheme);
         }
     }, [setThemeColor]);

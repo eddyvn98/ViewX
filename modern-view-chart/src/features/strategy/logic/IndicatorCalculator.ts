@@ -1,6 +1,13 @@
 import { Candle } from '@/lib/store/types';
-import { calculateEMA, calculateSMA, calculateRSI, calculateMACD, calculateHullMA, calculateHeikinAshi, calculateATR, calculateSuperTrend, calculateVWAP, calculateIchimoku, calculateADX, calculateOrderBlocks, calculateFVG } from '../../chart/utils/indicator-math';
+import { calculateEMA, calculateSMA, calculateRSI, calculateMACD, calculateHullMA, calculateHeikinAshi, calculateATR, calculateSuperTrend, calculateVWAP, calculateIchimoku, calculateADX } from '../../chart/utils/indicator-math';
 import { Indicator } from '../types';
+
+type HACandleResult = {
+    ha_open: number;
+    ha_high: number;
+    ha_low: number;
+    ha_close: number;
+};
 
 export class IndicatorCalculator {
     static getValues(indicator: Indicator, candles: Candle[]): number[] {
@@ -16,11 +23,11 @@ export class IndicatorCalculator {
             case "HMA":
                 return calculateHullMA(prices, indicator.params[0] || 25);
             case "HA": {
-                const results = calculateHeikinAshi(candles);
-                if (indicator.field === "open") return results.map((r: any) => r.ha_open);
-                if (indicator.field === "high") return results.map((r: any) => r.ha_high);
-                if (indicator.field === "low") return results.map((r: any) => r.ha_low);
-                return results.map((r: any) => r.ha_close);
+                const results = calculateHeikinAshi(candles) as HACandleResult[];
+                if (indicator.field === "open") return results.map((r) => r.ha_open);
+                if (indicator.field === "high") return results.map((r) => r.ha_high);
+                if (indicator.field === "low") return results.map((r) => r.ha_low);
+                return results.map((r) => r.ha_close);
             }
             case "MACD": {
                 const result = calculateMACD(

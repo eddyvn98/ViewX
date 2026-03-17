@@ -1,4 +1,4 @@
-import { IChartApi, ISeriesApi, LineSeries } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateATR } from '../utils/indicator-math';
 import { safeRemoveSeries } from './utils/safe-remove-series';
@@ -11,17 +11,31 @@ export class ATRIndicator {
         private config: IndicatorConfig
     ) { }
 
+    private getStyleString(key: string, fallback: string): string {
+        const value = this.config.styles?.[key];
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    private getStyleNumber(key: string, fallback: number): number {
+        const value = this.config.styles?.[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    private getPeriod(defaultPeriod: number): number {
+        const value = this.config.params.period;
+        return typeof value === 'number' && Number.isFinite(value) ? value : defaultPeriod;
+    }
+
     update(candles: Candle[], config: IndicatorConfig, calculatedValues?: number[]) {
         this.config = config;
 
-        const styles = this.config.styles || {};
-        const lineColor = styles.line || this.config.color || '#f06292';
-        const lineWidth = styles.width || this.config.lineWidth || 2;
+        const lineColor = this.getStyleString('line', this.config.color || '#f06292');
+        const lineWidth = this.getStyleNumber('width', this.config.lineWidth || 2) as 1 | 2 | 3 | 4;
 
         if (!this.series) {
             this.series = this.chart.addSeries(LineSeries, {
                 color: lineColor,
-                lineWidth: lineWidth as any,
+                lineWidth,
                 priceScaleId: 'right',
                 visible: this.config.visible,
                 lastValueVisible: true,
@@ -31,46 +45,46 @@ export class ATRIndicator {
         } else {
             this.series.applyOptions({
                 color: lineColor,
-                lineWidth: lineWidth as any,
+                lineWidth,
                 visible: this.config.visible,
             });
         }
 
-        const atrValues = calculatedValues || calculateATR(candles, this.config.params.period || 14);
+        const atrValues = calculatedValues || calculateATR(candles, this.getPeriod(14));
 
         const data = candles.map((c, i) => {
-            const rawTime = (typeof c.time === 'object' ? (c.time as any).timestamp : Number(c.time));
+            const rawTime = Number(c.time);
             const time = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             return {
-                time: time as any,
+                time: time as Time,
                 value: atrValues[i]
             };
         }).filter(d => !isNaN(d.value));
 
-        this.series.setData(data as any);
+        this.series.setData(data);
     }
 
     updateLastPoint(candle: Candle, candles: Candle[]) {
         if (!this.series || !this.config.visible) return;
 
         // Ensure we have enough data
-        if (candles.length < (this.config.params.period || 14)) return;
+        if (candles.length < this.getPeriod(14)) return;
 
         const prices = [...candles];
         prices[prices.length - 1] = candle;
 
-        const atrValues = calculateATR(prices, this.config.params.period || 14);
+        const atrValues = calculateATR(prices, this.getPeriod(14));
         const lastVal = atrValues[atrValues.length - 1];
 
         if (!isNaN(lastVal)) {
-            const rawTime = typeof candle.time === 'object' ? (candle.time as any).timestamp : Number(candle.time);
+            const rawTime = Number(candle.time);
             const candleTime = rawTime > 10000000000 ? Math.floor(rawTime / 1000) : rawTime;
             try {
                 this.series.update({
-                    time: candleTime as any,
+                    time: candleTime as Time,
                     value: lastVal
                 });
-            } catch (err) { }
+            } catch { }
         }
     }
 

@@ -1,5 +1,4 @@
-
-import { Candle } from '@/lib/store/types';
+import type { Condition } from '../types';
 
 /**
  * BacktestEvaluator
@@ -7,7 +6,7 @@ import { Candle } from '@/lib/store/types';
  * Instead of calculating indicators on the fly, it expects pre-calculated arrays of values.
  */
 export class BacktestEvaluator {
-    static evaluate(condition: any, index: number, indicatorValues: Record<string, number[]>): boolean {
+    static evaluate(condition: Condition, index: number, indicatorValues: Record<string, number[]>): boolean {
         const { left, comparator, right } = condition;
 
         // Construct key for pre-calculated values (e.g., "RSI-14")
