@@ -1,4 +1,5 @@
 import { calculateEMA, calculateRSI, calculateHullMA, calculateMACD, calculateSMA, calculateWMA } from '../utils/indicator-math';
+import { calculateStochastic } from '../utils/indicators/stochastic';
 
 export interface IndicatorCache {
     type: string;
@@ -6,7 +7,7 @@ export interface IndicatorCache {
     period: number;
     color: string;
     pane: string;
-    results: number[] | { macd: number[]; signal: number[]; histogram: number[] };
+    results: number[] | Record<string, number[]>;
     params?: any;
 }
 
@@ -31,6 +32,15 @@ export const calculateIndicators = (candles: any[], indicators: any[]): Indicato
                     case 'MACD': {
                         const { fast = 12, slow = 26, signal = 9 } = config.params || {};
                         results = calculateMACD(prices, Number(fast), Number(slow), Number(signal));
+                        break;
+                    }
+                    case 'Stochastic':
+                    case 'STOCHASTIC': {
+                        const { periodK = 14, smoothK = 3, periodD = 3 } = config.params || {};
+                        const high = candles.map(c => Number(c.high));
+                        const low = candles.map(c => Number(c.low));
+                        const close = candles.map(c => Number(c.close));
+                        results = calculateStochastic(high, low, close, Number(periodK), Number(smoothK), Number(periodD));
                         break;
                     }
                 }

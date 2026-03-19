@@ -18,7 +18,7 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
         indicators.filter(i => i.pane === 'subchart'),
         [indicators]);
 
-    const toggleIndicatorVisibility = useMarketStore(state => state.toggleIndicatorVisibility);
+    const updateIndicator = useMarketStore(state => state.updateIndicator);
 
     if (subchartIndicators.length === 0) return null;
 
@@ -31,11 +31,11 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
 
         // Hide current if exists
         if (visibleInd) {
-            toggleIndicatorVisibility(chartId, visibleInd.id);
+            updateIndicator(chartId, visibleInd.id, { visible: false });
         }
 
         // Show new one
-        toggleIndicatorVisibility(chartId, targetId);
+        updateIndicator(chartId, targetId, { visible: true });
     };
 
     return (

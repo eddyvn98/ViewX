@@ -2,9 +2,11 @@ import { StateCreator } from 'zustand';
 import { RootState } from '../index';
 import { IndicatorConfig } from '../types';
 import { INDICATOR_REGISTRY } from '../../../features/chart/indicators/registry';
+import { IndicatorCache } from '../../../features/chart/logic/indicator-calculations';
 
 export interface IndicatorSlice {
     chartIndicators: Record<string, IndicatorConfig[]>;
+    chartIndicatorRuntime: Record<string, IndicatorCache[]>;
     activeIndicatorId: string | null;
 
     addIndicator: (chartId: string, indicator: Omit<IndicatorConfig, 'id'>) => void;
@@ -12,6 +14,8 @@ export interface IndicatorSlice {
     removeIndicator: (chartId: string, indicatorId: string) => void;
     updateIndicator: (chartId: string, indicatorId: string, updates: Partial<IndicatorConfig>) => void;
     toggleIndicatorVisibility: (chartId: string, indicatorId: string) => void;
+    setChartIndicatorRuntime: (chartId: string, indicators: IndicatorCache[]) => void;
+    clearChartIndicatorRuntime: (chartId: string) => void;
     setActiveIndicatorId: (id: string | null) => void;
 }
 
@@ -27,6 +31,7 @@ const INDICATOR_COLORS = [
 
 export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlice> = (set) => ({
     chartIndicators: {},
+    chartIndicatorRuntime: {},
     activeIndicatorId: null,
 
     addIndicator: (chartId, indicator) => set((state) => {
@@ -146,6 +151,19 @@ export const createIndicatorSlice: StateCreator<RootState, [], [], IndicatorSlic
                 [chartId]: currentIndicators.map(i => i.id === indicatorId ? { ...i, visible: !i.visible } : i)
             }
         };
+    }),
+
+    setChartIndicatorRuntime: (chartId, indicators) => set((state) => ({
+        chartIndicatorRuntime: {
+            ...state.chartIndicatorRuntime,
+            [chartId]: indicators
+        }
+    })),
+
+    clearChartIndicatorRuntime: (chartId) => set((state) => {
+        const next = { ...state.chartIndicatorRuntime };
+        delete next[chartId];
+        return { chartIndicatorRuntime: next };
     }),
 
     setActiveIndicatorId: (id) => set({ activeIndicatorId: id }),

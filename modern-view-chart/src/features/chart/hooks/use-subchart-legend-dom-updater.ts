@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useMarketStore, Candle } from '@/lib/store';
-import { calculateIndicators, IndicatorCache } from '../logic/indicator-calculations';
+import { IndicatorCache, calculateIndicators } from '../logic/indicator-calculations';
 import { getIndicatorRefs, renderIndicators } from '../logic/legend-renderer';
 import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { IndicatorConfig } from '@/lib/store/types';
+import { buildLiveCandle } from './indicators/indicator-candle-utils';
 
 interface SubchartLegendDOMUpdaterProps {
     chartId: string;
@@ -18,7 +19,7 @@ interface SubchartLegendDOMUpdaterProps {
 
 function buildIndicatorSeeds(indicators: IndicatorConfig[]): IndicatorCache[] {
     return indicators
-        .filter((config) => config.visible)
+        .filter((config) => config.visible && config.pane === 'subchart')
         .map((config) => ({
             type: config.type,
             id: config.id,
@@ -36,64 +37,40 @@ export function useSubchartLegendDOMUpdater(
     containerRef: React.RefObject<HTMLDivElement | null>,
     { chartId, symbol, interval, source, candles }: SubchartLegendDOMUpdaterProps
 ) {
-    const indicatorCacheRef = useRef<IndicatorCache[]>([]);
-    const indicatorCacheLengthRef = useRef(0);
+    const indicatorRefsRef = useRef<Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>>(new Map());
     const crosshairRafRef = useRef<number | null>(null);
     const tickerRafRef = useRef<number | null>(null);
     const isCrosshairActiveRef = useRef(false);
-    const indicatorRefsRef = useRef<Map<string, { container: HTMLElement, value: HTMLElement, spans?: NodeListOf<HTMLSpanElement> }>>(new Map());
     const lastUpdateAtRef = useRef(0);
     const lastCrosshairTimeRef = useRef<number | null>(null);
 
-    const lastCalcLengthRef = useRef(0);
-    useEffect(() => {
-        if (!candles.length) return;
-
-        if (candles.length !== lastCalcLengthRef.current) {
-            const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
-            indicatorCacheRef.current = calculateIndicators(candles, indicators);
-            indicatorCacheLengthRef.current = candles.length;
-            if (containerRef.current) {
-                const refSource = indicatorCacheRef.current.length
-                    ? indicatorCacheRef.current
-                    : buildIndicatorSeeds(indicators);
-                indicatorRefsRef.current = getIndicatorRefs(containerRef.current, refSource);
-            }
-            lastCalcLengthRef.current = candles.length;
-        }
-    }, [candles, chartId, containerRef]);
-
     const getFreshCandles = useCallback(() => {
-        if (!symbol || !interval || !source) return [];
+        if (!symbol || !interval || !source) return candles || [];
         const normSym = normalizeSymbol(symbol);
         const key = `${source}:${normSym}:${interval}`;
-        return useMarketStore.getState().candleData[key] || [];
-    }, [symbol, interval, source]);
+        const storeCandles = useMarketStore.getState().candleData[key] || [];
+        return storeCandles.length > 0 ? storeCandles : (candles || []);
+    }, [symbol, interval, source, candles]);
+
+    const getRuntimeIndicators = useCallback(() => {
+        const runtime = useMarketStore.getState().chartIndicatorRuntime[chartId] || [];
+        if (runtime.length > 0) return runtime;
+        const configs = useMarketStore.getState().chartIndicators[chartId] || [];
+        return buildIndicatorSeeds(configs);
+    }, [chartId]);
 
     useEffect(() => {
         if (!containerRef.current || !symbol || !interval || !source) return;
 
         const container = containerRef.current;
-        const indicators = useMarketStore.getState().chartIndicators[chartId] || [];
-        const initialCandles = getFreshCandles();
-        indicatorCacheRef.current = calculateIndicators(initialCandles, indicators);
-        indicatorCacheLengthRef.current = initialCandles.length;
-        const initialRefSource = indicatorCacheRef.current.length
-            ? indicatorCacheRef.current
-            : buildIndicatorSeeds(indicators);
-        indicatorRefsRef.current = getIndicatorRefs(container, initialRefSource);
+        const normSym = normalizeSymbol(symbol);
+        const tickerKey = `${source}:${normSym}`;
+        const lastPosRef = { time: null as number | null, sourceId: null as string | null };
 
-        const getIndicatorsFor = (rawCandles: Candle[]) => {
-            if (rawCandles.length !== indicatorCacheLengthRef.current) {
-                const latestIndicators = useMarketStore.getState().chartIndicators[chartId] || [];
-                indicatorCacheRef.current = calculateIndicators(rawCandles, latestIndicators);
-                indicatorCacheLengthRef.current = rawCandles.length;
-                const refSource = indicatorCacheRef.current.length
-                    ? indicatorCacheRef.current
-                    : buildIndicatorSeeds(latestIndicators);
-                indicatorRefsRef.current = getIndicatorRefs(container, refSource);
-            }
-            return indicatorCacheRef.current;
+        const refreshRefs = () => {
+            const sourceIndicators = getRuntimeIndicators();
+            indicatorRefsRef.current = getIndicatorRefs(container, sourceIndicators);
+            return sourceIndicators;
         };
 
         const updateLegend = (
@@ -109,8 +86,21 @@ export function useSubchartLegendDOMUpdater(
             if (isLive && (now - lastUpdateAtRef.current < 32)) return;
             lastUpdateAtRef.current = now;
 
-            void currentPrice;
-            renderIndicators(activeIndex, currentIndicators, indicatorRefsRef.current, 'subchart');
+            let indicatorsToRender = currentIndicators;
+            const isLastCandle = activeIndex === currentRawCandles.length - 1;
+
+            // Keep instant feedback for the latest bar while still sharing baseline results from runtime cache.
+            if (isLive && isLastCandle && typeof currentPrice === 'number' && Number.isFinite(currentPrice)) {
+                const projected = [...currentRawCandles];
+                const baseLast = projected[projected.length - 1];
+                if (baseLast) {
+                    projected[projected.length - 1] = buildLiveCandle(baseLast, Number(currentPrice), interval);
+                    const latestConfigs = useMarketStore.getState().chartIndicators[chartId] || [];
+                    indicatorsToRender = calculateIndicators(projected, latestConfigs);
+                }
+            }
+
+            renderIndicators(activeIndex, indicatorsToRender, indicatorRefsRef.current, 'subchart');
         };
 
         const findCandleIndex = (targetTime: number, candlesArray: Candle[]): number => {
@@ -121,7 +111,6 @@ export function useSubchartLegendDOMUpdater(
             while (low <= high) {
                 const mid = (low + high) >> 1;
                 const midTime = toSec(candlesArray[mid].time);
-
                 if (midTime === target) return mid;
                 if (midTime < target) low = mid + 1;
                 else high = mid - 1;
@@ -129,17 +118,19 @@ export function useSubchartLegendDOMUpdater(
             return Math.max(0, Math.min(high, candlesArray.length - 1));
         };
 
-        const normSym = normalizeSymbol(symbol);
-        const tickerKey = `${source}:${normSym}`;
-        const lastPosRef = { time: null as number | null, sourceId: null as string | null };
+        const renderAtLatest = (price?: number) => {
+            const freshCandles = getFreshCandles();
+            const runtimeIndicators = refreshRefs();
+            updateLegend(freshCandles.length - 1, true, price, freshCandles, runtimeIndicators);
+        };
+
+        renderAtLatest(useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price);
 
         const handleCrosshair = (e: Event) => {
             const detail = (e as CustomEvent<{ time?: number; sourceId?: string }>).detail;
             const { time, sourceId } = detail || {};
 
-            if (sourceId === chartId && time) {
-                isCrosshairActiveRef.current = true;
-            }
+            if (sourceId === chartId && time) isCrosshairActiveRef.current = true;
 
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             crosshairRafRef.current = requestAnimationFrame(() => {
@@ -148,6 +139,7 @@ export function useSubchartLegendDOMUpdater(
                 lastPosRef.sourceId = sourceId ?? null;
 
                 const freshCandles = getFreshCandles();
+                const runtimeIndicators = refreshRefs();
 
                 if (!time || sourceId !== chartId) {
                     if (!isCrosshairActiveRef.current) return;
@@ -158,7 +150,7 @@ export function useSubchartLegendDOMUpdater(
                         true,
                         useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                         freshCandles,
-                        getIndicatorsFor(freshCandles)
+                        runtimeIndicators
                     );
                     return;
                 }
@@ -172,19 +164,10 @@ export function useSubchartLegendDOMUpdater(
                     isLastCandle,
                     isLastCandle ? (useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price) : undefined,
                     freshCandles,
-                    getIndicatorsFor(freshCandles)
+                    runtimeIndicators
                 );
             });
         };
-
-        const initialFresh = getFreshCandles();
-        updateLegend(
-            initialFresh.length - 1,
-            true,
-            useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
-            initialFresh,
-            getIndicatorsFor(initialFresh)
-        );
 
         window.addEventListener('chart-crosshair', handleCrosshair as EventListener);
 
@@ -195,35 +178,29 @@ export function useSubchartLegendDOMUpdater(
                 if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
                 tickerRafRef.current = requestAnimationFrame(() => {
                     if (isCrosshairActiveRef.current) return;
-                    const freshCandles = getFreshCandles();
-                    updateLegend(
-                        freshCandles.length - 1,
-                        true,
-                        price,
-                        freshCandles,
-                        getIndicatorsFor(freshCandles)
-                    );
+                    renderAtLatest(price);
                 });
+            }
+        );
+
+        const unsubRuntime = useMarketStore.subscribe(
+            state => state.chartIndicatorRuntime[chartId],
+            () => {
+                renderAtLatest(useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price);
             }
         );
 
         const unsubIndicators = useMarketStore.subscribe(
             state => state.chartIndicators[chartId],
-            (newIndicators) => {
+            () => {
+                const runtimeIndicators = refreshRefs();
                 const fresh = getFreshCandles();
-                indicatorCacheRef.current = calculateIndicators(fresh, newIndicators || []);
-                indicatorCacheLengthRef.current = fresh.length;
-                const refSource = indicatorCacheRef.current.length
-                    ? indicatorCacheRef.current
-                    : buildIndicatorSeeds(newIndicators || []);
-                indicatorRefsRef.current = getIndicatorRefs(container, refSource);
-
                 updateLegend(
                     fresh.length - 1,
                     true,
                     useMarketStore.getState().tickers[tickerKey]?.price || useMarketStore.getState().tickers[normSym]?.price,
                     fresh,
-                    indicatorCacheRef.current
+                    runtimeIndicators
                 );
             }
         );
@@ -231,9 +208,10 @@ export function useSubchartLegendDOMUpdater(
         return () => {
             window.removeEventListener('chart-crosshair', handleCrosshair as EventListener);
             unsubTicker();
+            unsubRuntime();
             unsubIndicators();
             if (crosshairRafRef.current) cancelAnimationFrame(crosshairRafRef.current);
             if (tickerRafRef.current) cancelAnimationFrame(tickerRafRef.current);
         };
-    }, [chartId, symbol, interval, source, containerRef, getFreshCandles]);
+    }, [chartId, symbol, interval, source, containerRef, getFreshCandles, getRuntimeIndicators]);
 }

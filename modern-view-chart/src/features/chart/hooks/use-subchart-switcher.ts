@@ -5,7 +5,7 @@ export function useSubchartSwitcher(
     chartId: string,
     subchartContainerRef: React.RefObject<HTMLDivElement | null>
 ) {
-    const toggleIndicatorVisibility = useMarketStore(state => state.toggleIndicatorVisibility);
+    const updateIndicator = useMarketStore(state => state.updateIndicator);
     const lastSwitchRef = useRef<number>(0);
 
     // Unified Indicator Switch Logic (Swipe & Scroll)
@@ -33,9 +33,9 @@ export function useSubchartSwitcher(
 
                 lastSwitchRef.current = Date.now();
                 if (visibleIndex !== -1) {
-                    toggleIndicatorVisibility(chartId, subchartIndicators[visibleIndex].id);
+                    updateIndicator(chartId, subchartIndicators[visibleIndex].id, { visible: false });
                 }
-                toggleIndicatorVisibility(chartId, subchartIndicators[nextIndex].id);
+                updateIndicator(chartId, subchartIndicators[nextIndex].id, { visible: true });
             }
         };
 
@@ -96,5 +96,5 @@ export function useSubchartSwitcher(
             container.removeEventListener('touchstart', handleTouchStart);
             container.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [chartId, toggleIndicatorVisibility, subchartContainerRef]);
+    }, [chartId, updateIndicator, subchartContainerRef]);
 }

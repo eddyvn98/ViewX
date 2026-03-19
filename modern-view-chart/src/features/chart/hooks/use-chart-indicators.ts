@@ -7,6 +7,7 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import { DEFAULT_CHART_INDICATORS } from './indicators/default-indicators';
 import { formatCandles, buildLiveCandle } from './indicators/indicator-candle-utils';
 import { createIndicatorInstance } from './indicators/sync-indicator-series';
+import { IndicatorCache } from '../logic/indicator-calculations';
 
 const EMPTY_INDICATORS: IndicatorConfig[] = [];
 type BatchResult = { id: string; values: unknown };
@@ -37,10 +38,13 @@ export function useChartIndicators(
 
     const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_INDICATORS));
     const addIndicators = useMarketStore(state => state.addIndicators);
+    const setChartIndicatorRuntime = useMarketStore(state => state.setChartIndicatorRuntime);
+    const clearChartIndicatorRuntime = useMarketStore(state => state.clearChartIndicatorRuntime);
 
     const instancesRef = useRef<Record<string, IndicatorInstance>>({});
     const defaultsAppliedRef = useRef(false);
     const batchVersionRef = useRef(0);
+    const runtimeByIdRef = useRef<Record<string, IndicatorCache>>({});
 
     const normSymbol = normalizeSymbol(symbol);
     const key = (symbol && source && interval) ? `${source}:${normSymbol}:${interval}` : '';
@@ -63,12 +67,14 @@ export function useChartIndicators(
             batchVersionRef.current += 1;
             lastBarTimeRef.current = 0;
             stableCandlesRef.current = [];
+            runtimeByIdRef.current = {};
+            clearChartIndicatorRuntime(chartId);
             Object.keys(instancesRef.current).forEach(id => {
                 try { instancesRef.current[id]?.destroy?.(); } catch { }
             });
             instancesRef.current = {};
         }
-    }, [key, isReady, chartId, symbol]);
+    }, [key, isReady, chartId, symbol, clearChartIndicatorRuntime]);
 
     const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -97,6 +103,7 @@ export function useChartIndicators(
                 if (!currentIds.has(id) || (config && !config.visible)) {
                     instancesRef.current[id].destroy();
                     delete instancesRef.current[id];
+                    delete runtimeByIdRef.current[id];
                 }
             });
 
@@ -142,8 +149,25 @@ export function useChartIndicators(
                         const resultsMap = new Map(typedResults.map((result) => [result.id, result.values]));
                         indicatorsToCalculate.forEach(config => {
                             const instance = instancesRef.current[config.id];
-                            if (instance) instance.update(batchCandles, config, resultsMap.get(config.id));
+                            const values = resultsMap.get(config.id);
+                            if (instance) instance.update(batchCandles, config, values);
+                            runtimeByIdRef.current[config.id] = {
+                                type: config.type,
+                                id: config.id,
+                                period: Number(config.params?.period || 14),
+                                color: config.color,
+                                pane: config.pane,
+                                results: (values as IndicatorCache['results']) ?? (config.type === 'MACD'
+                                    ? { macd: [], signal: [], histogram: [] }
+                                    : []),
+                                params: config.params
+                            };
                         });
+
+                        const visibleRuntime = visibleIndicators
+                            .map((config) => runtimeByIdRef.current[config.id])
+                            .filter((item): item is IndicatorCache => Boolean(item));
+                        setChartIndicatorRuntime(chartId, visibleRuntime);
                     })
                     .catch(() => {
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
@@ -160,7 +184,7 @@ export function useChartIndicators(
         return () => {
             if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
         };
-    }, [isReady, candles, key, indicators, symbol, interval, priceChartRef, subchartChartRef, seriesRef, markerSeriesRef, syncRange]);
+    }, [isReady, candles, key, indicators, symbol, interval, priceChartRef, subchartChartRef, seriesRef, markerSeriesRef, syncRange, chartId, setChartIndicatorRuntime]);
 
     const chartInstance = useMarketStore(useShallow(state => {
         for (const tab of Object.values(state.tabs)) {
@@ -212,10 +236,11 @@ export function useChartIndicators(
     useEffect(() => {
         return () => {
             batchVersionRef.current += 1;
+            clearChartIndicatorRuntime(chartId);
             Object.values(instancesRef.current).forEach(inst => {
                 try { inst?.destroy?.(); } catch { }
             });
             instancesRef.current = {};
         };
-    }, []);
+    }, [chartId, clearChartIndicatorRuntime]);
 }
