@@ -25,12 +25,12 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </div>
                 <div class="tag-label-container px-2.5 h-full flex items-center rounded-lg bg-secondary/40 dark:bg-white/5 border border-border/10">
-                    <span class="tag-label text-[10px] font-black text-foreground uppercase tracking-widest"></span>
+                    <span class="tag-label text-[11px] font-black text-foreground uppercase tracking-widest"></span>
                 </div>
 
-                <div class="tp-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
+                <div class="tp-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
                     data-draggable="true" data-type="tp" data-ticket="draft">TP</div>
-                <div class="sl-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold border border-red-500/20 cursor-pointer hover:bg-red-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
+                <div class="sl-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-bold border border-red-500/20 cursor-pointer hover:bg-red-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
                     data-draggable="true" data-type="sl" data-ticket="draft">SL</div>
 
                 <div class="lot-container flex items-center h-full bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 overflow-hidden shrink-0">
@@ -43,7 +43,7 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
                     </div>
                 </div>
 
-                <div class="confirm-btn flex items-center justify-center h-full px-2 rounded-lg text-[10px] font-black hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest whitespace-nowrap cursor-pointer shadow-sm" data-no-drag="true">Confirm</div>
+                <div class="confirm-btn flex items-center justify-center h-full px-2 rounded-lg text-[11px] font-black hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest whitespace-nowrap cursor-pointer shadow-sm" data-no-drag="true">Confirm</div>
 
                 <div class="price-box h-full flex items-center px-3 bg-secondary/50 dark:bg-white/5 border border-border/10 rounded-lg min-w-[85px] justify-center cursor-row-resize hover:bg-secondary/70 transition-colors"
                     data-draggable="true" data-type="entry" data-ticket="draft">
@@ -90,7 +90,7 @@ function createDotTagElement(tag: TagData): TagElements {
                 <div class="price-box ${markerClass} ${markerShapeClass} p-0 justify-center items-center cursor-row-resize transition-transform duration-150 group-hover:scale-110" ${draggableAttr}>
                     <span class="price-text hidden"></span>
                 </div>
-                <span class="dot-caption text-[9px] font-semibold leading-none text-foreground/75 tracking-tight"></span>
+                <span class="dot-caption text-[11px] font-semibold leading-none text-foreground/75 tracking-tight"></span>
                 <span class="tag-label hidden"></span>
                 <span class="pnl-text hidden"></span>
             </div>`);

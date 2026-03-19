@@ -16,7 +16,7 @@ export default function Loading() {
                     <div className="h-full bg-primary animate-[loading-bar_1.5s_ease-in-out_infinite] origin-left" />
                 </div>
 
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 animate-pulse">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-white/20 animate-pulse">
                     Connecting to workspace...
                 </p>
             </div>

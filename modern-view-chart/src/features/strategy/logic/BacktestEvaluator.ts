@@ -1,4 +1,5 @@
 import type { Condition } from '../types';
+import { IndicatorCalculator } from './IndicatorCalculator';
 
 /**
  * BacktestEvaluator
@@ -10,7 +11,7 @@ export class BacktestEvaluator {
         const { left, comparator, right } = condition;
 
         // Construct key for pre-calculated values (e.g., "RSI-14")
-        const leftKey = `${left.type}-${left.params?.join('-') || ''}`;
+        const leftKey = IndicatorCalculator.getKey(left);
         const leftArr = indicatorValues[leftKey];
 
         // If data is missing or index out of bounds, fail safe
@@ -23,7 +24,7 @@ export class BacktestEvaluator {
             rightVal = right;
         } else {
             // Right side is also an indicator
-            const rightKey = `${right.type}-${right.params?.join('-') || ''}`;
+            const rightKey = IndicatorCalculator.getKey(right);
             const rightArr = indicatorValues[rightKey];
             if (!rightArr || index >= rightArr.length) return false;
             rightVal = rightArr[index];
@@ -36,17 +37,18 @@ export class BacktestEvaluator {
             case "<": return leftVal < rightVal;
             case ">=": return leftVal >= rightVal;
             case "<=": return leftVal <= rightVal;
+            case "==": return leftVal === rightVal;
             case "crosses_above": {
                 // Check previous index
                 if (index === 0) return false;
                 const prevLeft = leftArr[index - 1];
-                const prevRight = typeof right === 'number' ? right : (indicatorValues[`${right.type}-${right.params?.join('-')}`]?.[index - 1] ?? 0);
+                const prevRight = typeof right === 'number' ? right : (indicatorValues[IndicatorCalculator.getKey(right)]?.[index - 1] ?? 0);
                 return prevLeft <= prevRight && leftVal > rightVal;
             }
             case "crosses_below": {
                 if (index === 0) return false;
                 const prevLeft = leftArr[index - 1];
-                const prevRight = typeof right === 'number' ? right : (indicatorValues[`${right.type}-${right.params?.join('-')}`]?.[index - 1] ?? 0);
+                const prevRight = typeof right === 'number' ? right : (indicatorValues[IndicatorCalculator.getKey(right)]?.[index - 1] ?? 0);
                 return prevLeft >= prevRight && leftVal < rightVal;
             }
             default: return false;

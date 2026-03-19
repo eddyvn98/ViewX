@@ -44,27 +44,27 @@ export function CursorTooltip({ chartId, symbol, interval, source, candles }: Cu
                 {/* OHLC Values - Ultra Compact Grid */}
                 <div className="grid grid-cols-2 gap-x-1.5 gap-y-0 border-b border-border/5 pb-0.5">
                     <div className="flex items-center gap-0.5">
-                        <span className="text-[8px] text-muted-foreground/60 font-bold">O</span>
-                        <span data-ohlc="open" className="text-[10px] font-black text-foreground tabular-nums">---</span>
+                        <span className="text-[11px] text-muted-foreground/60 font-bold">O</span>
+                        <span data-ohlc="open" className="text-[11px] font-black text-foreground tabular-nums">---</span>
                     </div>
                     <div className="flex items-center gap-0.5">
-                        <span className="text-[8px] text-muted-foreground/60 font-bold">H</span>
-                        <span data-ohlc="high" className="text-[10px] font-black text-foreground tabular-nums">---</span>
+                        <span className="text-[11px] text-muted-foreground/60 font-bold">H</span>
+                        <span data-ohlc="high" className="text-[11px] font-black text-foreground tabular-nums">---</span>
                     </div>
                     <div className="flex items-center gap-0.5">
-                        <span className="text-[8px] text-muted-foreground/60 font-bold">L</span>
-                        <span data-ohlc="low" className="text-[10px] font-black text-foreground tabular-nums">---</span>
+                        <span className="text-[11px] text-muted-foreground/60 font-bold">L</span>
+                        <span data-ohlc="low" className="text-[11px] font-black text-foreground tabular-nums">---</span>
                     </div>
                     <div className="flex items-center gap-0.5">
-                        <span className="text-[8px] text-muted-foreground/60 font-bold">C</span>
-                        <span data-ohlc="close" className="text-[10px] font-black text-foreground tabular-nums">---</span>
+                        <span className="text-[11px] text-muted-foreground/60 font-bold">C</span>
+                        <span data-ohlc="close" className="text-[11px] font-black text-foreground tabular-nums">---</span>
                     </div>
                 </div>
 
                 {/* Change Info */}
                 <div className="flex items-center justify-between px-0.5 leading-none">
-                    <span data-ohlc="change" className="text-[9px] font-bold tabular-nums">---</span>
-                    <span data-ohlc="change-percent" className="text-[9px] font-black tabular-nums">---</span>
+                    <span data-ohlc="change" className="text-[11px] font-bold tabular-nums">---</span>
+                    <span data-ohlc="change-percent" className="text-[11px] font-black tabular-nums">---</span>
                 </div>
 
                 {/* Indicators - Micro List */}
@@ -72,10 +72,10 @@ export function CursorTooltip({ chartId, symbol, interval, source, candles }: Cu
                     <div data-indicators className="flex flex-col gap-0 mt-0 border-t border-border/5 pt-0.5">
                         {indicators.map((ind: any) => (
                             <div key={ind.id} data-indicator-id={ind.id} className="flex items-center justify-between gap-1.5">
-                                <span className="text-[8px] font-bold text-muted-foreground/50 uppercase truncate max-w-[40px]">
+                                <span className="text-[11px] font-bold text-muted-foreground/50 uppercase truncate max-w-[40px]">
                                     {ind.type}
                                 </span>
-                                <div data-indicator-value className="text-[9px] font-black tabular-nums flex gap-0.5">
+                                <div data-indicator-value className="text-[11px] font-black tabular-nums flex gap-0.5">
                                     {ind.type === 'MACD' ? (
                                         <>
                                             <span style={{ color: ind.color }}>-</span>

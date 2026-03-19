@@ -21,6 +21,7 @@ export class ConditionEvaluator {
             case "<": return leftVal < rightVal;
             case ">=": return leftVal >= rightVal;
             case "<=": return leftVal <= rightVal;
+            case "==": return leftVal === rightVal;
             case "crosses_above": {
                 const prevLeft = Calc.getPreviousValue(left, candles);
                 const prevRight = typeof right === 'number' ? right : Calc.getPreviousValue(right, candles);

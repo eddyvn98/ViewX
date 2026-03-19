@@ -42,7 +42,7 @@ export class BacktestIndicators {
     }
 
     public getOrCalculate(indicatorDef: Indicator): number[] {
-        const key = `${indicatorDef.type}-${indicatorDef.params?.join('-') || ''}`;
+        const key = IndicatorCalculator.getKey(indicatorDef);
         if (!this.indicators[key]) {
             this.indicators[key] = IndicatorCalculator.getValues(indicatorDef, this.candles);
         }

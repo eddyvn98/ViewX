@@ -61,10 +61,10 @@ function OrderCard({ ord, onCancel, onSymbolClick }: {
                     </div>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-sm font-black text-foreground">{ord.symbol}</span>
-                        <span className="text-[10px] text-muted-foreground font-bold">{ord.volume.toFixed(2)} Lot</span>
+                        <span className="text-[11px] text-muted-foreground font-bold">{ord.volume.toFixed(2)} Lot</span>
                     </div>
                 </div>
-                <div className="text-[10px] font-black uppercase text-yellow-500/80 bg-yellow-500/5 px-1.5 py-0.5 rounded border border-yellow-500/10">
+                <div className="text-[11px] font-black uppercase text-yellow-500/80 bg-yellow-500/5 px-1.5 py-0.5 rounded border border-yellow-500/10">
                     {ord.type}
                 </div>
             </div>
@@ -73,34 +73,34 @@ function OrderCard({ ord, onCancel, onSymbolClick }: {
             <div className="px-3 py-2 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Target:</span>
+                        <span className="text-[11px] text-muted-foreground font-bold uppercase">Target:</span>
                         <span className="text-xs font-mono font-bold text-foreground/80">{ord.price_open.toFixed(5)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Live:</span>
+                        <span className="text-[11px] text-muted-foreground font-bold uppercase">Live:</span>
                         <span className="text-xs font-mono text-muted-foreground">{livePrice.toFixed(5)}</span>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
-                        <span className="text-[8px] text-red-500/70 font-black uppercase">SL:</span>
-                        <span className="text-[10px] font-mono text-foreground/80">{(ord.sl || 0) > 0 ? ord.sl.toFixed(2) : '--'}</span>
+                        <span className="text-[11px] text-red-500/70 font-black uppercase">SL:</span>
+                        <span className="text-[11px] font-mono text-foreground/80">{(ord.sl || 0) > 0 ? ord.sl.toFixed(2) : '--'}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <span className="text-[8px] text-green-500/70 font-black uppercase">TP:</span>
-                        <span className="text-[10px] font-mono text-foreground/80">{(ord.tp || 0) > 0 ? ord.tp.toFixed(2) : '--'}</span>
+                        <span className="text-[11px] text-green-500/70 font-black uppercase">TP:</span>
+                        <span className="text-[11px] font-mono text-foreground/80">{(ord.tp || 0) > 0 ? ord.tp.toFixed(2) : '--'}</span>
                     </div>
-                    <div className="ml-auto text-[9px] text-muted-foreground font-mono">#{ord.ticket}</div>
+                    <div className="ml-auto text-[11px] text-muted-foreground font-mono">#{ord.ticket}</div>
                 </div>
             </div>
 
             {/* Footer Actions */}
             <div className="flex items-center border-t border-border/30">
-                <button onClick={handleFocus} className="flex-1 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground border-r border-border/30 uppercase tracking-tighter">
+                <button onClick={handleFocus} className="flex-1 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground border-r border-border/30 uppercase tracking-tighter">
                     Focus
                 </button>
-                <button onClick={() => onCancel(ord.ticket)} className="flex-1 py-1.5 text-[10px] font-bold text-red-500/80 hover:text-red-400 uppercase tracking-tighter">
+                <button onClick={() => onCancel(ord.ticket)} className="flex-1 py-1.5 text-[11px] font-bold text-red-500/80 hover:text-red-400 uppercase tracking-tighter">
                     Cancel Order
                 </button>
             </div>

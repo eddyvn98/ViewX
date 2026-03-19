@@ -10,10 +10,13 @@ import { StrategyPanel } from '@/features/chart/components/StrategyPanel';
 import { LineChart, Layout, ShoppingCart, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RightSidebarTab } from '@/lib/store/types';
+import { useTranslations } from 'next-intl';
 
 export const RightSidebar = memo(function RightSidebar() {
+    const t = useTranslations('ChartPanel.tabs');
     const sidebarRef = useRef<HTMLDivElement>(null);
     const activeTab = useMarketStore(state => state.activeRightSidebarTab);
+    const isLeftSidebarOpen = useMarketStore(state => state.isLeftSidebarOpen);
     const setActiveTab = useMarketStore(state => state.setActiveRightSidebarTab);
     const topHeight = useMarketStore(state => state.sidebarTopHeight);
     const sidebarWidth = useMarketStore(state => state.rightSidebarWidth);
@@ -121,13 +124,16 @@ export const RightSidebar = memo(function RightSidebar() {
 
     const tabConfigs: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>, label: string, component: React.ReactNode }> = {
         market: { icon: LineChart, label: 'Watchlist', component: <MarketList mode="watchlist" /> },
-        layer: { icon: Layout, label: 'Layer', component: <LayerManager /> },
-        strategy: { icon: Brain, label: 'Strategy', component: <StrategyPanel /> },
-        trade: { icon: ShoppingCart, label: 'Trade', component: <OrderForm /> }
+        layer: { icon: Layout, label: t('layer'), component: <LayerManager /> },
+        strategy: { icon: Brain, label: t('strategy'), component: <StrategyPanel /> },
+        trade: { icon: ShoppingCart, label: t('trade'), component: <OrderForm /> }
     };
 
     // Filter to exclude 'market' from the bottom tabs as it's fixed on top
     const bottomTabs = tabOrder.filter((id: string) => id !== 'market') as RightSidebarTab[];
+    const normalizedTopHeight = Math.max(28, Math.min(70, Number.isFinite(topHeight) ? topHeight : 40));
+    const topSectionHeight = isLeftSidebarOpen ? normalizedTopHeight : 0;
+    const bottomSectionHeight = isLeftSidebarOpen ? 100 - normalizedTopHeight : 100;
 
     return (
         <aside
@@ -144,29 +150,34 @@ export const RightSidebar = memo(function RightSidebar() {
             />
             {/* 1. TOP SECTION: WATCHLIST (Fixed) */}
             <div
-                className="flex flex-col min-h-0 overflow-hidden"
-                style={{ height: `${topHeight}%` }}
+                className={cn(
+                    "flex flex-col min-h-0 overflow-hidden transition-all duration-200",
+                    !isLeftSidebarOpen && "opacity-0 pointer-events-none"
+                )}
+                style={{ height: `${topSectionHeight}%` }}
             >
-                <div className="flex-1 min-h-0 bg-transparent">
-                    <MarketList mode="watchlist" />
+                <div className="flex-1 min-h-0 bg-transparent" style={{ display: isLeftSidebarOpen ? 'block' : 'none' }}>
+                    {isLeftSidebarOpen ? <MarketList mode="watchlist" /> : null}
                 </div>
             </div>
 
             {/* 2. RESIZER HANDLE */}
-            <div
-                onMouseDown={startResizing}
-                className={cn(
-                    "h-1.5 flex items-center justify-center cursor-row-resize bg-white/5 hover:bg-primary/20 transition-all group z-50 border-y border-white/[0.02]",
-                    isResizing && "bg-primary/40 shadow-[0_0_15px_var(--glow-primary)]"
-                )}
-            >
-                <div className="w-12 h-[2px] rounded-full bg-white/10 group-hover:bg-primary/50 transition-all shadow-glow" />
-            </div>
+            {isLeftSidebarOpen && (
+                <div
+                    onMouseDown={startResizing}
+                    className={cn(
+                        "h-1.5 flex items-center justify-center cursor-row-resize bg-white/5 hover:bg-primary/20 transition-all group z-50 border-y border-white/[0.02]",
+                        isResizing && "bg-primary/40 shadow-[0_0_15px_var(--glow-primary)]"
+                    )}
+                >
+                    <div className="w-12 h-[2px] rounded-full bg-white/10 group-hover:bg-primary/50 transition-all shadow-glow" />
+                </div>
+            )}
 
             {/* 3. BOTTOM SECTION: TABS */}
             <div
                 className="flex-1 flex flex-col min-h-0 overflow-hidden"
-                style={{ height: `${100 - topHeight}%` }}
+                style={{ height: `${bottomSectionHeight}%` }}
             >
                 {/* Tab Header & Draggable Area */}
                 <LayoutGroup id="sidebar-tabs">

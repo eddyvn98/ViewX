@@ -63,7 +63,40 @@
     "dashboard": "Dashboard",
     "back": "Quay lại"
   },
+  "Header": {
+    "notifications": {
+      "buttonTitle": "Thông báo và cảnh báo",
+      "title": "Trung tâm thông báo",
+      "clearHistory": "Xóa lịch sử",
+      "toastHistory": "Lịch sử thông báo",
+      "noNotificationsYet": "Chưa có thông báo nào.",
+      "priceAlertsOnChart": "Cảnh báo giá trên biểu đồ",
+      "noPriceAlerts": "Chưa có cảnh báo giá.",
+      "active": "Đang hoạt động",
+      "triggeredInactive": "Đã kích hoạt/Tạm ngưng",
+      "edit": "Sửa",
+      "remove": "Xóa"
+    }
+  },
   "Strategy": {
+    "list": {
+      "runningBot": "Bot đang chạy",
+      "addBot": "Thêm bot",
+      "noActiveBots": "Không có bot đang hoạt động",
+      "generic": "Chung",
+      "active": "Đang chạy",
+      "paused": "Tạm dừng",
+      "aiGuardActive": "AI Guard đang bật",
+      "enableAiGuard": "Bật AI Guard",
+      "on": "Bật",
+      "off": "Tắt",
+      "sl": "SL",
+      "tp": "TP",
+      "lot": "Lot",
+      "max": "Tối đa",
+      "fixed": "Cố định",
+      "na": "N/A"
+    },
     "builder": {
       "botIdentity": "Định Danh Bot",
       "botName": "Tên Bot",
@@ -97,6 +130,26 @@
       "candle": "Nến",
       "indicator": "Chỉ báo",
       "rrRatio": "Tỷ lệ R:R",
+      "numberValue": "Number",
+      "indicatorValue": "Indicator",
+      "searchIndicatorPlaceholder": "Search indicator...",
+      "noIndicatorFound": "No indicator found",
+      "fieldClose": "Close",
+      "fieldOpen": "Open",
+      "fieldHigh": "High",
+      "fieldLow": "Low",
+      "fieldMiddle": "Middle",
+      "fieldUpper": "Upper",
+      "fieldLower": "Lower",
+      "fieldSignal": "Signal",
+      "fieldHistogram": "Histogram",
+      "fieldKijun": "Kijun",
+      "fieldTenkan": "Tenkan",
+      "fieldSpanA": "Span A",
+      "fieldSpanB": "Span B",
+      "fieldChikou": "Chikou",
+      "fieldSuperTrend": "SuperTrend",
+      "fieldTrend": "Trend",
       "single": "Vị thế đơn",
       "hedge": "Vị thế đối ứng",
       "scaleIn": "Vị thế nhồi lệnh"
@@ -153,5 +206,122 @@
     "aiAuditComplete": "AI Audit hoàn tất: {confidence}% tin cậy",
     "exit": "THOÁT",
     "virtualBalance": "Giao dịch ảo"
+  },
+  "ChartPanel": {
+    "tabs": {
+      "strategy": "Chiến lược",
+      "layer": "Chỉ báo",
+      "trade": "Giao dịch",
+      "signals": "Tín hiệu",
+      "createStrategy": "Tạo chiến lược",
+      "aiChat": "AI chat"
+    }
+  },
+  "StrategyDashboard": {
+    "page": {
+      "title": "Phân tích Backtest Chiến lược",
+      "mode": "Chế độ Backtest",
+      "soundOn": "BẬT ÂM THANH",
+      "activateSound": "KÍCH HOẠT ÂM THANH",
+      "confirmReset": "XÁC NHẬN RESET",
+      "masterReset": "RESET TOÀN BỘ",
+      "refresh": "LÀM MỚI",
+      "backToChart": "QUAY LẠI CHART",
+      "engine": "vivutrade High-Performance Rule Engine v2.0",
+      "totalVolume": "Tổng khối lượng",
+      "lot": "Lot"
+    },
+    "stats": {
+      "netProfit": "Lợi nhuận ròng",
+      "winRate": "Tỷ lệ thắng",
+      "profitFactor": "Hệ số lợi nhuận",
+      "grossRatio": "Tỷ lệ gộp",
+      "maxDrawdown": "Suy giảm tối đa",
+      "riskMetric": "Chỉ số rủi ro",
+      "avgWinningTrade": "Lệnh thắng trung bình",
+      "avgLosingTrade": "Lệnh thua trung bình",
+      "wins": "T",
+      "losses": "B"
+    },
+    "tradeHistory": {
+      "noTradeHistory": "Chưa có lịch sử giao dịch",
+      "noTradeHistoryDesc": "Lệnh ảo sẽ hiển thị tại đây sau khi được đóng bởi chiến lược.",
+      "closedSessions": "Phiên đã đóng",
+      "timeSymbol": "Thời gian / Mã",
+      "type": "Loại",
+      "lot": "Lot",
+      "entryExit": "Vào / Ra",
+      "aiConf": "Độ tin cậy AI",
+      "profitUsd": "Lợi nhuận (USD)",
+      "confidence": "Tin cậy"
+    },
+    "equity": {
+      "title": "Đường cong vốn",
+      "subtitle": "Tăng trưởng ảo"
+    },
+    "aiPanel": {
+      "title": "AI cố vấn Chiến lược",
+      "subtitle": "Hướng dẫn tín hiệu Bot đến MT5",
+      "performAudit": "Đánh giá hệ thống",
+      "aggregating": "Đang tổng hợp dữ liệu giao dịch...",
+      "systemStrength": "Độ tin cậy TB",
+      "actionableRefinement": "Hướng tối ưu đề xuất",
+      "filterByConfidence": "Lọc lệnh MT5 theo độ tin cậy AI > 80%",
+      "auditSession": "Kiểm tra logic ${session} với các đợt MAE tăng vọt",
+      "recalculate": "Tính lại với dữ liệu mới",
+      "avgConfidence": "Độ tin cậy TB",
+      "avgMae": "MAE TB",
+      "avgMfe": "MFE TB",
+      "predictionAccuracy": "Độ chính xác dự đoán",
+      "inTesting": "Đang thử nghiệm",
+      "current": "Hiện tại"
+    },
+    "tradeDetail": {
+      "noAdvancedContext": "Không có ngữ cảnh nâng cao cho lệnh này.",
+      "marketDynamics": "Động lực thị trường",
+      "session": "Phiên",
+      "volatilityAtr": "Biến động (ATR)",
+      "pips": "pips",
+      "maeTooltip": "Độ bất lợi tối đa: Giá đi ngược xa nhất so với vị thế của bạn.",
+      "mfeTooltip": "Độ thuận lợi tối đa: Giá đi đúng hướng xa nhất theo vị thế của bạn.",
+      "tradeEfficiency": "Hiệu suất lệnh",
+      "tradeEfficiencyDesc": "Đo mức độ tận dụng chuyển động tiềm năng (MFE) thành lợi nhuận.",
+      "exitReason": "Lý do thoát lệnh",
+      "inspectOnChart": "Xem trên biểu đồ",
+      "entryRealityCheck": "Kiểm tra thực tế điểm vào (Snapshot)",
+      "indicator": "Chỉ báo",
+      "conditionValue": "Giá trị điều kiện",
+      "noIndicatorSnapshot": "Không có snapshot chỉ báo cho lệnh này.",
+      "postTradeAnalysis": "Phân tích sau lệnh",
+      "postTradeAnalysisDesc": "Đã phân tích hiệu quả đóng lệnh. Biến động giá sau khi thoát được ghi nhận để đánh giá hiệu suất.",
+      "sessions": {
+        "asian": "Châu Á",
+        "tokyo": "Tokyo",
+        "london": "London",
+        "newyork": "New York",
+        "sydney": "Sydney",
+        "close": "Đóng phiên"
+      }
+    },
+    "aiInsight": {
+      "title": "Phân tích chiến lược AI",
+      "analyzeWithAi": "Phân tích với AI",
+      "readingTape": "AI đang đọc dữ liệu thị trường...",
+      "keyTakeaway": "Điểm chính",
+      "aiRecommendation": "Khuyến nghị AI",
+      "applyFix": "Áp dụng",
+      "actionableFeedback": "Phản hồi có thể hành động",
+      "emptyHint": "Nhấn nút phía trên để tạo phân tích chuyên sâu cho đặc điểm của lệnh này.",
+      "enabled": "Bật",
+      "disabled": "Tắt",
+      "toast": {
+        "analysisComplete": "Phân tích AI hoàn tất",
+        "bridgeFailed": "Kết nối AI Bridge thất bại",
+        "updatedRsi": "Đã cập nhật ngưỡng RSI thành {value}",
+        "trailingStop": "Trailing Stop: {state}",
+        "manualUpdateRequired": "Cần cập nhật thủ công cho: {field}",
+        "applyFailed": "Không thể tự động áp dụng khuyến nghị."
+      }
+    }
   }
 }

@@ -10,12 +10,11 @@ import {
     Square,
     Magnet,
     ChevronLeft,
-    ChevronRight,
-    Pencil
+    ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DrawingTool } from '@/lib/store/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export function DrawingToolbar({ chartId }: { chartId: string }) {
     const isVisible = useMarketStore(state => state.isDrawingToolbarVisible);
@@ -33,14 +32,14 @@ export function DrawingToolbar({ chartId }: { chartId: string }) {
         { id: 'vertical-line', label: 'Vertical Line', icon: <MoveVertical size={16} /> },
         { id: 'crosshair', label: 'Crosshair', icon: <Crosshair size={16} /> },
         { id: 'rectangle', label: 'Rectangle', icon: <Square size={16} /> },
-        { id: 'fib-retracement', label: 'Fib Retracement', icon: <span className="text-[10px] font-bold">F</span> },
-        { id: 'fib-extension', label: 'Fib Extension', icon: <span className="text-[10px] font-bold">FE</span> },
+        { id: 'fib-retracement', label: 'Fib Retracement', icon: <span className="text-[11px] font-bold">F</span> },
+        { id: 'fib-extension', label: 'Fib Extension', icon: <span className="text-[11px] font-bold">FE</span> },
     ];
 
     if (!chartId) return null;
 
     return (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-[60] flex items-center pointer-events-none animate-in fade-in slide-in-from-left-4 duration-500 max-md:left-2 max-md:top-auto max-md:bottom-12 max-md:translate-y-0">
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-[80] flex items-center pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-500 max-md:left-2 max-md:top-auto max-md:bottom-12 max-md:translate-y-0">
             <motion.div
                 initial={false}
                 animate={{ x: isVisible ? 8 : -52 }}
@@ -55,6 +54,7 @@ export function DrawingToolbar({ chartId }: { chartId: string }) {
                             <button
                                 key={tool.id}
                                 onClick={() => isActive ? cancelDrawing() : startDrawing(tool.id as DrawingTool)}
+                                data-testid={`drawing-tool-${tool.id}`}
                                 className={cn(
                                     "w-9 h-9 flex items-center justify-center rounded-lg transition-all relative group/btn",
                                     isActive
@@ -64,7 +64,7 @@ export function DrawingToolbar({ chartId }: { chartId: string }) {
                                 title={tool.label}
                             >
                                 {tool.icon}
-                                <div className="absolute left-full ml-3 px-2 py-1 bg-popover text-popover-foreground text-[10px] font-bold rounded shadow-xl opacity-0 translate-x-1 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all pointer-events-none whitespace-nowrap z-50 border border-border/50">
+                                <div className="absolute left-full ml-3 px-2 py-1 bg-popover text-popover-foreground text-[11px] font-bold rounded shadow-xl opacity-0 translate-x-1 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all pointer-events-none whitespace-nowrap z-50 border border-border/50">
                                     {tool.label}
                                 </div>
                             </button>
@@ -85,7 +85,7 @@ export function DrawingToolbar({ chartId }: { chartId: string }) {
                         title="Magnet Mode (Snap to High/Low)"
                     >
                         <Magnet size={16} className={cn(snapToCandle && "animate-pulse")} />
-                        <div className="absolute left-full ml-3 px-2 py-1 bg-popover text-popover-foreground text-[10px] font-bold rounded shadow-xl opacity-0 translate-x-1 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all pointer-events-none whitespace-nowrap z-50 border border-border/50">
+                        <div className="absolute left-full ml-3 px-2 py-1 bg-popover text-popover-foreground text-[11px] font-bold rounded shadow-xl opacity-0 translate-x-1 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all pointer-events-none whitespace-nowrap z-50 border border-border/50">
                             Magnet Mode
                         </div>
                     </button>

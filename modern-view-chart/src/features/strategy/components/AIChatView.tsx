@@ -90,20 +90,20 @@ export function AIChatView() {
                 <div className="flex items-center gap-2">
                     <BrainCircuit size={16} className="text-blue-500 animate-pulse" />
                     <span className="text-[11px] font-black uppercase tracking-wider text-foreground">AI Assistant</span>
-                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-amber-500/40 text-amber-400 bg-amber-500/10">
+                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-amber-500/40 text-amber-400 bg-amber-500/10">
                         Coming Soon
                     </span>
                 </div>
                 <div className="flex bg-secondary/80 p-0.5 rounded-md border border-border">
                     <button
                         onClick={() => setMode('chat')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold transition-all ${mode === 'chat' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-muted-foreground hover:text-foreground'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all ${mode === 'chat' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         <MessageSquare size={12} /> CHAT
                     </button>
                     <button
                         onClick={() => setMode('logs')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold transition-all ${mode === 'logs' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all ${mode === 'logs' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         <Terminal size={12} /> LOGS
                     </button>
@@ -144,7 +144,7 @@ export function AIChatView() {
                                         <div className="self-start max-w-[90%] bg-secondary/40 border border-border rounded-2xl rounded-tl-none p-4 text-[13px] text-foreground leading-relaxed shadow-lg flex flex-col gap-2">
                                             <div className="flex items-center gap-2 mb-1 opacity-50">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                <span className="text-[10px] font-black uppercase tracking-tight">Gemini AI</span>
+                                                <span className="text-[11px] font-black uppercase tracking-tight">Gemini AI</span>
                                             </div>
                                             {msg.response}
                                         </div>
@@ -165,9 +165,9 @@ export function AIChatView() {
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2 text-cyan-500/80">
                                                 <ShieldCheck size={12} />
-                                                <span className="text-[9px] font-black uppercase tracking-tighter">System Audit Log</span>
+                                                <span className="text-[11px] font-black uppercase tracking-tighter">System Audit Log</span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-muted-foreground text-[9px] font-mono">
+                                            <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-mono">
                                                 <Clock size={10} />
                                                 {new Date(msg.timestamp).toLocaleTimeString()}
                                             </div>

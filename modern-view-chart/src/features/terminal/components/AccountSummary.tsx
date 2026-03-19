@@ -94,13 +94,13 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
     if (!account) return null;
 
     return (
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/80 font-medium">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/80 font-medium">
             <div className="flex items-center gap-1">Bal: <span className="text-foreground/90 font-bold">{(account.balance ?? 0).toFixed(2)}</span></div>
-            <div className="flex items-center gap-1">Eq: <span ref={equityRef} className="font-bold text-foreground/90">···</span></div>
+            <div className="flex items-center gap-1">Eq: <span ref={equityRef} className="font-bold text-foreground/90">...</span></div>
             <div className="flex items-center gap-1">Mar: <span className="text-foreground/90 font-bold">{(account.margin ?? 0).toFixed(2)}</span></div>
             <div className="flex items-center gap-1">Free: <span className="text-foreground/90 font-bold">{(account.free_margin ?? 0).toFixed(2)}</span></div>
             <div className="flex items-center gap-1">Lev: <span className="text-foreground/90 font-bold">{(account.margin_level ?? 0).toFixed(2)}%</span></div>
-            <div className="flex items-center gap-1">PnL: <span ref={profitRef} className="font-bold text-green-500">···</span></div>
+            <div className="flex items-center gap-1">PnL: <span ref={profitRef} className="font-bold text-green-500">...</span></div>
         </div>
     );
 });

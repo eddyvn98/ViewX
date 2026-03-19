@@ -40,7 +40,7 @@ export function TimeframeToolbar() {
                         key={tf.id}
                         onClick={() => activeChartId && setChartTimeframe(activeChartId, tf.id)}
                         className={cn(
-                            "px-1.5 py-0.5 rounded text-[10px] font-bold transition-all",
+                            "px-1.5 py-0.5 rounded text-[11px] font-bold transition-all",
                             currentInterval === tf.id
                                 ? "text-primary bg-primary/10"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"

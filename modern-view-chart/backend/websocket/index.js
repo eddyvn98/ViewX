@@ -1,138 +1,22 @@
 import { WebSocketServer } from "ws";
 import { setupMessageRouter } from "./messageRouter.js";
-import { broadcastPricesToSubscribers, broadcastChartCandles } from "./services/broadcastService.js";
 import { startBinanceTickerStream } from "./services/binanceTickerService.js";
-import { binanceSimulator } from "../services/binanceSimulator.js";
+import { emergencyConfig } from "../config/emergency.js";
 import {
     incrementWsDroppedRateLimit,
-    recordBroadcastLoopDuration,
     runtimeState,
     setBridgeOnline,
     setWsClients,
 } from "../runtime-state.js";
 import { safeSend } from "./wsSend.js";
-import {
-    addDefaultPriceClient,
-    collectInterestSymbolsFromIndex,
-    createSubscriptionIndex,
-    removeClientFromIndexes,
-} from "./subscriptionIndex.js";
-import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
-import { resolveUserAuthFromAccessToken } from "../auth/userSession.js";
+import { addDefaultPriceClient, createSubscriptionIndex, removeClientFromIndexes } from "./subscriptionIndex.js";
 import { logInfo, logWarn } from "../logger.js";
-import { emergencyConfig } from "../config/emergency.js";
+import { BRIDGE_TOPICS, resolveQueryAuthPolicy } from "./config.js";
+import { emitWsError, resolveAuthContext } from "./auth.js";
+import { startPeriodicTasks } from "./loopManager.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
-
-const BRIDGE_TOPICS = new Set([
-    "mt5_update",
-    "mt5_positions_update",
-    "mt5_symbols_available",
-    "mt5_candles",
-    "mt5_candles_at",
-    "mt5_history_deals",
-    "mt5_symbol_info",
-    "mt5_order_result",
-]);
-
-function parseBooleanEnv(value, fallback) {
-    if (value === undefined || value === null || String(value).trim() === "") return fallback;
-    const normalized = String(value).trim().toLowerCase();
-    if (["1", "true", "yes", "on"].includes(normalized)) return true;
-    if (["0", "false", "no", "off"].includes(normalized)) return false;
-    return fallback;
-}
-
-function resolveQueryAuthPolicy() {
-    const allowQueryAuth = parseBooleanEnv(process.env.WS_ALLOW_QUERY_AUTH, false);
-    const fromEnv = (process.env.WS_QUERY_AUTH_DEPRECATED_UNTIL || "").trim();
-    const fallbackMs = Date.now() + 14 * 24 * 60 * 60 * 1000;
-    const fallbackIso = new Date(fallbackMs).toISOString();
-    const deprecatedUntil = new Date(fromEnv || fallbackIso);
-    const untilMs = Number.isFinite(deprecatedUntil.getTime()) ? deprecatedUntil.getTime() : fallbackMs;
-
-    return {
-        allowQueryAuth,
-        deprecatedUntilIso: new Date(untilMs).toISOString(),
-        isDeprecatedWindowOpen(nowMs = Date.now()) {
-            return nowMs <= untilMs;
-        },
-    };
-}
-
-function emitWsError(ws, payload) {
-    safeSend(ws, JSON.stringify({ topic: "error", ...payload }));
-}
-
-async function resolveAuthContext(request, queryAuthPolicy) {
-    const expectedToken = (process.env.ACCESS_TOKEN || "").trim();
-
-    const bearerCredential = extractBearerCredential(request.headers?.authorization || "");
-    const bearerUserAuth = await resolveUserAuthFromAccessToken(bearerCredential);
-    if (bearerUserAuth?.userId) {
-        return {
-            type: "user",
-            userId: bearerUserAuth.userId,
-            role: bearerUserAuth.role,
-            via: "authorization_header",
-        };
-    }
-
-    const protocolHeader = request.headers?.["sec-websocket-protocol"] || "";
-    const protocolTokens = String(protocolHeader)
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter(Boolean);
-
-    const protocolBearerCredentials = [];
-    for (const protocolToken of protocolTokens) {
-        if (protocolToken.startsWith("bearer.")) {
-            const protocolValue = protocolToken.slice("bearer.".length);
-            protocolBearerCredentials.push(protocolValue);
-            const protocolUserAuth = await resolveUserAuthFromAccessToken(protocolValue);
-            if (protocolUserAuth?.userId) {
-                return {
-                    type: "user",
-                    userId: protocolUserAuth.userId,
-                    role: protocolUserAuth.role,
-                    via: "sec_websocket_protocol",
-                };
-            }
-        }
-    }
-
-    if (!expectedToken) return null;
-
-    if (isAuthorizedWithCredential({
-        expectedToken,
-        bearerCredential,
-    })) {
-        return { type: "service", via: "authorization_header" };
-    }
-
-    for (const credential of protocolBearerCredentials) {
-        if (
-            isAuthorizedWithCredential({
-                expectedToken,
-                bearerCredential: credential,
-            })
-        ) {
-            return { type: "service", via: "sec_websocket_protocol" };
-        }
-    }
-
-    const parsed = new URL(request.url || "/", "http://localhost");
-    if (parsed.searchParams.has("access_token") || parsed.searchParams.has("access_ticket")) {
-        logWarn("auth.ws.query_rejected", {
-            reason: queryAuthPolicy.allowQueryAuth ? "sunset_expired" : "query_auth_disabled",
-            has_access_token: parsed.searchParams.has("access_token"),
-            has_access_ticket: parsed.searchParams.has("access_ticket"),
-        });
-    }
-
-    return { type: "guest", role: "viewer", via: "anonymous" };
-}
 
 export default function initWebSocket(server) {
     const maxClients = emergencyConfig.limits.wsClients;
@@ -142,8 +26,8 @@ export default function initWebSocket(server) {
     const heartbeatIntervalMs = Number.parseInt(process.env.WS_HEARTBEAT_INTERVAL_MS || "30000", 10);
     const wsBroadcastIntervalMs = emergencyConfig.limits.wsBroadcastIntervalMs;
     const binanceBroadcastIntervalMs = emergencyConfig.limits.binanceBroadcastIntervalMs;
-    const windowMs = 10_000;
     const queryAuthPolicy = resolveQueryAuthPolicy();
+    const windowMs = 10_000;
 
     const wss = new WebSocketServer({
         server,
@@ -162,68 +46,15 @@ export default function initWebSocket(server) {
         });
     }
 
-    let broadcastTickRunning = false;
-    setInterval(() => {
-        if (broadcastTickRunning) return;
-        broadcastTickRunning = true;
-        const startAt = Date.now();
-
-        Promise.resolve()
-            .then(async () => {
-                await broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex });
-                await broadcastChartCandles({ clients, mt5Prices, subscriptionIndex });
-            })
-            .finally(() => {
-                recordBroadcastLoopDuration(Date.now() - startAt);
-                broadcastTickRunning = false;
-            });
-    }, Math.max(250, wsBroadcastIntervalMs));
-
-    setInterval(() => {
-        binanceSimulator.updatePnL();
-        broadcastBinanceState();
-    }, Math.max(500, binanceBroadcastIntervalMs));
-
-    let lastInterestHash = null;
-    setInterval(() => {
-        const bridgeSockets = [];
-        for (const [ws, meta] of clients.entries()) {
-            if (meta?.isBridgeAuthenticated && ws.readyState === ws.OPEN) bridgeSockets.push(ws);
-        }
-        if (bridgeSockets.length === 0) return;
-
-        const symbols = collectInterestSymbolsFromIndex(subscriptionIndex);
-        const hash = symbols.join("|");
-        if (hash === lastInterestHash) return;
-        lastInterestHash = hash;
-
-        const payload = JSON.stringify({
-            topic: "bridge_symbols_interest",
-            symbols,
-            source: "client_interest",
-            updated_at: Date.now(),
-        });
-
-        for (const bridgeWs of bridgeSockets) {
-            safeSend(bridgeWs, payload);
-        }
-    }, Math.max(1, bridgeSymbolsRefreshSec) * 1000);
-
-    const heartbeatInterval = setInterval(() => {
-        for (const [ws] of clients.entries()) {
-            if (ws.readyState !== ws.OPEN) continue;
-            if (ws.isAlive === false) {
-                ws.terminate();
-                continue;
-            }
-            ws.isAlive = false;
-            try {
-                ws.ping();
-            } catch {
-                ws.terminate();
-            }
-        }
-    }, Math.max(5000, heartbeatIntervalMs));
+    const stopPeriodicTasks = startPeriodicTasks({
+        clients,
+        mt5Prices,
+        subscriptionIndex,
+        wsBroadcastIntervalMs,
+        binanceBroadcastIntervalMs,
+        bridgeSymbolsRefreshSec,
+        heartbeatIntervalMs,
+    });
 
     const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex);
 
@@ -329,7 +160,7 @@ export default function initWebSocket(server) {
     });
 
     wss.on("close", () => {
-        clearInterval(heartbeatInterval);
+        stopPeriodicTasks();
     });
 
     return wss;
@@ -341,22 +172,6 @@ function broadcastBridgeStatus(online) {
         if (meta?.isBridgeAuthenticated) continue;
         if (clientWs.readyState === clientWs.OPEN) {
             safeSend(clientWs, payload);
-        }
-    }
-}
-
-function broadcastBinanceState() {
-    const payload = JSON.stringify({
-        topic: "binance_positions_update",
-        account: binanceSimulator.getAccount(),
-        positions: binanceSimulator.getPositions(),
-        history: binanceSimulator.getHistory(),
-    });
-
-    for (const [clientWs, meta] of clients.entries()) {
-        if (meta?.isBridgeAuthenticated) continue;
-        if (clientWs.readyState === clientWs.OPEN) {
-            safeSend(clientWs, payload, { nonCritical: true });
         }
     }
 }

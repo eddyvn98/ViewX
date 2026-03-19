@@ -28,7 +28,7 @@ export function SignalHistoryList({
 }: SignalHistoryListProps) {
     if (filteredSignals.length === 0) {
         return (
-            <div className="py-3 text-center text-[9px] text-muted-foreground/40 font-bold uppercase tracking-wider">
+            <div className="py-3 text-center text-[11px] text-muted-foreground/40 font-bold uppercase tracking-wider">
                 {noRecentSignalsLabel}
             </div>
         );

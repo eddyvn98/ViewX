@@ -15,6 +15,7 @@ export function NotificationManager() {
     const { sendMessage } = useWebSocket();
 
     const [editingAlert, setEditingAlert] = useState<{ id: string; symbol: string; price: number } | null>(null);
+    const visibleNotifications = notifications.slice(-2);
 
     // Listen for double-click edit event from chart
     useEffect(() => {
@@ -50,8 +51,8 @@ export function NotificationManager() {
 
     return (
         <>
-            <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-80 pointer-events-none">
-                {notifications.map((notification) => (
+            <div className="fixed top-12 right-4 z-[9999] flex flex-col gap-2 w-80 pointer-events-none">
+                {visibleNotifications.map((notification) => (
                     <div
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification.alertId)}

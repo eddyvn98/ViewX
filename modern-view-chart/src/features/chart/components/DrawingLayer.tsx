@@ -28,7 +28,7 @@ export function DrawingLayer() {
             {/* List of active drawings */}
             <div className="p-3 flex flex-col gap-0.5 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-tight">Applied Objects</h4>
+                    <h4 className="text-[11px] font-bold uppercase text-muted-foreground/60 tracking-tight">Applied Objects</h4>
                     {drawings.length > 0 && (
                         <div className="flex items-center gap-1">
                             <button
@@ -65,7 +65,7 @@ export function DrawingLayer() {
                 </div>
 
                 {drawings.length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground/30 text-[10px] italic bg-secondary/5 rounded-lg border border-dashed border-border/40">
+                    <div className="text-center py-6 text-muted-foreground/30 text-[11px] italic bg-secondary/5 rounded-lg border border-dashed border-border/40">
                         No manual drawings
                     </div>
                 )}
@@ -94,7 +94,7 @@ export function DrawingLayer() {
 
                             <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => setExpandedId(expandedId === drawing.id ? null : drawing.id)}>
                                 <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: drawing.color }} />
-                                <span className="text-[10px] truncate text-foreground font-medium">
+                                <span className="text-[11px] truncate text-foreground font-medium">
                                     {drawing.type === 'fib-retracement' ? 'Fib Retracement' :
                                         drawing.type === 'fib-extension' ? 'Fib Extension' :
                                             drawing.type === 'trend-line' ? 'Trend Line' :
@@ -133,7 +133,7 @@ export function DrawingLayer() {
                                         {/* Color & Line Settings */}
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-[9px] font-bold text-muted-foreground/60 uppercase">Line Style</label>
+                                                <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">Line Style</label>
                                                 <div className="flex bg-secondary/30 rounded p-0.5 gap-0.5">
                                                     {(['solid', 'dashed', 'dotted'] as const).map(style => (
                                                         <button
@@ -153,7 +153,7 @@ export function DrawingLayer() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-[9px] font-bold text-muted-foreground/60 uppercase">Width ({drawing.lineWidth}px)</label>
+                                                <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">Width ({drawing.lineWidth}px)</label>
                                                 <input
                                                     type="range"
                                                     min="1"
@@ -170,8 +170,8 @@ export function DrawingLayer() {
                                         {(drawing.type === 'fib-retracement' || drawing.type === 'fib-extension') && (
                                             <div className="flex flex-col gap-2 border-t border-border/30 pt-2">
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-[9px] font-bold text-muted-foreground/60 uppercase">Active Levels</label>
-                                                    <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">FIBONACCI</span>
+                                                    <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">Active Levels</label>
+                                                    <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">FIBONACCI</span>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-1.5">
                                                     {[0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0, 1.618, 2.618].map(ratio => {
@@ -188,7 +188,7 @@ export function DrawingLayer() {
                                                                     });
                                                                 }}
                                                                 className={cn(
-                                                                    "flex items-center justify-center p-1.5 rounded border text-[9px] font-bold transition-all",
+                                                                    "flex items-center justify-center p-1.5 rounded border text-[11px] font-bold transition-all",
                                                                     isEnabled
                                                                         ? "bg-primary/10 border-primary/30 text-primary"
                                                                         : "bg-secondary/10 border-transparent text-muted-foreground/40 hover:bg-secondary/20"

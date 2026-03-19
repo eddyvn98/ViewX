@@ -74,7 +74,7 @@ export function ChartPanels({
                         )}
                         style={{ marginLeft: '-1px' }}
                     >
-                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight md:tracking-widest whitespace-nowrap">
+                        <span className="text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest whitespace-nowrap">
                             {isSubchartVisible ? 'Hide' : (
                                 <>
                                     <span className="md:inline hidden">Show Indicator</span>

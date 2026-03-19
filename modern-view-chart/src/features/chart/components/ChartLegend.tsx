@@ -7,7 +7,7 @@ import { useLegendDOMUpdater } from '../hooks/use-legend-dom-updater';
 import { useShallow } from 'zustand/react/shallow';
 import { SymbolIcon } from './SymbolIcon';
 import { isSmartAnalysis } from '../indicators/registry/indicator-categories';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChartLegendProps {
@@ -25,6 +25,7 @@ const EMPTY_INDICATORS: IndicatorConfig[] = [];
 
 export function ChartLegend({ chartId, symbol, interval, source, candles, chartType = 'candles' }: ChartLegendProps) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [activeIndicatorId, setActiveIndicatorId] = React.useState<string | null>(null);
     const { isVisible, setIsVisible } = useMarketStore(useShallow(state => ({
         isVisible: state.isChartLegendVisible,
         setIsVisible: state.setChartLegendVisible
@@ -38,6 +39,7 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
             !isSmartAnalysis(i.type)
         )
     ));
+    const removeIndicator = useMarketStore(state => state.removeIndicator);
 
     // DOM-based updates - NO REACT RE-RENDERS on hover!
     useLegendDOMUpdater(containerRef, { chartId, symbol, interval, source, candles, chartType });
@@ -84,25 +86,25 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
                     {/* Elegant OHLC Rows */}
                     <div className="flex flex-col gap-1 px-0.5 font-extrabold">
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted-foreground/90 min-w-[8px]">O</span>
+                            <span className="text-[11px] text-muted-foreground/90 min-w-[8px]">O</span>
                             <span data-ohlc="open" className="text-[13px] text-foreground tracking-tight">---</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted-foreground/90 min-w-[8px]">H</span>
+                            <span className="text-[11px] text-muted-foreground/90 min-w-[8px]">H</span>
                             <span data-ohlc="high" className="text-[13px] text-foreground tracking-tight">---</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted-foreground/90 min-w-[8px]">L</span>
+                            <span className="text-[11px] text-muted-foreground/90 min-w-[8px]">L</span>
                             <span data-ohlc="low" className="text-[13px] text-foreground tracking-tight">---</span>
                         </div>
                     </div>
 
                     {/* Elegant Price Display */}
                     <div className="flex flex-col pt-1.5 border-t border-border/10">
-                        <span data-ohlc="close" className="text-[17px] font-black text-foreground leading-tight">···</span>
+                        <span data-ohlc="close" className="text-[17px] font-black text-foreground leading-tight">...</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                            <span data-ohlc="change" className="text-[12px] font-extrabold">···</span>
-                            <span data-ohlc="change-percent" className="text-[12px] font-extrabold opacity-100">···</span>
+                            <span data-ohlc="change" className="text-[12px] font-extrabold">...</span>
+                            <span data-ohlc="change-percent" className="text-[12px] font-extrabold opacity-100">...</span>
                         </div>
                     </div>
                 </div>
@@ -116,20 +118,38 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
                         <div
                             key={ind.id}
                             data-indicator-id={ind.id}
-                            className="flex flex-col"
+                            className="flex flex-col pointer-events-auto"
+                            onClick={() => setActiveIndicatorId((prev) => (prev === ind.id ? null : ind.id))}
                         >
-                            <span className="text-[10px] font-extrabold text-muted-foreground/95 uppercase tracking-tight leading-none mb-0.5">
-                                {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${Number((ind.params as Record<string, unknown>)?.period ?? 14)}`}
-                            </span>
+                            <div className="flex items-center justify-between gap-1 mb-0.5">
+                                <span className="text-[11px] font-extrabold text-muted-foreground/95 uppercase tracking-tight leading-none">
+                                    {ind.type === 'MACD' ? 'MACD' : `${ind.type} ${Number((ind.params as Record<string, unknown>)?.period ?? 14)}`}
+                                </span>
+                                {activeIndicatorId === ind.id && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeIndicator(chartId, ind.id);
+                                            setActiveIndicatorId(null);
+                                        }}
+                                        className="h-4 w-4 rounded-sm border border-rose-500/40 text-rose-400 inline-flex items-center justify-center hover:bg-rose-500/10"
+                                        title={`Remove ${ind.type}`}
+                                        aria-label={`Remove ${ind.type}`}
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                )}
+                            </div>
                             <div data-indicator-value className="flex gap-1 text-[12px] font-extrabold leading-none">
                                 {ind.type === 'MACD' ? (
                                     <>
-                                        <span style={{ color: ind.color }}>···</span>
-                                        <span style={{ color: '#FF6D00' }}>···</span>
-                                        <span style={{ color: '#787b86' }}>···</span>
+                                        <span style={{ color: ind.color }}>...</span>
+                                        <span style={{ color: '#FF6D00' }}>...</span>
+                                        <span style={{ color: '#787b86' }}>...</span>
                                     </>
                                 ) : (
-                                    <span style={{ color: ind.color }}>···</span>
+                                    <span style={{ color: ind.color }}>...</span>
                                 )}
                             </div>
                         </div>

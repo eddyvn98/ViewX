@@ -97,7 +97,7 @@ export function ChartsToolbar() {
                             useMarketStore.getState().setChartType(activeChart.id, nextType);
                         }}
                         className={cn(
-                            "px-1.5 py-0.5 rounded text-[10px] font-black uppercase transition-all active:scale-95 border",
+                            "px-1.5 py-0.5 rounded text-[11px] font-black uppercase transition-all active:scale-95 border",
                             activeChart?.chartType !== 'candles'
                                 ? "text-primary border-primary/30 bg-primary/10"
                                 : "text-muted-foreground border-border hover:text-foreground hover:bg-secondary/40"
@@ -142,7 +142,7 @@ export function ChartsToolbar() {
                         <HistoryIcon size={14} />
                     </button>
 
-                    <button onClick={handleAddChart} className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground hover:text-foreground transition-all uppercase tracking-wider"><Plus size={13} className="text-primary" /> Add Chart</button>
+                    <button onClick={handleAddChart} className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-all uppercase tracking-wider"><Plus size={13} className="text-primary" /> Add Chart</button>
                 </div>
             </div>
 

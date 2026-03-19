@@ -22,10 +22,11 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
-    const lastEmittedSymbol = useRef(currentSymbol);
     const initialCentered = useRef(false);
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const longPressTriggeredRef = useRef(false);
+    const dragMovedRef = useRef(false);
     const pressStartRef = useRef({ x: 0, y: 0 });
 
     const infiniteSymbols = [...watchlist, ...watchlist, ...watchlist];
@@ -84,16 +85,6 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     }, [centerSymbol, watchlist]);
 
     useEffect(() => {
-        if (centerSymbol && centerSymbol !== lastEmittedSymbol.current && initialCentered.current) {
-            const timer = setTimeout(() => {
-                setChartSymbol(activeChartId, centerSymbol);
-                lastEmittedSymbol.current = centerSymbol;
-            }, 400);
-            return () => clearTimeout(timer);
-        }
-    }, [centerSymbol, activeChartId, setChartSymbol]);
-
-    useEffect(() => {
         if (scrollRef.current && currentSymbol && !initialCentered.current && watchlist.length > 0) {
             const index = watchlist.indexOf(currentSymbol);
             if (index !== -1) {
@@ -114,6 +105,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     useEffect(() => {
         return () => {
             if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+            if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
         };
     }, []);
 
@@ -124,12 +116,60 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         }
     };
 
+    useEffect(() => {
+        if (!initialCentered.current) return;
+        if (!centerSymbol || !currentSymbol || centerSymbol === currentSymbol) return;
+        if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = setTimeout(() => {
+            setChartSymbol(activeChartId, centerSymbol);
+        }, 220);
+        return () => {
+            if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+        };
+    }, [centerSymbol, currentSymbol, activeChartId, setChartSymbol]);
+
+    const startLongPress = (x: number, y: number) => {
+        longPressTriggeredRef.current = false;
+        pressStartRef.current = { x, y };
+        clearLongPress();
+        longPressTimerRef.current = setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            if (window.navigator.vibrate) window.navigator.vibrate(12);
+            onSymbolLongPress?.();
+        }, 450);
+    };
+
+    const moveLongPress = (x: number, y: number) => {
+        const dx = Math.abs(x - pressStartRef.current.x);
+        const dy = Math.abs(y - pressStartRef.current.y);
+        if (dx > 10 || dy > 10) {
+            dragMovedRef.current = true;
+            clearLongPress();
+        }
+    };
+
+    const selectSymbol = (symbol: string, element: HTMLElement) => {
+        if (symbol === centerSymbol) {
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
+            onSymbolTap?.();
+            return;
+        }
+        setCenterSymbol(symbol);
+        setChartSymbol(activeChartId, symbol);
+        const container = scrollRef.current;
+        if (container) {
+            const targetScroll = element.offsetLeft - (container.clientWidth / 2) + (element.clientWidth / 2);
+            container.scrollTo({ left: targetScroll, behavior: 'smooth' });
+        }
+    };
+
     return (
         <div
             className={cn(
                 "relative w-full h-full bg-transparent flex items-center justify-center transition-all duration-300",
                 isDimmed ? "opacity-10 scale-95 pointer-events-none" : "opacity-100 scale-100"
             )}
+            data-testid="mobile-symbol-carousel"
         >
             <div
                 ref={scrollRef}
@@ -142,6 +182,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                         <div
                             key={`${symbol}-${idx}`}
                             data-symbol={symbol}
+                            data-testid={`mobile-symbol-${symbol}`}
                             className="flex-shrink-0 w-auto px-2 flex items-center justify-center select-none"
                             style={{ scrollSnapAlign: 'center' }}
                             onClick={(e) => {
@@ -150,44 +191,55 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                                     longPressTriggeredRef.current = false;
                                     return;
                                 }
-                                if (isActive) {
-                                    if (window.navigator.vibrate) window.navigator.vibrate(10);
-                                    onSymbolTap?.();
-                                    return;
-                                }
-                                const item = e.currentTarget;
-                                const container = scrollRef.current;
-                                if (container) {
-                                    const targetScroll = item.offsetLeft - (container.clientWidth / 2) + (item.clientWidth / 2);
-                                    container.scrollTo({ left: targetScroll, behavior: 'smooth' });
-                                }
+                                selectSymbol(symbol, e.currentTarget);
                             }}
                             onTouchStart={(e) => {
-                                if (!isActive) return;
                                 const touch = e.touches[0];
                                 if (!touch) return;
-                                longPressTriggeredRef.current = false;
-                                pressStartRef.current = { x: touch.clientX, y: touch.clientY };
-                                clearLongPress();
-                                longPressTimerRef.current = setTimeout(() => {
-                                    longPressTriggeredRef.current = true;
-                                    if (window.navigator.vibrate) window.navigator.vibrate(12);
-                                    onSymbolLongPress?.();
-                                }, 450);
+                                dragMovedRef.current = false;
+                                startLongPress(touch.clientX, touch.clientY);
                             }}
                             onTouchMove={(e) => {
                                 const touch = e.touches[0];
                                 if (!touch) return;
-                                const dx = Math.abs(touch.clientX - pressStartRef.current.x);
-                                const dy = Math.abs(touch.clientY - pressStartRef.current.y);
-                                if (dx > 10 || dy > 10) {
-                                    clearLongPress();
-                                }
+                                moveLongPress(touch.clientX, touch.clientY);
                             }}
-                            onTouchEnd={() => {
+                            onTouchEnd={(e) => {
+                                if (!dragMovedRef.current && !longPressTriggeredRef.current) {
+                                    selectSymbol(symbol, e.currentTarget);
+                                }
                                 clearLongPress();
                             }}
                             onTouchCancel={() => {
+                                clearLongPress();
+                            }}
+                            onPointerDown={(e) => {
+                                startLongPress(e.clientX, e.clientY);
+                            }}
+                            onPointerMove={(e) => {
+                                moveLongPress(e.clientX, e.clientY);
+                            }}
+                            onPointerUp={() => {
+                                clearLongPress();
+                            }}
+                            onPointerCancel={() => {
+                                clearLongPress();
+                            }}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                longPressTriggeredRef.current = true;
+                                onSymbolLongPress?.();
+                            }}
+                            onMouseDown={(e) => {
+                                startLongPress(e.clientX, e.clientY);
+                            }}
+                            onMouseMove={(e) => {
+                                moveLongPress(e.clientX, e.clientY);
+                            }}
+                            onMouseUp={() => {
+                                clearLongPress();
+                            }}
+                            onMouseLeave={() => {
                                 clearLongPress();
                             }}
                         >
@@ -204,7 +256,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                                     <SymbolIcon symbol={symbol} className="w-full h-full" />
                                 </div>
                                 <span className={cn(
-                                    "text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+                                    "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap"
                                 )}>
                                     {symbol}
                                 </span>

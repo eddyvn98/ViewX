@@ -68,7 +68,7 @@ export function ScannerCard({
                 <button
                     onClick={() => onToggleScanner(scanner.id)}
                     className={cn(
-                        'h-8 px-2 rounded border text-[10px] font-black uppercase inline-flex items-center gap-1.5 transition-all duration-300',
+                        'h-8 px-2 rounded border text-[11px] font-black uppercase inline-flex items-center gap-1.5 transition-all duration-300',
                         scanner.active ? 'border-primary/50 text-primary bg-primary/10' : 'border-border/70 text-muted-foreground bg-background/40'
                     )}
                     disabled={!scanner.strategyId}

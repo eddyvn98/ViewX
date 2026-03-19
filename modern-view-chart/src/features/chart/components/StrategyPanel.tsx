@@ -10,6 +10,7 @@ import { AIChatView } from '@/features/strategy/components/AIChatView';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { Strategy } from '@/features/strategy/types';
 import { useMarketStore } from '@/lib/store';
+import { useTranslations } from 'next-intl';
 
 import { motion, LayoutGroup } from 'framer-motion';
 
@@ -20,6 +21,7 @@ export function StrategyPanel() {
     const editingStrategyId = useMarketStore((state) => state.strategyEditingStrategyId);
     const setEditingStrategyId = useMarketStore((state) => state.setStrategyEditingStrategyId);
     const setBuilderDraft = useMarketStore((state) => state.setStrategyBuilderDraft);
+    const t = useTranslations('ChartPanel.tabs');
     const availableStrategies = useStrategyStore((state) => state.strategies);
     const editingStrategy = availableStrategies.find((strategy: Strategy) => strategy.id === editingStrategyId) || null;
 
@@ -42,9 +44,9 @@ export function StrategyPanel() {
     };
 
     const tabs = [
-        { id: 'signals' as PanelView, label: 'Signals', icon: Activity },
-        { id: 'list' as PanelView, label: 'My bot', icon: Bot, matches: ['list', 'build'] },
-        { id: 'ai_chat' as PanelView, label: 'Ai chat', icon: MessageSquare }
+        { id: 'signals' as PanelView, label: t('signals'), icon: Activity },
+        { id: 'list' as PanelView, label: t('createStrategy'), icon: Bot, matches: ['list', 'build'] },
+        { id: 'ai_chat' as PanelView, label: t('aiChat'), icon: MessageSquare }
     ];
 
     return (

@@ -109,7 +109,7 @@ export function TimezoneSelector() {
                                 >
                                     <div className="flex flex-col items-start translate-x-0 group-hover:translate-x-1 transition-transform">
                                         <span className="font-medium">{tz.label}</span>
-                                        <span className="text-[10px] text-zinc-500 group-hover:text-zinc-400">{tz.id}</span>
+                                        <span className="text-[11px] text-zinc-500 group-hover:text-zinc-400">{tz.id}</span>
                                     </div>
                                     {currentTimezone === tz.id && <Check className="w-3.5 h-3.5" />}
                                 </button>

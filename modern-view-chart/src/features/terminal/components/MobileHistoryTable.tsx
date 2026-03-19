@@ -66,7 +66,7 @@ function HistoryCard({ deal, onSymbolClick, onAnalyze, analyzeEnabled = true }: 
                     </div>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-sm font-black text-foreground">{deal.symbol || '---'}</span>
-                        <span className="text-[9px] text-muted-foreground/60 font-mono">#{deal.ticket}</span>
+                        <span className="text-[11px] text-muted-foreground/60 font-mono">#{deal.ticket}</span>
                     </div>
                 </div>
                 <div className={cn(
@@ -81,22 +81,22 @@ function HistoryCard({ deal, onSymbolClick, onAnalyze, analyzeEnabled = true }: 
             <div className="px-3 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="flex flex-col">
-                        <span className="text-[8px] text-muted-foreground/60 uppercase font-black">Volume</span>
+                        <span className="text-[11px] text-muted-foreground/60 uppercase font-black">Volume</span>
                         <span className="text-xs font-mono text-foreground/80 font-bold">{deal.volume.toFixed(2)}</span>
                     </div>
                     <div className="w-px h-6 bg-border/50" />
                     <div className="flex flex-col">
-                        <span className="text-[8px] text-muted-foreground/60 uppercase font-black">Exit Price</span>
+                        <span className="text-[11px] text-muted-foreground/60 uppercase font-black">Exit Price</span>
                         <span className="text-xs font-mono text-foreground/80 font-bold">{deal.price.toFixed(5)}</span>
                     </div>
                 </div>
 
                 <div className="text-right">
-                    <div className="text-[8px] text-muted-foreground/60 uppercase font-black flex items-center gap-1 justify-end">
+                    <div className="text-[11px] text-muted-foreground/60 uppercase font-black flex items-center gap-1 justify-end">
                         <Calendar size={8} />
                         {new Date(deal.time * 1000).toLocaleDateString()}
                     </div>
-                    <div className="text-[10px] font-mono text-muted-foreground">
+                    <div className="text-[11px] font-mono text-muted-foreground">
                         {new Date(deal.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                 </div>
@@ -104,7 +104,7 @@ function HistoryCard({ deal, onSymbolClick, onAnalyze, analyzeEnabled = true }: 
 
             {/* Footer: AI & Focus */}
             <div className="flex items-center border-t border-border/30">
-                <button onClick={handleFocus} className="flex-1 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground border-r border-border/30 uppercase tracking-tighter flex items-center justify-center gap-1">
+                <button onClick={handleFocus} className="flex-1 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground border-r border-border/30 uppercase tracking-tighter flex items-center justify-center gap-1">
                     <Target size={12} />
                     View Chart
                 </button>
@@ -112,7 +112,7 @@ function HistoryCard({ deal, onSymbolClick, onAnalyze, analyzeEnabled = true }: 
                     onClick={() => onAnalyze?.(deal)}
                     disabled={!analyzeEnabled}
                     className={cn(
-                        "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-tighter flex items-center justify-center gap-1",
+                        "flex-1 py-1.5 text-[11px] font-bold uppercase tracking-tighter flex items-center justify-center gap-1",
                         analysisResult
                             ? "text-blue-400 bg-blue-500/5"
                             : analyzeEnabled

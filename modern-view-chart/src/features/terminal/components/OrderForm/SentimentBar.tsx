@@ -9,7 +9,7 @@ import React from 'react';
 export function SentimentBar() {
     return (
         <div className="space-y-1.5">
-            <div className="flex justify-between text-[10px] font-bold">
+            <div className="flex justify-between text-[11px] font-bold">
                 <span className="text-red-500">64%</span>
                 <span className="text-blue-500">36%</span>
             </div>

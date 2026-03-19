@@ -147,7 +147,7 @@ const PositionCard = memo(function PositionCard({ pos, onClose, onUpdate, onSymb
                     </div>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-sm font-black text-foreground">{pos.symbol}</span>
-                        <span className="text-[10px] text-muted-foreground font-bold">{pos.volume.toFixed(2)}</span>
+                        <span className="text-[11px] text-muted-foreground font-bold">{pos.volume.toFixed(2)}</span>
                     </div>
                 </div>
                 <div ref={profitRef} className={cn("text-base font-black font-mono", pos.profit >= 0 ? "text-green-500" : "text-red-500")}>
@@ -167,12 +167,12 @@ const PositionCard = memo(function PositionCard({ pos, onClose, onUpdate, onSymb
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
-                            <span className="text-[8px] text-red-500/70 font-black uppercase">SL:</span>
-                            <span className="text-[10px] font-mono text-foreground/80">{(pos.sl || 0) > 0 ? pos.sl.toFixed(2) : '--'}</span>
+                            <span className="text-[11px] text-red-500/70 font-black uppercase">SL:</span>
+                            <span className="text-[11px] font-mono text-foreground/80">{(pos.sl || 0) > 0 ? pos.sl.toFixed(2) : '--'}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className="text-[8px] text-green-500/70 font-black uppercase">TP:</span>
-                            <span className="text-[10px] font-mono text-foreground/80">{(pos.tp || 0) > 0 ? pos.tp.toFixed(2) : '--'}</span>
+                            <span className="text-[11px] text-green-500/70 font-black uppercase">TP:</span>
+                            <span className="text-[11px] font-mono text-foreground/80">{(pos.tp || 0) > 0 ? pos.tp.toFixed(2) : '--'}</span>
                         </div>
                     </div>
                 </div>
@@ -180,9 +180,9 @@ const PositionCard = memo(function PositionCard({ pos, onClose, onUpdate, onSymb
 
             {/* Row 3: Buttons */}
             <div className="flex items-center border-t border-border/30">
-                <button onClick={handleFocus} className="flex-1 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground border-r border-border/30 uppercase tracking-tighter">Focus</button>
-                <button onClick={() => setIsEditing(!isEditing)} className="flex-1 py-1.5 text-[10px] font-bold text-blue-500/80 hover:text-blue-400 border-r border-border/30 uppercase tracking-tighter">Adjust</button>
-                <button onClick={() => onClose(pos.ticket)} className="flex-1 py-1.5 text-[10px] font-bold text-red-500/80 hover:text-red-400 uppercase tracking-tighter">Close</button>
+                <button onClick={handleFocus} className="flex-1 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground border-r border-border/30 uppercase tracking-tighter">Focus</button>
+                <button onClick={() => setIsEditing(!isEditing)} className="flex-1 py-1.5 text-[11px] font-bold text-blue-500/80 hover:text-blue-400 border-r border-border/30 uppercase tracking-tighter">Adjust</button>
+                <button onClick={() => onClose(pos.ticket)} className="flex-1 py-1.5 text-[11px] font-bold text-red-500/80 hover:text-red-400 uppercase tracking-tighter">Close</button>
             </div>
 
             {/* Inline Edit Panel */}
@@ -190,12 +190,12 @@ const PositionCard = memo(function PositionCard({ pos, onClose, onUpdate, onSymb
                 <div className="p-3 bg-popover border-t border-border animate-in slide-in-from-top-2 duration-200">
                     <div className="grid grid-cols-2 gap-3 mb-3">
                         <div>
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">New SL</label>
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase block mb-1">New SL</label>
                             <input type="number" step="0.00001" value={slValue} onChange={e => setSlValue(e.target.value)}
                                 className="w-full bg-secondary border-none rounded-md px-3 py-2 text-sm text-foreground focus:ring-1 focus:ring-blue-500 outline-none" />
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">New TP</label>
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase block mb-1">New TP</label>
                             <input type="number" step="0.00001" value={tpValue} onChange={e => setTpValue(e.target.value)}
                                 className="w-full bg-secondary border-none rounded-md px-3 py-2 text-sm text-foreground focus:ring-1 focus:ring-blue-500 outline-none" />
                         </div>

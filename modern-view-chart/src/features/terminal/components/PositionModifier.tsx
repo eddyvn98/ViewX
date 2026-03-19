@@ -134,7 +134,7 @@ export function PositionModifier() {
                                     </div>
                                 </div>
                                 {tpMetrics && (
-                                    <div className="flex gap-3 text-[10px] font-bold text-blue-400 ml-1">
+                                    <div className="flex gap-3 text-[11px] font-bold text-blue-400 ml-1">
                                         <span>{tpMetrics.pnl}</span>
                                         <span className="text-muted-foreground/40">|</span>
                                         <span>{tpMetrics.points} points</span>
@@ -166,7 +166,7 @@ export function PositionModifier() {
                                     </div>
                                 </div>
                                 {slMetrics && (
-                                    <div className="flex gap-3 text-[10px] font-bold text-red-400 ml-1">
+                                    <div className="flex gap-3 text-[11px] font-bold text-red-400 ml-1">
                                         <span>{slMetrics.pnl}</span>
                                         <span className="text-muted-foreground/40">|</span>
                                         <span>{slMetrics.points} points</span>
@@ -211,7 +211,7 @@ export function PositionModifier() {
                                         </button>
                                     </div>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground/50 font-bold ml-1">Min: 0.01 - Max: {editingPosition.volume}</span>
+                                <span className="text-[11px] text-muted-foreground/50 font-bold ml-1">Min: 0.01 - Max: {editingPosition.volume}</span>
                             </div>
                             <div className="text-center pt-2">
                                 <div className="text-[12px] text-muted-foreground font-bold">Estimated PnL:</div>

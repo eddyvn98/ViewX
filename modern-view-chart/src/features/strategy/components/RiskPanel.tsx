@@ -40,21 +40,21 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
         <div className="rounded-lg border border-border bg-secondary/10 overflow-hidden">
             <div className="px-3 py-2 border-b border-border bg-secondary/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center">4</span>
-                    <span className="text-[12px] font-black uppercase tracking-wide text-rose-500">{t('builder.riskManagement')}</span>
+                    <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[11px] font-semibold flex items-center justify-center">4</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-wide text-rose-500">{t('builder.riskManagement')}</span>
                 </div>
             </div>
 
             <div className="p-3 flex flex-col gap-1.5">
                 {/* LOT SIZE - ROW */}
                 <div className="flex items-center gap-3 h-6">
-                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">{t('builder.volume')}</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tighter w-16 shrink-0">{t('builder.volume')}</span>
 
                     <div className="flex items-center gap-1.5">
                         <select
                             value={lotConfig.mode}
                             onChange={(e) => handleLotModeChange(e.target.value as LotMode)}
-                            className="bg-secondary text-[8px] font-black px-1 h-5 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer min-w-[56px] text-center hover:border-blue-500/40 transition-colors"
+                            className="bg-secondary text-[11px] font-semibold px-1 h-5 rounded border border-border outline-none text-muted-foreground appearance-none cursor-pointer min-w-[56px] text-center hover:border-blue-500/40 transition-colors"
                         >
                             <option value="fixed" className="bg-popover text-foreground">{t('builder.points')}</option>
                             <option value="percentage" className="bg-popover text-foreground">{t('builder.percent')}</option>
@@ -67,9 +67,9 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                                 step={lotConfig.mode === 'fixed' ? "0.01" : "0.1"}
                                 value={lotConfig.value}
                                 onChange={(e) => onChangeRisk({ ...risk, lotSize: { ...lotConfig, value: parseFloat(e.target.value) } })}
-                                className="bg-transparent border-none h-5 px-1 text-[11px] font-mono font-black text-foreground outline-none w-12 text-right"
+                                className="bg-transparent border-none h-5 px-1 text-[11px] font-mono font-semibold text-foreground outline-none w-12 text-right"
                             />
-                            <span className="text-[7px] text-muted-foreground font-black uppercase">
+                            <span className="text-[11px] text-muted-foreground font-semibold uppercase">
                                 {lotConfig.mode === 'fixed' ? 'Lot' : (lotConfig.mode === 'percentage' ? '%' : '$')}
                             </span>
                         </div>
@@ -82,7 +82,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                 <div className="flex flex-col gap-1">
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between h-4">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
                                 <Shield size={8} /> {t('builder.useStopLoss')}
                             </span>
                             <button
@@ -109,7 +109,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
 
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between h-4">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
                                 <Target size={8} /> {t('builder.useTakeProfit')}
                             </span>
                             <button
@@ -137,7 +137,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
 
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center justify-between h-6">
-                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
                             <Zap size={9} className={risk.trailing ? 'text-blue-500/80' : 'text-muted-foreground/40'} /> {t('builder.trailingProtect')}
                         </span>
                         <button
@@ -154,7 +154,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                         </button>
                     </div>
                     {risk.trailing && (
-                        <span className="text-[7px] text-blue-500/60 font-black italic pl-4 -mt-1 mb-1">
+                        <span className="text-[11px] text-blue-500/60 font-semibold italic pl-4 -mt-1 mb-1">
                             ACTIVE PROTECTION ENABLED
                         </span>
                     )}
@@ -164,7 +164,7 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                 <div className="flex flex-col gap-3 mt-1">
                     <button
                         onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="flex items-center gap-1.5 text-[9px] font-black text-[#b4b7c1] hover:text-white transition-colors uppercase"
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-[#b4b7c1] hover:text-white transition-colors uppercase"
                     >
                         <Settings2 size={10} /> {showAdvanced ? t('builder.hideAdvanced') : t('builder.showAdvanced')}
                     </button>
@@ -172,11 +172,11 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                     {showAdvanced && (
                         <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">{t('builder.position')}</span>
+                                <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest">{t('builder.position')}</span>
                                 <select
                                     value={positionMode}
                                     onChange={(e) => onChangeMode(e.target.value as PositionMode)}
-                                    className="bg-secondary text-[10px] h-7 px-2 rounded border border-border text-foreground outline-none font-bold appearance-none cursor-pointer hover:border-blue-500/50 transition-colors"
+                                    className="bg-secondary text-[11px] h-7 px-2 rounded border border-border text-foreground outline-none font-bold appearance-none cursor-pointer hover:border-blue-500/50 transition-colors"
                                 >
                                     <option value="single_position" className="bg-popover">{t('builder.single')}</option>
                                     <option value="hedge" className="bg-popover">{t('builder.hedge')}</option>
@@ -184,12 +184,12 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">{t('builder.maxTrades')}</span>
+                                <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest">{t('builder.maxTrades')}</span>
                                 <input
                                     type="number"
                                     value={risk.maxTrades || 1}
                                     onChange={(e) => onChangeRisk({ ...risk, maxTrades: parseInt(e.target.value) })}
-                                    className="bg-secondary/80 text-[10px] h-7 px-2 rounded border border-border text-foreground outline-none font-mono font-bold text-right"
+                                    className="bg-secondary/80 text-[11px] h-7 px-2 rounded border border-border text-foreground outline-none font-mono font-bold text-right"
                                 />
                             </div>
                         </div>
@@ -199,3 +199,5 @@ export function RiskPanel({ risk, positionMode, onChangeRisk, onChangeMode }: Ri
         </div>
     );
 }
+
+

@@ -103,23 +103,23 @@ export const MobileAccountSummary = memo(function MobileAccountSummary({ account
         <div className="flex items-center justify-between w-full h-full px-1">
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
-                    <span className="text-[7px] text-muted-foreground uppercase font-black">Eq:</span>
-                    <span ref={equityRef} className="text-[10px] font-mono font-bold text-foreground">···</span>
+                    <span className="text-[11px] text-muted-foreground uppercase font-black">Eq:</span>
+                    <span ref={equityRef} className="text-[11px] font-mono font-bold text-foreground">...</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <span className="text-[7px] text-muted-foreground uppercase font-black">Pr:</span>
-                    <span ref={profitRef} className="text-[10px] font-mono font-bold font-black text-green-500">···</span>
+                    <span className="text-[11px] text-muted-foreground uppercase font-black">Pr:</span>
+                    <span ref={profitRef} className="text-[11px] font-mono font-bold font-black text-green-500">...</span>
                 </div>
             </div>
 
             <div className="flex items-center gap-2">
                 <div className="flex items-baseline gap-0.5">
-                    <span className="text-[7px] text-muted-foreground/80 uppercase">B</span>
-                    <span className="text-[9px] font-mono text-muted-foreground">{(account.balance ?? 0).toFixed(0)}</span>
+                    <span className="text-[11px] text-muted-foreground/80 uppercase">B</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">{(account.balance ?? 0).toFixed(0)}</span>
                 </div>
                 <div className="flex items-baseline gap-0.5">
-                    <span className="text-[7px] text-muted-foreground/80 uppercase">L</span>
-                    <span className="text-[9px] font-mono text-muted-foreground">{(account.margin_level ?? 0).toFixed(0)}%</span>
+                    <span className="text-[11px] text-muted-foreground/80 uppercase">L</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">{(account.margin_level ?? 0).toFixed(0)}%</span>
                 </div>
             </div>
         </div>

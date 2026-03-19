@@ -6,9 +6,13 @@ import { timeframeToChartInterval } from '@/features/strategy/dashboard/matrix-u
 import { BotPicker } from './strategy-signal-scanners/BotPicker';
 import { ScannerCard } from './strategy-signal-scanners/ScannerCard';
 import { useScannerViewModel } from './strategy-signal-scanners/useScannerViewModel';
+import { ExternalLink } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export function StrategySignalScanners() {
     const t = useTranslations('Signals.matrix');
+    const pathname = usePathname();
+    const isSignalsPage = pathname.includes('/signals');
 
     const [isBotPickerOpen, setIsBotPickerOpen] = useState(false);
     const [addingSymbolScannerId, setAddingSymbolScannerId] = useState<string | null>(null);
@@ -23,6 +27,7 @@ export function StrategySignalScanners() {
         virtualPositions,
         addMatrixScannerForStrategy,
         findMatrixScannerByStrategy,
+        setMatrixScannerStrategy,
         focusMatrixScanner,
         removeMatrixScanner,
         setMatrixScannerName,
@@ -88,6 +93,16 @@ export function StrategySignalScanners() {
             setIsBotPickerOpen(false);
             return;
         }
+        const emptyScanner = matrixScanners.find((scanner) => !scanner.strategyId);
+        if (emptyScanner) {
+            setMatrixScannerStrategy(emptyScanner.id, strategyId);
+            setMatrixScannerName(emptyScanner.id, strategyName);
+            toggleMatrixScanner(emptyScanner.id);
+            focusMatrixScanner(emptyScanner.id);
+            setIsBotPickerOpen(false);
+            return;
+        }
+
         const scannerId = addMatrixScannerForStrategy(strategyId);
         setMatrixScannerName(scannerId, strategyName);
         toggleMatrixScanner(scannerId);
@@ -105,8 +120,26 @@ export function StrategySignalScanners() {
         setAddingTfScannerId(null);
     };
 
+    const openMatrixInNewTab = () => {
+        const segments = window.location.pathname.split('/').filter(Boolean);
+        const locale = segments[0] || 'en';
+        window.open(`/${locale}/signals?focus=matrix`, '_blank', 'noopener,noreferrer');
+    };
+
     return (
         <div className="flex flex-col gap-4">
+            {!isSignalsPage && (
+                <div className="flex items-center justify-end">
+                    <button
+                        type="button"
+                        onClick={openMatrixInNewTab}
+                        className="h-7 px-2 rounded-md border border-border/60 bg-secondary/20 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+                    >
+                        <ExternalLink size={11} />
+                        Open Matrix Tab
+                    </button>
+                </div>
+            )}
             <BotPicker
                 isOpen={isBotPickerOpen}
                 strategies={strategies}

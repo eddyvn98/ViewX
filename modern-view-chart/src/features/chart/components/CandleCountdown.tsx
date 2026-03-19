@@ -144,7 +144,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             style={{ transform: 'translateY(-50%)' }}
         >
             <div ref={priceRef} className="text-white text-[11px] font-bold leading-none">--</div>
-            <div ref={countdownRef} className="text-white/90 text-[9px] font-medium leading-none mt-0.5">--:--</div>
+            <div ref={countdownRef} className="text-white/90 text-[11px] font-medium leading-none mt-0.5">--:--</div>
         </div>
     );
 }

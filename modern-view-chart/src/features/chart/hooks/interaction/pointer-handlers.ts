@@ -252,7 +252,7 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
                     const pnlEl = tagElement.querySelector('.pnl-text') as HTMLElement;
                     if (pnlEl) {
                         pnlEl.textContent = formatPnL(pnlVal);
-                        pnlEl.className = `pnl-text text-[10px] font-bold px-1 rounded bg-black/40 ${pnlVal >= 0 ? 'text-green-400' : 'text-red-400'} max-w-0 overflow-hidden opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 [[dragging]_&]:max-w-[120px] [[dragging]_&]:opacity-100 transition-all duration-300 ease-in-out`;
+                        pnlEl.className = `pnl-text text-[11px] font-bold px-1 rounded bg-black/40 ${pnlVal >= 0 ? 'text-green-400' : 'text-red-400'} max-w-0 overflow-hidden opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 [[dragging]_&]:max-w-[120px] [[dragging]_&]:opacity-100 transition-all duration-300 ease-in-out`;
                     }
                     tagElement.setAttribute('dragging', '');
                 }

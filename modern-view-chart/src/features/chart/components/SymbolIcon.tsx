@@ -54,7 +54,7 @@ export function SymbolIcon({ symbol, className }: SymbolIconProps) {
         if (!resolved.logo.src) {
             return (
                 <div className={cn("flex items-center justify-center rounded-full shrink-0 border border-border/40 shadow-sm bg-slate-600/20 text-slate-700 dark:text-slate-200", className)}>
-                    <span className="text-[9px] font-black tracking-tight">{resolved.logo.key.slice(0, 4)}</span>
+                    <span className="text-[11px] font-black tracking-tight">{resolved.logo.key.slice(0, 4)}</span>
                 </div>
             );
         }
@@ -116,7 +116,7 @@ export function SymbolIcon({ symbol, className }: SymbolIconProps) {
                 )}
                 title={s}
             >
-                <span className="text-[10px] leading-none font-black uppercase tracking-tight">
+                <span className="text-[11px] leading-none font-black uppercase tracking-tight">
                     {label}
                 </span>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { VirtualPosition, PerformanceMetrics, ConditionGroup, Strategy, Condition } from '../../types';
 import { Sparkles, BrainCircuit, Lightbulb, AlertCircle, Loader2, Check, ArrowRight, Wrench } from 'lucide-react';
 import { AiAnalyzer, AnalysisType } from '../../logic/AiAnalyzer';
@@ -25,6 +26,7 @@ const cloneConditionGroup = (group: ConditionGroup): ConditionGroup =>
 const isCondition = (value: ConditionGroup['conditions'][number]): value is Condition => !('operator' in value);
 
 export function AIInsightPanel({ position }: Props) {
+    const t = useTranslations('StrategyDashboard.aiInsight');
     const [isLoading, setIsLoading] = useState(false);
     const [insight, setInsight] = useState<string | null>(null);
     const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null);
@@ -64,10 +66,10 @@ export function AIInsightPanel({ position }: Props) {
             );
             setInsight(response.reasoning.join('. '));
             setSuggestion((response.suggestedFix ?? null) as AiSuggestion | null);
-            toast.success('AI Analysis Complete');
+            toast.success(t('toast.analysisComplete'));
         } catch (error) {
             console.error('[AIInsight] Analysis failed:', error);
-            toast.error('AI Bridge communication failed');
+            toast.error(t('toast.bridgeFailed'));
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +93,7 @@ export function AIInsightPanel({ position }: Props) {
                         buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, entry: newEntry } : strategy.buy,
                         sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, entry: newEntry } : strategy.sell,
                     });
-                    toast.success(`Updated RSI threshold to ${String(suggestion.value)}`);
+                    toast.success(t('toast.updatedRsi', { value: String(suggestion.value) }));
                 }
             } else if (suggestion.field === 'trailing_stop') {
                 const risk = getPrimaryStrategyRisk(strategy);
@@ -101,49 +103,49 @@ export function AIInsightPanel({ position }: Props) {
                     buy: position.type === 'BUY' && strategy.buy ? { ...strategy.buy, risk: { ...strategy.buy.risk, trailing: isOn } } : strategy.buy,
                     sell: position.type === 'SELL' && strategy.sell ? { ...strategy.sell, risk: { ...strategy.sell.risk, trailing: isOn } } : strategy.sell,
                 });
-                toast.success(`Trailing Stop ${isOn ? 'Enabled' : 'Disabled'}`);
+                toast.success(t('toast.trailingStop', { state: isOn ? t('enabled') : t('disabled') }));
             } else {
-                toast.info(`Manual update required for: ${suggestion.field}`);
+                toast.info(t('toast.manualUpdateRequired', { field: suggestion.field }));
             }
             setSuggestion(null);
         } catch {
-            toast.error('Failed to apply recommendation automatically.');
+            toast.error(t('toast.applyFailed'));
         }
     };
 
     return (
         <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                    <BrainCircuit size={14} className="text-pink-500" />
-                    AI Strategic Insight
+                <h4 className="text-[11px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+                    <BrainCircuit size={14} className="text-primary" />
+                    {t('title')}
                 </h4>
                 {!insight && !isLoading && (
                     <button
                         onClick={handleAskAI}
-                        className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase transition-all shadow-lg shadow-pink-500/20 active:scale-95"
+                        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-[11px] font-black uppercase transition-all shadow-lg shadow-primary/20 active:scale-95"
                     >
                         <Sparkles size={12} />
-                        Analyze with AI
+                        {t('analyzeWithAi')}
                     </button>
                 )}
             </div>
 
             {isLoading && (
                 <div className="bg-secondary/40 border border-border/50 rounded-xl p-6 flex flex-col items-center justify-center gap-3 animate-pulse">
-                    <Loader2 size={24} className="text-pink-500 animate-spin" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">AI is reading the tape...</span>
+                    <Loader2 size={24} className="text-primary animate-spin" />
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-tighter">{t('readingTape')}</span>
                 </div>
             )}
 
             {insight && (
                 <div className="relative group overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 backdrop-blur-md border border-border rounded-xl" />
+                    <div className="absolute inset-0 bg-primary/5 backdrop-blur-md border border-border rounded-xl" />
 
                     <div className="relative p-5 space-y-3">
-                        <div className="flex items-center gap-2 text-pink-400">
+                        <div className="flex items-center gap-2 text-primary">
                             <Lightbulb size={16} />
-                            <span className="text-[11px] font-black uppercase tracking-widest">Key Takeaway</span>
+                            <span className="text-[11px] font-black uppercase tracking-widest">{t('keyTakeaway')}</span>
                         </div>
 
                         <p className="text-[12px] text-foreground/80 leading-relaxed italic">
@@ -151,47 +153,47 @@ export function AIInsightPanel({ position }: Props) {
                         </p>
 
                         {suggestion && (
-                            <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-2 animate-in zoom-in-95 duration-300">
-                                <div className="flex items-center gap-2 text-blue-400">
+                            <div className="mt-4 bg-primary/10 border border-primary/20 rounded-lg p-3 space-y-2 animate-in zoom-in-95 duration-300">
+                                <div className="flex items-center gap-2 text-primary">
                                     <Wrench size={14} />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">AI Recommendation</span>
+                                    <span className="text-[11px] font-black uppercase tracking-wider">{t('aiRecommendation')}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="flex-1">
                                         <p className="text-[11px] text-foreground font-bold">{suggestion.reason}</p>
-                                        <div className="flex items-center gap-2 mt-1 text-[9px] text-blue-400 font-mono">
-                                            <span className="bg-blue-500/20 px-1.5 py-0.5 rounded uppercase">{suggestion.field.replace('_', ' ')}</span>
+                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-primary font-mono">
+                                            <span className="bg-primary/20 px-1.5 py-0.5 rounded uppercase">{suggestion.field.replace('_', ' ')}</span>
                                             <ArrowRight size={10} />
-                                            <span className="bg-blue-500/20 px-1.5 py-0.5 rounded text-foreground font-black">{String(suggestion.value)}</span>
+                                            <span className="bg-primary/20 px-1.5 py-0.5 rounded text-foreground font-black">{String(suggestion.value)}</span>
                                         </div>
                                     </div>
                                     <button
                                         onClick={handleApplyFix}
-                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded text-[11px] font-black uppercase transition-all flex items-center gap-1.5 whitespace-nowrap"
                                     >
                                         <Check size={12} />
-                                        Apply Fix
+                                        {t('applyFix')}
                                     </button>
                                 </div>
                             </div>
                         )}
 
                         <div className="pt-2 flex items-center gap-4">
-                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase">
-                                <AlertCircle size={12} className="text-blue-400" />
-                                Actionable Feedback
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase">
+                                <AlertCircle size={12} className="text-primary" />
+                                {t('actionableFeedback')}
                             </div>
                         </div>
                     </div>
 
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+                    <div className="absolute -inset-0.5 bg-primary/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
                 </div>
             )}
 
             {!insight && !isLoading && (
                 <div className="p-4 bg-secondary/20 border border-dashed border-border rounded-xl flex flex-col items-center gap-2">
-                    <p className="text-[10px] text-muted-foreground text-center max-w-[200px]">
-                        Click the button above to generate a deep-dive analysis of this trade&apos;s characteristics.
+                    <p className="text-[11px] text-muted-foreground text-center max-w-[200px]">
+                        {t('emptyHint')}
                     </p>
                 </div>
             )}

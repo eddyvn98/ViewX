@@ -47,9 +47,9 @@ export function ScannerMatrixTable({
                 <table className="w-max border-collapse">
                     <thead>
                         <tr>
-                            <th className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-left text-[9px] font-black uppercase min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">{t('symbol')}</th>
+                            <th className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-left text-[11px] font-black uppercase min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">{t('symbol')}</th>
                             {vm.timeframes.map((tf) => (
-                                <th key={`${scannerId}-${tf}`} className="bg-background border border-border/60 px-1 py-0.5 text-center text-[9px] font-black uppercase min-w-[72px] w-[72px]">
+                                <th key={`${scannerId}-${tf}`} className="bg-background border border-border/60 px-1 py-0.5 text-center text-[11px] font-black uppercase min-w-[72px] w-[72px]">
                                     <div className="flex items-center justify-center gap-1">
                                         <span>{tf}</span>
                                         <button onClick={() => onRemoveTimeframe(scannerId, tf)} className="text-muted-foreground hover:text-rose-400">
@@ -67,7 +67,7 @@ export function ScannerMatrixTable({
                                             if (!e.target.value) return;
                                             onCommitAddTimeframe(scannerId, e.target.value);
                                         }}
-                                        className="h-6 w-full rounded border border-border/60 bg-background px-1 text-[9px] font-bold uppercase"
+                                        className="h-6 w-full rounded border border-border/60 bg-background px-1 text-[11px] font-bold uppercase"
                                     >
                                         <option value="">TF</option>
                                         {TIMEFRAME_OPTIONS.filter((tf) => !vm.timeframes.includes(tf)).map((tf) => (
@@ -83,7 +83,7 @@ export function ScannerMatrixTable({
                     <tbody>
                         {vm.symbols.map((symbol) => (
                             <tr key={`${scannerId}-${symbol}`}>
-                                <td className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-[10px] font-bold min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">
+                                <td className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-[11px] font-bold min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">
                                     <div className="flex items-center justify-between gap-1">
                                         <span>{symbol}</span>
                                         <button onClick={() => onRemoveSymbol(scannerId, symbol)} className="text-muted-foreground hover:text-rose-400">
@@ -117,7 +117,7 @@ export function ScannerMatrixTable({
                                             <button
                                                 onClick={() => onOpenChart(symbol, tf)}
                                                 className={cn(
-                                                    'w-full h-7 rounded border text-[8px] font-black relative leading-none transition-colors duration-200',
+                                                    'w-full h-7 rounded border text-[11px] font-black relative leading-none transition-colors duration-200',
                                                     isOpen
                                                         ? (isOpenBuy
                                                             ? 'bg-emerald-500/20 border-emerald-500/65 text-emerald-700 dark:text-emerald-400'
@@ -185,7 +185,7 @@ export function ScannerMatrixTable({
                                             if (!e.target.value) return;
                                             onCommitAddSymbol(scannerId, e.target.value);
                                         }}
-                                        className="h-6 w-full rounded border border-border/60 bg-background px-1 text-[9px] font-bold"
+                                        className="h-6 w-full rounded border border-border/60 bg-background px-1 text-[11px] font-bold"
                                     >
                                         <option value="">Symbol</option>
                                         {symbolCandidates.filter((s) => !vm.symbols.includes(s)).map((symbol) => (
@@ -237,7 +237,7 @@ export function ScannerMatrixTable({
             {!isActive && (
                 <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
                     <div className="bg-background/80 backdrop-blur-[2px] border border-border/40 px-4 py-2 rounded-full shadow-xl">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse" />
                             {t('disabled')}
                         </span>

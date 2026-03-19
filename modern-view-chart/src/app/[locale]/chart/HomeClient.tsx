@@ -101,7 +101,11 @@ export default function Home() {
   );
 
   const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
+  const setLeftSidebarOpen = useMarketStore((state) => state.setLeftSidebarOpen);
+  const setRightSidebarOpen = useMarketStore((state) => state.setRightSidebarOpen);
+  const setSidebarTopHeight = useMarketStore((state) => state.setSidebarTopHeight);
   const setActiveMobileTab = useMarketStore((state) => state.setActiveMobileTab);
+  const setStrategyPanelView = useMarketStore((state) => state.setStrategyPanelView);
   const setInputFocused = useMarketStore((state) => state.setInputFocused);
   const setIsScrollingPanel = useMarketStore((state) => state.setIsScrollingPanel);
   const setRightSidebarWidth = useMarketStore((state) => state.setRightSidebarWidth);
@@ -145,6 +149,9 @@ export default function Home() {
       setActiveMobileTab("chart");
       setInputFocused(false);
     } else {
+      if (tab === "strategy") {
+        setStrategyPanelView("signals");
+      }
       setActiveMobileTab(tab);
     }
   };
@@ -154,6 +161,13 @@ export default function Home() {
     setInputFocused(false);
     (document.activeElement as HTMLElement | null)?.blur();
   };
+
+  React.useEffect(() => {
+    // Keep watchlist/search discoverable on chart route regardless of persisted sidebar state.
+    setLeftSidebarOpen(true);
+    setRightSidebarOpen(true);
+    setSidebarTopHeight(40);
+  }, [setLeftSidebarOpen, setRightSidebarOpen, setSidebarTopHeight]);
 
   React.useEffect(() => {
     if (activeMobileTab === "watchlist") {
@@ -263,7 +277,7 @@ export default function Home() {
         <MobileBottomNav
           activeTab={activeMobileTab}
           onTabChange={handleMobileTabChange}
-          isHidden={isScrollingPanel}
+          isHidden={isScrollingPanel && activeMobileTab !== "chart"}
         />
       )}
     </div>

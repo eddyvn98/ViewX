@@ -14,10 +14,10 @@ export function BotPicker({ isOpen, strategies, onToggle, onPickStrategy }: BotP
 
     return (
         <div className="flex items-center justify-between relative">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t('title')}</span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{t('title')}</span>
             <button
                 onClick={onToggle}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded border border-primary/40 text-primary text-[10px] font-black uppercase transition-all hover:bg-primary/5 shadow-sm"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded border border-primary/40 text-primary text-[11px] font-black uppercase transition-all hover:bg-primary/5 shadow-sm"
             >
                 <Plus size={11} />
                 {t('pickBot')}

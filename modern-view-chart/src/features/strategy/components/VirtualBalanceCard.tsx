@@ -62,7 +62,7 @@ export function VirtualBalanceCard() {
                             }
                         </span>
                         <span className={cn(
-                            "text-[8px] font-bold",
+                            "text-[11px] font-bold",
                             isProfit ? "text-emerald-500" : "text-rose-500"
                         )}>
                             {isProfit ? '+' : ''}{(((virtualBalance - initialVirtualBalance) / initialVirtualBalance) * 100).toFixed(2)}%
@@ -75,7 +75,7 @@ export function VirtualBalanceCard() {
             <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={openDashboard}
-                    className="p-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded ring-1 ring-primary/10 text-[7px] font-black uppercase tracking-widest transition-all"
+                    className="p-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded ring-1 ring-primary/10 text-[11px] font-black uppercase tracking-widest transition-all"
                 >
                     INFO
                 </button>

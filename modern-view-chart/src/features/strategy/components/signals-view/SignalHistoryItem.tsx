@@ -43,7 +43,7 @@ export function SignalHistoryItem({
                     <div className="flex items-center gap-1.5">
                         <span
                             className={cn(
-                                'font-black uppercase text-[7px] px-1 rounded-sm',
+                                'font-black uppercase text-[11px] px-1 rounded-sm',
                                 isExit
                                     ? 'text-orange-500 bg-orange-400/10'
                                     : isSell
@@ -54,13 +54,13 @@ export function SignalHistoryItem({
                             {isExit ? exitLabel : isSell ? sellLabel : buyLabel}
                         </span>
                         <span className="text-[12px] font-bold text-foreground leading-none">{signal.symbol}</span>
-                        <span className="text-[10px] font-bold text-foreground/70 font-mono tracking-tighter">@{signal.price}</span>
+                        <span className="text-[11px] font-bold text-foreground/70 font-mono tracking-tighter">@{signal.price}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[8px] font-bold text-muted-foreground/60 uppercase">
+                        <span className="text-[11px] font-bold text-muted-foreground/60 uppercase">
                             {new Date(signal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <span className="text-[8px] font-bold text-muted-foreground/40 italic tracking-tighter">
+                        <span className="text-[11px] font-bold text-muted-foreground/40 italic tracking-tighter">
                             {typeof signal.risk.lotSize === 'object'
                                 ? signal.risk.lotSize.mode === 'fixed'
                                     ? signal.risk.lotSize.value
@@ -74,14 +74,14 @@ export function SignalHistoryItem({
                 {linkedPosition && (
                     <div className="flex items-center ml-1">
                         {linkedPosition.status === 'open' && (
-                            <span className="text-[7px] font-bold text-green-500 bg-green-500/10 px-1 py-0.5 rounded uppercase">OPEN</span>
+                            <span className="text-[11px] font-bold text-green-500 bg-green-500/10 px-1 py-0.5 rounded uppercase">OPEN</span>
                         )}
                         {linkedPosition.status === 'pending' && (
-                            <span className="text-[7px] font-bold text-yellow-500 bg-yellow-500/10 px-1 py-0.5 rounded uppercase">WAIT</span>
+                            <span className="text-[11px] font-bold text-yellow-500 bg-yellow-500/10 px-1 py-0.5 rounded uppercase">WAIT</span>
                         )}
                         {linkedPosition.status === 'closed' && (
                             <span className={cn(
-                                'text-[7px] font-bold px-1 py-0.5 rounded uppercase',
+                                'text-[11px] font-bold px-1 py-0.5 rounded uppercase',
                                 (linkedPosition.pnl || 0) > 0 ? 'text-green-500 bg-green-500/10' : (linkedPosition.pnl || 0) < 0 ? 'text-rose-500 bg-rose-500/10' : 'text-zinc-500 bg-zinc-500/10'
                             )}>
                                 {(linkedPosition.pnl || 0) > 0 ? 'WIN' : (linkedPosition.pnl || 0) < 0 ? 'LOSS' : 'FLAT'}
@@ -95,7 +95,7 @@ export function SignalHistoryItem({
                 {signal.aiAnalysis?.confidence && aiGuardEnabled ? (
                     <div className="flex items-center gap-1 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10">
                         <BrainCircuit size={10} className="text-primary/50" />
-                        <span className="text-[8px] font-black text-primary/70">{signal.aiAnalysis.confidence.toFixed(0)}%</span>
+                        <span className="text-[11px] font-black text-primary/70">{signal.aiAnalysis.confidence.toFixed(0)}%</span>
                     </div>
                 ) : !isExit ? (
                     <button

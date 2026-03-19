@@ -78,7 +78,7 @@ export function SmartAnalysisToggles({ chartId }: SmartAnalysisTogglesProps) {
                     key={ind.id}
                     onClick={() => toggleIndicatorVisibility(chartId, ind.id)}
                     className={cn(
-                        "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold transition-all border pointer-events-auto",
+                        "flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold transition-all border pointer-events-auto",
                         ind.visible
                             ? "bg-primary/20 border-primary/40 text-primary shadow-[0_0_8px_rgba(var(--primary-rgb),0.2)]"
                             : "bg-secondary/5 border-border/10 text-muted-foreground/60 hover:text-foreground hover:bg-secondary/10"

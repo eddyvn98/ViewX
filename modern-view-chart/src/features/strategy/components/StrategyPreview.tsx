@@ -1,4 +1,4 @@
-import { Condition, ConditionGroup, StrategyDirection, StrategyRisk, SLTPConfig, PositionMode } from '../types';
+﻿import { Condition, ConditionGroup, StrategyDirection, StrategyRisk, SLTPConfig, PositionMode } from '../types';
 import { useTranslations } from 'next-intl';
 
 interface StrategyPreviewProps {
@@ -77,26 +77,27 @@ export function StrategyPreview({ direction, marketFilter, entrySetup, risk, ent
     return (
         <div className="rounded-lg border border-border bg-secondary/20 overflow-hidden">
             <div className="px-4 py-2 border-b border-border bg-secondary/40">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.12em]">{t('preview.title')}</span>
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">{t('preview.title')}</span>
             </div>
             <div className="px-4 py-3 flex flex-col gap-1.5">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-[11px] font-medium text-foreground">
                     {direction} {t('preview.when')}
                 </p>
                 {lines.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('preview.noRules')}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('preview.noRules')}</p>
                 ) : (
-                    <ul className="list-disc pl-5 text-sm text-foreground/90 space-y-0.5">
+                    <ul className="list-disc pl-5 text-[11px] text-foreground/90 space-y-0.5">
                         {lines.map((line, idx) => (
                             <li key={`${line}-${idx}`}>{line}</li>
                         ))}
                     </ul>
                 )}
-                <p className="text-sm text-foreground"><span className="font-semibold">{t('preview.sl')}</span> <span className="text-muted-foreground">{summarizeSL(risk, t)}</span></p>
-                <p className="text-sm text-foreground"><span className="font-semibold">{t('preview.tp')}</span> <span className="text-muted-foreground">{summarizeTP(risk, t)}</span></p>
-                <p className="text-sm text-foreground"><span className="font-semibold">{t('preview.execution')}</span> <span className="text-muted-foreground">{entryType.toUpperCase()} {entryType !== 'market' ? `${t('preview.at')} ${summarizeEntryPrice(entryPrice, direction, t)}` : ''}</span></p>
-                <p className="text-sm text-foreground"><span className="font-semibold">{t('preview.riskManager')}</span> <span className="text-muted-foreground">Lot {summarizeLot(risk, t)} | {t('preview.trailing')} {risk.trailing ? t('preview.on') : t('preview.off')} | {t('preview.maxTrades')} {risk.maxTrades ?? 1}{positionMode ? ` | ${t(`builder.${positionMode === 'single_position' ? 'single' : positionMode === 'hedge' ? 'hedge' : 'scaleIn'}`)}` : ''}</span></p>
+                <p className="text-[11px] text-foreground"><span className="font-semibold">{t('preview.sl')}</span> <span className="text-muted-foreground">{summarizeSL(risk, t)}</span></p>
+                <p className="text-[11px] text-foreground"><span className="font-semibold">{t('preview.tp')}</span> <span className="text-muted-foreground">{summarizeTP(risk, t)}</span></p>
+                <p className="text-[11px] text-foreground"><span className="font-semibold">{t('preview.execution')}</span> <span className="text-muted-foreground">{entryType.toUpperCase()} {entryType !== 'market' ? `${t('preview.at')} ${summarizeEntryPrice(entryPrice, direction, t)}` : ''}</span></p>
+                <p className="text-[11px] text-foreground"><span className="font-semibold">{t('preview.riskManager')}</span> <span className="text-muted-foreground">Lot {summarizeLot(risk, t)} | {t('preview.trailing')} {risk.trailing ? t('preview.on') : t('preview.off')} | {t('preview.maxTrades')} {risk.maxTrades ?? 1}{positionMode ? ` | ${t(`builder.${positionMode === 'single_position' ? 'single' : positionMode === 'hedge' ? 'hedge' : 'scaleIn'}`)}` : ''}</span></p>
             </div>
         </div>
     );
 }
+

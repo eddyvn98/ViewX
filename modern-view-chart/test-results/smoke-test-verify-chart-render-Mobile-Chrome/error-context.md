@@ -1,0 +1,140 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - navigation "Primary navigation" [ref=e5]:
+        - generic [ref=e6]:
+          - img "vivutrade logo" [ref=e8]
+          - text: vivutrade
+        - generic [ref=e9]:
+          - button "EN|VI" [ref=e10]
+          - link "Launch App" [ref=e11] [cursor=pointer]:
+            - /url: /en/chart
+            - text: Launch App
+            - img [ref=e12]
+    - main [ref=e14]:
+      - region "A Professional Trading Platform With Built-in AI Intelligence." [ref=e15]:
+        - article [ref=e16]:
+          - generic [ref=e17]:
+            - img [ref=e18]
+            - text: Live MT5 Broker Data
+          - heading "A Professional Trading Platform With Built-in AI Intelligence." [level=1] [ref=e24]
+          - paragraph [ref=e25]: Experience zero-lag charts with real-time MT5 data. Generate strategies, leverage AI trade monitoring, evaluate your trades, and build your rules on a platform strictly superior to TradingView.
+          - generic [ref=e26]:
+            - link "Vào vùng làm việc biểu đồ thời gian thực" [ref=e27] [cursor=pointer]:
+              - /url: /en/chart
+              - text: Launch Chart
+              - img [ref=e28]
+            - link "AI Dashboard" [ref=e30] [cursor=pointer]:
+              - /url: /en/strategy/dashboard
+        - link "Hình ảnh hệ thống thực tế" [ref=e31] [cursor=pointer]:
+          - /url: /en/chart
+          - img "Giao diện Vivutrade Trading Chart Realtime" [ref=e32]
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - img [ref=e36]
+              - generic [ref=e42]:
+                - paragraph [ref=e43]: Live Workspace
+                - paragraph [ref=e44]: XAUUSD Realtime Feed
+            - generic [ref=e45]: LIVE
+      - generic [ref=e46]:
+        - heading "Trade Smarter with Vivutrade AI" [level=2] [ref=e47]
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - img [ref=e51]
+            - generic [ref=e54]:
+              - heading "Analyze & Build" [level=3] [ref=e55]
+              - paragraph [ref=e56]: Use high-fidelity MT5 data and Diamond charts to find opportunities and define your rules.
+          - generic [ref=e57]:
+            - img [ref=e59]
+            - generic [ref=e64]:
+              - heading "AI Monitor & Alert" [level=3] [ref=e65]
+              - paragraph [ref=e66]: Let the AI monitor your rules, evaluate trades, and score market confidence.
+          - generic [ref=e67]:
+            - img [ref=e69]
+            - generic [ref=e72]:
+              - heading "Execute & Backtest" [level=3] [ref=e73]
+              - paragraph [ref=e74]: Place trades, backtest strategies, and review AI trade evaluations directly on the chart.
+      - region "Professional Grade Tools" [ref=e75]:
+        - generic [ref=e76]:
+          - heading "Professional Grade Tools" [level=2] [ref=e77]
+          - paragraph [ref=e78]: Everything you need to build, test, and execute strategies autonomously with AI assistance.
+        - generic [ref=e79]:
+          - article [ref=e80]:
+            - img [ref=e82]
+            - heading "Smart Chart & Analysis" [level=3] [ref=e85]
+            - paragraph [ref=e86]: Experience sub-second candle rendering with smart analysis tools. Optimized for precision scalping and fast execution.
+          - article [ref=e87]:
+            - img [ref=e89]
+            - heading "Diamond Chart" [level=3] [ref=e91]
+            - paragraph [ref=e92]: Our exclusive Diamond rendering gives you unique insights into market structures that regular candles hide.
+          - article [ref=e93]:
+            - img [ref=e95]
+            - heading "Strategy Builder" [level=3] [ref=e99]
+            - paragraph [ref=e100]: Create, test, and live-follow custom strategies. Turn your ideas into an automated AI system.
+          - article [ref=e101]:
+            - img [ref=e103]
+            - heading "Smart Signal Matrix" [level=3] [ref=e105]
+            - paragraph [ref=e106]: Never miss a trade. Monitor dozens of pairs simultaneously based on your custom rules. Get instant alerts.
+          - article [ref=e107]:
+            - img [ref=e109]
+            - heading "AI Trade Monitor" [level=3] [ref=e121]
+            - paragraph [ref=e122]: Advanced AI tracking, trade evaluation, and confidence scoring. Let AI assess the market and your positions in real time.
+          - article [ref=e123]:
+            - img [ref=e125]
+            - heading "Exclusive Broker Data" [level=3] [ref=e129]
+            - paragraph [ref=e130]: Direct tick data feeds from MT5. Trade with the exact prices you execute on, a critical edge over TradingView.
+          - article [ref=e131]:
+            - img [ref=e133]
+            - heading "Unlimited Tools" [level=3] [ref=e135]
+            - paragraph [ref=e136]: No arbitrary limits. Apply unlimited indicators, set unlimited alerts, and build as complex a template as you need.
+          - article [ref=e137]:
+            - img [ref=e139]
+            - heading "Multi-Chart Workspaces" [level=3] [ref=e142]
+            - paragraph [ref=e143]: View multiple charts on a single screen, or span multiple screens with our advanced multi-window synchronization.
+      - generic [ref=e145]:
+        - heading "Ready to Trade with AI?" [level=2] [ref=e146]
+        - paragraph [ref=e147]: Join professional traders who leverage our MT5 data, Diamond charts, and AI-driven insights to maintain their edge in the markets.
+        - link "Start Trading Now" [ref=e149] [cursor=pointer]:
+          - /url: /en/chart
+          - text: Start Trading Now
+          - img [ref=e150]
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - img [ref=e154]
+            - text: No credit card required
+          - generic [ref=e157]:
+            - img [ref=e158]
+            - text: AI Strategy Builder included
+    - contentinfo [ref=e161]:
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - generic [ref=e164]:
+            - img "vivutrade logo" [ref=e166]
+            - text: vivutrade
+          - paragraph [ref=e167]: The premier AI-assisted strategy dashboard and realtime chart monitor for professional traders. Powered by direct MT5 broker connections.
+        - generic [ref=e168]:
+          - generic [ref=e169]:
+            - link "Chart" [ref=e170] [cursor=pointer]:
+              - /url: /en/chart
+            - link "Dashboard" [ref=e171] [cursor=pointer]:
+              - /url: /en/strategy/dashboard
+          - paragraph [ref=e172]: © 2026 Vivutrade. All rights reserved.
+          - generic [ref=e173]:
+            - generic [ref=e174]: "Information:"
+            - link "FAQ" [ref=e175] [cursor=pointer]:
+              - /url: /en/faq
+            - link "About" [ref=e176] [cursor=pointer]:
+              - /url: /en/about
+            - link "Methodology" [ref=e177] [cursor=pointer]:
+              - /url: /en/methodology
+            - link "Contact" [ref=e178] [cursor=pointer]:
+              - /url: /en/contact
+            - link "Terms" [ref=e179] [cursor=pointer]:
+              - /url: /en/terms
+            - link "Privacy" [ref=e180] [cursor=pointer]:
+              - /url: /en/privacy
+  - region "Notifications alt+T"
+```

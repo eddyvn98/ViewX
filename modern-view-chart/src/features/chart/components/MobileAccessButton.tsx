@@ -115,7 +115,7 @@ export function MobileAccessButton() {
                                         <ExternalLink size={14} /> Send to Telegram
                                     </a>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground text-center px-4">
+                                <p className="text-[11px] text-muted-foreground text-center px-4">
                                     Scan QR or copy link to access charts on your phone securely.
                                 </p>
                             </div>
@@ -123,7 +123,7 @@ export function MobileAccessButton() {
                             <div className="h-48 flex flex-col items-center justify-center text-zinc-600 text-xs text-center p-4 gap-2">
                                 <Smartphone size={32} className="opacity-20" />
                                 <p>Mobile access script not running.</p>
-                                <p className="text-[10px] text-zinc-700">Run `python start_mobile_access.py`</p>
+                                <p className="text-[11px] text-zinc-700">Run `python start_mobile_access.py`</p>
                             </div>
                         )}
                     </div>

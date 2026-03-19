@@ -43,7 +43,7 @@ export function updatePnlVisuals(elements: TagElements, tag: TagData, context: T
     });
 
     const pnlText = formatPnL(pnlVal);
-    const newClass = `pnl-text text-[10px] font-bold px-1.5 rounded-md bg-zinc-500/10 dark:bg-white/10 ${pnlVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} max-w-0 overflow-hidden opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 [[dragging]_&]:max-w-[120px] [[dragging]_&]:opacity-100 transition-all duration-300 ease-in-out`;
+    const newClass = `pnl-text text-[11px] font-bold px-1.5 rounded-md bg-zinc-500/10 dark:bg-white/10 ${pnlVal >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} max-w-0 overflow-hidden opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 [[dragging]_&]:max-w-[120px] [[dragging]_&]:opacity-100 transition-all duration-300 ease-in-out`;
 
     if (!elements.pnl) return;
     if (elements.pnl.className !== newClass) {

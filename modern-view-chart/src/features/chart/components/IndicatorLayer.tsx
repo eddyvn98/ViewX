@@ -42,20 +42,20 @@ export function IndicatorLayer() {
                         title="Add Indicator"
                     >
                         <Plus size={10} strokeWidth={3} />
-                        <span className="text-[10px] font-bold">Add</span>
+                        <span className="text-[11px] font-bold">Add</span>
                     </button>
                 </div>
 
                 {indicators.length === 0 && (
                     <div className="text-center py-8 flex flex-col items-center gap-2 text-muted-foreground/40 bg-secondary/5 rounded-xl border border-dashed border-border/40">
                         <Layout size={24} strokeWidth={1.5} className="opacity-50" />
-                        <span className="text-[10px] font-medium">No active layers</span>
+                        <span className="text-[11px] font-medium">No active layers</span>
                     </div>
                 )}
 
                 {smartIndicators.length > 0 && (
                     <div className="flex flex-col gap-1">
-                        <h5 className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest px-1 mb-1">Smart Analysis</h5>
+                        <h5 className="text-[11px] font-bold text-muted-foreground/50 uppercase tracking-widest px-1 mb-1">Smart Analysis</h5>
                         {smartIndicators.map(indicator => (
                             <IndicatorItem
                                 key={indicator.id}
@@ -73,7 +73,7 @@ export function IndicatorLayer() {
 
                 {standardIndicators.length > 0 && (
                     <div className="flex flex-col gap-1">
-                        {smartIndicators.length > 0 && <h5 className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest px-1 mb-1 mt-1">Indicators</h5>}
+                        {smartIndicators.length > 0 && <h5 className="text-[11px] font-bold text-muted-foreground/50 uppercase tracking-widest px-1 mb-1 mt-1">Indicators</h5>}
                         {standardIndicators.map(indicator => (
                             <IndicatorItem
                                 key={indicator.id}

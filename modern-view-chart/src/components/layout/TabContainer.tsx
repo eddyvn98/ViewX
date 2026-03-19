@@ -47,7 +47,7 @@ export function TabContainer() {
                     {editingId === tab.id ? (
                         <input
                             autoFocus
-                            className="bg-secondary/40 text-foreground text-[9px] px-1 py-0.5 rounded border border-primary/30 outline-none w-full shadow-inner"
+                            className="bg-secondary/40 text-foreground text-[11px] px-1 py-0.5 rounded border border-primary/30 outline-none w-full shadow-inner"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onBlur={() => submitRename(tab.id)}
@@ -55,7 +55,7 @@ export function TabContainer() {
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className="text-[9px] font-black uppercase tracking-wider truncate select-none leading-none">
+                        <span className="text-[11px] font-black uppercase tracking-wider truncate select-none leading-none">
                             {tab.name}
                         </span>
                     )}

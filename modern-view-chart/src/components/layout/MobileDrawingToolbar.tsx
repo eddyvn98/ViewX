@@ -1,21 +1,16 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
-    MousePointer2,
     TrendingUp,
     Minus,
-    ArrowUpRight,
     Square,
     GitCommit,
-    Type,
-    Eraser,
     Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DRAWING_TOOLS = [
-    { id: 'cursor', label: 'Cursor', icon: MousePointer2 },
     { id: 'trend-line', label: 'Trend Line', icon: TrendingUp },
     { id: 'horizontal-line', label: 'Horz Line', icon: Minus },
     { id: 'rectangle', label: 'Rectangle', icon: Square },
@@ -31,8 +26,8 @@ interface MobileDrawingToolbarProps {
 
 export const MobileDrawingToolbar = React.memo(function MobileDrawingToolbar({ onToolSelect, isDimmed = false }: MobileDrawingToolbarProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const [activeTool, setActiveTool] = useState('cursor');
-    const [centerTool, setCenterTool] = useState('cursor');
+    const [activeTool, setActiveTool] = useState('trend-line');
+    const [centerTool, setCenterTool] = useState('trend-line');
     const initialCentered = useRef(false);
 
     const infiniteTools = [...DRAWING_TOOLS, ...DRAWING_TOOLS, ...DRAWING_TOOLS];
@@ -99,9 +94,9 @@ export const MobileDrawingToolbar = React.memo(function MobileDrawingToolbar({ o
     useEffect(() => {
         if (scrollRef.current && !initialCentered.current) {
             const container = scrollRef.current;
-            const cursorIndex = DRAWING_TOOLS.findIndex(t => t.id === 'cursor');
-            if (cursorIndex !== -1) {
-                const middleIndex = cursorIndex + DRAWING_TOOLS.length;
+            const defaultToolIndex = DRAWING_TOOLS.findIndex(t => t.id === 'trend-line');
+            if (defaultToolIndex !== -1) {
+                const middleIndex = defaultToolIndex + DRAWING_TOOLS.length;
                 setTimeout(() => {
                     const item = container.children[middleIndex] as HTMLElement;
                     if (item) {
@@ -143,9 +138,11 @@ export const MobileDrawingToolbar = React.memo(function MobileDrawingToolbar({ o
                     const isSelected = activeTool === tool.id;
 
                     return (
-                        <div
+                        <button
                             key={`${tool.id}-${idx}`}
+                            type="button"
                             data-tool={tool.id}
+                            data-testid={`drawing-tool-${tool.id}`}
                             className="flex-shrink-0 w-auto px-2 flex items-center justify-center select-none"
                             style={{ scrollSnapAlign: 'center' }}
                             onClick={(e) => handleToolClick(tool.id, e.currentTarget)}
@@ -163,12 +160,12 @@ export const MobileDrawingToolbar = React.memo(function MobileDrawingToolbar({ o
                                     <tool.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
                                 </div>
                                 <span className={cn(
-                                    "text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+                                    "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap"
                                 )}>
                                     {tool.label}
                                 </span>
                             </div>
-                        </div>
+                        </button>
                     );
                 })}
             </div>

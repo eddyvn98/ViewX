@@ -230,7 +230,6 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 />
 
                 <ChartTradingOverlay symbol={symbol} source={source} />
-                <DrawingToolbar chartId={chartId} />
 
                 {isReady && priceChartRef.current && seriesRef.current && symbol && (
                     <StrategyMarkers
@@ -241,6 +240,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     />
                 )}
             </ChartPanels>
+
+            <DrawingToolbar chartId={chartId} />
 
             {contextMenu && (
                 <ChartContextMenu

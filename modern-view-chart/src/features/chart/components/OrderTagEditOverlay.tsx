@@ -104,7 +104,7 @@ export const OrderTagEditOverlay = memo(function OrderTagEditOverlay({
             <button
                 type="button"
                 data-no-drag="true"
-                title="XoÃ¡ lá»‡nh"
+                title="Xoá lệnh"
                 className="delete-btn flex items-center justify-center w-8 h-8 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white backdrop-blur-md border border-red-500/20 rounded-lg shadow-lg active:scale-95 transition-all"
                 onPointerDown={(e) => {
                     e.preventDefault();

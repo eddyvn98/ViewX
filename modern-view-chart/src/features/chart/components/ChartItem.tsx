@@ -77,12 +77,12 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                         </button>
                         <div className="flex flex-row items-baseline gap-1.5">
                             <span className={cn(
-                                "text-[10px] font-bold uppercase tracking-wider transition-colors",
+                                "text-[11px] font-bold uppercase tracking-wider transition-colors",
                                 isActive ? "text-foreground" : "text-foreground/70"
                             )}>
                                 {chart.symbol}
                             </span>
-                            <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tight">{chart.interval} • {chart.source}</span>
+                            <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tight">{chart.interval} • {chart.source}</span>
                         </div>
                         <button
                             onClick={(e) => {

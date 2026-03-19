@@ -98,11 +98,11 @@ export function ChartClock() {
                 <Clock size={11} className={cn("transition-colors", isOpen ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                 <span
                     ref={timeRef}
-                    className="text-[10px] font-bold text-foreground font-mono tracking-tight"
+                    className="text-[11px] font-bold text-foreground font-mono tracking-tight"
                 >
                     --:--:--
                 </span>
-                <span className="text-[8px] font-bold text-primary uppercase tracking-tight bg-primary/10 px-1 py-0 rounded leading-none">
+                <span className="text-[11px] font-bold text-primary uppercase tracking-tight bg-primary/10 px-1 py-0 rounded leading-none">
                     {utcOffset}
                 </span>
             </button>
@@ -142,7 +142,7 @@ export function ChartClock() {
                                 >
                                     <div className="flex flex-col items-start transition-transform group-hover/item:translate-x-0.5">
                                         <span className="font-bold leading-tight">{tz.label}</span>
-                                        <span className="text-[10px] text-zinc-600 group-hover:text-zinc-500">{tz.id}</span>
+                                        <span className="text-[11px] text-zinc-600 group-hover:text-zinc-500">{tz.id}</span>
                                     </div>
                                     {timezone === tz.id && <Check className="w-3.5 h-3.5 text-blue-400" />}
                                 </button>

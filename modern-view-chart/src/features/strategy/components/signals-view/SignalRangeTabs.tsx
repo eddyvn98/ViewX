@@ -18,7 +18,7 @@ export function SignalRangeTabs({ selectedRange, onSelectRange, labels }: Signal
                     key={tab}
                     onClick={() => onSelectRange(tab)}
                     className={cn(
-                        'flex-1 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-wider transition-colors',
+                        'flex-1 rounded-md px-2 py-1 text-[11px] font-black uppercase tracking-wider transition-colors',
                         selectedRange === tab
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground/70 hover:bg-secondary/60 dark:hover:bg-white/[0.04]'

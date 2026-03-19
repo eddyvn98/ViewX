@@ -53,7 +53,7 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
     const handleConfirm = () => {
         if (!draftOrder) return;
 
-        // 🛡️ Final Validation Logic (Front-end Gatekeeper)
+        // ðŸ›¡ï¸ Final Validation Logic (Front-end Gatekeeper)
         const isBuy = draftOrder.type === 'buy';
         const entryPrice = draftOrder.isMarket ? getCurrentPrice() : (draftOrder.price || getCurrentPrice());
 
@@ -127,7 +127,7 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
                         onClick={() => handleStartDraft('buy')}
                         className="flex-1 flex items-center justify-center h-6.5 transition-all duration-300 rounded-lg hover:bg-blue-500/10 active:scale-95 group/btn"
                     >
-                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none">BUY</span>
+                        <span className="text-[11px] font-bold text-blue-500 uppercase tracking-widest leading-none">BUY</span>
                     </button>
 
                     <div className="w-[1px] h-2.5 bg-border/20 self-center mx-0.5" />
@@ -136,7 +136,7 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
                         onClick={() => handleStartDraft('sell')}
                         className="flex-1 flex items-center justify-center h-6.5 transition-all duration-300 rounded-lg hover:bg-rose-500/10 active:scale-95 group/btn"
                     >
-                        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest leading-none">SELL</span>
+                        <span className="text-[11px] font-bold text-rose-500 uppercase tracking-widest leading-none">SELL</span>
                     </button>
                 </div>
             ) : (
@@ -150,18 +150,18 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
 
                     <div className="flex-1 flex flex-col items-center justify-center min-w-0">
                         <span className={cn(
-                            "text-[7px] font-bold uppercase tracking-tight leading-none mb-0.5",
+                            "text-[11px] font-bold uppercase tracking-tight leading-none mb-0.5",
                             draftOrder.type === 'buy' ? "text-blue-500/60" : "text-rose-500/60"
                         )}>
                             {draftOrder.type}
                         </span>
-                        <span className="text-[8px] font-bold text-foreground tracking-tight leading-none uppercase">{draftOrder.volume}L</span>
+                        <span className="text-[11px] font-bold text-foreground tracking-tight leading-none uppercase">{draftOrder.volume}L</span>
                     </div>
 
                     <button
                         onClick={handleConfirm}
                         className={cn(
-                            "h-6.5 px-3 flex-none rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 border",
+                            "h-6.5 px-3 flex-none rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 border",
                             draftOrder.type === 'buy'
                                 ? "bg-blue-500 text-white border-blue-400/20 hover:bg-blue-600"
                                 : "bg-rose-500 text-white border-rose-400/20 hover:bg-rose-600"

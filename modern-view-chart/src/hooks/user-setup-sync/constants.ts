@@ -1,0 +1,12 @@
+export const USER_STATE_SCHEMA_VERSION = 1;
+export const SAVE_DEBOUNCE_MS = 1500;
+export const MIN_SAVE_INTERVAL_MS = 5000;
+export const FALLBACK_SAVE_INTERVAL_MS = 15000;
+export const REMOTE_SYNC_POLL_MS = 5000;
+export const RATE_LIMIT_BACKOFF_MS = 30000;
+export const PUBLIC_STATE_SAVE_PAUSE_MS = 60000;
+export const USER_STATE_TARGET_BYTES = 220 * 1024;
+export const CLIENT_ID_STORAGE_KEY = 'vivutrade-client-id';
+export const LEGACY_CLIENT_ID_STORAGE_KEY = 'viewx-client-id';
+export const USER_SETUP_SYNC_CHANNEL_NAME = 'user_setup_sync_channel';
+export const USER_SETUP_SYNC_STATUS_EVENT = 'user-setup-sync-status';

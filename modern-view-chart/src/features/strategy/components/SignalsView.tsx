@@ -17,7 +17,12 @@ import { AiAnalyzer, AnalysisType } from '../logic/AiAnalyzer';
 import { ContextCollector } from '../logic/ContextCollector';
 import { StatsService } from '../logic/StatsService';
 
-export function SignalsView() {
+interface SignalsViewProps {
+    showVirtualBalanceCard?: boolean;
+    showMatrix?: boolean;
+}
+
+export function SignalsView({ showVirtualBalanceCard = true, showMatrix = true }: SignalsViewProps = {}) {
     const t = useTranslations('Signals');
     const {
         signals,
@@ -142,8 +147,12 @@ export function SignalsView() {
 
     return (
         <div className="flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-500 w-full pb-6 px-3">
-            <VirtualBalanceCard />
-            <StrategySignalScanners />
+            {showVirtualBalanceCard && <VirtualBalanceCard />}
+            {showMatrix && (
+                <div id="signal-monitor-matrix" data-testid="signal-monitor-matrix">
+                    <StrategySignalScanners />
+                </div>
+            )}
 
             {activePositions.length > 0 && (
                 <div className="flex flex-col gap-3">
@@ -188,7 +197,7 @@ export function SignalsView() {
 
             <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center px-1">
-                    <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <span className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
                         <HistoryIcon size={12} /> {t('recentSignals')}
                     </span>
                 </div>
@@ -197,7 +206,7 @@ export function SignalsView() {
                     {visibleSignals.length === 0 ? (
                         <div className="py-8 flex flex-col items-center justify-center opacity-5 text-center gap-2">
                             <Activity size={24} />
-                            <span className="text-[9px] uppercase font-black tracking-widest">{t('scanning')}</span>
+                            <span className="text-[11px] uppercase font-black tracking-widest">{t('scanning')}</span>
                         </div>
                     ) : (
                         <>
@@ -213,7 +222,7 @@ export function SignalsView() {
 
                             <div className="rounded-xl border border-border/40 dark:border-white/5 bg-secondary/20 dark:bg-white/[0.01] p-2">
                                 <div className="flex items-center justify-end mb-2 px-0.5">
-                                    <span className="text-[8px] font-bold text-muted-foreground/50">{filteredSignals.length}/8</span>
+                                    <span className="text-[11px] font-bold text-muted-foreground/50">{filteredSignals.length}/8</span>
                                 </div>
                                 <SignalHistoryList
                                     filteredSignals={filteredSignals}

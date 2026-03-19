@@ -33,26 +33,26 @@ export function ActivePositionItem({
                     <span className="text-[12px] font-bold text-foreground dark:text-white tracking-tight">{position.symbol}</span>
                     <span
                         className={cn(
-                            'text-[8px] font-bold px-1 py-0.25 rounded uppercase border',
+                            'text-[11px] font-bold px-1 py-0.25 rounded uppercase border',
                             isBuy ? 'bg-primary/10 text-primary border-primary/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                         )}
                     >
                         {isBuy ? buyLabel : sellLabel}
                     </span>
                     {position.timeframe && (
-                        <span className="text-[9px] font-black text-muted-foreground/50 uppercase bg-secondary/50 px-1 rounded-sm border border-border/30 leading-none h-3.5 flex items-center">
+                        <span className="text-[11px] font-black text-muted-foreground/50 uppercase bg-secondary/50 px-1 rounded-sm border border-border/30 leading-none h-3.5 flex items-center">
                             {position.timeframe}
                         </span>
                     )}
                     {position.status === 'pending' && (
-                        <span className="text-[8px] font-black text-yellow-500 bg-yellow-500/10 px-1 py-0.25 rounded uppercase border border-yellow-500/20">
+                        <span className="text-[11px] font-black text-yellow-500 bg-yellow-500/10 px-1 py-0.25 rounded uppercase border border-yellow-500/20">
                             WAIT
                         </span>
                     )}
                     {position.confidence && aiGuardEnabled && (
                         <div className="flex items-center gap-0.5 text-primary/60">
                             <BrainCircuit size={8} />
-                            <span className="text-[8px] font-bold">{position.confidence.toFixed(0)}%</span>
+                            <span className="text-[11px] font-bold">{position.confidence.toFixed(0)}%</span>
                         </div>
                     )}
                 </div>
@@ -70,22 +70,22 @@ export function ActivePositionItem({
                 </div>
             </div>
 
-            <div className="flex items-center justify-between px-2.5 py-1 text-[9px] text-muted-foreground bg-secondary/30 dark:bg-black/20 border-t border-border/30 dark:border-white/5">
+            <div className="flex items-center justify-between px-2.5 py-1 text-[11px] text-muted-foreground bg-secondary/30 dark:bg-black/20 border-t border-border/30 dark:border-white/5">
                 <div className="flex gap-4">
                     <div className="flex items-baseline gap-1">
-                        <span className="text-[7px] uppercase font-black text-muted-foreground/50">GIA</span>
-                        <span className="font-mono font-bold text-[10px] text-foreground">{position.entryPrice.toFixed(2)}</span>
+                        <span className="text-[11px] uppercase font-black text-muted-foreground/50">GIA</span>
+                        <span className="font-mono font-bold text-[11px] text-foreground">{position.entryPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className="text-[7px] uppercase font-black text-rose-500/40">SL</span>
-                        <span className="text-rose-500 font-mono font-bold text-[10px]">{position.sl ? Number(position.sl).toFixed(2) : '--'}</span>
+                        <span className="text-[11px] uppercase font-black text-rose-500/40">SL</span>
+                        <span className="text-rose-500 font-mono font-bold text-[11px]">{position.sl ? Number(position.sl).toFixed(2) : '--'}</span>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className="text-[7px] uppercase font-black text-emerald-500/40">TP</span>
-                        <span className="text-emerald-500 font-mono font-bold text-[10px]">{position.tp ? Number(position.tp).toFixed(2) : '--'}</span>
+                        <span className="text-[11px] uppercase font-black text-emerald-500/40">TP</span>
+                        <span className="text-emerald-500 font-mono font-bold text-[11px]">{position.tp ? Number(position.tp).toFixed(2) : '--'}</span>
                     </div>
                 </div>
-                <span className="text-[8px] font-black text-muted-foreground/60">{position.lotSize} LOTS</span>
+                <span className="text-[11px] font-black text-muted-foreground/60">{position.lotSize} LOTS</span>
             </div>
         </div>
     );

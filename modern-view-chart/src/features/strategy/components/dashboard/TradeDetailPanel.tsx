@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { VirtualPosition, TradeContext, PerformanceMetrics } from '../../types';
 import {
     Clock,
@@ -28,6 +29,7 @@ const getEfficiencyColor = (eff: number) => {
 };
 
 export function TradeDetailPanel({ position, metrics }: Props) {
+    const t = useTranslations('StrategyDashboard.tradeDetail');
     const context = position.metadata;
     console.log(`[TradeDetail] Inspecting Trade: ${position.id} | Metadata keys:`, context ? Object.keys(context) : 'NULL');
     if (context && context.indicators_snapshot) {
@@ -36,10 +38,10 @@ export function TradeDetailPanel({ position, metrics }: Props) {
 
     if (!context) {
         return (
-            <div className="p-8 text-center text-[#787b86] text-xs">
-                No advanced context available for this trade.
-            </div>
-        );
+                <div className="p-8 text-center text-muted-foreground text-xs">
+                {t('noAdvancedContext')}
+                </div>
+            );
     }
 
     const handleFocusOnChart = () => {
@@ -54,44 +56,46 @@ export function TradeDetailPanel({ position, metrics }: Props) {
         }));
     };
 
+    const sessionLabel = context.session ? t(`sessions.${String(context.session).toLowerCase()}`) : 'N/A';
+
     return (
         <div className="bg-secondary p-6 border-t border-border space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* 1. Snapshot Grid */}
                 <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                        <Activity size={14} className="text-blue-500" />
-                        Market Dynamics
+                    <h4 className="text-[11px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+                        <Activity size={14} className="text-primary" />
+                        {t('marketDynamics')}
                     </h4>
                     <div className="grid grid-cols-2 gap-2">
                         <MetricCard
-                            label="Session"
-                            value={context.session}
+                            label={t('session')}
+                            value={sessionLabel}
                             icon={<Clock size={12} />}
                         />
                         <MetricCard
-                            label="Volatility (ATR)"
+                            label={t('volatilityAtr')}
                             value={context.volatility_atr?.toFixed(2) || 'N/A'}
                             icon={<Zap size={12} />}
                         />
                         <MetricCard
                             label="MAE"
-                            value={`${context.mae?.toFixed(2) || 0} pips`}
+                            value={`${context.mae?.toFixed(2) || 0} ${t('pips')}`}
                             icon={<TrendingDown size={12} className="text-red-500" />}
-                            tooltip="Maximum Adverse Excursion: The furthest price moved against you."
+                            tooltip={t('maeTooltip')}
                         />
                         <MetricCard
                             label="MFE"
-                            value={`${context.mfe?.toFixed(2) || 0} pips`}
+                            value={`${context.mfe?.toFixed(2) || 0} ${t('pips')}`}
                             icon={<TrendingUp size={12} className="text-green-500" />}
-                            tooltip="Maximum Favorable Excursion: The furthest price moved in your favor."
+                            tooltip={t('mfeTooltip')}
                         />
                     </div>
 
                     {/* Trade Efficiency */}
                     <div className="bg-secondary/60 p-4 rounded-lg border border-border">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Trade Efficiency</span>
+                            <span className="text-[11px] font-bold text-muted-foreground uppercase">{t('tradeEfficiency')}</span>
                             <span className={`text-[11px] font-black ${getEfficiencyColor(
                                 (Math.max(0, position.pnl || 0) / (context.mfe || 1)) * 100
                             )}`}>
@@ -109,42 +113,42 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                                 }}
                             />
                         </div>
-                        <p className="text-[9px] text-muted-foreground mt-2 italic leading-tight">
-                            Measures how much of the potential move (MFE) was captured as profit.
+                        <p className="text-[11px] text-muted-foreground mt-2 italic leading-tight">
+                            {t('tradeEfficiencyDesc')}
                         </p>
                     </div>
 
                     {context.exit_reason && (
                         <div className={`mt-4 p-2 rounded flex items-center gap-2 border ${context.exit_reason === 'TP' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
                             context.exit_reason === 'SL' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                                'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                                'bg-primary/10 border-primary/20 text-primary'
                             }`}>
                             <Target size={14} />
-                            <span className="text-[10px] font-black uppercase">Exit Reason: {context.exit_reason}</span>
+                            <span className="text-[11px] font-black uppercase">{t('exitReason')}: {context.exit_reason}</span>
                         </div>
                     )}
 
                     <button
                         onClick={handleFocusOnChart}
-                        className="w-full mt-4 flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-foreground py-2 rounded-lg text-[10px] font-bold uppercase transition-colors border border-border"
+                        className="w-full mt-4 flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-foreground py-2 rounded-lg text-[11px] font-bold uppercase transition-colors border border-border"
                     >
-                        <Search size={14} className="text-blue-400" />
-                        Inspect on Chart
+                        <Search size={14} className="text-primary" />
+                        {t('inspectOnChart')}
                     </button>
                 </div>
 
                 {/* 2. Indicator Reality Check */}
                 <div className="space-y-4 md:col-span-2">
-                    <h4 className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                        <BarChart3 size={14} className="text-purple-500" />
-                        Entry Reality Check (Snapshot)
+                    <h4 className="text-[11px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+                        <BarChart3 size={14} className="text-primary" />
+                        {t('entryRealityCheck')}
                     </h4>
                     <div className="bg-secondary/60 rounded-lg border border-border overflow-hidden">
                         <table className="w-full text-left text-[11px]">
                             <thead>
                                 <tr className="bg-secondary/80 text-muted-foreground uppercase">
-                                    <th className="px-3 py-2 font-black">Indicator</th>
-                                    <th className="px-3 py-2 font-black">Condition Value</th>
+                                    <th className="px-3 py-2 font-black">{t('indicator')}</th>
+                                    <th className="px-3 py-2 font-black">{t('conditionValue')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
@@ -160,7 +164,7 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                                 ) : (
                                     <tr>
                                         <td colSpan={2} className="px-3 py-8 text-center text-muted-foreground italic">
-                                            No indicator snapshot available for this trade.
+                                            {t('noIndicatorSnapshot')}
                                         </td>
                                     </tr>
                                 )}
@@ -169,13 +173,13 @@ export function TradeDetailPanel({ position, metrics }: Props) {
                     </div>
 
                     {context.post_exit && (
-                        <div className="p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
+                        <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
                             <div className="flex items-center gap-2 mb-2">
-                                <Info size={14} className="text-blue-400" />
-                                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Post-Trade Analysis</span>
+                                <Info size={14} className="text-primary" />
+                                <span className="text-[11px] font-black text-primary uppercase tracking-widest">{t('postTradeAnalysis')}</span>
                             </div>
                             <p className="text-[11px] text-muted-foreground">
-                                Trade closure efficiency analyzed. Post-exit price behavior captured for performance review.
+                                {t('postTradeAnalysisDesc')}
                             </p>
                         </div>
                     )}
@@ -195,12 +199,12 @@ function MetricCard({ label, value, icon, tooltip }: { label: string; value: str
         <div className="bg-secondary/60 p-3 rounded-lg border border-border flex flex-col gap-1 group relative">
             <div className="flex items-center gap-1.5 text-muted-foreground">
                 {icon}
-                <span className="text-[9px] font-bold uppercase tracking-tight">{label}</span>
+                <span className="text-[11px] font-bold uppercase tracking-tight">{label}</span>
             </div>
             <span className="text-[12px] font-black text-foreground">{value}</span>
 
             {tooltip && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-popover text-[9px] text-foreground rounded shadow-xl border border-border opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-popover text-[11px] text-foreground rounded shadow-xl border border-border opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                     {tooltip}
                 </div>
             )}

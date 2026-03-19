@@ -18,7 +18,40 @@ export interface MACDResult {
     histogram: number[];
 }
 
-export type IndicatorType = "RSI" | "EMA" | "SMA" | "MACD" | "HMA" | "HA" | "ATR" | "BollingerBands" | "Stochastic" | "SuperTrend" | "VWAP" | "Ichimoku" | "ADX" | "OrderBlock" | "FVG" | "SIGNALS" | "Signals";
+export type IndicatorType =
+    | "RSI"
+    | "EMA"
+    | "SMA"
+    | "MACD"
+    | "HMA"
+    | "HA"
+    | "ATR"
+    | "BollingerBands"
+    | "BOLLINGER_BANDS"
+    | "Stochastic"
+    | "STOCHASTIC"
+    | "SuperTrend"
+    | "SUPERTREND"
+    | "VWAP"
+    | "Ichimoku"
+    | "ICHIMOKU"
+    | "ADX"
+    | "SAR"
+    | "OrderBlock"
+    | "FVG"
+    | "BreakoutRays"
+    | "BREAKOUT_RAYS"
+    | "TrendLines"
+    | "TREND_LINES"
+    | "MarketStructure"
+    | "MARKET_STRUCTURE"
+    | "Fibonacci"
+    | "FIBONACCI"
+    | "FibonacciExtension"
+    | "FIBONACCI_EXTENSION"
+    | "SIGNALS"
+    | "Signals"
+    | (string & {});
 
 export interface Indicator {
     type: IndicatorType;
@@ -26,7 +59,7 @@ export interface Indicator {
     field?: string; // e.g., "macd", "signal", "histogram" for MACD
 }
 
-export type Comparator = ">" | "<" | ">=" | "<=" | "crosses_above" | "crosses_below";
+export type Comparator = ">" | "<" | ">=" | "<=" | "==" | "crosses_above" | "crosses_below";
 
 export interface Condition {
     id: string;

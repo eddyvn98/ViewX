@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   output: "standalone",
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async headers() {
     return [
       {

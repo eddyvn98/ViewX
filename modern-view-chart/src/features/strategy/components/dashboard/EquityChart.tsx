@@ -2,12 +2,14 @@
 
 import React, { useEffect, useRef } from 'react';
 import { createChart, ColorType, IChartApi, AreaSeries, LineSeries } from 'lightweight-charts';
+import { useTranslations } from 'next-intl';
 
 interface Props {
     data: { time: number; value: number }[];
 }
 
 export function EquityChart({ data }: Props) {
+    const t = useTranslations('StrategyDashboard.equity');
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
 
@@ -107,8 +109,8 @@ export function EquityChart({ data }: Props) {
     return (
         <div className="bg-secondary/40 rounded-xl border border-border p-4 shadow-2xl">
             <div className="flex items-baseline gap-2 mb-4 px-2">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Equity Curve</span>
-                <span className="text-[8px] font-bold text-blue-500/50 uppercase">Virtual Growth</span>
+                <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{t('title')}</span>
+                <span className="text-[11px] font-bold text-primary/60 uppercase">{t('subtitle')}</span>
             </div>
             <div ref={chartContainerRef} className="w-full" />
         </div>

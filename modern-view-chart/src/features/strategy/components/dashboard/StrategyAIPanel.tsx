@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { PerformanceMetrics } from '../../logic/PerformanceAnalyzer';
 import { Sparkles, BrainCircuit, Target, Zap, Loader2 } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 
 interface Props {
     metrics: PerformanceMetrics;
 }
 
 export function StrategyAIPanel({ metrics }: Props) {
+    const t = useTranslations('StrategyDashboard.aiPanel');
+    const locale = useLocale();
+    const numberFormatter = new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
     const aiEnabled = false;
     const [isLoading, setIsLoading] = useState(false);
     const [analysis, setAnalysis] = useState<string | null>(null);
@@ -36,16 +43,16 @@ export function StrategyAIPanel({ metrics }: Props) {
     };
 
     return (
-        <div className="bg-secondary/20 rounded-2xl border border-blue-500/20 overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="bg-secondary/20 rounded-2xl border border-primary/20 overflow-hidden shadow-2xl backdrop-blur-sm">
             <div className="p-6 space-y-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/10 rounded-lg">
-                            <BrainCircuit size={20} className="text-blue-400" />
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <BrainCircuit size={20} className="text-primary" />
                         </div>
                         <div className="flex flex-col">
-                            <h3 className="text-sm font-black text-foreground uppercase tracking-widest">AI Strategy Coach</h3>
-                            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">Bot → MT5 Signal Guidance</span>
+                            <h3 className="text-sm font-black text-foreground uppercase tracking-widest">{t('title')}</h3>
+                            <span className="text-[11px] font-bold text-primary uppercase tracking-tighter">{t('subtitle')}</span>
                         </div>
                     </div>
 
@@ -53,10 +60,10 @@ export function StrategyAIPanel({ metrics }: Props) {
                         <button
                             onClick={handleMacroAnalyze}
                             disabled={!aiEnabled}
-                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all shadow-lg shadow-blue-500/25 active:scale-95 group disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all shadow-lg shadow-primary/25 active:scale-95 group disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <Sparkles size={14} className="group-hover:animate-pulse" />
-                            Perform System Audit
+                            {t('performAudit')}
                         </button>
                     )}
                 </div>
@@ -64,10 +71,10 @@ export function StrategyAIPanel({ metrics }: Props) {
                 {isLoading && (
                     <div className="py-12 flex flex-col items-center justify-center gap-4">
                         <div className="relative">
-                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
-                            <Loader2 size={32} className="text-blue-400 animate-spin relative" />
+                            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                            <Loader2 size={32} className="text-primary animate-spin relative" />
                         </div>
-                        <span className="text-[10px] font-black text-blue-400/80 uppercase tracking-widest animate-pulse">Aggregating trade data...</span>
+                        <span className="text-[11px] font-black text-primary/80 uppercase tracking-widest animate-pulse">{t('aggregating')}</span>
                     </div>
                 )}
 
@@ -79,7 +86,7 @@ export function StrategyAIPanel({ metrics }: Props) {
                                     <Target size={16} className="text-green-400" />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-black text-muted-foreground uppercase">System Strength</span>
+                                    <span className="text-[11px] font-black text-muted-foreground uppercase">{t('systemStrength')}</span>
                                     <p className="text-[11px] text-foreground/80 leading-relaxed italic">
                                         &quot;{analysis}&quot;
                                     </p>
@@ -87,19 +94,19 @@ export function StrategyAIPanel({ metrics }: Props) {
                             </div>
 
                             <div className="bg-secondary/40 p-4 rounded-xl border border-border/50 flex items-start gap-4">
-                                <div className="p-2 bg-purple-500/10 rounded-lg">
-                                    <Zap size={16} className="text-purple-400" />
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                    <Zap size={16} className="text-primary" />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-black text-muted-foreground uppercase">Actionable Refinement</span>
+                                    <span className="text-[11px] font-black text-muted-foreground uppercase">{t('actionableRefinement')}</span>
                                     <div className="space-y-2 mt-1">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-1 h-1 rounded-full bg-blue-400" />
-                                            <span className="text-[10px] font-bold text-foreground/90">Filter MT5 trades by AI Confidence &gt; 80%</span>
+                                            <div className="w-1 h-1 rounded-full bg-primary" />
+                                            <span className="text-[11px] font-bold text-foreground/90">{t('filterByConfidence')}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-1 h-1 rounded-full bg-blue-400" />
-                                            <span className="text-[10px] font-bold text-foreground/90">Audit ${bestSession?.[0] || 'Current'} Logic for MAE spikes</span>
+                                            <div className="w-1 h-1 rounded-full bg-primary" />
+                                            <span className="text-[11px] font-bold text-foreground/90">{t('auditSession', { session: bestSession?.[0] || t('current') })}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -109,10 +116,10 @@ export function StrategyAIPanel({ metrics }: Props) {
                         <div className="flex justify-center">
                             <button
                                 onClick={() => setAnalysis(null)}
-                                className="text-[10px] font-black text-muted-foreground hover:text-blue-500 uppercase tracking-widest transition-colors flex items-center gap-2"
+                                className="text-[11px] font-black text-muted-foreground hover:text-primary uppercase tracking-widest transition-colors flex items-center gap-2"
                             >
                                 <RefreshCcw width={12} height={12} />
-                                Recalculate with New Data
+                                {t('recalculate')}
                             </button>
                         </div>
                     </div>
@@ -120,10 +127,10 @@ export function StrategyAIPanel({ metrics }: Props) {
 
                 {!analysis && !isLoading && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                        <MacroChip label="Avg Confidence" value={`${avgConfidence.toFixed(0)}%`} color="text-blue-400" />
-                        <MacroChip label="Avg MAE" value={`${metrics.avgMae.toFixed(2)} pips`} color="text-red-400" />
-                        <MacroChip label="Avg MFE" value={`${metrics.avgMfe.toFixed(2)} pips`} color="text-green-400" />
-                        <MacroChip label="Prediction Accuracy" value="In Testing" color="text-purple-400" />
+                        <MacroChip label={t('avgConfidence')} value={`${avgConfidence.toFixed(0)}%`} color="text-primary" />
+                        <MacroChip label={t('avgMae')} value={`${numberFormatter.format(metrics.avgMae)} pips`} color="text-red-400" />
+                        <MacroChip label={t('avgMfe')} value={`${numberFormatter.format(metrics.avgMfe)} pips`} color="text-green-400" />
+                        <MacroChip label={t('predictionAccuracy')} value={t('inTesting')} color="text-primary/80" />
                     </div>
                 )}
             </div>
@@ -134,7 +141,7 @@ export function StrategyAIPanel({ metrics }: Props) {
 function MacroChip({ label, value, color }: { label: string; value: string; color: string }) {
     return (
         <div className="bg-secondary/40 px-4 py-2 rounded-xl border border-border/30 flex flex-col">
-            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">{label}</span>
+            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-tighter">{label}</span>
             <span className={`text-[11px] font-mono font-black ${color}`}>{value}</span>
         </div>
     );
@@ -161,4 +168,3 @@ function RefreshCcw(props: React.SVGProps<SVGSVGElement>) {
         </svg>
     )
 }
-

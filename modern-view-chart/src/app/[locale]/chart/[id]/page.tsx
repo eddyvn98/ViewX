@@ -121,11 +121,11 @@ export default function StandaloneChartPage() {
                             {activeSymbol}
                         </span>
                         <div className="w-[1px] h-3 bg-white/10" />
-                        <span className="text-[10px] font-bold text-zinc-400">
+                        <span className="text-[11px] font-bold text-zinc-400">
                             {activeInterval}m
                         </span>
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest hidden sm:inline">
+                    <span className="text-[11px] text-zinc-500 font-medium uppercase tracking-widest hidden sm:inline">
                         {activeSource} Engine
                     </span>
                 </div>
@@ -133,9 +133,9 @@ export default function StandaloneChartPage() {
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Live Sync Active</span>
+                        <span className="text-[11px] font-bold text-emerald-500 uppercase tracking-tighter">Live Sync Active</span>
                     </div>
-                    <div className="text-[10px] text-zinc-600 font-mono hidden md:block">
+                    <div className="text-[11px] text-zinc-600 font-mono hidden md:block">
                         CHART_ID: {chartId.split('-')[0]}...
                     </div>
                 </div>

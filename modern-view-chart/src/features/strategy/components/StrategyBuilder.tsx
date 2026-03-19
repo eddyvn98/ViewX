@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { RuleBuilder } from '@/features/strategy/components/RuleBuilder';
 import { RiskPanel } from '@/features/strategy/components/RiskPanel';
@@ -53,6 +53,7 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
     const builderDraft = useMarketStore((state) => state.strategyBuilderDraft);
     const setBuilderDraft = useMarketStore((state) => state.setStrategyBuilderDraft);
     const setEditingStrategyId = useMarketStore((state) => state.setStrategyEditingStrategyId);
+    const setStrategyPanelView = useMarketStore((state) => state.setStrategyPanelView);
     const [name, setName] = useState(builderDraft?.name || editingStrategy?.name || 'Professional Scalper');
     const [activeDirection, setActiveDirection] = useState<StrategyDirection>(builderDraft?.activeDirection || 'BUY');
 
@@ -68,6 +69,11 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
     const [executionMode, setExecutionMode] = useState<'virtual' | 'real'>(builderDraft?.executionMode || editingStrategy?.executionMode || 'virtual');
     const [comment, setComment] = useState(builderDraft?.comment || editingStrategy?.comment || 'WebEngine');
     const [magic] = useState(builderDraft?.magic || editingStrategy?.magic || 123456);
+    const [validationError, setValidationError] = useState<string | null>(null);
+    const activeTabId = useMarketStore((state) => state.activeTabId);
+    const activeTab = useMarketStore((state) => (activeTabId ? state.tabs[activeTabId] : null));
+    const activeChartId = activeTab?.activeChartId;
+    const activeChart = activeChartId ? activeTab?.charts?.[activeChartId] : null;
 
     const currentLeg = activeDirection === 'BUY' ? buy : sell;
     const setCurrentLeg = (updater: (leg: StrategyLeg) => StrategyLeg) => {
@@ -76,9 +82,21 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
     };
 
     const handleSave = () => {
+        if (!name.trim()) {
+            setValidationError('Bot name is required.');
+            return;
+        }
+
+        if (!buy.entry?.conditions?.length && !sell.entry?.conditions?.length) {
+            setValidationError('Add at least one entry condition before activating bot.');
+            return;
+        }
+
+        setValidationError(null);
+
         const newStrategy: Strategy = {
             id: editingStrategy?.id || Math.random().toString(36).substring(7),
-            name,
+            name: name.trim(),
             active: true,
             buy,
             sell,
@@ -88,8 +106,8 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             trigger: buy.trigger,
             cancelConditions: buy.cancelConditions,
             side: 'BUY',
-            symbol: editingStrategy?.symbol,
-            timeframe: editingStrategy?.timeframe,
+            symbol: editingStrategy?.symbol || activeChart?.symbol || 'XAUUSDm',
+            timeframe: editingStrategy?.timeframe || activeChart?.interval || '5m',
             positionMode: buy.positionMode || 'single_position',
             executionMode,
             entryType: buy.entryType || 'stop',
@@ -103,6 +121,7 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
         else addStrategy(newStrategy);
         setBuilderDraft(null);
         setEditingStrategyId(null);
+        setStrategyPanelView('list');
         onClose();
     };
 
@@ -130,7 +149,7 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-0.5 flex-1">
-                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">{t('builder.botIdentity')}</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">{t('builder.botIdentity')}</span>
                         <div className="h-[1px] bg-blue-500/20 w-full" />
                     </div>
                     <button onClick={handleClose} className="ml-3 p-1 text-muted-foreground hover:text-foreground bg-secondary/50 rounded transition-all">
@@ -140,28 +159,28 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
 
                 <div className="grid grid-cols-2 gap-3 pl-1">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">{t('builder.botName')}</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">{t('builder.botName')}</span>
                         <input value={name} onChange={(e) => setName(e.target.value)} className="bg-secondary/40 border border-border focus:border-blue-500/40 px-2 h-7 text-[11px] font-bold text-foreground outline-none rounded w-full" />
                     </div>
                     <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">{t('builder.execution')}</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">{t('builder.execution')}</span>
                         <div className="flex bg-secondary/60 rounded p-0.5 border border-border h-7">
-                            <button onClick={() => setExecutionMode('virtual')} className={`flex-1 rounded text-[8px] font-black ${executionMode === 'virtual' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground'}`}>{t('builder.virtual')}</button>
-                            <button onClick={() => setExecutionMode('real')} className={`flex-1 rounded text-[8px] font-black ${executionMode === 'real' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground'}`}>{t('builder.real')}</button>
+                            <button onClick={() => setExecutionMode('virtual')} className={`flex-1 rounded text-[11px] font-semibold ${executionMode === 'virtual' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground'}`}>{t('builder.virtual')}</button>
+                            <button onClick={() => setExecutionMode('real')} className={`flex-1 rounded text-[11px] font-semibold ${executionMode === 'real' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground'}`}>{t('builder.real')}</button>
                         </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pl-1">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">{t('builder.directionConfig')}</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">{t('builder.directionConfig')}</span>
                         <div className="flex bg-secondary/60 rounded p-0.5 border border-border h-7">
-                            <button onClick={() => setActiveDirection('BUY')} className={`flex-1 rounded text-[8px] font-black ${activeDirection === 'BUY' ? 'bg-blue-600 text-white' : 'text-muted-foreground'}`}>BUY</button>
-                            <button onClick={() => setActiveDirection('SELL')} className={`flex-1 rounded text-[8px] font-black ${activeDirection === 'SELL' ? 'bg-red-600 text-white' : 'text-muted-foreground'}`}>SELL</button>
+                            <button onClick={() => setActiveDirection('BUY')} className={`flex-1 rounded text-[11px] font-semibold ${activeDirection === 'BUY' ? 'bg-blue-600 text-white' : 'text-muted-foreground'}`}>BUY</button>
+                            <button onClick={() => setActiveDirection('SELL')} className={`flex-1 rounded text-[11px] font-semibold ${activeDirection === 'SELL' ? 'bg-red-600 text-white' : 'text-muted-foreground'}`}>SELL</button>
                         </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tight">{t('builder.comment')}</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">{t('builder.comment')}</span>
                         <input value={comment} onChange={(e) => setComment(e.target.value)} className="bg-secondary/40 border border-border focus:border-blue-500/40 px-2 h-7 text-[11px] font-medium text-muted-foreground outline-none rounded" />
                     </div>
                 </div>
@@ -188,15 +207,15 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             <div className="rounded-lg border border-border bg-secondary/10 overflow-hidden">
                 <div className="px-3 py-2 border-b border-border bg-secondary/30 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center">3</span>
-                        <span className="text-[12px] font-black uppercase tracking-wide text-yellow-500">{t('builder.executionStep')}</span>
+                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[11px] font-semibold flex items-center justify-center">3</span>
+                        <span className="text-[12px] font-semibold uppercase tracking-wide text-yellow-500">{t('builder.executionStep')}</span>
                     </div>
                 </div>
 
                 <div className="p-3 flex flex-col gap-3">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter w-16 shrink-0">{t('builder.orderType')}</span>
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tighter w-16 shrink-0">{t('builder.orderType')}</span>
                             <div className="flex bg-secondary/80 rounded p-0.5 border border-border h-6 w-[140px]">
                                 {(['market', 'stop', 'limit'] as const).map((type) => (
                                     <button
@@ -208,7 +227,7 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                                             }
                                             return newLeg;
                                         })}
-                                        className={`flex-1 flex justify-center items-center h-full rounded text-[8px] font-black transition-all ${(currentLeg.entryType || 'stop') === type ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
+                                        className={`flex-1 flex justify-center items-center h-full rounded text-[11px] font-semibold transition-all ${(currentLeg.entryType || 'stop') === type ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground'}`}
                                     >
                                         {type.toUpperCase()}
                                     </button>
@@ -238,10 +257,17 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             />
 
             <div className="flex flex-col gap-2 border-t border-border/50 pt-3 mt-1">
-                <button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 w-full rounded font-black text-[11px] uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-primary/20">
+                {validationError ? (
+                    <div className="text-[11px] font-semibold text-red-500 px-1" role="alert">
+                        {validationError}
+                    </div>
+                ) : null}
+                <button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 w-full rounded font-semibold text-[11px] uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-lg shadow-primary/20">
                     {editingStrategy ? t('builder.updateBot') : t('builder.activateBot')}
                 </button>
             </div>
         </div>
     );
 }
+
+

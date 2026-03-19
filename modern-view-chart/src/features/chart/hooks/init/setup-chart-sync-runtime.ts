@@ -1,14 +1,14 @@
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { autoSyncLayout } from '../../logic/chart-sync';
-import { Candle, ChartInstance } from '@/lib/store/types';
+import { ChartInstance } from '@/lib/store/types';
 import {
-  buildStableTimeScaleViewport,
   LogicalRangeSource,
-  logicalRangesEqual,
   PersistedRange,
-  resolveLockedScaleWidth,
   sanitizeRange,
 } from './chart-init-helpers';
+import { createLogicalRangeSync } from './chart-sync-runtime/logical-range';
+import { createPointerState } from './chart-sync-runtime/pointer-state';
+import { createViewportPersistence } from './chart-sync-runtime/persistence';
+import { createInteractionHandlers } from './chart-sync-runtime/interaction-handlers';
 
 type RuntimeParams = {
   priceChart: IChartApi;
@@ -47,231 +47,65 @@ export function setupChartSyncRuntime({
   const subTS = subchartChart.timeScale();
   const footTS = timescaleChart.timeScale();
 
-  let lastViewportSnapshot = '';
   let isDisposed = false;
-  let isPointerInteracting = false;
-  let hasPendingAutoSync = false;
-  let hasPendingViewportPersist = false;
-  let logicalRangeSyncRafId: number | null = null;
-  let pendingLogicalRange: PersistedRange | null = null;
-  let pendingLogicalRangeSource: LogicalRangeSource | null = null;
-  let lastAppliedLogicalRange: PersistedRange | null = null;
-  let pointerInteractionSource: LogicalRangeSource | null = null;
-  let autoScrollResumeTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  let syncRequestId: number | null = null;
-  let lastMaxW = initialMinW;
-  let syncing = false;
 
-  const persistViewport = () => {
-    const logicalRange = sanitizeRange(priceTS.getVisibleLogicalRange() as PersistedRange | null);
-    const mainPriceScale = priceChart.priceScale('right') as {
-      getVisibleRange?: () => PersistedRange | null;
-      setVisibleRange?: (range: PersistedRange) => void;
-    };
-    const subPriceScale = subchartChart.priceScale('right') as {
-      getVisibleRange?: () => PersistedRange | null;
-      setVisibleRange?: (range: PersistedRange) => void;
-    };
-    const mainPriceRange = sanitizeRange(mainPriceScale.getVisibleRange?.() ?? null);
-    const subPriceRange = sanitizeRange(subPriceScale.getVisibleRange?.() ?? null);
+  const pointerState = createPointerState();
 
-    const nextViewport: NonNullable<ChartInstance['viewport']> = {
-      contextKey: currentContextKeyRef.current,
-      savedAt: Date.now(),
-    };
+  const viewportPersistence = createViewportPersistence({
+    priceChart,
+    subchartChart,
+    currentContextKeyRef,
+    viewportSaveTimeoutRef,
+    updateChart,
+    chartId,
+    getIsPointerInteracting: pointerState.getIsPointerInteracting,
+  });
+  const { scheduleViewportPersist, flushPendingViewportPersist } = viewportPersistence;
 
-    if (logicalRange) nextViewport.logicalRange = logicalRange;
-    if (mainPriceRange) nextViewport.mainPriceRange = mainPriceRange;
-    if (subPriceRange) nextViewport.subPriceRange = subPriceRange;
+  const logicalRangeSync = createLogicalRangeSync({
+    priceTS,
+    subTS,
+    footTS,
+    scheduleViewportPersist,
+    getIsPointerInteracting: pointerState.getIsPointerInteracting,
+    getPointerInteractionSource: pointerState.getPointerInteractionSource,
+  });
+  const {
+    queueLogicalRangeSync,
+    flushLogicalRangeSync,
+    cancelPendingLogicalRangeSync,
+    setLastAppliedLogicalRange,
+  } = logicalRangeSync;
 
-    const nextSnapshot = JSON.stringify(nextViewport);
-    if (nextSnapshot === lastViewportSnapshot) return;
+  const interactionHandlers = createInteractionHandlers({
+    priceChart,
+    subchartChart,
+    timescaleChart,
+    priceContainer,
+    subchartContainer,
+    chartId,
+    seriesRef,
+    isAutoScrollEnabledRef,
+    initialMinW,
+    pointerState,
+    scheduleViewportPersist,
+    flushPendingViewportPersist,
+    flushLogicalRangeSync,
+    cancelPendingLogicalRangeSync,
+  });
 
-    lastViewportSnapshot = nextSnapshot;
-    updateChart(chartId, { viewport: nextViewport });
-  };
-
-  const scheduleViewportPersist = () => {
-    if (isPointerInteracting) {
-      hasPendingViewportPersist = true;
-      return;
-    }
-    if (viewportSaveTimeoutRef.current) clearTimeout(viewportSaveTimeoutRef.current);
-    viewportSaveTimeoutRef.current = setTimeout(() => {
-      viewportSaveTimeoutRef.current = null;
-      persistViewport();
-    }, 180);
-  };
-
-  const flushPendingViewportPersist = () => {
-    if (!hasPendingViewportPersist) return;
-    hasPendingViewportPersist = false;
-    scheduleViewportPersist();
-  };
+  const {
+    handleScrollPosition,
+    handleAutoSync,
+    handlePointerDown,
+    handlePointerUp,
+    handleTimescaleDoubleClick,
+  } = interactionHandlers;
 
   const applyLogicalRangeToTargets = (nextRange: PersistedRange, source: LogicalRangeSource | null) => {
     if (source !== 'price') priceTS.setVisibleLogicalRange(nextRange);
     if (source !== 'sub') subTS.setVisibleLogicalRange(nextRange);
     if (source !== 'foot') footTS.setVisibleLogicalRange(nextRange);
-  };
-
-  const flushLogicalRangeSync = () => {
-    if (!pendingLogicalRange || syncing) return;
-    const nextRange = pendingLogicalRange;
-    const nextSource = pendingLogicalRangeSource;
-    pendingLogicalRange = null;
-    pendingLogicalRangeSource = null;
-    logicalRangeSyncRafId = null;
-    if (logicalRangesEqual(nextRange, lastAppliedLogicalRange)) return;
-
-    syncing = true;
-    applyLogicalRangeToTargets(nextRange, nextSource);
-    syncing = false;
-    lastAppliedLogicalRange = nextRange;
-    scheduleViewportPersist();
-  };
-
-  const queueLogicalRangeSync = (range: unknown, source: LogicalRangeSource) => {
-    const nextRange = sanitizeRange(range as PersistedRange | null);
-    if (!nextRange || syncing) return;
-    if (isPointerInteracting && pointerInteractionSource && source !== pointerInteractionSource) return;
-    if (logicalRangesEqual(nextRange, pendingLogicalRange) || logicalRangesEqual(nextRange, lastAppliedLogicalRange)) return;
-    pendingLogicalRange = nextRange;
-    pendingLogicalRangeSource = source;
-    if (logicalRangeSyncRafId !== null) return;
-    logicalRangeSyncRafId = requestAnimationFrame(flushLogicalRangeSync);
-  };
-
-  const handleScrollPosition = (range: PersistedRange | null) => {
-    if (!range) return;
-    const dataCount = seriesRef.current?.data().length || 0;
-    if (dataCount === 0) return;
-    const isNearRealtimeEdge = range.to >= dataCount - 1;
-    if (isPointerInteracting) {
-      if (pointerInteractionSource !== 'foot' && !isNearRealtimeEdge) isAutoScrollEnabledRef.current = false;
-      return;
-    }
-    if (!isAutoScrollEnabledRef.current && isNearRealtimeEdge) {
-      isAutoScrollEnabledRef.current = true;
-      return;
-    }
-    if (isAutoScrollEnabledRef.current && !isNearRealtimeEdge) {
-      isAutoScrollEnabledRef.current = false;
-    }
-  };
-
-  const handleAutoSync = () => {
-    if (isDisposed) return;
-    if (pointerInteractionSource === 'foot') {
-      hasPendingAutoSync = false;
-      return;
-    }
-    if (isPointerInteracting) {
-      hasPendingAutoSync = true;
-      return;
-    }
-    autoSyncLayout(
-      priceChart,
-      subchartChart,
-      timescaleChart,
-      priceContainer,
-      subchartContainer,
-      initialMinW,
-      lastMaxW,
-      syncRequestId,
-      (id) => { syncRequestId = id; },
-      (w) => { lastMaxW = w; },
-    );
-  };
-
-  const flushPendingAutoSync = () => {
-    if (isDisposed || !hasPendingAutoSync) return;
-    hasPendingAutoSync = false;
-    handleAutoSync();
-  };
-
-  const resetToStableTimeScaleViewport = () => {
-    const dataCount = (seriesRef.current?.data() as Candle[] | undefined)?.length || 0;
-    if (dataCount <= 0) return;
-    const nextRange = buildStableTimeScaleViewport(dataCount, window.innerWidth);
-    syncing = true;
-    priceTS.setVisibleLogicalRange(nextRange);
-    subTS.setVisibleLogicalRange(nextRange);
-    footTS.setVisibleLogicalRange(nextRange);
-    syncing = false;
-    lastAppliedLogicalRange = nextRange;
-    isAutoScrollEnabledRef.current = true;
-    scheduleViewportPersist();
-  };
-
-  const lockScaleWidthDuringPan = () => {
-    try {
-      const width = resolveLockedScaleWidth(priceChart.priceScale('right').width(), subchartChart.priceScale('right').width());
-      if (width == null) return;
-      const opt = { rightPriceScale: { minimumWidth: width } };
-      priceChart.applyOptions(opt);
-      subchartChart.applyOptions(opt);
-      timescaleChart.applyOptions(opt);
-    } catch {
-      // Ignore transient resize/teardown errors.
-    }
-  };
-
-  const handlePointerDown = (source: LogicalRangeSource) => {
-    if (isPointerInteracting) return;
-    isPointerInteracting = true;
-    pointerInteractionSource = source;
-    if (autoScrollResumeTimeoutId) {
-      clearTimeout(autoScrollResumeTimeoutId);
-      autoScrollResumeTimeoutId = null;
-    }
-    if (source !== 'foot') {
-      isAutoScrollEnabledRef.current = false;
-      lockScaleWidthDuringPan();
-      return;
-    }
-    window.dispatchEvent(new CustomEvent('chart-timescale-interaction', { detail: { chartId, active: true } }));
-  };
-
-  const handlePointerUp = () => {
-    if (!isPointerInteracting) return;
-    const wasFooterInteraction = pointerInteractionSource === 'foot';
-    isPointerInteracting = false;
-    pointerInteractionSource = null;
-
-    if (wasFooterInteraction) {
-      window.dispatchEvent(new CustomEvent('chart-timescale-interaction', { detail: { chartId, active: false } }));
-    }
-    if (logicalRangeSyncRafId !== null) {
-      cancelAnimationFrame(logicalRangeSyncRafId);
-      logicalRangeSyncRafId = null;
-    }
-    flushLogicalRangeSync();
-    autoScrollResumeTimeoutId = setTimeout(() => {
-      autoScrollResumeTimeoutId = null;
-      const currentRange = sanitizeRange(priceTS.getVisibleLogicalRange() as PersistedRange | null);
-      const dataCount = seriesRef.current?.data().length || 0;
-      if (!currentRange || dataCount === 0) return;
-      isAutoScrollEnabledRef.current = currentRange.to >= dataCount - 1;
-    }, 120);
-
-    if (wasFooterInteraction) {
-      requestAnimationFrame(() => {
-        flushPendingViewportPersist();
-        scheduleViewportPersist();
-      });
-      return;
-    }
-
-    flushPendingAutoSync();
-    flushPendingViewportPersist();
-    scheduleViewportPersist();
-  };
-
-  const handleTimescaleDoubleClick = (event: MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    resetToStableTimeScaleViewport();
   };
 
   const handlePricePointerDown = () => handlePointerDown('price');
@@ -299,7 +133,6 @@ export function setupChartSyncRuntime({
   window.addEventListener('mouseup', handlePointerUp);
   window.addEventListener('touchend', handlePointerUp);
   window.addEventListener('touchcancel', handlePointerUp);
-
   const restorePersistedViewport = () => {
     try {
       const logicalRange = sanitizeRange(persistedViewportRef.current?.logicalRange);
@@ -311,7 +144,7 @@ export function setupChartSyncRuntime({
 
       if (matchesCurrentContext && logicalRange) {
         applyLogicalRangeToTargets(logicalRange, null);
-        lastAppliedLogicalRange = logicalRange;
+        setLastAppliedLogicalRange(logicalRange);
       }
       const mainPriceScale = priceChart.priceScale('right') as { setVisibleRange?: (range: PersistedRange) => void };
       const subPriceScale = subchartChart.priceScale('right') as { setVisibleRange?: (range: PersistedRange) => void };
@@ -338,9 +171,8 @@ export function setupChartSyncRuntime({
 
   const cleanup = () => {
     isDisposed = true;
-    if (autoScrollResumeTimeoutId) clearTimeout(autoScrollResumeTimeoutId);
-    if (syncRequestId !== null) cancelAnimationFrame(syncRequestId);
-    if (logicalRangeSyncRafId !== null) cancelAnimationFrame(logicalRangeSyncRafId);
+    cancelPendingLogicalRangeSync();
+    interactionHandlers.dispose();
     priceContainer.removeEventListener('pointerdown', handlePricePointerDown, true);
     subchartContainer.removeEventListener('pointerdown', handleSubPointerDown, true);
     timescaleContainer.removeEventListener('pointerdown', handleFootPointerDown, true);

@@ -1,13 +1,11 @@
 import React, { memo, useState, useRef, useCallback } from "react";
 import { useMarketStore } from "@/lib/store";
-import { DrawingTool } from "@/lib/store/types";
 import { List, Menu, ArrowLeftRight, Briefcase, Brain, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { MobileSymbolCarousel } from "./MobileSymbolCarousel";
 import { MobileTimeframeSlide } from "./MobileTimeframeSlide";
-import { MobileDrawingToolbar } from "./MobileDrawingToolbar";
 
 import { useOrderFormLogic } from "@/features/terminal/components/OrderForm";
 import { MobileTradeFlow } from "@/features/terminal/components/OrderForm/MobileTradeFlow";
@@ -26,9 +24,9 @@ interface MobileBottomNavProps {
     mini?: boolean;
 }
 
-type NavMode = 'symbol' | 'drawing' | 'actions' | 'timeframe';
+type NavMode = 'symbol' | 'actions' | 'timeframe';
 
-const MODES: NavMode[] = ['actions', 'symbol', 'drawing'];
+const MODES: NavMode[] = ['actions', 'symbol'];
 const DEFAULT_ITEM_HEIGHT = 62;
 const COMPACT_ITEM_HEIGHT = 52;
 const MINI_ITEM_HEIGHT = 44;
@@ -37,7 +35,6 @@ const NAV_ITEMS = [
     { id: 'trade', label: 'Trade', icon: ArrowLeftRight },
     { id: 'strategy', label: 'Strategy', icon: Brain },
     { id: 'positions', label: 'Terminal', icon: Briefcase },
-    { id: 'menu', label: 'Menu', icon: Menu },
 ];
 
 export const MobileBottomNav = memo(function MobileBottomNav({
@@ -64,20 +61,8 @@ export const MobileBottomNav = memo(function MobileBottomNav({
 
     const orderLogic = useOrderFormLogic();
 
-    const startDrawing = useMarketStore(state => state.startDrawing);
-    const cancelDrawing = useMarketStore(state => state.cancelDrawing);
-    const clearDrawings = useMarketStore(state => state.clearDrawings);
-    const chartId = useMarketStore(state => state.tabs[activeTab]?.activeChartId || '');
-
-    const handleToolSelect = useCallback((toolId: string) => {
-        if (toolId === 'cursor') {
-            cancelDrawing();
-        } else if (toolId === 'clear') {
-            if (chartId) clearDrawings(chartId);
-        } else {
-            startDrawing(toolId as DrawingTool);
-        }
-    }, [startDrawing, cancelDrawing, clearDrawings, chartId]);
+    const marketSearchQuery = useMarketStore((state) => state.marketListSearchQuery);
+    const setMarketSearchQuery = useMarketStore((state) => state.setMarketListSearchQuery);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         if (isTimeframe || isAnimating) return;
@@ -128,7 +113,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({
         if (window.navigator.vibrate) window.navigator.vibrate(10);
         setMode(newMode);
 
-        if ((newMode === 'symbol' || newMode === 'drawing') && activeTab !== 'chart') {
+        if (newMode === 'symbol' && activeTab !== 'chart') {
             onTabChange('chart');
         }
     };
@@ -156,19 +141,15 @@ export const MobileBottomNav = memo(function MobileBottomNav({
             return (
                 <div className="w-full flex items-center justify-center gap-2 text-muted-foreground/30 px-2" style={itemStyle}>
                     <modeInfo.icon size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{modeInfo.label}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-widest">{modeInfo.label}</span>
                 </div>
             );
         }
 
         switch (targetMode) {
             case 'symbol':
-                return <div className="w-full flex items-center justify-center" style={itemStyle}>
+                return <div className="w-full flex items-center justify-center px-2" style={itemStyle}>
                     <MobileSymbolCarousel onSymbolTap={handleSymbolTap} onSymbolLongPress={handleSymbolLongPress} />
-                </div>;
-            case 'drawing':
-                return <div className="w-full flex items-center justify-center" style={itemStyle}>
-                    <MobileDrawingToolbar onToolSelect={handleToolSelect} />
                 </div>;
             case 'actions':
                 return <div className="w-full flex items-center justify-center" style={itemStyle}>
@@ -184,12 +165,13 @@ export const MobileBottomNav = memo(function MobileBottomNav({
                                     <button
                                         key={item.id}
                                         onClick={(e) => { e.stopPropagation(); onTabChange(item.id); }}
+                                        data-testid={`mobile-nav-${item.id}`}
                                         className={cn("flex flex-row items-center gap-1.5", isItemActive ? "text-foreground font-medium" : "text-muted-foreground")}
                                     >
                                         <div className={cn("p-1 rounded-lg", isItemActive ? "bg-primary/20 text-primary" : "bg-transparent")}>
                                             <item.icon size={14} strokeWidth={isItemActive ? 2.5 : 2} />
                                         </div>
-                                        <span className={cn("font-black uppercase tracking-widest", compact ? "text-[9px]" : "text-[10px]", isItemActive ? "opacity-100" : "opacity-40")}>
+                                        <span className={cn("font-black uppercase tracking-widest", compact ? "text-[11px]" : "text-[11px]", isItemActive ? "opacity-100" : "opacity-40")}>
                                             {item.label}
                                         </span>
                                     </button>
@@ -203,7 +185,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({
     };
 
     return (
-        <div className={cn("w-full z-[99] flex flex-col items-center pointer-events-auto shrink-0 relative bg-background overflow-x-hidden", className)}>
+        <div className={cn("w-full z-[99] flex flex-col items-center pointer-events-auto shrink-0 relative bg-background overflow-x-hidden", className)} data-testid="mobile-bottom-nav-root">
             <AnimatePresence>
                 {isSymbolPickerOpen && (
                     <motion.div
@@ -226,7 +208,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({
                             className="relative z-10 w-full max-w-md h-[min(78vh,680px)] rounded-[28px] border border-white/10 bg-background/95 shadow-2xl overflow-hidden flex flex-col"
                         >
                             <div className="px-4 py-3 border-b border-border/60 bg-secondary/30 flex items-start justify-between gap-3">
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 text-foreground">
                                         <Search size={15} className="text-primary shrink-0" />
                                         <h2 className="text-sm font-black uppercase tracking-[0.18em]">Find Symbols</h2>
@@ -234,6 +216,14 @@ export const MobileBottomNav = memo(function MobileBottomNav({
                                     <p className="mt-1 text-[11px] text-muted-foreground">
                                         Search in watchlist and market list, tap star to add multiple symbols, tap X to close.
                                     </p>
+                                    <input
+                                        data-testid="mobile-symbol-search-input"
+                                        type="text"
+                                        value={marketSearchQuery}
+                                        onChange={(e) => setMarketSearchQuery(e.target.value)}
+                                        placeholder="Search symbols..."
+                                        className="mt-2 h-8 w-full rounded-lg border border-border bg-background/80 px-3 text-xs text-foreground outline-none focus:border-primary/40"
+                                    />
                                 </div>
                                 <button
                                     type="button"
@@ -255,6 +245,7 @@ export const MobileBottomNav = memo(function MobileBottomNav({
             <div
                 className="w-full z-[100] backdrop-blur-2xl border-t border-border/10 bg-background/95 supports-[backdrop-filter]:bg-background/80 h-auto overflow-hidden touch-pan-x pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.1)]"
                 onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+                data-testid="mobile-bottom-nav-surface"
             >
                 <div className="w-full relative overflow-hidden flex flex-col items-center shrink-0" style={{ height: `${itemHeight}px` }}>
                     {!isTimeframe ? (

@@ -25,6 +25,11 @@ export interface Notification {
     alertId?: string; // For click-to-edit
 }
 
+export interface NotificationHistoryItem extends Notification {
+    createdAt: number;
+    readAt?: number;
+}
+
 export interface UISlice {
     isLeftSidebarOpen: boolean;
     isRightSidebarOpen: boolean;
@@ -34,6 +39,7 @@ export interface UISlice {
     isInputFocused: boolean;
     isScrollingPanel: boolean;
     notifications: Notification[];
+    notificationHistory: NotificationHistoryItem[];
     focusedTicket: number | null;
     themeColor: 'blue' | 'green' | 'amber' | 'red' | 'slate';
     sidebarTopHeight: number;
@@ -61,6 +67,8 @@ export interface UISlice {
     setIsScrollingPanel: (isScrolling: boolean) => void;
     addNotification: (message: string, type?: Notification['type'], alertId?: string) => void;
     removeNotification: (id: string) => void;
+    markAllNotificationsAsRead: () => void;
+    clearNotificationHistory: () => void;
     setFocusedTicket: (ticket: number | null) => void;
     setSidebarTopHeight: (height: number) => void;
     setRightSidebarWidth: (width: number) => void;
@@ -84,6 +92,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     isInputFocused: false,
     isScrollingPanel: false,
     notifications: [],
+    notificationHistory: [],
     focusedTicket: null,
     sidebarTopHeight: 40,
     rightSidebarWidth: 320,
@@ -109,12 +118,28 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setActiveMobileTab: (tab) => set({ activeMobileTab: tab }),
     setInputFocused: (focused) => set({ isInputFocused: focused }),
     setIsScrollingPanel: (isScrolling) => set((state) => state.isScrollingPanel === isScrolling ? state : { isScrollingPanel: isScrolling }),
-    addNotification: (message, type = 'info', alertId) => set((state) => ({
-        notifications: [...state.notifications, { id: crypto.randomUUID(), message, type, alertId }]
-    })),
+    addNotification: (message, type = 'info', alertId) => set((state) => {
+        const item: NotificationHistoryItem = {
+            id: crypto.randomUUID(),
+            message,
+            type,
+            alertId,
+            createdAt: Date.now()
+        };
+        return {
+            notifications: [...state.notifications, item],
+            notificationHistory: [...state.notificationHistory, item].slice(-200)
+        };
+    }),
     removeNotification: (id) => set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id)
     })),
+    markAllNotificationsAsRead: () => set((state) => ({
+        notificationHistory: state.notificationHistory.map((item) => (
+            item.readAt ? item : { ...item, readAt: Date.now() }
+        ))
+    })),
+    clearNotificationHistory: () => set({ notificationHistory: [] }),
     setFocusedTicket: (ticket) => set({ focusedTicket: ticket }),
     setSidebarTopHeight: (height) => set({ sidebarTopHeight: height }),
     setRightSidebarWidth: (width) => {

@@ -131,7 +131,7 @@ export function updateDotTagVisuals(elements: TagElements, tag: TagData, context
             }
             dotCaption.style.color = `${tag.color}dd`;
             dotCaption.style.display = '';
-            dotCaption.style.fontSize = '8px';
+            dotCaption.style.fontSize = '11px';
             dotCaption.style.fontWeight = '600';
             dotCaption.style.letterSpacing = '0.01em';
             dotCaption.style.whiteSpace = 'nowrap';

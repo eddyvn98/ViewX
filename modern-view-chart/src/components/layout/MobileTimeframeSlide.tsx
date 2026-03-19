@@ -36,7 +36,7 @@ export function MobileTimeframeSlide({ onSelect }: MobileTimeframeSlideProps) {
     return (
         <div className="flex items-center w-full h-10 px-4 overflow-x-auto no-scrollbar gap-1 animate-in slide-in-from-right duration-300">
             <div className="flex-shrink-0 pr-2 border-r border-border/50 mr-1">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Timeframe</span>
+                <span className="text-[11px] font-black text-muted-foreground uppercase tracking-tighter">Timeframe</span>
             </div>
             {timeframes.map((tf) => (
                 <button

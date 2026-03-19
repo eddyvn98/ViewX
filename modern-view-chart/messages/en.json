@@ -1,9 +1,9 @@
 {
-    "Metadata": {
-        "title": "vivutrade | Advanced Charting & Trading Strategy Platform",
-        "description": "Real-time charts from Exness & Binance, integrated strategy builder and professional demo trading."
-    },
-    "HomePage": {
+  "Metadata": {
+    "title": "vivutrade | Advanced Charting & Trading Strategy Platform",
+    "description": "Real-time charts from Exness & Binance, integrated strategy builder and professional demo trading."
+  },
+  "HomePage": {
     "title": "A Professional Trading Platform With Built-in AI Intelligence.",
     "description": "Experience zero-lag charts with real-time MT5 data. Generate strategies, leverage AI trade monitoring, evaluate your trades, and build your rules on a platform strictly superior to TradingView.",
     "openChart": "Launch Chart",
@@ -63,7 +63,40 @@
     "dashboard": "Dashboard",
     "back": "Back"
   },
+  "Header": {
+    "notifications": {
+      "buttonTitle": "Notifications and Alerts",
+      "title": "Notification Center",
+      "clearHistory": "Clear History",
+      "toastHistory": "Toast History",
+      "noNotificationsYet": "No notifications yet.",
+      "priceAlertsOnChart": "Price Alerts On Chart",
+      "noPriceAlerts": "No price alerts.",
+      "active": "Active",
+      "triggeredInactive": "Triggered/Inactive",
+      "edit": "Edit",
+      "remove": "Remove"
+    }
+  },
   "Strategy": {
+    "list": {
+      "runningBot": "Running Bot",
+      "addBot": "Add Bot",
+      "noActiveBots": "No active bots",
+      "generic": "Generic",
+      "active": "Active",
+      "paused": "Paused",
+      "aiGuardActive": "AI Guard Active",
+      "enableAiGuard": "Enable AI Guard",
+      "on": "On",
+      "off": "Off",
+      "sl": "SL",
+      "tp": "TP",
+      "lot": "Lot",
+      "max": "Max",
+      "fixed": "Fixed",
+      "na": "N/A"
+    },
     "builder": {
       "botIdentity": "Bot Identity",
       "botName": "Bot Name",
@@ -97,6 +130,26 @@
       "candle": "Candle",
       "indicator": "Indicator",
       "rrRatio": "R:R Ratio",
+      "numberValue": "Number",
+      "indicatorValue": "Indicator",
+      "searchIndicatorPlaceholder": "Search indicator...",
+      "noIndicatorFound": "No indicator found",
+      "fieldClose": "Close",
+      "fieldOpen": "Open",
+      "fieldHigh": "High",
+      "fieldLow": "Low",
+      "fieldMiddle": "Middle",
+      "fieldUpper": "Upper",
+      "fieldLower": "Lower",
+      "fieldSignal": "Signal",
+      "fieldHistogram": "Histogram",
+      "fieldKijun": "Kijun",
+      "fieldTenkan": "Tenkan",
+      "fieldSpanA": "Span A",
+      "fieldSpanB": "Span B",
+      "fieldChikou": "Chikou",
+      "fieldSuperTrend": "SuperTrend",
+      "fieldTrend": "Trend",
       "single": "Single Position",
       "hedge": "Hedge Position",
       "scaleIn": "Scale In Position"
@@ -116,7 +169,8 @@
       "off": "OFF",
       "maxTrades": "Max Trades",
       "cooldown": "Cooldown"
-    }  },
+    }
+  },
   "Signals": {
     "matrix": {
       "title": "Signal Monitor Matrix",
@@ -152,5 +206,122 @@
     "aiAuditComplete": "AI audit completed: {confidence}% confidence",
     "exit": "EXIT",
     "virtualBalance": "Virtual trading"
+  },
+  "ChartPanel": {
+    "tabs": {
+      "strategy": "Strategy",
+      "layer": "Layer",
+      "trade": "Trade",
+      "signals": "Signals",
+      "createStrategy": "My bot",
+      "aiChat": "AI chat"
+    }
+  },
+  "StrategyDashboard": {
+    "page": {
+      "title": "Strategy Backtest Analysis",
+      "mode": "Backtest Mode",
+      "soundOn": "SOUND ON",
+      "activateSound": "ACTIVATE SOUND",
+      "confirmReset": "CONFIRM RESET",
+      "masterReset": "MASTER RESET",
+      "refresh": "REFRESH",
+      "backToChart": "BACK TO CHART",
+      "engine": "vivutrade High-Performance Rule Engine v2.0",
+      "totalVolume": "Total Volume",
+      "lot": "Lot"
+    },
+    "stats": {
+      "netProfit": "Net Profit",
+      "winRate": "Win Rate",
+      "profitFactor": "Profit Factor",
+      "grossRatio": "Gross Ratio",
+      "maxDrawdown": "Max Drawdown",
+      "riskMetric": "Risk Metric",
+      "avgWinningTrade": "Avg Winning Trade",
+      "avgLosingTrade": "Avg Losing Trade",
+      "wins": "W",
+      "losses": "L"
+    },
+    "tradeHistory": {
+      "noTradeHistory": "No Trade History",
+      "noTradeHistoryDesc": "Virtual positions will appear here once they are closed by your strategies.",
+      "closedSessions": "Closed Sessions",
+      "timeSymbol": "Time / Symbol",
+      "type": "Type",
+      "lot": "Lot",
+      "entryExit": "Entry / Exit",
+      "aiConf": "AI Conf.",
+      "profitUsd": "Profit (USD)",
+      "confidence": "Confidence"
+    },
+    "equity": {
+      "title": "Equity Curve",
+      "subtitle": "Virtual Growth"
+    },
+    "aiPanel": {
+      "title": "AI Strategy Coach",
+      "subtitle": "Bot to MT5 Signal Guidance",
+      "performAudit": "Perform System Audit",
+      "aggregating": "Aggregating trade data...",
+      "systemStrength": "System Strength",
+      "actionableRefinement": "Actionable Refinement",
+      "filterByConfidence": "Filter MT5 trades by AI Confidence > 80%",
+      "auditSession": "Audit ${session} Logic for MAE spikes",
+      "recalculate": "Recalculate with New Data",
+      "avgConfidence": "Avg Confidence",
+      "avgMae": "Avg MAE",
+      "avgMfe": "Avg MFE",
+      "predictionAccuracy": "Prediction Accuracy",
+      "inTesting": "In Testing",
+      "current": "Current"
+    },
+    "tradeDetail": {
+      "noAdvancedContext": "No advanced context available for this trade.",
+      "marketDynamics": "Market Dynamics",
+      "session": "Session",
+      "volatilityAtr": "Volatility (ATR)",
+      "pips": "pips",
+      "maeTooltip": "Maximum Adverse Excursion: The furthest price moved against you.",
+      "mfeTooltip": "Maximum Favorable Excursion: The furthest price moved in your favor.",
+      "tradeEfficiency": "Trade Efficiency",
+      "tradeEfficiencyDesc": "Measures how much of the potential move (MFE) was captured as profit.",
+      "exitReason": "Exit Reason",
+      "inspectOnChart": "Inspect on Chart",
+      "entryRealityCheck": "Entry Reality Check (Snapshot)",
+      "indicator": "Indicator",
+      "conditionValue": "Condition Value",
+      "noIndicatorSnapshot": "No indicator snapshot available for this trade.",
+      "postTradeAnalysis": "Post-Trade Analysis",
+      "postTradeAnalysisDesc": "Trade closure efficiency analyzed. Post-exit price behavior captured for performance review.",
+      "sessions": {
+        "asian": "Asian",
+        "tokyo": "Tokyo",
+        "london": "London",
+        "newyork": "New York",
+        "sydney": "Sydney",
+        "close": "Close"
+      }
+    },
+    "aiInsight": {
+      "title": "AI Strategic Insight",
+      "analyzeWithAi": "Analyze with AI",
+      "readingTape": "AI is reading the tape...",
+      "keyTakeaway": "Key Takeaway",
+      "aiRecommendation": "AI Recommendation",
+      "applyFix": "Apply Fix",
+      "actionableFeedback": "Actionable Feedback",
+      "emptyHint": "Click the button above to generate a deep-dive analysis of this trade's characteristics.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "toast": {
+        "analysisComplete": "AI analysis complete",
+        "bridgeFailed": "AI Bridge communication failed",
+        "updatedRsi": "Updated RSI threshold to {value}",
+        "trailingStop": "Trailing Stop {state}",
+        "manualUpdateRequired": "Manual update required for: {field}",
+        "applyFailed": "Failed to apply recommendation automatically."
+      }
+    }
   }
 }

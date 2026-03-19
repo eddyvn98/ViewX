@@ -63,7 +63,7 @@ export function LayerManager() {
             <div className="p-2 border-t border-border bg-secondary/10 shrink-0">
                 <div className="flex items-center gap-2 text-muted-foreground/30">
                     <Zap size={10} className="text-yellow-500/40" />
-                    <span className="text-[8px] font-bold uppercase tracking-widest">Manual Drawing Mode Enabled</span>
+                    <span className="text-[11px] font-bold uppercase tracking-widest">Manual Drawing Mode Enabled</span>
                 </div>
             </div>
         </div>

@@ -25,7 +25,7 @@ export const AlertEditOverlay = memo(function AlertEditOverlay({ state, series, 
         <div
             className="edit-overlay absolute z-[15] flex flex-col items-center gap-1.5 pointer-events-auto touch-action-none"
             onContextMenu={e => e.preventDefault()}
-            style={{ transform: `translateY(${coord - 13}px)`, left: state.x !== undefined ? `${state.x}px` : 'auto', right: state.x !== undefined ? 'auto' : '10px' }}
+            style={{ transform: `translateY(${coord - 13}px)`, left: state.x !== undefined ? `${state.x}px` : 'auto', right: state.x !== undefined ? 'auto' : '11px' }}
             onPointerDown={e => {
                 if (e.pointerType === 'touch') e.preventDefault();
                 e.stopPropagation();

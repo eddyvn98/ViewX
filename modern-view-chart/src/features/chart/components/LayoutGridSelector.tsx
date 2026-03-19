@@ -46,9 +46,9 @@ export function LayoutGridSelector() {
 
                     {/* Dropdown Grid */}
                     <div className="absolute left-0 top-full mt-1.5 z-[70] p-3 bg-popover border border-border rounded-lg shadow-xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 origin-top-left min-w-[160px]">
-                        <div className="mb-3 flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                        <div className="mb-3 flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">
                             <span>Grid Layout</span>
-                            <span className="text-primary font-mono text-[10px]">
+                            <span className="text-primary font-mono text-[11px]">
                                 {hovered ? `${hovered.r}x${hovered.c}` : `${activeTab?.rows || 1}x${activeTab?.cols || 1}`}
                             </span>
                         </div>
@@ -91,7 +91,7 @@ export function LayoutGridSelector() {
                                         handleSelect(r, c);
                                     }}
                                     className={cn(
-                                        "px-2 py-1 text-[9px] font-bold rounded border transition-all flex-1 text-center whitespace-nowrap",
+                                        "px-2 py-1 text-[11px] font-bold rounded border transition-all flex-1 text-center whitespace-nowrap",
                                         activeTab?.layoutMode === m
                                             ? "bg-primary/20 border-primary/40 text-primary"
                                             : "bg-secondary/30 border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80"
