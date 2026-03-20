@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic';
 
 const Workflow = dynamic(() => import('@/features/landing/components/Workflow').then(m => ({ default: m.Workflow })), { ssr: true });
 const Features = dynamic(() => import('@/features/landing/components/Features').then(m => ({ default: m.Features })), { ssr: true });
+const UserPlans = dynamic(() => import('@/features/landing/components/UserPlans').then(m => ({ default: m.UserPlans })), { ssr: true });
 
 export default function LandingPage() {
   const locale = useLocale();
@@ -43,6 +44,8 @@ export default function LandingPage() {
 
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-5 py-10 md:gap-24 md:px-8 md:py-16">
         <Hero />
+
+        <UserPlans />
         
         <Workflow />
         

@@ -55,6 +55,47 @@
         "title": "Backtest & Thực Thi",
         "desc": "Vào lệnh trực tiếp, test lại hiệu quả chiến lược và theo dõi đánh giá AI ngay trên live chart."
       }
+    },
+    "userPlans": {
+      "title": "Kế Hoạch Theo Từng User",
+      "description": "Bắt đầu với Free, nâng cấp khi bạn cần giao diện web hiện đại thay thế trải nghiệm MT5.",
+      "free": {
+        "title": "Miễn phí",
+        "subtitle": "Cho trader cần bộ công cụ mạnh ngay ở gói miễn phí",
+        "price": "0đ / vĩnh viễn",
+        "cta": "Dùng miễn phí",
+        "b1": "Không giới hạn cảnh báo",
+        "b2": "Không giới hạn biểu đồ trên mỗi tab",
+        "b3": "Không giới hạn chỉ báo hiển thị",
+        "b4": "Tạo chiến lược giao dịch đơn giản chưa bao giờ dễ đến thế",
+        "b5": "Bảng theo dõi tín hiệu giao dịch độc quyền đa khung thời gian, đa mã giao dịch",
+        "b6": "Dashboard theo dõi và đánh giá chiến lược",
+        "b7": "Lớp hiển thị thông minh độc quyền trên biểu đồ",
+        "b8": "Nến kim cương độc quyền cho cái nhìn biểu đồ từ xa rõ nét"
+      },
+      "pro": {
+        "title": "Nâng cao",
+        "subtitle": "Giao diện web hiện đại cho người dùng MT5",
+        "price": "30k / tháng",
+        "badge": "Khuyến nghị cho user MT5",
+        "cta": "Khám phá gói Nâng cao",
+        "b1": "Mở MT5 và cài extension để kết nối",
+        "b2": "Đồng bộ symbol và data từ MT5 local của bạn",
+        "b3": "Hiển thị terminal account, position, order ngay trên web",
+        "b4": "Workflow thao tác nhanh, phù hợp giao dịch cường độ cao",
+        "b5": "Giữ trải nghiệm hiện đại thay thế thao tác MT5 truyền thống"
+      },
+      "proPlus": {
+        "title": "Cao cấp",
+        "subtitle": "Cho team cần workflow AI nâng cao",
+        "price": "100k / tháng",
+        "cta": "Khám phá gói Cao cấp",
+        "b1": "Bao gồm toàn bộ tính năng Pro",
+        "b2": "AI phân tích chiến lược chuyên sâu",
+        "b3": "Gợi ý tối ưu rule và quản trị rủi ro",
+        "b4": "Theo dõi hiệu suất chiến lược theo ngữ cảnh thị trường",
+        "b5": "Bộ công cụ nâng cao cho team và power user"
+      }
     }
   },
   "Navigation": {
@@ -208,6 +249,9 @@
     "virtualBalance": "Giao dịch ảo"
   },
   "ChartPanel": {
+    "history": {
+      "loadingMore": "Đang tải thêm nến quá khứ..."
+    },
     "tabs": {
       "strategy": "Chiến lược",
       "layer": "Chỉ báo",
@@ -215,7 +259,28 @@
       "signals": "Tín hiệu",
       "createStrategy": "Tạo chiến lược",
       "aiChat": "AI chat"
+    },
+    "layerManager": {
+      "tabs": {
+        "indicators": "Chỉ báo",
+        "drawTools": "Công cụ vẽ"
+      },
+      "layers": "Lớp hiển thị",
+      "add": "Thêm",
+      "addIndicator": "Thêm chỉ báo",
+      "noActiveChart": "Không có biểu đồ đang hoạt động",
+      "noActiveLayers": "Không có lớp hiển thị đang bật",
+      "smartAnalysis": "Phân tích thông minh",
+      "indicators": "Chỉ báo",
+      "searchIndicatorPlaceholder": "Tìm chỉ báo...",
+      "noResults": "Không có kết quả",
+      "manualDrawingModeEnabled": "Đã bật chế độ vẽ thủ công"
     }
+  },
+  "ChartToolbar": {
+    "changeLayout": "Đổi bố cục",
+    "gridLayout": "Bố cục lưới",
+    "addChart": "Thêm biểu đồ"
   },
   "StrategyDashboard": {
     "page": {

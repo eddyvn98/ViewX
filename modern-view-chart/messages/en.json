@@ -55,6 +55,47 @@
         "title": "Execute & Backtest",
         "desc": "Place trades, backtest strategies, and review AI trade evaluations directly on the chart."
       }
+    },
+    "userPlans": {
+      "title": "Plans For Every User",
+      "description": "Start with Free, then upgrade when you need a modern MT5 companion workspace.",
+      "free": {
+        "title": "Free",
+        "subtitle": "For traders who want a powerful toolkit even on Free",
+        "price": "$0 / forever",
+        "cta": "Use Free",
+        "b1": "Unlimited alerts",
+        "b2": "Unlimited charts per tab",
+        "b3": "Unlimited visible indicators",
+        "b4": "Simple strategy builder",
+        "b5": "Exclusive trading signal monitoring board",
+        "b6": "Strategy monitoring and evaluation dashboard",
+        "b7": "Exclusive Smart Analysis",
+        "b8": "Exclusive Diamond Chart"
+      },
+      "pro": {
+        "title": "Pro",
+        "subtitle": "A modern web interface for MT5 users",
+        "price": "30k / month",
+        "badge": "Recommended for MT5 users",
+        "cta": "Explore Pro",
+        "b1": "Open MT5 and install extension to connect",
+        "b2": "Sync symbols and market data from your local MT5",
+        "b3": "View account, positions, and orders in a web terminal workspace",
+        "b4": "Faster workflow for high-intensity trading sessions",
+        "b5": "Modern interface designed to replace legacy MT5 interaction patterns"
+      },
+      "proPlus": {
+        "title": "AI",
+        "subtitle": "For teams using advanced AI workflows",
+        "price": "100k / month",
+        "cta": "Explore AI",
+        "b1": "Everything in Pro",
+        "b2": "Advanced AI strategy analysis",
+        "b3": "Rule optimization and risk-guidance support",
+        "b4": "Performance monitoring across market contexts",
+        "b5": "Advanced toolkit for teams and power users"
+      }
     }
   },
   "Navigation": {
@@ -208,6 +249,9 @@
     "virtualBalance": "Virtual trading"
   },
   "ChartPanel": {
+    "history": {
+      "loadingMore": "Loading more history..."
+    },
     "tabs": {
       "strategy": "Strategy",
       "layer": "Layer",
@@ -215,7 +259,28 @@
       "signals": "Signals",
       "createStrategy": "My bot",
       "aiChat": "AI chat"
+    },
+    "layerManager": {
+      "tabs": {
+        "indicators": "Indicators",
+        "drawTools": "Draw Tools"
+      },
+      "layers": "Layers",
+      "add": "Add",
+      "addIndicator": "Add Indicator",
+      "noActiveChart": "No active chart",
+      "noActiveLayers": "No active layers",
+      "smartAnalysis": "Smart Analysis",
+      "indicators": "Indicators",
+      "searchIndicatorPlaceholder": "Search indicator...",
+      "noResults": "No results",
+      "manualDrawingModeEnabled": "Manual Drawing Mode Enabled"
     }
+  },
+  "ChartToolbar": {
+    "changeLayout": "Change Layout",
+    "gridLayout": "Grid Layout",
+    "addChart": "Add Chart"
   },
   "StrategyDashboard": {
     "page": {
