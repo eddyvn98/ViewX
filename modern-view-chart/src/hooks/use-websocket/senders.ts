@@ -88,6 +88,7 @@ export function requestChartBackfill(sourceRaw: string, symbolRaw: string, inter
                 topic: 'get_binance_candles',
                 symbol,
                 interval,
+                count,
                 fromTimestamp: nowSec - secondsPerBar * count,
                 toTimestamp: nowSec,
                 reason,

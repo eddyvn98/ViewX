@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
-import { ChartInstance, Ticker } from '../types';
+import { ChartInstance } from '../types';
 import { TabSlice } from './tab-slice';
 import { MarketSlice } from './market-slice';
+import { IndicatorSlice } from './indicator-slice';
 
 export interface ChartSlice {
     addChart: (symbol: string, interval: string, source: ChartInstance['source']) => void;
@@ -22,7 +23,7 @@ export interface ChartSlice {
 import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export const createChartSlice: StateCreator<
-    TabSlice & MarketSlice & ChartSlice,
+    TabSlice & MarketSlice & IndicatorSlice & ChartSlice,
     [],
     [],
     ChartSlice
@@ -58,16 +59,54 @@ export const createChartSlice: StateCreator<
         if (!activeTab) return state;
 
         const newCharts = { ...activeTab.charts };
+        const newChartIndicators = { ...state.chartIndicators };
         delete newCharts[id];
+        delete newChartIndicators[id];
         const remainingIds = Object.keys(newCharts);
+        const remainingCount = remainingIds.length;
+
+        let nextRows = activeTab.rows || 1;
+        let nextCols = activeTab.cols || 1;
+
+        if (remainingCount > 0) {
+            // Shrink to an exact-fit grid after deleting a chart so the remaining
+            // charts expand and we avoid leaving empty cells behind.
+            let bestRows = 1;
+            let bestCols = remainingCount;
+            let bestDelta = Math.abs(bestCols - bestRows);
+
+            for (let rows = 1; rows <= remainingCount; rows++) {
+                if (remainingCount % rows !== 0) continue;
+                const cols = remainingCount / rows;
+                const delta = Math.abs(cols - rows);
+                if (delta < bestDelta) {
+                    bestRows = rows;
+                    bestCols = cols;
+                    bestDelta = delta;
+                }
+            }
+
+            nextRows = bestRows;
+            nextCols = bestCols;
+        } else {
+            nextRows = 1;
+            nextCols = 1;
+        }
 
         const updatedTab = {
             ...activeTab,
             charts: newCharts,
-            activeChartId: activeTab.activeChartId === id ? (remainingIds[0] || null) : activeTab.activeChartId
+            activeChartId: activeTab.activeChartId === id ? (remainingIds[0] || null) : activeTab.activeChartId,
+            maximizedChartId: activeTab.maximizedChartId === id ? null : activeTab.maximizedChartId,
+            layoutMode: `${nextRows}x${nextCols}`,
+            rows: nextRows,
+            cols: nextCols,
         };
 
-        return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
+        return {
+            chartIndicators: newChartIndicators,
+            tabs: { ...state.tabs, [state.activeTabId]: updatedTab },
+        };
     }),
 
     updateChart: (id, patch) => set((state) => {

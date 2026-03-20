@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { wsRuntime } from './runtime';
-import { clearForegroundResyncTimer, clearQueuedSymbolInterest, queueForegroundResync, queueSymbolsInterestSync, requestChartBackfill, sendSymbolsInterestNow, syncForegroundCharts } from './senders';
+import { clearQueuedSymbolInterest, queueSymbolsInterestSync, sendSymbolsInterestNow } from './senders';
 import { APP_PING_INTERVAL_MS, APP_PONG_TIMEOUT_MS, RESUME_SOCKET_GRACE_MS, SOCKET_STALE_MS } from './constants';
 
 function ensureLiveSocket(reason: string) {
@@ -100,7 +100,6 @@ export function useInitialHistoryAndForegroundResyncEffect(isConnected: boolean)
             wsRuntime.lastResumeSyncAt = Date.now();
             sendSymbolsInterestNow();
             window.dispatchEvent(new CustomEvent('chart-foreground-resync', { detail: { reason, force } }));
-            queueForegroundResync(() => syncForegroundCharts(force, reason));
             ensureLiveSocket(reason);
             scheduleResumeHealthCheck(reason);
         };
@@ -123,7 +122,6 @@ export function useInitialHistoryAndForegroundResyncEffect(isConnected: boolean)
             document.removeEventListener('visibilitychange', onVisibilityChange);
             window.removeEventListener('focus', onFocus);
             window.removeEventListener('pageshow', onPageShow);
-            clearForegroundResyncTimer();
             if (wsRuntime.resumeHealthCheckTimer) {
                 clearTimeout(wsRuntime.resumeHealthCheckTimer);
                 wsRuntime.resumeHealthCheckTimer = null;
@@ -159,15 +157,8 @@ export function useBackfillEventEffect(isConnected: boolean) {
             };
         }
 
-        const handleBackfillRequest = (event: Event) => {
-            const detail = (event as CustomEvent)?.detail || {};
-            const source = String(detail.source || '').toUpperCase();
-            const symbol = String(detail.symbol || '').trim();
-            const interval = String(detail.interval || '').trim();
-            const count = Number.isFinite(Number(detail.count)) ? Number(detail.count) : 300;
-            if (!symbol || !interval) return;
-
-            requestChartBackfill(source, symbol, interval, 'event_request', count);
+        const handleBackfillRequest = () => {
+            // Disabled by product rule: historical backfill must only be triggered by explicit left-scroll on chart.
         };
 
         window.addEventListener('chart-backfill-request', handleBackfillRequest as EventListener);

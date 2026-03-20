@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { useMarketStore } from '@/lib/store';
 import { IndicatorLayer } from './IndicatorLayer';
 import { DrawingLayer } from './DrawingLayer';
 import { Activity, Pencil, Zap } from 'lucide-react';
 import { motion, LayoutGroup } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export function LayerManager() {
+    const t = useTranslations('ChartPanel.layerManager');
     const [activeTab, setActiveTab] = useState<'indicator' | 'draw'>('indicator');
 
     const tabs = [
-        { id: 'indicator' as const, label: 'Indicators', icon: Activity },
-        { id: 'draw' as const, label: 'Draw Tools', icon: Pencil },
+        { id: 'indicator' as const, label: t('tabs.indicators'), icon: Activity },
+        { id: 'draw' as const, label: t('tabs.drawTools'), icon: Pencil },
     ];
 
     return (
@@ -63,7 +64,7 @@ export function LayerManager() {
             <div className="p-2 border-t border-border bg-secondary/10 shrink-0">
                 <div className="flex items-center gap-2 text-muted-foreground/30">
                     <Zap size={10} className="text-yellow-500/40" />
-                    <span className="text-[11px] font-bold uppercase tracking-widest">Manual Drawing Mode Enabled</span>
+                    <span className="text-[11px] font-bold uppercase tracking-widest">{t('manualDrawingModeEnabled')}</span>
                 </div>
             </div>
         </div>

@@ -77,7 +77,7 @@ export function useChartRuntime(chartId: string) {
     } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone, key);
 
     const { sendMessage } = useWebSocket();
-    const { realTimeCandleRef } = useChartData(
+    const { realTimeCandleRef, isLoadingOlderHistory } = useChartData(
         chartId,
         symbol,
         interval,
@@ -138,6 +138,7 @@ export function useChartRuntime(chartId: string) {
         isAutoScrollEnabledRef,
         sendMessage,
         realTimeCandleRef,
+        isLoadingOlderHistory,
         filteredPositions,
         filteredOrders
     };

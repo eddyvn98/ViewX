@@ -10,6 +10,7 @@ import { TimeframeToolbar } from './TimeframeToolbar';
 import { LayoutGridSelector } from './LayoutGridSelector';
 import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 type ChartGroup = 'none' | 'A' | 'B' | 'C' | 'D';
 type ChartType = 'candles' | 'heikin_ashi' | 'smart_candles';
@@ -31,6 +32,7 @@ const NEXT_CHART_TYPE: Record<ChartType, ChartType> = {
 
 
 export function ChartsToolbar() {
+    const t = useTranslations('ChartToolbar');
     const { activeChart } = useMarketStore(useShallow((state: RootState) => {
         const activeTab = state.activeTabId ? state.tabs[state.activeTabId] : null;
         const activeChartId = activeTab?.activeChartId;
@@ -44,22 +46,10 @@ export function ChartsToolbar() {
         isCrosshairSyncEnabled: state.isCrosshairSyncEnabled
     })));
 
-    const setLayoutMode = useMarketStore((state) => state.setLayoutMode);
-    const addChart = useMarketStore((state) => state.addChart);
     const updateChart = useMarketStore((state) => state.updateChart);
     const setCrosshairSync = useMarketStore((state) => state.setCrosshairSync);
     const isDrawingToolbarVisible = useMarketStore((state) => state.isDrawingToolbarVisible);
     const showHistoryMarkers = useStrategyStore((state) => state.showHistoryMarkers);
-
-    const handleAddChart = () => {
-        const state = useMarketStore.getState();
-        const activeTab = state.tabs[state.activeTabId];
-        const currentCount = Object.keys(activeTab?.charts || {}).length;
-        addChart('BTCUSDm', '15', 'MT5');
-        const newCount = currentCount + 1;
-        if (newCount === 2) setLayoutMode('2x1');
-        else if (newCount >= 3) setLayoutMode('2x2');
-    };
 
     return (
         <div className="flex items-center justify-between px-2 py-0 shrink-0 bg-primary/5 backdrop-blur-sm border-b border-primary/10 transition-colors duration-300 relative z-50">
@@ -107,7 +97,6 @@ export function ChartsToolbar() {
                         {activeChart?.chartType === 'heikin_ashi' ? 'HA' : activeChart?.chartType === 'smart_candles' ? 'SC' : 'C'}
                     </button>
 
-                    <LayoutGridSelector />
                 </div>
 
                 <div className="h-4 w-[1px] bg-border" />
@@ -142,7 +131,21 @@ export function ChartsToolbar() {
                         <HistoryIcon size={14} />
                     </button>
 
-                    <button onClick={handleAddChart} className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-all uppercase tracking-wider"><Plus size={13} className="text-primary" /> Add Chart</button>
+                    <LayoutGridSelector
+                        renderTrigger={({ isOpen, toggle }) => (
+                            <button
+                                onClick={toggle}
+                                className={cn(
+                                    "flex items-center gap-1 text-[11px] font-bold transition-all uppercase tracking-wider",
+                                    isOpen ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                                )}
+                                title={t('addChart')}
+                            >
+                                <Plus size={13} className="text-primary" />
+                                {t('addChart')}
+                            </button>
+                        )}
+                    />
                 </div>
             </div>
 

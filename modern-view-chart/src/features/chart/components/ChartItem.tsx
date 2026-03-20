@@ -12,9 +12,10 @@ interface ChartItemProps {
     isActive: boolean;
     isMaximized: boolean;
     canClose: boolean;
+    isEntering?: boolean;
 }
 
-export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemProps) {
+export function ChartItem({ chart, isActive, isMaximized, canClose, isEntering = false }: ChartItemProps) {
     const setActiveChart = useMarketStore((state) => state.setActiveChart);
     const toggleMaximizeChart = useMarketStore((state) => state.toggleMaximizeChart);
     const removeChart = useMarketStore((state) => state.removeChart);
@@ -22,6 +23,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [isNarrow, setIsNarrow] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -37,13 +39,32 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
         return () => observer.disconnect();
     }, []);
 
+    const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        if (isClosing) return;
+
+        setIsClosing(true);
+        window.setTimeout(() => {
+            removeChart(chart.id);
+        }, 220);
+    };
+
     return (
         <div
             ref={containerRef}
-            onClick={() => setActiveChart(chart.id)}
-            onDoubleClick={() => toggleMaximizeChart(isMaximized ? null : chart.id)}
+            onClick={() => {
+                if (isClosing) return;
+                setActiveChart(chart.id);
+            }}
+            onDoubleClick={() => {
+                if (isClosing) return;
+                toggleMaximizeChart(isMaximized ? null : chart.id);
+            }}
             className={cn(
-                "group relative rounded-xl border flex flex-col bg-background transition-all duration-300 overflow-hidden",
+                "group relative rounded-xl border flex min-h-0 min-w-0 flex-col bg-background overflow-hidden will-change-transform",
+                "transition-[transform,opacity,border-color,box-shadow,filter] duration-300 ease-out",
+                isEntering && "animate-in fade-in zoom-in-95 slide-in-from-bottom-2",
+                isClosing && "pointer-events-none scale-[0.985] opacity-0 blur-[1px]",
                 isActive
                     ? "border-primary/40 ring-2 ring-primary/5 shadow-2xl shadow-primary/10 z-10"
                     : "border-border/30 hover:border-border/50"
@@ -127,11 +148,13 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                         >
                             <ExternalLink size={11} />
                         </a>
-                        {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all" title="Close"><X size={11} /></button>}
+                        {canClose && <button onClick={handleClose} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all" title="Close"><X size={11} /></button>}
                     </div>
                 </div>
             </div>
-            <div className="flex-1 min-h-0"><ChartContainer chartId={chart.id} isNarrow={isNarrow} /></div>
+            <div className="flex-1 min-h-0 min-w-0">
+                <ChartContainer chartId={chart.id} isNarrow={isNarrow} />
+            </div>
         </div>
     );
 }

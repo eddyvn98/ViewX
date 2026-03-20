@@ -14,7 +14,24 @@ const INTERVAL_MAP = {
 export async function handleBinanceHistory({ ws }, data) {
     try {
         const binanceInterval = INTERVAL_MAP[data.interval] || '1m';
-        const url = `https://api.binance.com/api/v3/klines?symbol=${data.symbol.toUpperCase()}&interval=${binanceInterval}&limit=500`;
+        const requestedCount = Number(data.count);
+        const limit = Number.isFinite(requestedCount)
+            ? Math.max(1, Math.min(1000, Math.floor(requestedCount)))
+            : 500;
+        const fromTimestamp = Number(data.fromTimestamp);
+        const toTimestamp = Number(data.toTimestamp);
+        const params = new URLSearchParams({
+            symbol: data.symbol.toUpperCase(),
+            interval: binanceInterval,
+            limit: String(limit),
+        });
+        if (Number.isFinite(fromTimestamp) && fromTimestamp > 0) {
+            params.set('startTime', String(Math.floor(fromTimestamp * 1000)));
+        }
+        if (Number.isFinite(toTimestamp) && toTimestamp > 0) {
+            params.set('endTime', String(Math.floor(toTimestamp * 1000)));
+        }
+        const url = `https://api.binance.com/api/v3/klines?${params.toString()}`;
         const res = await fetch(url);
         if (!res.ok) return;
         const raw = await res.json();

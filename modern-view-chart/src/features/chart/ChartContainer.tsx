@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/refs */
 
 import React, { memo, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
 import { useChartPositions } from './hooks/use-chart-positions';
 import { useChartOrders } from './hooks/use-chart-orders';
@@ -31,6 +32,7 @@ import { ChartPanels } from './components/ChartPanels';
 
 export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }: { chartId: string, isNarrow?: boolean }) {
     void isNarrow;
+    const t = useTranslations('ChartPanel.history');
 
     const {
         chartInstance,
@@ -54,6 +56,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         isAutoScrollEnabledRef,
         sendMessage,
         realTimeCandleRef,
+        isLoadingOlderHistory,
         filteredPositions,
         filteredOrders
     } = useChartRuntime(chartId);
@@ -167,7 +170,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
 
     return (
         <div
-            className="w-full h-full relative flex flex-col bg-theme-pattern"
+            className="relative flex h-full min-h-0 w-full min-w-0 flex-col bg-theme-pattern"
             onContextMenu={handleContextMenu}
         >
             <ChartOverlay
@@ -177,6 +180,11 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 source={chartInstance?.source}
                 candles={candles}
             />
+            {isLoadingOlderHistory && (
+                <div className="pointer-events-none absolute left-2 top-2 z-30 rounded-md border border-primary/25 bg-background/85 px-2 py-1 text-[10px] font-semibold text-primary shadow-sm backdrop-blur-sm">
+                    {t('loadingMore')}
+                </div>
+            )}
 
             <PositionModifier />
 

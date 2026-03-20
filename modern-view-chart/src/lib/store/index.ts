@@ -29,3 +29,7 @@ export const useMarketStore = create<RootState>()(
     }))
 );
 
+if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+    (window as typeof window & { __marketStore?: typeof useMarketStore }).__marketStore = useMarketStore;
+}
+

@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo } from 'react';
+import { useEffect, useRef, memo, useMemo } from 'react';
 import { IChartApi, ISeriesApi, createSeriesMarkers, ISeriesMarkersPluginApi, Time, SeriesMarker, IPriceLine } from 'lightweight-charts';
 import { useStrategyStore } from '../store/strategy-store';
 import { normalizeTF } from '../utils/time-utils';
@@ -31,6 +31,14 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
 
     const currentInterval = normalizeTF(interval);
     const markersPluginRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+    const activeStrategyIds = useMemo(
+        () => new Set(
+            strategies
+                .filter((strategy) => strategy.active)
+                .map((strategy) => strategy.id)
+        ),
+        [strategies]
+    );
 
     const toEpochSec = (value: unknown): number | null => {
         const n = Number(value);
@@ -94,6 +102,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         };
 
         const closedPositions = virtualPositions.filter(p => {
+            if (p.strategyId && !activeStrategyIds.has(p.strategyId)) return false;
             const isMatch = p.status === 'closed' && (!p.symbol || matchesChartScope(p));
 
             if (!isMatch) return false;
@@ -126,6 +135,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         };
 
         virtualPositions.forEach((pos) => {
+            if (pos.strategyId && !activeStrategyIds.has(pos.strategyId)) return;
             if (!matchesChartScope(pos)) return;
             if (!(pos.status === 'open' || pos.status === 'pending')) return;
 
@@ -203,7 +213,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         });
 
         signals
-            .filter((sig) => matchesChartScope(sig))
+            .filter((sig) => activeStrategyIds.has(sig.strategyId) && matchesChartScope(sig))
             .forEach((sig) => {
                 const rawTime = toEpochSec(sig.timestamp);
                 if (!rawTime) return;
@@ -236,7 +246,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         markers.sort((a, b) => (a.time as number) - (b.time as number));
         plugin.setMarkers(markers);
 
-    }, [virtualPositions, terminalPositions, terminalOrders, signals, symbol, showHistoryMarkers, mainSeries, strategies, currentInterval]);
+    }, [virtualPositions, terminalPositions, terminalOrders, signals, symbol, showHistoryMarkers, mainSeries, strategies, currentInterval, activeStrategyIds]);
 
     // 3. Handle Active/Pending Lines (Price Lines)
     useEffect(() => {
@@ -244,6 +254,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         if (!SHOW_STRATEGY_PRICE_LINES) return;
 
         const activePositions = virtualPositions.filter(p => {
+            if (p.strategyId && !activeStrategyIds.has(p.strategyId)) return false;
             const isMatch = (p.status === 'open' || p.status === 'pending') &&
                 (isSameSymbol(p.symbol, symbol) || !p.symbol) &&
                 p.strategyId !== '';
@@ -311,7 +322,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
                 } catch { }
             });
         };
-    }, [virtualPositions, symbol, currentInterval, showHistoryMarkers, mainSeries, strategies]);
+    }, [virtualPositions, symbol, currentInterval, showHistoryMarkers, mainSeries, strategies, activeStrategyIds]);
 
     // 4. Handle "Focus on Chart" requests
     useEffect(() => {

@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { ChartTab } from '../types';
 import { RootState } from '../index';
+import { debugLog } from '@/lib/debug';
 
 export interface TabSlice {
     tabs: Record<string, ChartTab>;
@@ -82,14 +83,32 @@ export const createTabSlice: StateCreator<RootState, [], [], TabSlice> = (set) =
         const newCharts = { ...activeTab.charts };
         const newChartIndicators = { ...state.chartIndicators };
 
-        // Find prototype
-        const protoId = activeTab.activeChartId || existingCharts[0];
-        const protoChart = activeTab.charts[protoId];
+        // Use the active chart as the prototype when it is still valid.
+        // Logged-in users can occasionally hydrate an outdated activeChartId,
+        // so we fall back to the first real chart in the tab.
+        const protoId = activeTab.activeChartId && activeTab.charts[activeTab.activeChartId]
+            ? activeTab.activeChartId
+            : existingCharts[0];
+        const protoChart = protoId ? activeTab.charts[protoId] : null;
         const protoIndicators = state.chartIndicators[protoId] || [];
 
+        if (!protoChart) {
+            return state;
+        }
+
+        const nextChartId = () => {
+            let candidateIndex = existingCharts.length + 1;
+            let candidateId = `chart-${activeTab.id}-${candidateIndex}`;
+            while (newCharts[candidateId]) {
+                candidateIndex += 1;
+                candidateId = `chart-${activeTab.id}-${candidateIndex}`;
+            }
+            return candidateId;
+        };
+
         if (existingCount < needed) {
-            for (let i = existingCount + 1; i <= needed; i++) {
-                const newId = `chart-${activeTab.id}-${i}`;
+            for (let i = existingCount; i < needed; i++) {
+                const newId = nextChartId();
                 newCharts[newId] = { ...protoChart, id: newId, group: 'none' };
                 newChartIndicators[newId] = protoIndicators.map((ind) => ({
                     ...ind,
@@ -98,12 +117,29 @@ export const createTabSlice: StateCreator<RootState, [], [], TabSlice> = (set) =
             }
         }
 
+        debugLog('[TabSlice][setLayoutMode]', {
+            tabId: state.activeTabId,
+            mode,
+            rows,
+            cols,
+            needed,
+            existingCount,
+            chartIdsBefore: existingCharts,
+            chartIdsAfter: Object.keys(newCharts),
+            activeChartId: activeTab.activeChartId,
+            protoId,
+        });
+
         return {
             chartIndicators: newChartIndicators,
             tabs: {
                 ...state.tabs,
                 [state.activeTabId]: {
                     ...activeTab,
+                    activeChartId: activeTab.activeChartId && newCharts[activeTab.activeChartId]
+                        ? activeTab.activeChartId
+                        : protoId,
+                    maximizedChartId: needed > 1 ? null : activeTab.maximizedChartId,
                     layoutMode: `${rows}x${cols}`,
                     rows,
                     cols,

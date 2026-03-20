@@ -11,6 +11,8 @@ import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import React from "react";
 import dynamic from "next/dynamic";
+import { parseIntervalSeconds } from "@/hooks/use-websocket/socket-config";
+import { normalizeSymbol } from "@/lib/utils/symbol";
 import {
   DESKTOP_SCALE_BASE_HEIGHT,
   DESKTOP_SCALE_BASE_WIDTH,
@@ -72,8 +74,9 @@ const StrategyRunnerBootstrap = dynamic(
 );
 
 export default function Home() {
-  useWebSocket();
+  const { sendMessage } = useWebSocket();
   useUserSetupSync();
+  const firstLoadBackfillKeyRef = React.useRef<string>("");
 
   const strategyEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED !== "false";
   const {
@@ -143,6 +146,7 @@ export default function Home() {
     changePercent: activeTicker?.change,
     digits: activeDigits,
   });
+  const isConnected = useMarketStore((state) => state.isConnected);
 
   const handleMobileTabChange = (tab: string) => {
     if (activeMobileTab === tab && (tab === "trade" || tab === "positions")) {
@@ -174,6 +178,52 @@ export default function Home() {
       setActiveMobileTab("chart");
     }
   }, [activeMobileTab, setActiveMobileTab]);
+
+  React.useEffect(() => {
+    if (!isConnected) return;
+    const symbol = activeChart?.symbol;
+    const interval = activeChart?.interval;
+    const source = String(activeChart?.source || "").toUpperCase();
+    if (!symbol || !interval || !source) return;
+
+    const normalizedSymbol = normalizeSymbol(symbol);
+    const key = `${source}:${normalizedSymbol}:${interval}`;
+    if (firstLoadBackfillKeyRef.current === key) return;
+
+    const candlesCount = useMarketStore.getState().candleData[key]?.length || 0;
+    if (candlesCount >= 150) {
+      firstLoadBackfillKeyRef.current = key;
+      return;
+    }
+
+    firstLoadBackfillKeyRef.current = key;
+    if (source === "BINANCE") {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const secondsPerBar = parseIntervalSeconds(interval);
+      sendMessage({
+        topic: "get_binance_candles",
+        symbol,
+        interval,
+        fromTimestamp: nowSec - secondsPerBar * 300,
+        toTimestamp: nowSec,
+        reason: "home_chart_first_load",
+      });
+    } else {
+      sendMessage({
+        topic: "mt5_command",
+        command: "get_candles",
+        symbol,
+        interval,
+        count: 300,
+        reason: "home_chart_first_load",
+      });
+      sendMessage({
+        topic: "mt5_command",
+        command: "get_symbol_info",
+        symbol,
+      });
+    }
+  }, [activeChart?.interval, activeChart?.source, activeChart?.symbol, isConnected, sendMessage]);
 
   const {
     isScaledDesktopMode,

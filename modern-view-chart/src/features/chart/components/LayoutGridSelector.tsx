@@ -4,10 +4,16 @@ import React, { useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Grid3X3 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-export function LayoutGridSelector() {
+type LayoutGridSelectorProps = {
+    renderTrigger?: (props: { isOpen: boolean; toggle: () => void }) => React.ReactNode;
+};
+
+export function LayoutGridSelector({ renderTrigger }: LayoutGridSelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [hovered, setHovered] = useState<{ r: number; c: number } | null>(null);
+    const t = useTranslations('ChartToolbar');
     const setLayoutMode = useMarketStore((state) => state.setLayoutMode);
     const activeTabId = useMarketStore((state) => state.activeTabId);
     const activeTab = useMarketStore((state) => state.tabs[activeTabId]);
@@ -21,20 +27,26 @@ export function LayoutGridSelector() {
         setIsOpen(false);
     };
 
+    const toggle = () => setIsOpen((prev) => !prev);
+
     return (
         <div className="relative group px-1">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={cn(
-                    "p-1.5 rounded-md transition-all duration-200 border",
-                    isOpen
-                        ? "bg-primary/10 text-primary border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.1)]"
-                        : "text-muted-foreground border-transparent hover:bg-secondary/50 hover:text-foreground"
-                )}
-                title={isOpen ? "" : "Change Layout"}
-            >
-                <Grid3X3 size={16} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
-            </button>
+            {renderTrigger ? (
+                renderTrigger({ isOpen, toggle })
+            ) : (
+                <button
+                    onClick={toggle}
+                    className={cn(
+                        "p-1.5 rounded-md transition-all duration-200 border",
+                        isOpen
+                            ? "bg-primary/10 text-primary border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.1)]"
+                            : "text-muted-foreground border-transparent hover:bg-secondary/50 hover:text-foreground"
+                    )}
+                    title={isOpen ? "" : t('changeLayout')}
+                >
+                    <Grid3X3 size={16} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
+                </button>
+            )}
 
             {isOpen && (
                 <>
@@ -47,7 +59,7 @@ export function LayoutGridSelector() {
                     {/* Dropdown Grid */}
                     <div className="absolute left-0 top-full mt-1.5 z-[70] p-3 bg-popover border border-border rounded-lg shadow-xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 origin-top-left min-w-[160px]">
                         <div className="mb-3 flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                            <span>Grid Layout</span>
+                            <span>{t('gridLayout')}</span>
                             <span className="text-primary font-mono text-[11px]">
                                 {hovered ? `${hovered.r}x${hovered.c}` : `${activeTab?.rows || 1}x${activeTab?.cols || 1}`}
                             </span>

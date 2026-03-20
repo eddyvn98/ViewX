@@ -1,3 +1,5 @@
+import time
+
 import MetaTrader5 as mt5
 
 class MT5Service:
@@ -107,10 +109,24 @@ class MT5Service:
 
         tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
         print(f"[FETCH] {symbol} -> {resolved_symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")
-        rates = mt5.copy_rates_from_pos(resolved_symbol, tf, 0, count)
-        if rates is None or len(rates) == 0:
+        rates = None
+        for attempt in range(3):
+            rates = mt5.copy_rates_from_pos(resolved_symbol, tf, 0, count)
+            if rates is not None and len(rates) > 0:
+                break
+
             error_code, error_desc = mt5.last_error()
-            print(f"[WARN] No rates found for {symbol} {interval} | MT5 error: {error_code} - {error_desc}")
+            print(
+                f"[WARN] No rates found for {symbol} {interval} on attempt {attempt + 1}/3"
+                f" | MT5 error: {error_code} - {error_desc}"
+            )
+
+            # MT5 can transiently return an empty buffer right after reconnect
+            # or when a symbol has not been refreshed yet; re-select then retry.
+            mt5.symbol_select(resolved_symbol, True)
+            time.sleep(0.2)
+
+        if rates is None or len(rates) == 0:
             return []
         
         return [{

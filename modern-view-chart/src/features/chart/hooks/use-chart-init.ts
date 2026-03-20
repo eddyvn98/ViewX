@@ -7,6 +7,7 @@ import {
     ISeriesApi,
     CandlestickSeries,
     LineSeries,
+    Time,
 } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { getPriceChartOptions, getSubChartOptions, getTimescaleOptions, initialMinW } from '../config/chart-options';
@@ -15,6 +16,7 @@ import { setupCrosshairListeners } from './init/setup-crosshair-listeners';
 import { ChartInstance } from '@/lib/store/types';
 import { readPersistedViewportForChart } from './init/chart-init-helpers';
 import { setupChartSyncRuntime } from './init/setup-chart-sync-runtime';
+import { normalizeCrosshairTime } from './init/normalize-crosshair-time';
 import type { ChartTab } from '@/lib/store/types';
 
 export function useChartInit(
@@ -40,6 +42,31 @@ export function useChartInit(
     const currentContextKeyRef = useRef(currentContextKey);
     const themeColor = useMarketStore(state => state.themeColor);
     const updateChart = useMarketStore(state => state.updateChart);
+    const timezoneFormatters = useMemo(() => {
+        const tickLabelFormatter = new Intl.DateTimeFormat('en-GB', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+        const timeLabelFormatter = new Intl.DateTimeFormat('en-GB', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+        const timeFormatter = (timestamp: number) => timeLabelFormatter.format(timestamp * 1000).replace(',', '');
+        const tickMarkFormatter = (time: Time) => {
+            const sec = normalizeCrosshairTime(time);
+            if (sec == null) return '';
+            return tickLabelFormatter.format(sec * 1000);
+        };
+
+        return { timeFormatter, tickMarkFormatter };
+    }, [timezone]);
 
     const getPersistedViewport = useCallback((): ChartInstance['viewport'] | undefined => {
         return readPersistedViewportForChart(useMarketStore.getState().tabs as Record<string, ChartTab>, chartId);
@@ -63,15 +90,30 @@ export function useChartInit(
     useEffect(() => {
         if (!isReady) return;
         if (priceChartRef.current && priceContainerRef.current) {
-            priceChartRef.current.applyOptions(getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor));
+            priceChartRef.current.applyOptions({
+                ...getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor),
+                localization: {
+                    timeFormatter: timezoneFormatters.timeFormatter,
+                },
+            });
         }
         if (subchartChartRef.current && subchartContainerRef.current) {
-            subchartChartRef.current.applyOptions(getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, themeColor));
+            subchartChartRef.current.applyOptions({
+                ...getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, themeColor),
+                localization: {
+                    timeFormatter: timezoneFormatters.timeFormatter,
+                },
+            });
         }
         if (timescaleChartRef.current && timescaleContainerRef.current) {
-            timescaleChartRef.current.applyOptions(getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, themeColor));
+            timescaleChartRef.current.applyOptions({
+                ...getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, themeColor),
+                localization: {
+                    timeFormatter: timezoneFormatters.timeFormatter,
+                },
+            });
         }
-    }, [theme, themeColor, isReady, priceContainerRef, subchartContainerRef, timescaleContainerRef]);
+    }, [theme, themeColor, isReady, priceContainerRef, subchartContainerRef, timescaleContainerRef, timezoneFormatters]);
 
     const currentSymbol = useMarketStore(state => {
         const activeTab = state.tabs[state.activeTabId];
@@ -117,30 +159,45 @@ export function useChartInit(
 
         const priceChart = createChart(
             priceContainer,
-            getPriceChartOptions(
-                Math.max(1, Math.round(priceContainer.clientWidth || 1)),
-                Math.max(1, Math.round(priceContainer.clientHeight || 1)),
-                theme,
-                themeColor
-            )
+            {
+                ...getPriceChartOptions(
+                    Math.max(1, Math.round(priceContainer.clientWidth || 1)),
+                    Math.max(1, Math.round(priceContainer.clientHeight || 1)),
+                    theme,
+                    themeColor
+                ),
+                localization: {
+                    timeFormatter: timezoneFormatters.timeFormatter,
+                },
+            }
         );
         const subchartChart = createChart(
             subchartContainer,
-            getSubChartOptions(
-                Math.max(1, Math.round(subchartContainer.clientWidth || 1)),
-                Math.max(1, Math.round(subchartContainer.clientHeight || 1)),
-                theme,
-                themeColor
-            )
+            {
+                ...getSubChartOptions(
+                    Math.max(1, Math.round(subchartContainer.clientWidth || 1)),
+                    Math.max(1, Math.round(subchartContainer.clientHeight || 1)),
+                    theme,
+                    themeColor
+                ),
+                localization: {
+                    timeFormatter: timezoneFormatters.timeFormatter,
+                },
+            }
         );
         const timescaleChart = createChart(
             timescaleContainer,
-            getTimescaleOptions(
-                Math.max(1, Math.round(timescaleContainer.clientWidth || 1)),
-                Math.max(1, Math.round(timescaleContainer.clientHeight || 1)),
-                theme,
-                themeColor
-            )
+            {
+                ...getTimescaleOptions(
+                    Math.max(1, Math.round(timescaleContainer.clientWidth || 1)),
+                    Math.max(1, Math.round(timescaleContainer.clientHeight || 1)),
+                    theme,
+                    themeColor
+                ),
+                localization: {
+                    timeFormatter: timezoneFormatters.timeFormatter,
+                },
+            }
         );
         applyTouchAction(priceContainer);
         applyTouchAction(subchartContainer);
@@ -274,7 +331,7 @@ export function useChartInit(
             subSyncRef.current = null;
             timescaleSyncRef.current = null;
         };
-    }, [chartId, timezone, theme, themeColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef, currentContextKey]);
+    }, [chartId, timezone, theme, themeColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef, currentContextKey, timezoneFormatters]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();

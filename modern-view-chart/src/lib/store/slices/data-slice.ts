@@ -12,6 +12,8 @@ export interface DataSlice {
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Candle) => void;
 }
 
+const MAX_CANDLES_PER_KEY = 6000;
+
 // Normalize time to seconds for consistent comparison (supports numeric and date-string input)
 const toSeconds = (t: unknown): number => {
     const raw = typeof t === 'object' && t !== null ? (t as { timestamp?: unknown }).timestamp : t;
@@ -69,8 +71,25 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
             return state;
         }
 
+        // Merge by candle timestamp to support incremental historical loading.
+        const mergedMap = new Map<number, Candle>();
+        for (const candle of current) {
+            const ts = toSeconds(candle.time);
+            if (Number.isFinite(ts)) mergedMap.set(ts, candle);
+        }
+        for (const candle of normalized) {
+            const ts = toSeconds(candle.time);
+            if (Number.isFinite(ts)) mergedMap.set(ts, candle);
+        }
+
+        const merged = Array.from(mergedMap.values())
+            .sort((a, b) => toSeconds(a.time) - toSeconds(b.time));
+        const capped = merged.length > MAX_CANDLES_PER_KEY
+            ? merged.slice(merged.length - MAX_CANDLES_PER_KEY)
+            : merged;
+
         return {
-            candleData: { ...state.candleData, [key]: normalized }
+            candleData: { ...state.candleData, [key]: capped }
         };
     }),
 

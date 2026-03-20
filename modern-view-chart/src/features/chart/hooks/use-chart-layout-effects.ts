@@ -1,9 +1,6 @@
 import { useEffect } from 'react';
-import { IChartApi } from 'lightweight-charts';
-
-type TimeScaleWithOptions = {
-    applyOptions: (options: { tickMarkFormatter: (time: number) => string }) => void;
-};
+import { IChartApi, Time } from 'lightweight-charts';
+import { normalizeCrosshairTime } from './init/normalize-crosshair-time';
 
 export function useChartLayoutEffects(
     priceChartRef: React.MutableRefObject<IChartApi | null>,
@@ -34,51 +31,58 @@ export function useChartLayoutEffects(
     useEffect(() => {
         if (!priceChartRef.current || !timezone) return;
 
+        const tickLabelFormatter = new Intl.DateTimeFormat('en-GB', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+        const timeLabelFormatter = new Intl.DateTimeFormat('en-GB', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+
         const timeFormatter = (timestamp: number) => {
-            return new Intl.DateTimeFormat('en-GB', {
-                timeZone: timezone,
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-            }).format(timestamp * 1000).replace(',', '');
+            return timeLabelFormatter.format(timestamp * 1000).replace(',', '');
         };
 
-        const tickMarkFormatter = (time: number) => {
-            const date = new Date(time * 1000);
-            return new Intl.DateTimeFormat('en-GB', {
-                timeZone: timezone,
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-            }).format(date);
+        const tickMarkFormatter = (time: Time) => {
+            const sec = normalizeCrosshairTime(time);
+            if (sec == null) return '';
+            return tickLabelFormatter.format(sec * 1000);
         };
 
         const localizationOptions = {
             localization: {
                 timeFormatter,
-            },
-        };
-
-        const timeScaleOptions = {
-            timeScale: {
                 tickMarkFormatter,
             },
         };
 
         try {
-            priceChartRef.current.applyOptions(localizationOptions);
-            (priceChartRef.current.timeScale() as unknown as TimeScaleWithOptions).applyOptions(timeScaleOptions.timeScale);
+            priceChartRef.current.applyOptions({
+                ...localizationOptions,
+                timeScale: {
+                    tickMarkFormatter,
+                },
+            });
         } catch {
             // Ignore transient layout errors while chart instances are being recreated.
         }
 
         if (subchartChartRef.current) {
             try {
-                subchartChartRef.current.applyOptions(localizationOptions);
-                (subchartChartRef.current.timeScale() as unknown as TimeScaleWithOptions).applyOptions(timeScaleOptions.timeScale);
+                subchartChartRef.current.applyOptions({
+                    ...localizationOptions,
+                    timeScale: {
+                        tickMarkFormatter,
+                    },
+                });
             } catch {
                 // Ignore transient layout errors while chart instances are being recreated.
             }
@@ -86,8 +90,12 @@ export function useChartLayoutEffects(
 
         if (timescaleChartRef.current) {
             try {
-                timescaleChartRef.current.applyOptions(localizationOptions);
-                (timescaleChartRef.current.timeScale() as unknown as TimeScaleWithOptions).applyOptions(timeScaleOptions.timeScale);
+                timescaleChartRef.current.applyOptions({
+                    ...localizationOptions,
+                    timeScale: {
+                        tickMarkFormatter,
+                    },
+                });
             } catch {
                 // Ignore transient layout errors while chart instances are being recreated.
             }

@@ -17,8 +17,13 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     const activeTab = useMarketStore(state => state.tabs[activeTabId]);
     const setChartSymbol = useMarketStore(state => state.setChartSymbol);
 
-    const activeChartId = activeTab?.activeChartId || 'default';
-    const currentSymbol = activeTab?.charts[activeChartId]?.symbol;
+    const resolvedActiveChartId = (() => {
+        if (!activeTab) return null;
+        if (activeTab.activeChartId && activeTab.charts[activeTab.activeChartId]) return activeTab.activeChartId;
+        const fallbackChartId = Object.keys(activeTab.charts || {})[0];
+        return fallbackChartId || null;
+    })();
+    const currentSymbol = resolvedActiveChartId ? activeTab?.charts[resolvedActiveChartId]?.symbol : undefined;
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
@@ -119,14 +124,15 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     useEffect(() => {
         if (!initialCentered.current) return;
         if (!centerSymbol || !currentSymbol || centerSymbol === currentSymbol) return;
+        if (!resolvedActiveChartId) return;
         if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
         syncTimerRef.current = setTimeout(() => {
-            setChartSymbol(activeChartId, centerSymbol);
+            setChartSymbol(resolvedActiveChartId, centerSymbol);
         }, 220);
         return () => {
             if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
         };
-    }, [centerSymbol, currentSymbol, activeChartId, setChartSymbol]);
+    }, [centerSymbol, currentSymbol, resolvedActiveChartId, setChartSymbol]);
 
     const startLongPress = (x: number, y: number) => {
         longPressTriggeredRef.current = false;
@@ -155,7 +161,9 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
             return;
         }
         setCenterSymbol(symbol);
-        setChartSymbol(activeChartId, symbol);
+        if (resolvedActiveChartId) {
+            setChartSymbol(resolvedActiveChartId, symbol);
+        }
         const container = scrollRef.current;
         if (container) {
             const targetScroll = element.offsetLeft - (container.clientWidth / 2) + (element.clientWidth / 2);
