@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SubchartIndicatorsTabs } from './SubchartIndicatorsTabs';
@@ -14,6 +14,9 @@ interface ChartPanelsProps {
     candles: Candle[];
     isSubchartVisible: boolean;
     setIsSubchartVisible: (visible: boolean) => void;
+    subchartHeightPct: number;
+    setSubchartHeightPct: (heightPct: number) => void;
+    resetSubchartHeightPct: () => void;
     isMinimized: boolean;
     mainContainerRef: React.RefObject<HTMLDivElement | null>;
     priceContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -30,6 +33,9 @@ export function ChartPanels({
     candles,
     isSubchartVisible,
     setIsSubchartVisible,
+    subchartHeightPct,
+    setSubchartHeightPct,
+    resetSubchartHeightPct,
     isMinimized,
     mainContainerRef,
     priceContainerRef,
@@ -37,6 +43,65 @@ export function ChartPanels({
     timescaleContainerRef,
     children
 }: ChartPanelsProps) {
+    const isDraggingRef = useRef(false);
+    const lastPointerDownAtRef = useRef(0);
+
+    const startResizeSubchart = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+        if (isMinimized || !isSubchartVisible) return;
+        const now = Date.now();
+        if (now - lastPointerDownAtRef.current <= 500) {
+            lastPointerDownAtRef.current = 0;
+            resetSubchartHeightPct();
+            return;
+        }
+        lastPointerDownAtRef.current = now;
+
+        const container = mainContainerRef.current;
+        if (!container) return;
+
+        const pointerId = event.pointerId;
+        event.currentTarget.setPointerCapture(pointerId);
+        isDraggingRef.current = true;
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+
+        const clamp = (value: number) => Math.max(0, Math.min(85, value));
+
+        const updateHeight = (clientY: number) => {
+            const rect = container.getBoundingClientRect();
+            const pixelsFromBottom = rect.bottom - clientY;
+            const nextPct = clamp((pixelsFromBottom / Math.max(1, rect.height)) * 100);
+            if (nextPct <= 2) {
+                setIsSubchartVisible(false);
+                return;
+            }
+            setSubchartHeightPct(nextPct);
+        };
+
+        const onPointerMove = (moveEvent: PointerEvent) => {
+            if (!isDraggingRef.current) return;
+            updateHeight(moveEvent.clientY);
+        };
+
+        const endDrag = () => {
+            if (!isDraggingRef.current) return;
+            isDraggingRef.current = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', endDrag);
+            window.removeEventListener('pointercancel', endDrag);
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+    }, [isMinimized, isSubchartVisible, mainContainerRef, resetSubchartHeightPct, setIsSubchartVisible, setSubchartHeightPct]);
+
+    const activeSubchartHeightPct = Math.max(3, Math.min(85, subchartHeightPct || 25));
+    const subchartBottomOffset = isMinimized && isSubchartVisible ? '32px' : (isSubchartVisible ? `${activeSubchartHeightPct}%` : '0px');
+    const subchartHeightStyle = isMinimized && isSubchartVisible ? '80px' : `${activeSubchartHeightPct}%`;
+
     return (
         <>
             <div ref={mainContainerRef} className="flex-1 relative min-h-0 touch-none">
@@ -56,8 +121,9 @@ export function ChartPanels({
                 <div
                     className={cn(
                         "absolute right-[50px] md:right-[62px] z-30 flex items-end transition-all duration-300",
-                        isMinimized && isSubchartVisible ? "bottom-[32px]" : (isSubchartVisible ? "bottom-[25%]" : "bottom-0")
+                        isSubchartVisible ? "" : "bottom-0"
                     )}
+                    style={isSubchartVisible ? { bottom: subchartBottomOffset } : undefined}
                 >
                     <SubchartIndicatorsTabs
                         chartId={chartId}
@@ -86,23 +152,35 @@ export function ChartPanels({
                     </button>
                 </div>
 
+                <div className="absolute left-3 bottom-[42px] z-20 pointer-events-none select-none">
+                    <SubchartLegend
+                        chartId={chartId}
+                        symbol={symbol}
+                        interval={interval}
+                        source={source}
+                        candles={candles}
+                        className="!relative !top-0 !left-0"
+                    />
+                </div>
+
                 <div
                     className={cn(
                         "absolute bottom-0 left-0 right-0 z-10 border-t border-primary/20 transition-all duration-300 transform overflow-hidden",
                         isSubchartVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
-                        isMinimized && isSubchartVisible ? "h-[80px] bg-background/5 backdrop-blur-[1.5px]" : "h-[25%] min-h-[100px] bg-background/5 backdrop-blur-[1.5px]"
+                        isMinimized && isSubchartVisible ? "bg-background/5 backdrop-blur-[1.5px]" : "bg-background/5 backdrop-blur-[1.5px]"
                     )}
+                    style={{ height: subchartHeightStyle }}
                 >
-
-                    <div className="absolute left-3 top-[5%] z-10 pointer-events-none select-none">
-                        <SubchartLegend
-                            chartId={chartId}
-                            symbol={symbol}
-                            interval={interval}
-                            source={source}
-                            candles={candles}
+                    {!isMinimized && isSubchartVisible && (
+                        <button
+                            type="button"
+                            aria-label="Resize subchart height"
+                            onPointerDown={startResizeSubchart}
+                            onDoubleClick={resetSubchartHeightPct}
+                            className="absolute top-0 left-0 right-0 h-4 -translate-y-1/2 cursor-row-resize z-30 bg-transparent hover:bg-primary/15"
+                            title="Double-click to reset subchart height"
                         />
-                    </div>
+                    )}
 
                     <div className="w-full h-full relative">
                         {/* Solid background for sub-chart price axis only - matches initialMinW (62) + extra for labels */}

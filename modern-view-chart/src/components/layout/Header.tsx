@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Bell, BarChart2, Settings, PanelRightClose, LogOut } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
 import { TabContainer } from './TabContainer';
 import { cn } from '@/lib/utils';
@@ -18,14 +18,66 @@ type UserSetupSyncStatusDetail = {
     lastSavedAt: number | null;
 };
 
+type MembershipTier = 'free' | 'pro' | 'ai';
+
+type MembershipUi = {
+    badgeClassName: string;
+    dotClassName: string;
+    avatarBorderClassName: string;
+    avatarInnerClassName: string;
+};
+
+const MEMBERSHIP_UI: Record<MembershipTier, MembershipUi> = {
+    free: {
+        badgeClassName: 'bg-slate-500/10 border border-slate-500/30 text-slate-700 dark:text-slate-300',
+        dotClassName: 'bg-slate-500',
+        avatarBorderClassName: 'border-slate-400/50 dark:border-slate-500/60',
+        avatarInnerClassName: 'bg-slate-100 dark:bg-slate-800/80',
+    },
+    pro: {
+        badgeClassName: 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300',
+        dotClassName: 'bg-emerald-500',
+        avatarBorderClassName: 'border-emerald-500/50 dark:border-emerald-400/70',
+        avatarInnerClassName: 'bg-emerald-50 dark:bg-emerald-950/40',
+    },
+    ai: {
+        badgeClassName: 'bg-amber-500/10 border border-amber-500/35 text-amber-700 dark:text-amber-300',
+        dotClassName: 'bg-amber-500',
+        avatarBorderClassName: 'border-amber-500/60 dark:border-amber-400/75',
+        avatarInnerClassName: 'bg-amber-50 dark:bg-amber-950/35',
+    },
+};
+
+function normalizeMembershipTier(rawPlan: unknown): MembershipTier {
+    const plan = String(rawPlan || '').trim().toLowerCase();
+    if (plan === 'pro') return 'pro';
+    if (plan === 'pro_plus' || plan === 'ai') return 'ai';
+    return 'free';
+}
+
+function getMembershipLabel(tier: MembershipTier, locale: string): string {
+    const isVi = locale.toLowerCase().startsWith('vi');
+    if (!isVi) {
+        if (tier === 'pro') return 'PRO';
+        if (tier === 'ai') return 'AI';
+        return 'FREE';
+    }
+
+    if (tier === 'pro') return 'N\u00e2ng cao';
+    if (tier === 'ai') return 'Cao c\u1ea5p';
+    return 'Mi\u1ec5n ph\u00ed';
+}
+
 export const Header = memo(function Header() {
     const tNotifications = useTranslations('Header.notifications');
+    const locale = useLocale();
     const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
     const toggleRightSidebar = useMarketStore((state) => state.toggleRightSidebar);
     const isLeftSidebarOpen = useMarketStore((state) => state.isLeftSidebarOpen);
     const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
     const [displayName, setDisplayName] = React.useState("Guest");
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+    const [membershipTier, setMembershipTier] = React.useState<MembershipTier>('free');
     const [isAvatarMenuOpen, setIsAvatarMenuOpen] = React.useState(false);
     const [isTelegramDialogOpen, setIsTelegramDialogOpen] = React.useState(false);
     const [isNotificationMenuOpen, setIsNotificationMenuOpen] = React.useState(false);
@@ -52,11 +104,13 @@ export const Header = memo(function Header() {
             setIsAuthenticated(Boolean(token));
             if (!raw) {
                 setDisplayName("Guest");
+                setMembershipTier('free');
                 return;
             }
             try {
                 const parsed = JSON.parse(raw);
                 const name = String(parsed?.display_name || parsed?.username || "").trim();
+                setMembershipTier(normalizeMembershipTier(parsed?.subscription?.plan || parsed?.plan));
                 if (!name) {
                     setDisplayName("Guest");
                     return;
@@ -64,6 +118,7 @@ export const Header = memo(function Header() {
                 setDisplayName(name.split("@")[0]);
             } catch {
                 setDisplayName("Guest");
+                setMembershipTier('free');
             }
         };
 
@@ -132,6 +187,12 @@ export const Header = memo(function Header() {
         window.addEventListener("mousedown", onClickOutside);
         return () => window.removeEventListener("mousedown", onClickOutside);
     }, [isNotificationMenuOpen]);
+
+    const membershipUi = MEMBERSHIP_UI[membershipTier];
+    const membershipLabel = React.useMemo(
+        () => getMembershipLabel(membershipTier, locale),
+        [locale, membershipTier]
+    );
 
     const handleLogout = React.useCallback(async () => {
         try {
@@ -307,35 +368,39 @@ export const Header = memo(function Header() {
                         />
                     ) : null}
 
-                    <div className="hidden sm:flex flex-col items-end justify-center">
-                        <span className="text-[11px] font-bold text-foreground dark:text-white group-hover:text-primary transition-colors tracking-tight leading-none">{displayName}</span>
-                        <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full mt-0.5">
-                            <span className="w-1 h-1 bg-emerald-500 rounded-full" />
-                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">{isAuthenticated ? "PRO" : "GUEST"}</span>
-                        </div>
-                    </div>
+                    {isAuthenticated ? (
+                        <>
+                            <div className="hidden sm:flex flex-col items-end justify-center">
+                                <span className="text-[10px] font-bold text-foreground dark:text-white group-hover:text-primary transition-colors tracking-tight leading-none">{displayName}</span>
+                                <div className={cn("flex items-center gap-1 px-1 py-[1px] rounded-full mt-[2px]", membershipUi.badgeClassName)}>
+                                    <span className={cn("w-[3px] h-[3px] rounded-full", membershipUi.dotClassName)} />
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] leading-none">{membershipLabel}</span>
+                                </div>
+                            </div>
 
-                    <div className="relative" ref={avatarMenuRef}>
-                        <button
-                            onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
-                            className="w-7 h-7 rounded-full bg-secondary dark:bg-white/[0.05] border border-border dark:border-white/10 p-[1px] shadow-sm group-hover:border-primary/40 transition-all duration-500"
-                            title="Account menu"
-                        >
-                            <div className="w-full h-full rounded-full bg-background/40" />
-                        </button>
-                        {isAvatarMenuOpen ? (
-                            <div className="absolute right-0 top-8 w-44 rounded-md border border-border dark:border-white/10 bg-background/95 backdrop-blur p-1 shadow-lg z-[140]">
-                                <div className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">Quick Controls</div>
-                                <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
-                                    <span className="text-xs text-foreground dark:text-white">Dark Mode</span>
-                                    <ThemeToggle />
-                                </div>
-                                <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
-                                    <span className="text-xs text-foreground dark:text-white">Theme Color</span>
-                                    <ThemeColorSwitcher />
-                                </div>
-                                <div className="my-1 h-px bg-border dark:bg-white/10" />
-                                {isAuthenticated ? (
+                            <div className="relative" ref={avatarMenuRef}>
+                                <button
+                                    onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
+                                    className={cn(
+                                        "w-7 h-7 rounded-full bg-secondary dark:bg-white/[0.05] border p-[1px] shadow-sm transition-all duration-500",
+                                        membershipUi.avatarBorderClassName
+                                    )}
+                                    title="Account menu"
+                                >
+                                    <div className={cn("w-full h-full rounded-full", membershipUi.avatarInnerClassName)} />
+                                </button>
+                                {isAvatarMenuOpen ? (
+                                    <div className="absolute right-0 top-8 w-44 rounded-md border border-border dark:border-white/10 bg-background/95 backdrop-blur p-1 shadow-lg z-[140]">
+                                        <div className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">Quick Controls</div>
+                                        <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
+                                            <span className="text-xs text-foreground dark:text-white">Dark Mode</span>
+                                            <ThemeToggle />
+                                        </div>
+                                        <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
+                                            <span className="text-xs text-foreground dark:text-white">Theme Color</span>
+                                            <ThemeColorSwitcher />
+                                        </div>
+                                        <div className="my-1 h-px bg-border dark:bg-white/10" />
                                     <button
                                         onClick={() => {
                                             setIsAvatarMenuOpen(false);
@@ -346,19 +411,17 @@ export const Header = memo(function Header() {
                                         <Bell size={13} />
                                         <span>Telegram Alerts</span>
                                     </button>
-                                ) : null}
-                                <button
-                                    onClick={() => {
-                                        setIsAvatarMenuOpen(false);
-                                        toggleRightSidebar();
-                                    }}
-                                    className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
-                                >
-                                    <Settings size={13} />
-                                    <span>Settings</span>
-                                </button>
-                                {isAuthenticated ? (
-                                    <button
+                                        <button
+                                            onClick={() => {
+                                                setIsAvatarMenuOpen(false);
+                                                toggleRightSidebar();
+                                            }}
+                                            className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
+                                        >
+                                            <Settings size={13} />
+                                            <span>Settings</span>
+                                        </button>
+                                        <button
                                         onClick={() => {
                                             setIsAvatarMenuOpen(false);
                                             void handleLogout();
@@ -368,10 +431,11 @@ export const Header = memo(function Header() {
                                         <LogOut size={13} />
                                         <span>Logout</span>
                                     </button>
+                                    </div>
                                 ) : null}
                             </div>
-                        ) : null}
-                    </div>
+                        </>
+                    ) : null}
 
                     <button
                         onClick={toggleRightSidebar}

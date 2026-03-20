@@ -19,6 +19,18 @@ type TradeExitPayload = {
     metadata?: Record<string, unknown>;
 };
 
+export class TradeLogApiError extends Error {
+    status: number;
+    code?: string;
+
+    constructor(message: string, status: number, code?: string) {
+        super(message);
+        this.name = "TradeLogApiError";
+        this.status = status;
+        this.code = code;
+    }
+}
+
 async function readJsonSafe(response: Response) {
     const text = await response.text();
     if (!text) return null;
@@ -40,7 +52,11 @@ async function requestJson<T>(input: RequestInfo, init?: RequestInit): Promise<T
 
     if (!response.ok) {
         const payload = await readJsonSafe(response);
-        throw new Error(typeof payload === "string" ? payload : payload?.error || `Request failed: ${response.status}`);
+        const code = typeof payload === "object" && payload && "error" in payload
+            ? String((payload as { error?: unknown }).error || "") || undefined
+            : undefined;
+        const message = typeof payload === "string" ? payload : code || `Request failed: ${response.status}`;
+        throw new TradeLogApiError(message, response.status, code);
     }
 
     return (await readJsonSafe(response)) as T;

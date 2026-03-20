@@ -1,10 +1,10 @@
-import { toast } from 'sonner';
 import { IndicatorCalculator } from '../../logic/IndicatorCalculator';
 import { getPipMultiplier, getPriceOffset } from '../../utils/market-utils';
 import { getTradingSession } from '../../utils/time-utils';
 import { soundService } from '../../logic/SoundService';
 import type { Strategy, VirtualPosition } from '../../types';
 import type { Candle } from '@/lib/store/types';
+import { useMarketStore } from '@/lib/store';
 import { getStrategyLeg } from '../../strategy-helpers';
 import { createPositionId } from '../../utils/position-id';
 
@@ -127,7 +127,8 @@ export function managePositionOnTick(
         store.closeVirtualPosition(strategy.id, symbol, exitPrice, { exit_reason: exitReason }, position.type, position.matrixScopeKey);
         if (exitReason === 'TP') soundService.playTP();
         else if (exitReason === 'SL') soundService.playSL();
-        toast.warning(`[${exitReason}] ${position.symbol} Closed @ ${exitPrice}`);
+        const closeMsg = `[${exitReason}] ${position.symbol} Closed @ ${exitPrice}`;
+        useMarketStore.getState().addNotification(closeMsg, 'warning');
         return;
     }
 
@@ -139,6 +140,7 @@ export function managePositionOnTick(
             timestamp: nowMs,
             entry_time: Math.floor(nowMs / 1000)
         });
-        toast.success(`[FILLED] ${position.type} ${position.symbol} @ ${position.entryPrice}`);
+        const filledMsg = `[FILLED] ${position.type} ${position.symbol} @ ${position.entryPrice}`;
+        useMarketStore.getState().addNotification(filledMsg, 'success');
     }
 }

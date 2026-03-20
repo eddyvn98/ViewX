@@ -86,6 +86,7 @@ export interface ChartInstance {
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     isSubchartVisible?: boolean;
+    subchartHeightPct?: number;
     viewport?: {
         contextKey?: string;
         logicalRange?: {

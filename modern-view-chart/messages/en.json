@@ -216,11 +216,12 @@
     "matrix": {
       "title": "Signal Monitor Matrix",
       "symbol": "Symbol",
-      "disabled": "Scanner is disabled",
+      "disabled": "Board is off - tap to turn on",
       "noBot": "Select strategy",
       "selectBotHint": "Select a strategy to start scanning the matrix.",
       "on": "ON",
       "off": "OFF",
+      "openMatrixTab": "Open board in new tab",
       "addSymbol": "Add Symbol",
       "addTf": "Add TF",
       "buy": "BUY",

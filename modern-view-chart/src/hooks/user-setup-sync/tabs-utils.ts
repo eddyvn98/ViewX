@@ -206,6 +206,10 @@ export function sanitizeTabsInput(input: unknown): RootState['tabs'] | null {
                 chart.chartType === 'candles' || chart.chartType === 'heikin_ashi' || chart.chartType === 'smart_candles'
                     ? chart.chartType
                     : 'smart_candles';
+            const subchartHeightPctRaw = Number(chart.subchartHeightPct);
+            const subchartHeightPct = Number.isFinite(subchartHeightPctRaw)
+                ? Math.max(3, Math.min(85, Math.round(subchartHeightPctRaw)))
+                : undefined;
             safeCharts[chartId] = {
                 ...chart,
                 id: typeof chart.id === 'string' && chart.id.trim() ? chart.id : chartId,
@@ -214,6 +218,7 @@ export function sanitizeTabsInput(input: unknown): RootState['tabs'] | null {
                 source,
                 chartType,
                 timezone: typeof chart.timezone === 'string' ? chart.timezone : 'Asia/Ho_Chi_Minh',
+                subchartHeightPct,
             };
         }
 

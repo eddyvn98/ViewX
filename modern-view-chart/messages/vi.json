@@ -216,11 +216,12 @@
     "matrix": {
       "title": "Bảng theo dõi tín hiệu",
       "symbol": "Mã GD",
-      "disabled": "Scanner đã tắt",
+      "disabled": "Đang tắt bảng - nhấn để bật lại",
       "noBot": "Chọn chiến lược",
       "selectBotHint": "Chọn chiến lược để bắt đầu theo dõi matrix.",
       "on": "BẬT",
       "off": "TẮT",
+      "openMatrixTab": "Mở bảng ở tab mới",
       "addSymbol": "Thêm Mã GD",
       "addTf": "Thêm TF",
       "buy": "MUA",

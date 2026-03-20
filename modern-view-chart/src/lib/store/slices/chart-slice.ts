@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { ChartInstance, Ticker } from '../types';
+import { ChartInstance } from '../types';
 import { TabSlice } from './tab-slice';
 import { MarketSlice } from './market-slice';
 
@@ -14,6 +14,8 @@ export interface ChartSlice {
     setChartTimezone: (id: string, timezone: string) => void;
     setChartType: (id: string, type: ChartInstance['chartType']) => void;
     toggleSubchartVisibility: (id: string, visible?: boolean) => void;
+    setSubchartHeightPct: (id: string, heightPct: number) => void;
+    resetSubchartHeightPct: (id: string) => void;
     favoriteTimeframes: string[];
     toggleFavoriteTimeframe: (timeframe: string) => void;
 }
@@ -60,11 +62,14 @@ export const createChartSlice: StateCreator<
         const newCharts = { ...activeTab.charts };
         delete newCharts[id];
         const remainingIds = Object.keys(newCharts);
+        const nextActiveChartId = activeTab.activeChartId === id ? (remainingIds[0] || null) : activeTab.activeChartId;
+        const safeActiveChartId = nextActiveChartId && newCharts[nextActiveChartId] ? nextActiveChartId : (remainingIds[0] || null);
 
         const updatedTab = {
             ...activeTab,
             charts: newCharts,
-            activeChartId: activeTab.activeChartId === id ? (remainingIds[0] || null) : activeTab.activeChartId
+            activeChartId: safeActiveChartId,
+            maximizedChartId: activeTab.maximizedChartId === id ? null : activeTab.maximizedChartId
         };
 
         return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
@@ -195,6 +200,40 @@ export const createChartSlice: StateCreator<
             charts: {
                 ...activeTab.charts,
                 [id]: { ...activeTab.charts[id], isSubchartVisible: newVisible }
+            }
+        };
+
+        return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
+    }),
+
+    setSubchartHeightPct: (id, heightPct) => set((state) => {
+        const activeTab = state.tabs[state.activeTabId];
+        if (!activeTab || !activeTab.charts[id]) return state;
+
+        const normalized = Math.max(3, Math.min(85, Math.round(heightPct)));
+        if (activeTab.charts[id].subchartHeightPct === normalized) return state;
+
+        const updatedTab = {
+            ...activeTab,
+            charts: {
+                ...activeTab.charts,
+                [id]: { ...activeTab.charts[id], subchartHeightPct: normalized }
+            }
+        };
+
+        return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
+    }),
+
+    resetSubchartHeightPct: (id) => set((state) => {
+        const activeTab = state.tabs[state.activeTabId];
+        if (!activeTab || !activeTab.charts[id]) return state;
+        if (activeTab.charts[id].subchartHeightPct === 25 || activeTab.charts[id].subchartHeightPct === undefined) return state;
+
+        const updatedTab = {
+            ...activeTab,
+            charts: {
+                ...activeTab.charts,
+                [id]: { ...activeTab.charts[id], subchartHeightPct: 25 }
             }
         };
 

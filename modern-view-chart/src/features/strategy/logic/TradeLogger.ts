@@ -1,4 +1,4 @@
-import { createTradeLog, updateTradeExit } from './trade-log-api';
+import { createTradeLog, TradeLogApiError, updateTradeExit } from './trade-log-api';
 import type { MarketMetrics } from './AiManager';
 import type { StrategySignal } from '../types';
 
@@ -34,11 +34,27 @@ export class TradeLogger {
     }
 
     static async updateExit(strategyId: string, symbol: string, exitPrice: number, metadata?: Record<string, unknown>) {
-        await updateTradeExit({
-            strategy_id: strategyId,
-            symbol,
-            exit_price: exitPrice,
-            metadata,
-        });
+        try {
+            await updateTradeExit({
+                strategy_id: strategyId,
+                symbol,
+                exit_price: exitPrice,
+                metadata,
+            });
+        } catch (error) {
+            if (
+                error instanceof TradeLogApiError
+                && error.status === 404
+                && error.code === 'trade_log_not_found'
+            ) {
+                console.warn('[TradeLogger] Skip exit update because no open trade log was found.', {
+                    strategyId,
+                    symbol,
+                    exitPrice,
+                });
+                return;
+            }
+            throw error;
+        }
     }
 }

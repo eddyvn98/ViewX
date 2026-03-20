@@ -93,8 +93,14 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
             return true;
         };
 
+        const isStrategyActive = (strategyId?: string) => {
+            if (!strategyId) return true;
+            const strategy = strategies.find((item) => item.id === strategyId);
+            return strategy ? strategy.active : true;
+        };
+
         const closedPositions = virtualPositions.filter(p => {
-            const isMatch = p.status === 'closed' && (!p.symbol || matchesChartScope(p));
+            const isMatch = p.status === 'closed' && (!p.symbol || matchesChartScope(p)) && isStrategyActive(p.strategyId);
 
             if (!isMatch) return false;
             return true;
@@ -128,6 +134,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         virtualPositions.forEach((pos) => {
             if (!matchesChartScope(pos)) return;
             if (!(pos.status === 'open' || pos.status === 'pending')) return;
+            if (!isStrategyActive(pos.strategyId)) return;
 
             const isBuy = pos.type === 'BUY';
             const isPending = pos.status === 'pending';
@@ -203,7 +210,7 @@ function StrategyMarkersView({ chart, mainSeries, symbol, interval }: StrategyMa
         });
 
         signals
-            .filter((sig) => matchesChartScope(sig))
+            .filter((sig) => matchesChartScope(sig) && isStrategyActive(sig.strategyId))
             .forEach((sig) => {
                 const rawTime = toEpochSec(sig.timestamp);
                 if (!rawTime) return;

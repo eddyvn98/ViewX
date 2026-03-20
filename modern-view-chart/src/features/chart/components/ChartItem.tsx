@@ -43,7 +43,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
             onClick={() => setActiveChart(chart.id)}
             onDoubleClick={() => toggleMaximizeChart(isMaximized ? null : chart.id)}
             className={cn(
-                "group relative rounded-xl border flex flex-col bg-background transition-all duration-300 overflow-hidden",
+                "group relative rounded-xl border flex flex-col bg-background transition-all duration-300 overflow-hidden h-full w-full min-h-0",
                 isActive
                     ? "border-primary/40 ring-2 ring-primary/5 shadow-2xl shadow-primary/10 z-10"
                     : "border-border/30 hover:border-border/50"

@@ -16,6 +16,7 @@ interface ScannerMatrixTableProps {
     onCommitAddSymbol: (scannerId: string, symbol: string) => void;
     onCommitAddTimeframe: (scannerId: string, timeframe: string) => void;
     onOpenChart: (symbol: string, timeframe: string) => void;
+    onEnableScanner: () => void;
     isActive: boolean;
 }
 
@@ -34,6 +35,7 @@ export function ScannerMatrixTable({
     onCommitAddSymbol,
     onCommitAddTimeframe,
     onOpenChart,
+    onEnableScanner,
     isActive,
 }: ScannerMatrixTableProps) {
     const t = useTranslations('Signals.matrix');
@@ -41,15 +43,15 @@ export function ScannerMatrixTable({
     return (
         <div className="overflow-auto pb-6 relative">
             <div className={cn(
-                "relative inline-block group/matrix transition-all duration-300",
-                !isActive && "opacity-40 grayscale-[0.5] pointer-events-none select-none"
+                "relative inline-block group/matrix transition-all duration-300 subpixel-antialiased",
+                !isActive && "opacity-40 grayscale-[0.5] select-none"
             )}>
-                <table className="w-max border-collapse">
+                <table className={cn("w-max border-collapse", !isActive && "pointer-events-none")}>
                     <thead>
                         <tr>
-                            <th className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-left text-[11px] font-black uppercase min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">{t('symbol')}</th>
+                            <th className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-left text-[10px] font-medium uppercase tracking-[0.02em] min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">{t('symbol')}</th>
                             {vm.timeframes.map((tf) => (
-                                <th key={`${scannerId}-${tf}`} className="bg-background border border-border/60 px-1 py-0.5 text-center text-[11px] font-black uppercase min-w-[72px] w-[72px]">
+                                <th key={`${scannerId}-${tf}`} className="bg-background border border-border/60 px-1 py-0.5 text-center text-[10px] font-medium uppercase tracking-[0.02em] min-w-[72px] w-[72px]">
                                     <div className="flex items-center justify-center gap-1">
                                         <span>{tf}</span>
                                         <button onClick={() => onRemoveTimeframe(scannerId, tf)} className="text-muted-foreground hover:text-rose-400">
@@ -83,7 +85,7 @@ export function ScannerMatrixTable({
                     <tbody>
                         {vm.symbols.map((symbol) => (
                             <tr key={`${scannerId}-${symbol}`}>
-                                <td className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-[11px] font-bold min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">
+                                <td className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-[10px] font-medium min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">
                                     <div className="flex items-center justify-between gap-1">
                                         <span>{symbol}</span>
                                         <button onClick={() => onRemoveSymbol(scannerId, symbol)} className="text-muted-foreground hover:text-rose-400">
@@ -117,7 +119,7 @@ export function ScannerMatrixTable({
                                             <button
                                                 onClick={() => onOpenChart(symbol, tf)}
                                                 className={cn(
-                                                    'w-full h-7 rounded border text-[11px] font-black relative leading-none transition-colors duration-200',
+                                                    'w-full h-7 rounded border text-[10px] font-medium relative leading-none tracking-[0.01em] transition-colors duration-200',
                                                     isOpen
                                                         ? (isOpenBuy
                                                             ? 'bg-emerald-500/20 border-emerald-500/65 text-emerald-700 dark:text-emerald-400'
@@ -143,7 +145,7 @@ export function ScannerMatrixTable({
                                             >
                                                 <span className="flex items-center justify-center gap-1.5">
                                                     {isOpenBuy || isOpenSell || isPendingBuy || isPendingSell ? (
-                                                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                                        <span className="relative flex h-[5px] w-[5px] shrink-0">
                                                             <span
                                                                 className={cn(
                                                                     'absolute inline-flex h-full w-full rounded-full animate-ping opacity-75',
@@ -152,7 +154,7 @@ export function ScannerMatrixTable({
                                                             />
                                                             <span
                                                                 className={cn(
-                                                                    'relative inline-flex h-2.5 w-2.5 rounded-full',
+                                                                    'relative inline-flex h-[5px] w-[5px] rounded-full',
                                                                     (isOpenBuy || isPendingBuy) ? 'bg-emerald-500' : 'bg-rose-500'
                                                                 )}
                                                             />
@@ -236,12 +238,16 @@ export function ScannerMatrixTable({
 
             {!isActive && (
                 <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                    <div className="bg-background/80 backdrop-blur-[2px] border border-border/40 px-4 py-2 rounded-full shadow-xl">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse" />
+                    <button
+                        type="button"
+                        onClick={onEnableScanner}
+                        className="pointer-events-auto bg-background/80 backdrop-blur-[2px] border border-border/40 px-4 py-2 rounded-full shadow-xl hover:bg-background/90 transition-colors"
+                    >
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-pulse" />
                             {t('disabled')}
                         </span>
-                    </div>
+                    </button>
                 </div>
             )}
         </div>

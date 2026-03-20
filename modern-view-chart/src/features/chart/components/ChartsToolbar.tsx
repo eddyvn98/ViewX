@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { RootState } from '@/lib/store';
 
-import { Plus, Crosshair, Link, History as HistoryIcon, Pencil } from 'lucide-react';
+import { Crosshair, Link, History as HistoryIcon, Pencil } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { TimeframeToolbar } from './TimeframeToolbar';
@@ -44,22 +44,10 @@ export function ChartsToolbar() {
         isCrosshairSyncEnabled: state.isCrosshairSyncEnabled
     })));
 
-    const setLayoutMode = useMarketStore((state) => state.setLayoutMode);
-    const addChart = useMarketStore((state) => state.addChart);
     const updateChart = useMarketStore((state) => state.updateChart);
     const setCrosshairSync = useMarketStore((state) => state.setCrosshairSync);
     const isDrawingToolbarVisible = useMarketStore((state) => state.isDrawingToolbarVisible);
     const showHistoryMarkers = useStrategyStore((state) => state.showHistoryMarkers);
-
-    const handleAddChart = () => {
-        const state = useMarketStore.getState();
-        const activeTab = state.tabs[state.activeTabId];
-        const currentCount = Object.keys(activeTab?.charts || {}).length;
-        addChart('BTCUSDm', '15', 'MT5');
-        const newCount = currentCount + 1;
-        if (newCount === 2) setLayoutMode('2x1');
-        else if (newCount >= 3) setLayoutMode('2x2');
-    };
 
     return (
         <div className="flex items-center justify-between px-2 py-0 shrink-0 bg-primary/5 backdrop-blur-sm border-b border-primary/10 transition-colors duration-300 relative z-50">
@@ -142,7 +130,6 @@ export function ChartsToolbar() {
                         <HistoryIcon size={14} />
                     </button>
 
-                    <button onClick={handleAddChart} className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-all uppercase tracking-wider"><Plus size={13} className="text-primary" /> Add Chart</button>
                 </div>
             </div>
 

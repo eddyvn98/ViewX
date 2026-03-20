@@ -68,20 +68,25 @@ export function ScannerCard({
                 <button
                     onClick={() => onToggleScanner(scanner.id)}
                     className={cn(
-                        'h-8 px-2 rounded border text-[11px] font-black uppercase inline-flex items-center gap-1.5 transition-all duration-300',
-                        scanner.active ? 'border-primary/50 text-primary bg-primary/10' : 'border-border/70 text-muted-foreground bg-background/40'
+                        'h-4 w-6 rounded-full border inline-flex items-center px-0.5 transition-all duration-300',
+                        scanner.active ? 'border-primary/50 bg-primary/20 justify-end' : 'border-border/70 bg-background/40 justify-start'
                     )}
                     disabled={!scanner.strategyId}
+                    aria-label={scanner.active ? t('on') : t('off')}
                 >
-                    <span className={cn('w-1.5 h-1.5 rounded-full', scanner.active ? 'bg-primary animate-pulse' : 'bg-muted-foreground/60')} />
-                    {scanner.active ? t('on') : t('off')}
+                    <span
+                        className={cn(
+                            'h-3 w-3 rounded-full shadow-sm transition-colors',
+                            scanner.active ? 'bg-primary' : 'bg-muted-foreground/60'
+                        )}
+                    />
                 </button>
                 <button
                     onClick={() => onRemoveScanner(scanner.id)}
-                    className="h-8 w-8 rounded border border-rose-500/30 text-rose-400 inline-flex items-center justify-center"
+                    className="h-4 w-4 rounded text-rose-400 inline-flex items-center justify-center hover:text-rose-500 transition-colors"
                     title="Remove matrix"
                 >
-                    <X size={12} />
+                    <X size={9} />
                 </button>
             </div>
 
@@ -105,6 +110,7 @@ export function ScannerCard({
                     onCommitAddSymbol={onCommitAddSymbol}
                     onCommitAddTimeframe={onCommitAddTimeframe}
                     onOpenChart={onOpenChart}
+                    onEnableScanner={() => onToggleScanner(scanner.id)}
                     isActive={scanner.active}
                 />
             )}

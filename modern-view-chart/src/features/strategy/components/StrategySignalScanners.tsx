@@ -136,7 +136,7 @@ export function StrategySignalScanners() {
                         className="h-7 px-2 rounded-md border border-border/60 bg-secondary/20 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
                     >
                         <ExternalLink size={11} />
-                        Open Matrix Tab
+                        {t('openMatrixTab')}
                     </button>
                 </div>
             )}

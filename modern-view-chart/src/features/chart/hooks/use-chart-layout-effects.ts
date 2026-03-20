@@ -10,14 +10,16 @@ export function useChartLayoutEffects(
     subchartChartRef: React.MutableRefObject<IChartApi | null>,
     timescaleChartRef: React.MutableRefObject<IChartApi | null>,
     timezone: string,
-    isSubchartVisible: boolean
+    isSubchartVisible: boolean,
+    subchartHeightPct: number
 ) {
     // Dynamic margin adjustment to keep candles above the subchart overlay
     useEffect(() => {
         const chart = priceChartRef.current;
         if (!chart) return;
 
-        const bottomMargin = isSubchartVisible ? 0.32 : 0.08; // 32% if overlay (25%) is visible
+        const normalizedSubchartPct = Math.max(3, Math.min(85, subchartHeightPct || 25));
+        const bottomMargin = isSubchartVisible ? Math.min(0.9, normalizedSubchartPct / 100 + 0.05) : 0.08;
         try {
             chart.priceScale('right').applyOptions({
                 scaleMargins: {
@@ -28,7 +30,7 @@ export function useChartLayoutEffects(
         } catch {
             // Chart can be in transient dispose/recreate state during StrictMode + layout remount.
         }
-    }, [isSubchartVisible, priceChartRef]);
+    }, [isSubchartVisible, subchartHeightPct, priceChartRef]);
 
     // Apply Timezone to Chart Localization & Scale
     useEffect(() => {

@@ -3,6 +3,7 @@ import { useSubchartLegendDOMUpdater } from '../hooks/use-subchart-legend-dom-up
 import { Candle, useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { cn } from '@/lib/utils';
 
 interface SubchartLegendProps {
     chartId: string;
@@ -10,6 +11,7 @@ interface SubchartLegendProps {
     interval?: string;
     source?: string;
     candles?: Candle[]; // Optional, will fetch if not provided
+    className?: string;
 }
 
 const EMPTY_ARRAY: Candle[] = [];
@@ -38,7 +40,7 @@ const getSeriesColor = (seriesName: string, fallback: string): string => {
     return fallback;
 };
 
-export function SubchartLegend({ chartId, symbol, interval, source, candles: propCandles }: SubchartLegendProps) {
+export function SubchartLegend({ chartId, symbol, interval, source, candles: propCandles, className }: SubchartLegendProps) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     // 1. Get Candles (Prop or Store)
@@ -63,7 +65,11 @@ export function SubchartLegend({ chartId, symbol, interval, source, candles: pro
     return (
         <div
             ref={containerRef}
-            className={`absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none transition-opacity duration-300 ${isDataMissing ? 'opacity-0' : 'opacity-100'}`}
+            className={cn(
+                "absolute top-1 left-2 z-10 flex flex-col gap-1 pointer-events-none select-none transition-opacity duration-300",
+                isDataMissing ? 'opacity-0' : 'opacity-100',
+                className
+            )}
         >
             <div
                 data-indicators

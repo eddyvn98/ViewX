@@ -149,8 +149,16 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         const activeTab = state.tabs[state.activeTabId];
         return activeTab?.charts[chartId]?.isSubchartVisible ?? true;
     });
+    const subchartHeightPct = useMarketStore(state => {
+        const activeTab = state.tabs[state.activeTabId];
+        return activeTab?.charts[chartId]?.subchartHeightPct ?? 25;
+    });
     const toggleSubchartVisibility = useMarketStore(state => state.toggleSubchartVisibility);
+    const setSubchartHeightPct = useMarketStore(state => state.setSubchartHeightPct);
+    const resetSubchartHeightPct = useMarketStore(state => state.resetSubchartHeightPct);
     const setIsSubchartVisible = (visible: boolean) => toggleSubchartVisibility(chartId, visible);
+    const onSetSubchartHeightPct = (heightPct: number) => setSubchartHeightPct(chartId, heightPct);
+    const onResetSubchartHeightPct = () => resetSubchartHeightPct(chartId);
 
     useSubchartSwitcher(chartId, subchartContainerRef);
 
@@ -159,7 +167,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         subchartChartRef,
         timescaleChartRef,
         timezone,
-        isSubchartVisible
+        isSubchartVisible,
+        subchartHeightPct
     );
     useChartShortcuts(chartId);
 
@@ -199,6 +208,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                 candles={candles}
                 isSubchartVisible={isSubchartVisible}
                 setIsSubchartVisible={setIsSubchartVisible}
+                subchartHeightPct={subchartHeightPct}
+                setSubchartHeightPct={onSetSubchartHeightPct}
+                resetSubchartHeightPct={onResetSubchartHeightPct}
                 isMinimized={isMinimized}
                 mainContainerRef={mainContainerRef}
                 priceContainerRef={priceContainerRef}

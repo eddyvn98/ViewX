@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Grid3X3 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export function LayoutGridSelector() {
     const [isOpen, setIsOpen] = useState(false);
     const [hovered, setHovered] = useState<{ r: number; c: number } | null>(null);
+    const t = useTranslations('ChartToolbar');
     const setLayoutMode = useMarketStore((state) => state.setLayoutMode);
     const activeTabId = useMarketStore((state) => state.activeTabId);
     const activeTab = useMarketStore((state) => state.tabs[activeTabId]);
@@ -31,7 +33,8 @@ export function LayoutGridSelector() {
                         ? "bg-primary/10 text-primary border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.1)]"
                         : "text-muted-foreground border-transparent hover:bg-secondary/50 hover:text-foreground"
                 )}
-                title={isOpen ? "" : "Change Layout"}
+                title={isOpen ? '' : t('gridLayout')}
+                aria-label={t('gridLayout')}
             >
                 <Grid3X3 size={16} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
             </button>
