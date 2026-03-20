@@ -71,7 +71,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             }
         }
 
-        if (msgType === 'mt5_candles' && Array.isArray(msg.candles)) {
+        if ((msgType === 'mt5_candles' || msgType === 'mt5_candles_at') && Array.isArray(msg.candles)) {
             const targetSymbol = String(msg.symbol || '');
             const targetInterval = String(msg.interval || '');
             const normalizedCandles = (msg.candles as Array<Record<string, unknown>>).map((c) => ({

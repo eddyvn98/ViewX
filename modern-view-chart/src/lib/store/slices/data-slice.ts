@@ -69,8 +69,27 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
             return state;
         }
 
+        // Merge incoming history with current buffer so left-side backfill can extend
+        // the chart instead of replacing what is already rendered.
+        const mergedByTime = new Map<number, Candle>();
+        current.forEach((candle) => {
+            const t = toSeconds(candle.time);
+            if (Number.isFinite(t)) mergedByTime.set(t, candle);
+        });
+        normalized.forEach((candle) => {
+            const t = toSeconds(candle.time);
+            if (Number.isFinite(t)) mergedByTime.set(t, candle);
+        });
+
+        const merged = Array.from(mergedByTime.entries())
+            .sort((a, b) => a[0] - b[0])
+            .map(([, candle]) => candle);
+
+        const MAX_CANDLES = 5000;
+        const nextCandles = merged.length > MAX_CANDLES ? merged.slice(merged.length - MAX_CANDLES) : merged;
+
         return {
-            candleData: { ...state.candleData, [key]: normalized }
+            candleData: { ...state.candleData, [key]: nextCandles }
         };
     }),
 

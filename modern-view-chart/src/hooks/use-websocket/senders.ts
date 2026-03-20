@@ -53,7 +53,19 @@ export function clearForegroundResyncTimer() {
     }
 }
 
-export function requestChartBackfill(sourceRaw: string, symbolRaw: string, intervalRaw: string, reason: string, count = 300) {
+type BackfillOptions = {
+    anchorTimeSec?: number;
+    direction?: 'older' | 'latest';
+};
+
+export function requestChartBackfill(
+    sourceRaw: string,
+    symbolRaw: string,
+    intervalRaw: string,
+    reason: string,
+    count = 300,
+    options?: BackfillOptions,
+) {
     const source = String(sourceRaw || '').toUpperCase();
     const symbol = String(symbolRaw || '').trim();
     const interval = String(intervalRaw || '').trim();
@@ -66,7 +78,26 @@ export function requestChartBackfill(sourceRaw: string, symbolRaw: string, inter
     if (nowMs - lastRequestedAt < BACKFILL_THROTTLE_MS) return;
     wsRuntime.lastForegroundResyncAtByKey[throttleKey] = nowMs;
 
+    const direction = options?.direction === 'older' ? 'older' : 'latest';
+    const anchorTimeSec = Number(options?.anchorTimeSec);
+    const intervalSec = Math.max(60, parseIntervalSeconds(interval));
+
     if (source === 'MT5') {
+        if (direction === 'older' && Number.isFinite(anchorTimeSec) && anchorTimeSec > 0) {
+            socket.send(
+                JSON.stringify({
+                    topic: 'mt5_command',
+                    command: 'get_candles_at',
+                    symbol,
+                    interval,
+                    timestamp: Math.max(1, Math.floor(anchorTimeSec - intervalSec)),
+                    count,
+                    reason,
+                }),
+            );
+            return;
+        }
+
         socket.send(
             JSON.stringify({
                 topic: 'mt5_command',
@@ -82,14 +113,18 @@ export function requestChartBackfill(sourceRaw: string, symbolRaw: string, inter
 
     if (source === 'BINANCE') {
         const nowSec = Math.floor(Date.now() / 1000);
-        const secondsPerBar = parseIntervalSeconds(interval);
+        const secondsPerBar = intervalSec;
+        const endSec =
+            direction === 'older' && Number.isFinite(anchorTimeSec) && anchorTimeSec > 0
+                ? Math.max(secondsPerBar, Math.floor(anchorTimeSec - secondsPerBar))
+                : nowSec;
         socket.send(
             JSON.stringify({
                 topic: 'get_binance_candles',
                 symbol,
                 interval,
-                fromTimestamp: nowSec - secondsPerBar * count,
-                toTimestamp: nowSec,
+                fromTimestamp: Math.max(1, endSec - secondsPerBar * count),
+                toTimestamp: endSec,
                 reason,
             }),
         );

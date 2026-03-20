@@ -176,7 +176,9 @@ class BridgeClient:
                 {
                     "topic": "mt5_candles_at",
                     "symbol": data["symbol"],
+                    "interval": data.get("interval", "1m"),
                     "timestamp": data["timestamp"],
+                    "source": "MT5",
                     "candles": candles,
                     "request_id": data.get("request_id"),
                 }

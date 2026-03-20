@@ -165,9 +165,14 @@ export function useBackfillEventEffect(isConnected: boolean) {
             const symbol = String(detail.symbol || '').trim();
             const interval = String(detail.interval || '').trim();
             const count = Number.isFinite(Number(detail.count)) ? Number(detail.count) : 300;
+            const anchorTimeSec = Number(detail.anchorTimeSec);
+            const direction = detail.direction === 'older' ? 'older' : 'latest';
             if (!symbol || !interval) return;
 
-            requestChartBackfill(source, symbol, interval, 'event_request', count);
+            requestChartBackfill(source, symbol, interval, 'event_request', count, {
+                anchorTimeSec,
+                direction,
+            });
         };
 
         window.addEventListener('chart-backfill-request', handleBackfillRequest as EventListener);
