@@ -34,7 +34,7 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles, curre
             if (reqSource !== normalizedSource) return;
 
             startedAtRef.current = Date.now();
-            baselineOldestTimeRef.current = Number(candles[0]?.time || 0);
+            baselineOldestTimeRef.current = oldestTime;
             setIsBackfillLoading(true);
             if (timerRef.current) clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => setIsBackfillLoading(false), 6000);
@@ -48,7 +48,7 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles, curre
                 timerRef.current = null;
             }
         };
-    }, [symbol, interval, normalizedSource, candles]);
+    }, [symbol, interval, normalizedSource, oldestTime]);
 
     useEffect(() => {
         if (!isBackfillLoading) return;
