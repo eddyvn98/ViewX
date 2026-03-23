@@ -43,15 +43,14 @@ export function useOrderFormLogic() {
     const ask = bid * 1.0001;
     const spread = (ask - bid).toFixed(2);
 
-    // Sync drafting state
+    // Sync drafting state from OrderForm only when user is actively drafting from this panel.
     React.useEffect(() => {
-        if (!isDrafting) { setDraftOrder(null); return; }
+        if (!isDrafting) return;
         setDraftOrder({
             symbol, type: side, volume: parseFloat(volume) || 0,
             sl: parseFloat(sl) || undefined, tp: parseFloat(tp) || undefined,
             isMarket: orderType === 'market'
         });
-        return () => setDraftOrder(null);
     }, [symbol, side, volume, sl, tp, orderType, isDrafting, setDraftOrder]);
 
     const setOrderType = (value: OrderType) => setOrderForm({ orderType: value });
@@ -122,7 +121,7 @@ export function useOrderFormLogic() {
     };
 }
 
-export const OrderForm = memo(function OrderForm() {
+export const OrderForm = memo(function OrderForm({ forceInline = false }: { forceInline?: boolean }) {
     const {
         symbol, side, setSide, orderType, setOrderType, volume, setVolume,
         sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
@@ -147,7 +146,7 @@ export const OrderForm = memo(function OrderForm() {
             {/* MOBILE LAYOUT REMOVED - NOW IN BOTTOM NAV */}
 
             {/* DESKTOP LAYOUT (Existing) */}
-            <div className="hidden md:flex flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 flex-col">
+            <div className={cn(forceInline ? "flex" : "hidden md:flex", "flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 flex-col")}>
                 <div className="flex items-center justify-between pb-1 border-b border-border">
                     <div className="flex items-center gap-2">
                         <span className="font-black text-foreground text-[12px] tracking-tighter">{symbol.replace('m', '')}</span>

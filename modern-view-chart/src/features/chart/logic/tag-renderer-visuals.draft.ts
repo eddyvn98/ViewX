@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TagData } from './order-tag-utils';
 import { TagElements } from './tag-renderer.types';
+import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
 
 export function updateDraftGroupVisuals(elements: TagElements, tag: TagData) {
     const draft = tag.pOriginal as any;
@@ -53,5 +54,48 @@ export function updateDraftGroupVisuals(elements: TagElements, tag: TagData) {
 
     if (elements.price) {
         elements.price.style.color = tag.color;
+    }
+}
+
+export function updateDraftLevelVisuals(
+    elements: TagElements,
+    tag: TagData,
+    context: { symbolInfo?: any; draftOrder?: any; symbol?: string; currentPrice?: number }
+) {
+    const draft = (tag.pOriginal || context.draftOrder || {}) as any;
+    const labelEl = elements.el.querySelector('.tag-label') as HTMLElement | null;
+    const lotEl = elements.el.querySelector('.lot-text') as HTMLElement | null;
+    const pnlEl = elements.el.querySelector('.pnl-text') as HTMLElement | null;
+    const line = elements.el.querySelector('.draft-level-line') as HTMLElement | null;
+    const body = elements.el.querySelector('.tag-body') as HTMLElement | null;
+
+    const isTP = tag.type === 'tp';
+    const accent = isTP ? '#10b981' : '#f59e0b';
+    const side = String(draft.type || 'buy').toLowerCase().includes('buy') ? 'buy' : 'sell';
+    const openPrice = Number(draft.price || context.currentPrice || 0);
+    const volume = Number(draft.volume || 0.01);
+
+    const pnlValue = calculatePnL({
+        type: side,
+        openPrice,
+        currentPrice: Number(tag.price || 0),
+        volume,
+        symbolInfo: context.symbolInfo,
+        symbol: context.symbol,
+    });
+
+    if (labelEl) {
+        labelEl.textContent = isTP ? 'TP' : 'SL';
+        labelEl.style.color = accent;
+    }
+    if (lotEl) lotEl.textContent = volume.toFixed(2);
+    if (pnlEl) {
+        pnlEl.textContent = formatPnL(pnlValue);
+        pnlEl.style.color = pnlValue >= 0 ? '#10b981' : '#ef4444';
+    }
+    if (line) line.style.borderColor = `${accent}66`;
+    if (body) {
+        body.style.borderColor = `${accent}4a`;
+        body.style.backgroundColor = `${accent}12`;
     }
 }

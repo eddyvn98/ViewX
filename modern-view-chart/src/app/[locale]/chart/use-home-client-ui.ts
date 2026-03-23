@@ -4,7 +4,12 @@ import React from "react";
 import { formatTabPrice, resolvePriceDigits } from "./home-client-helpers";
 
 export function useViewportState() {
-  const [viewport, setViewport] = React.useState({ width: 0, height: 0 });
+  const [viewport, setViewport] = React.useState({
+    width: 0,
+    height: 0,
+    isTouchDevice: false,
+    isMobileUserAgent: false,
+  });
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -13,7 +18,11 @@ export function useViewportState() {
       const source = window.visualViewport;
       const width = Math.round(source?.width ?? window.innerWidth);
       const height = Math.round(source?.height ?? window.innerHeight);
-      setViewport({ width, height });
+      const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+      const touchCapable = coarsePointer || navigator.maxTouchPoints > 0;
+      const ua = navigator.userAgent || "";
+      const isMobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua);
+      setViewport({ width, height, isTouchDevice: touchCapable, isMobileUserAgent });
     };
 
     updateViewport();

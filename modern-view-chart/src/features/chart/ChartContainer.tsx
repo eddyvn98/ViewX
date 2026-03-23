@@ -104,8 +104,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     useChartInteraction(
         priceChartRef,
         seriesRef,
+        markerSeriesRef,
         symbol,
         mainContainerRef,
+        priceContainerRef,
         isReady,
         alerts,
         handleUpdateAlertPrice,

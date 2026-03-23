@@ -18,6 +18,8 @@ export interface ChartSlice {
     resetSubchartHeightPct: (id: string) => void;
     favoriteTimeframes: string[];
     toggleFavoriteTimeframe: (timeframe: string) => void;
+    favoriteChartTypes: Array<'candles' | 'heikin_ashi' | 'smart_candles'>;
+    toggleFavoriteChartType: (chartType: 'candles' | 'heikin_ashi' | 'smart_candles') => void;
 }
 
 // Internal helper for symbol normalization
@@ -43,7 +45,14 @@ export const createChartSlice: StateCreator<
             group: 'none',
             source,
             timezone: 'Asia/Ho_Chi_Minh',
-            chartType: 'candles'
+            chartType: 'candles',
+            candleUpColor: '#22c55e',
+            candleDownColor: '#ef4444',
+            candleColors: {
+                candles: { up: '#22c55e', down: '#ef4444' },
+                heikin_ashi: { up: '#22c55e', down: '#ef4444' },
+                smart_candles: { up: '#22c55e', down: '#ef4444' },
+            },
         };
 
         const updatedTab = {
@@ -241,6 +250,7 @@ export const createChartSlice: StateCreator<
     }),
 
     favoriteTimeframes: ['1', '5', '15', '60', '240', 'D'],
+    favoriteChartTypes: ['candles', 'heikin_ashi', 'smart_candles'],
 
     toggleFavoriteTimeframe: (tf) => set((state) => {
         const current = state.favoriteTimeframes || [];
@@ -249,6 +259,16 @@ export const createChartSlice: StateCreator<
             favoriteTimeframes: exists
                 ? current.filter(id => id !== tf)
                 : [...current, tf]
+        };
+    }),
+
+    toggleFavoriteChartType: (chartType) => set((state) => {
+        const current = state.favoriteChartTypes || [];
+        const exists = current.includes(chartType);
+        return {
+            favoriteChartTypes: exists
+                ? current.filter((id) => id !== chartType)
+                : [...current, chartType]
         };
     }),
 });

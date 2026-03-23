@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TagData } from './order-tag-utils';
 import { TagElements, TagRenderContext } from './tag-renderer.types';
-import { updateDraftGroupVisuals } from './tag-renderer-visuals.draft';
+import { updateDraftGroupVisuals, updateDraftLevelVisuals } from './tag-renderer-visuals.draft';
 import { updateDotTagVisuals } from './tag-renderer-visuals.dot';
 import { updatePnlVisuals } from './tag-renderer-visuals.pnl';
 
@@ -25,6 +25,12 @@ export function updateTagVisuals(
 
     if (tag.type === 'draft_group') {
         updateDraftGroupVisuals(elements, tag);
+        return;
+    }
+
+    if (tag.ticket === 'draft' && (tag.type === 'sl' || tag.type === 'tp')) {
+        const context: TagRenderContext = { symbolInfo, currentPrice, draftOrder, symbol };
+        updateDraftLevelVisuals(elements, tag, context);
         return;
     }
 

@@ -25,10 +25,12 @@ interface UseChartTickerProps {
     chartRef?: React.RefObject<IChartApi | null>;
     theme?: string;
     contextKey?: string;
+    candleUpColor: string;
+    candleDownColor: string;
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, contextKey,
+    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, contextKey, candleUpColor, candleDownColor,
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<RealtimeCandle | null>(null);
@@ -194,7 +196,10 @@ export function useChartTicker({
                         close: newCandle.close,
                     };
                     if (isSmart) {
-                        seriesRef.current?.update(seriesNewCandle);
+                        seriesRef.current?.update({
+                            ...seriesNewCandle,
+                            candleColor: seriesNewCandle.close >= seriesNewCandle.open ? candleUpColor : candleDownColor,
+                        } as any);
                     } else {
                         seriesRef.current?.update(seriesNewCandle);
                     }
@@ -247,13 +252,24 @@ export function useChartTicker({
                     open: base.open, high: base.high, low: base.low, close: base.close,
                 };
 
-                seriesRef.current?.update({
-                    time: updateTime as Time,
-                    open: updateData.open,
-                    high: updateData.high,
-                    low: updateData.low,
-                    close: updateData.close,
-                });
+                if (isSmart) {
+                    seriesRef.current?.update({
+                        time: updateTime as Time,
+                        open: updateData.open,
+                        high: updateData.high,
+                        low: updateData.low,
+                        close: updateData.close,
+                        candleColor: updateData.close >= updateData.open ? candleUpColor : candleDownColor,
+                    } as any);
+                } else {
+                    seriesRef.current?.update({
+                        time: updateTime as Time,
+                        open: updateData.open,
+                        high: updateData.high,
+                        low: updateData.low,
+                        close: updateData.close,
+                    });
+                }
             }
 
             syncToStore(base);
@@ -272,7 +288,7 @@ export function useChartTicker({
         );
 
         return () => unsub();
-    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef]);
+    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor]);
 
     return realTimeCandleRef;
 }

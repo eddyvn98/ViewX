@@ -85,6 +85,13 @@ export interface ChartInstance {
     group?: 'A' | 'B' | 'C' | 'D' | 'none'; // Symbol Linking Group
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
+    candleColors?: {
+        candles: { up: string; down: string };
+        heikin_ashi: { up: string; down: string };
+        smart_candles: { up: string; down: string };
+    };
+    candleUpColor?: string;
+    candleDownColor?: string;
     isSubchartVisible?: boolean;
     subchartHeightPct?: number;
     viewport?: {

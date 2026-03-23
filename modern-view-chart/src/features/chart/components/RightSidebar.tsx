@@ -12,7 +12,11 @@ import { cn } from '@/lib/utils';
 import type { RightSidebarTab } from '@/lib/store/types';
 import { useTranslations } from 'next-intl';
 
-export const RightSidebar = memo(function RightSidebar() {
+interface RightSidebarProps {
+    mobileLandscape?: boolean;
+}
+
+export const RightSidebar = memo(function RightSidebar({ mobileLandscape = false }: RightSidebarProps) {
     const t = useTranslations('ChartPanel.tabs');
     const sidebarRef = useRef<HTMLDivElement>(null);
     const activeTab = useMarketStore(state => state.activeRightSidebarTab);
@@ -29,7 +33,6 @@ export const RightSidebar = memo(function RightSidebar() {
     const [isWidthResizing, setIsWidthResizing] = useState(false);
     const [draggedTab, setDraggedTab] = useState<string | null>(null);
 
-    /* ================= RESIZING LOGIC ================= */
     const startResizing = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         setIsResizing(true);
@@ -47,7 +50,6 @@ export const RightSidebar = memo(function RightSidebar() {
             const rect = sidebarRef.current.getBoundingClientRect();
             const offset = e.clientY - rect.top;
             const newHeight = (offset / rect.height) * 100;
-            // Constrain height between 15% and 85%
             setTopHeight(Math.max(15, Math.min(85, newHeight)));
         }
     }, [isResizing, setTopHeight]);
@@ -99,7 +101,6 @@ export const RightSidebar = memo(function RightSidebar() {
         };
     }, [isWidthResizing, resizeWidth, stopWidthResizing]);
 
-    /* ================= DRAG & DROP LOGIC ================= */
     const handleDragStart = (e: React.DragEvent, tabId: string) => {
         setDraggedTab(tabId);
         e.dataTransfer.effectAllowed = 'move';
@@ -123,13 +124,63 @@ export const RightSidebar = memo(function RightSidebar() {
     };
 
     const tabConfigs: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>, label: string, component: React.ReactNode }> = {
-        market: { icon: LineChart, label: 'Watchlist', component: <MarketList mode="watchlist" /> },
+        market: { icon: LineChart, label: t('market'), component: <MarketList mode="watchlist" /> },
         layer: { icon: Layout, label: t('layer'), component: <LayerManager /> },
         strategy: { icon: Brain, label: t('strategy'), component: <StrategyPanel /> },
-        trade: { icon: ShoppingCart, label: t('trade'), component: <OrderForm /> }
+        trade: { icon: ShoppingCart, label: t('trade'), component: <OrderForm forceInline={mobileLandscape} /> }
     };
 
-    // Filter to exclude 'market' from the bottom tabs as it's fixed on top
+    if (mobileLandscape) {
+        const tabsOrder: RightSidebarTab[] = ['market', 'strategy', 'layer', 'trade'];
+        const safeTab = tabsOrder.includes(activeTab) ? activeTab : 'market';
+
+        return (
+            <aside
+                ref={sidebarRef}
+                style={{ width: `${sidebarWidth}px` }}
+                className="border-l border-white/5 bg-background/60 backdrop-blur-3xl flex flex-col h-full overflow-hidden shrink-0 relative transition-all shadow-2xl z-10 glass-panel"
+            >
+                <div
+                    onMouseDown={startWidthResizing}
+                    className={cn(
+                        "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 bg-transparent hover:bg-primary/20 transition-colors",
+                        isWidthResizing && "bg-primary/40"
+                    )}
+                />
+
+                <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-1 gap-1 mx-2 mt-2 rounded-xl border border-border dark:border-white/5 shadow-sm">
+                    {tabsOrder.map((tabId) => {
+                        const tab = tabConfigs[tabId];
+                        const isActive = safeTab === tabId;
+                        return (
+                            <button
+                                key={tabId}
+                                onClick={() => setActiveTab(tabId)}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center py-2 gap-1.5 rounded-lg transition-colors duration-300 border border-transparent",
+                                    isActive
+                                        ? "text-primary bg-primary/20 border-primary/20 font-bold"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                )}
+                            >
+                                <tab.icon size={14} />
+                                <span className="text-[11px] font-bold leading-none tracking-tight whitespace-nowrap">{tab.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="flex-1 overflow-hidden relative min-h-0 flex flex-col mt-2">
+                    {tabsOrder.map(tabId => (
+                        <div key={tabId} className={cn("flex-1 min-h-0 animate-in fade-in zoom-in-95 duration-300", safeTab === tabId ? "flex flex-col h-full" : "hidden")}>
+                            {tabConfigs[tabId].component}
+                        </div>
+                    ))}
+                </div>
+            </aside>
+        );
+    }
+
     const bottomTabs = tabOrder.filter((id: string) => id !== 'market') as RightSidebarTab[];
     const normalizedTopHeight = Math.max(28, Math.min(70, Number.isFinite(topHeight) ? topHeight : 40));
     const topSectionHeight = isLeftSidebarOpen ? normalizedTopHeight : 0;
@@ -148,7 +199,6 @@ export const RightSidebar = memo(function RightSidebar() {
                     isWidthResizing && "bg-primary/40"
                 )}
             />
-            {/* 1. TOP SECTION: WATCHLIST (Fixed) */}
             <div
                 className={cn(
                     "flex flex-col min-h-0 overflow-hidden transition-all duration-200",
@@ -161,7 +211,6 @@ export const RightSidebar = memo(function RightSidebar() {
                 </div>
             </div>
 
-            {/* 2. RESIZER HANDLE */}
             {isLeftSidebarOpen && (
                 <div
                     onMouseDown={startResizing}
@@ -174,12 +223,10 @@ export const RightSidebar = memo(function RightSidebar() {
                 </div>
             )}
 
-            {/* 3. BOTTOM SECTION: TABS */}
             <div
                 className="flex-1 flex flex-col min-h-0 overflow-hidden"
                 style={{ height: `${bottomSectionHeight}%` }}
             >
-                {/* Tab Header & Draggable Area */}
                 <LayoutGroup id="sidebar-tabs">
                     <div className="flex bg-secondary/50 dark:bg-white/[0.03] p-1 gap-1 mx-2 mt-2 mb-0 rounded-xl border border-border dark:border-white/5 shadow-sm relative z-0">
                         {bottomTabs.map(tabId => {
@@ -207,7 +254,6 @@ export const RightSidebar = memo(function RightSidebar() {
                                             transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                         />
                                     )}
-                                    {/* Icon & Label with higher z-index to sit on top of motion bg */}
                                     <div className="relative z-10 flex items-center gap-2">
                                         <tab.icon size={15} className={cn("transition-all duration-500", isActive ? "scale-105" : "group-hover:scale-105")} />
                                         <span className="text-[11px] font-bold leading-none tracking-tight">{tab.label}</span>
@@ -218,7 +264,6 @@ export const RightSidebar = memo(function RightSidebar() {
                     </div>
                 </LayoutGroup>
 
-                {/* Content Area */}
                 <div className="flex-1 overflow-hidden relative min-h-0 flex flex-col">
                     {bottomTabs.map(tabId => (
                         <div key={tabId} className={cn("flex-1 min-h-0 animate-in fade-in zoom-in-95 duration-500", activeTab === tabId ? "flex flex-col h-full" : "hidden")}>

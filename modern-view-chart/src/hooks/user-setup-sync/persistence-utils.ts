@@ -41,6 +41,12 @@ function applyPersistedSetupState(
         if (Array.isArray(persisted.favoriteTimeframes)) {
             next.favoriteTimeframes = persisted.favoriteTimeframes.filter((s): s is string => typeof s === 'string');
         }
+        if (Array.isArray((persisted as Partial<RootState>).favoriteChartTypes)) {
+            next.favoriteChartTypes = (persisted as Partial<RootState>).favoriteChartTypes?.filter(
+                (s): s is 'candles' | 'heikin_ashi' | 'smart_candles' =>
+                    s === 'candles' || s === 'heikin_ashi' || s === 'smart_candles'
+            ) || ['candles', 'heikin_ashi', 'smart_candles'];
+        }
         if (Array.isArray(persisted.alerts)) next.alerts = persisted.alerts;
 
         if (includeTabs) {

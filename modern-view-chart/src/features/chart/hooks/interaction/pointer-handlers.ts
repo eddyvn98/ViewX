@@ -7,7 +7,9 @@ import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
 interface PointerHandlerArgs {
     chart: any;
     container: HTMLDivElement;
+    coordinateContainer: HTMLDivElement;
     series: ISeriesApi<'Candlestick'>;
+    coordinateSeries: ISeriesApi<'Candlestick'>;
     symbol: string;
     stateRef: React.MutableRefObject<any>;
     isDragging: React.MutableRefObject<boolean>;
@@ -24,7 +26,9 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
     const {
         chart,
         container,
+        coordinateContainer,
         series,
+        coordinateSeries,
         symbol,
         stateRef,
         isDragging,
@@ -39,6 +43,8 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
 
     let dragStoreRafId: number | null = null;
     let pendingDragStoreUpdate: any = null;
+    let activePointerId: number | null = null;
+    let capturedDragElement: HTMLElement | null = null;
 
     const flushDragStoreUpdate = () => {
         dragStoreRafId = null;
@@ -73,7 +79,7 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-        const rect = container.getBoundingClientRect();
+        const rect = coordinateContainer.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -112,7 +118,7 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
                     const parsedPrice = Number(priceTextEl?.textContent || '');
                     const fallbackPrice = Number.isFinite(parsedPrice)
                         ? parsedPrice
-                        : Number((series.coordinateToPrice(y) ?? 0).toFixed(stateRef.current.symbolInfo?.digits || 2));
+                        : Number((coordinateSeries.coordinateToPrice(y) ?? 0).toFixed(stateRef.current.symbolInfo?.digits || 2));
 
                     hit = { type, ticket: parsedTicket, price: fallbackPrice, id: idAttr };
                 }
@@ -126,8 +132,21 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         }
 
         if (hit) {
+            e.preventDefault();
             mouseDownPos.current = { x, y };
             dragState.current = { ...hit, originalPrice: hit.price, currentPrice: hit.price };
+            activePointerId = typeof e.pointerId === 'number' ? e.pointerId : null;
+            container.style.touchAction = 'none';
+
+            const captureTarget = (isDraggable as HTMLElement | null) ?? container;
+            if (captureTarget instanceof HTMLElement && typeof captureTarget.setPointerCapture === 'function') {
+                try {
+                    captureTarget.setPointerCapture(e.pointerId);
+                    capturedDragElement = captureTarget;
+                } catch {
+                    capturedDragElement = null;
+                }
+            }
 
             if (hit.ticket !== 'draft' && hit.ticket) useMarketStore.getState().setFocusedTicket(hit.ticket as number);
 
@@ -154,7 +173,13 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
 
     const handlePointerMove = (e: PointerEvent) => {
         if (!dragState.current || !mouseDownPos.current) return;
-        const rect = container.getBoundingClientRect();
+        if (
+            activePointerId !== null &&
+            typeof e.pointerId === 'number' &&
+            e.pointerId !== activePointerId
+        ) return;
+        if (e.pointerType === 'touch') e.preventDefault();
+        const rect = coordinateContainer.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -163,8 +188,10 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
 
         if (!isDragging.current) {
             const dist = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
-            if (dist > 5) {
+            const threshold = e.pointerType === 'touch' ? 1.5 : 5;
+            if (dist > threshold) {
                 isDragging.current = true;
+                e.preventDefault();
                 if (longPressTimer.current) {
                     clearTimeout(longPressTimer.current);
                     longPressTimer.current = null;
@@ -172,8 +199,36 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
             } else return;
         }
 
-        const price = series.coordinateToPrice(y);
+        let price: any = coordinateSeries.coordinateToPrice(y);
+        if (price === null) {
+            const clampedY = Math.max(0, Math.min(coordinateContainer.clientHeight - 1, y));
+            price = coordinateSeries.coordinateToPrice(clampedY);
+        }
+        if (price === null) {
+            const priceScale = (coordinateSeries as any).priceScale?.();
+            const visibleRange = priceScale?.getVisibleRange?.();
+            if (
+                visibleRange &&
+                Number.isFinite(visibleRange.from) &&
+                Number.isFinite(visibleRange.to)
+            ) {
+                const topCoord = coordinateSeries.priceToCoordinate(visibleRange.to as number);
+                const bottomCoord = coordinateSeries.priceToCoordinate(visibleRange.from as number);
+                if (
+                    topCoord !== null &&
+                    bottomCoord !== null &&
+                    Number.isFinite(topCoord) &&
+                    Number.isFinite(bottomCoord) &&
+                    Math.abs(bottomCoord - topCoord) > 1e-6
+                ) {
+                    const t = (y - topCoord) / (bottomCoord - topCoord);
+                    const clampedT = Math.max(0, Math.min(1, t));
+                    price = (visibleRange.to as number) + ((visibleRange.from as number) - (visibleRange.to as number)) * clampedT;
+                }
+            }
+        }
         if (price === null) return;
+        if (isDragging.current) e.preventDefault();
         const finalPrice = Number((price as number).toFixed(stateRef.current.symbolInfo?.digits || 2));
 
         let validatedPrice = finalPrice;
@@ -228,7 +283,7 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
 
         if (tagElement) {
             (tagElement as any)._tagData = { ...(tagElement as any)._tagData, price: validatedPrice };
-            const newY = series.priceToCoordinate(validatedPrice);
+            const newY = coordinateSeries.priceToCoordinate(validatedPrice);
             if (newY !== null) {
                 tagElement.style.transform = `translateY(${newY - 12}px)`;
                 const priceText = tagElement.querySelector('.price-text');
@@ -279,6 +334,11 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
     };
 
     const handlePointerUp = (e: PointerEvent) => {
+        if (
+            activePointerId !== null &&
+            typeof e.pointerId === 'number' &&
+            e.pointerId !== activePointerId
+        ) return;
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
@@ -291,7 +351,8 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         const { ticket, type, currentPrice } = dragState.current;
 
         if (!isDragging.current) {
-            if (e.pointerType === 'mouse') {
+            const isDraftTap = ticket === 'draft';
+            if (e.pointerType === 'mouse' && !isDraftTap) {
                 window.dispatchEvent(new CustomEvent('start-tag-edit', {
                     detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: dragState.current.price, x: mouseDownPos.current?.x },
                 }));
@@ -338,9 +399,21 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         isDragging.current = false;
         dragState.current = null;
         mouseDownPos.current = null;
+        activePointerId = null;
+        if (capturedDragElement && typeof capturedDragElement.releasePointerCapture === 'function') {
+            try {
+                if (e.pointerId !== undefined && capturedDragElement.hasPointerCapture?.(e.pointerId)) {
+                    capturedDragElement.releasePointerCapture(e.pointerId);
+                }
+            } catch {
+                // no-op
+            }
+        }
+        capturedDragElement = null;
         cancelPendingDragStoreUpdate();
 
         const drawingSelected = useMarketStore.getState().selectedDrawingId;
+        container.style.touchAction = '';
         if (!drawingSelected) chart.applyOptions({ handleScroll: true, handleScale: true });
     };
 

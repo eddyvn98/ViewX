@@ -27,6 +27,13 @@ export const ChartGrid = memo(function ChartGrid() {
                             group: 'A',
                             chartType: 'smart_candles',
                             timezone: 'Asia/Ho_Chi_Minh',
+                            candleUpColor: '#22c55e',
+                            candleDownColor: '#ef4444',
+                            candleColors: {
+                                candles: { up: '#22c55e', down: '#ef4444' },
+                                heikin_ashi: { up: '#22c55e', down: '#ef4444' },
+                                smart_candles: { up: '#22c55e', down: '#ef4444' },
+                            },
                         },
                     },
                     activeChartId: 'default',

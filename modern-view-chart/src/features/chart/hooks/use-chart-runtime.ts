@@ -7,6 +7,8 @@ import { useChartInit } from './use-chart-init';
 import { useChartData } from './use-chart-data';
 
 const EMPTY_CANDLES: unknown[] = [];
+const DEFAULT_CANDLE_UP_COLOR = '#22c55e';
+const DEFAULT_CANDLE_DOWN_COLOR = '#ef4444';
 
 export function useChartRuntime(chartId: string) {
     const { theme = 'dark' } = useTheme();
@@ -48,6 +50,26 @@ export function useChartRuntime(chartId: string) {
         }
         return 'candles';
     });
+    const candleUpColor = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) {
+                const palette = chart.candleColors?.[chartType];
+                return palette?.up || chart.candleUpColor || DEFAULT_CANDLE_UP_COLOR;
+            }
+        }
+        return DEFAULT_CANDLE_UP_COLOR;
+    });
+    const candleDownColor = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) {
+                const palette = chart.candleColors?.[chartType];
+                return palette?.down || chart.candleDownColor || DEFAULT_CANDLE_DOWN_COLOR;
+            }
+        }
+        return DEFAULT_CANDLE_DOWN_COLOR;
+    });
 
     const normSymbol = normalizeSymbol(symbol);
     const key = source && normSymbol && interval ? `${source}:${normSymbol}:${interval}` : '';
@@ -74,7 +96,17 @@ export function useChartRuntime(chartId: string) {
         timescaleSyncRef,
         syncRange,
         isAutoScrollEnabledRef
-    } = useChartInit(priceContainerRef, subchartContainerRef, timescaleContainerRef, chartId, theme, timezone, key);
+    } = useChartInit(
+        priceContainerRef,
+        subchartContainerRef,
+        timescaleContainerRef,
+        chartId,
+        theme,
+        timezone,
+        candleUpColor,
+        candleDownColor,
+        key
+    );
 
     const { sendMessage } = useWebSocket();
     const { realTimeCandleRef } = useChartData(
@@ -92,6 +124,8 @@ export function useChartRuntime(chartId: string) {
         isReady,
         isAutoScrollEnabledRef,
         theme,
+        candleUpColor,
+        candleDownColor,
         key
     );
 
@@ -113,8 +147,10 @@ export function useChartRuntime(chartId: string) {
             source,
             timezone,
             chartType,
+            candleUpColor,
+            candleDownColor,
         };
-    }, [chartId, symbol, interval, source, timezone, chartType]);
+    }, [chartId, symbol, interval, source, timezone, chartType, candleUpColor, candleDownColor]);
 
     return {
         chartInstance,
@@ -123,6 +159,8 @@ export function useChartRuntime(chartId: string) {
         source,
         timezone,
         chartType,
+        candleUpColor,
+        candleDownColor,
         candles,
         mainContainerRef,
         priceContainerRef,

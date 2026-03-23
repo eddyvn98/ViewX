@@ -176,6 +176,8 @@ export default function Home() {
   }, [activeMobileTab, setActiveMobileTab]);
 
   const {
+    isLandscape,
+    isDesktopViewport,
     isScaledDesktopMode,
     showDesktopLayout,
     showMobileLayout,
@@ -185,6 +187,11 @@ export default function Home() {
     scaledDesktopOffsetX,
     scaledDesktopOffsetY,
   } = getChartHomeLayoutState(viewport);
+  const showMobileLandscapeRightPanel = showMobileLayout && isLandscape && !isDesktopViewport;
+  const mobileLandscapeSidebarWidth = Math.max(
+    240,
+    Math.min(rightSidebarWidth, Math.floor(viewport.width * 0.46))
+  );
 
   const showDesktopLeftPanel = showDesktopLayout && !isScaledDesktopMode && isLeftSidebarOpen;
   const showDesktopRightPanel = showDesktopLayout && !isScaledDesktopMode && isRightSidebarOpen;
@@ -249,6 +256,7 @@ export default function Home() {
 
                 <MobilePanels
                   showMobileLayout={showMobileLayout}
+                  isMobileLandscape={showMobileLandscapeRightPanel}
                   activeMobileTab={activeMobileTab}
                   isInputFocused={isInputFocused}
                   handleClosePanel={handleClosePanel}
@@ -268,12 +276,21 @@ export default function Home() {
                 rightSidebarWidth={rightSidebarWidth}
                 RightSidebar={RightSidebar}
               />
+
+              {showMobileLandscapeRightPanel && (
+                <div
+                  className="flex shrink-0 border-l border-border/50 bg-background/70 backdrop-blur-sm"
+                  style={{ width: `${mobileLandscapeSidebarWidth}px` }}
+                >
+                  <RightSidebar mobileLandscape />
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {showMobileLayout && (
+      {showMobileLayout && !showMobileLandscapeRightPanel && (
         <MobileBottomNav
           activeTab={activeMobileTab}
           onTabChange={handleMobileTabChange}

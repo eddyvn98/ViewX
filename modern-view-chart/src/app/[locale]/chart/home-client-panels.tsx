@@ -85,6 +85,7 @@ export function ChartCenterPane({
 
 export function MobilePanels({
   showMobileLayout,
+  isMobileLandscape,
   activeMobileTab,
   isInputFocused,
   handleClosePanel,
@@ -97,6 +98,7 @@ export function MobilePanels({
   LayerManager,
 }: {
   showMobileLayout: boolean;
+  isMobileLandscape: boolean;
   activeMobileTab: string;
   isInputFocused: boolean;
   handleClosePanel: () => void;
@@ -105,7 +107,7 @@ export function MobilePanels({
   panelTouchStartYRef: React.RefObject<number | null>;
   Terminal: React.ComponentType<{ forceExpanded?: boolean }>;
   StrategyPanel: React.ComponentType;
-  MobileMenu: React.ComponentType;
+  MobileMenu: React.ComponentType<{ compact?: boolean }>;
   LayerManager: React.ComponentType;
 }) {
   return (
@@ -156,8 +158,16 @@ export function MobilePanels({
       )}
 
       {showMobileLayout && activeMobileTab === "menu" && (
-        <div className="flex-1 bg-background overflow-y-auto min-h-0">
-          <MobileMenu />
+        <div
+          className={cn(
+            "bg-background overflow-y-auto min-h-0",
+            isMobileLandscape
+              ? "absolute left-0 top-0 bottom-0 z-[65] border-r border-border/70 bg-background/95 backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.35)]"
+              : "flex-1"
+          )}
+          style={isMobileLandscape ? { width: "min(320px, calc(100% - 3rem))" } : undefined}
+        >
+          <MobileMenu compact={isMobileLandscape} />
         </div>
       )}
 

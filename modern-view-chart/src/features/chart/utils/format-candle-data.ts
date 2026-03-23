@@ -12,10 +12,21 @@ export interface FormattedCandle {
     theme?: 'light' | 'dark';
 }
 
+export interface CandlePalette {
+    up: string;
+    down: string;
+}
+
+export const DEFAULT_CANDLE_PALETTE: CandlePalette = {
+    up: '#22c55e',
+    down: '#ef4444',
+};
+
 export function formatCandleData(
     candles: any[],
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles',
-    theme: string = 'dark'
+    theme: string = 'dark',
+    palette: CandlePalette = DEFAULT_CANDLE_PALETTE,
 ): FormattedCandle[] {
     if (!candles || candles.length === 0) return [];
 
@@ -29,13 +40,13 @@ export function formatCandleData(
             high: c.ha_high,
             low: c.ha_low,
             close: c.ha_close,
-            candleColor: c.ha_close >= c.ha_open ? '#00ff88' : '#ff3366',
+            candleColor: c.ha_close >= c.ha_open ? palette.up : palette.down,
         }));
     } else if (chartType === 'smart_candles') {
         displayCandles = candles.map((c) => {
             const open = Number(c.open);
             const close = Number(c.close);
-            const color = close >= open ? '#00ff88' : '#ff3366';
+            const color = close >= open ? palette.up : palette.down;
             return { ...c, candleColor: color };
         });
     }

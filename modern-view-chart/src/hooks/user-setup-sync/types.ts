@@ -51,6 +51,7 @@ export type PersistedSetupState = {
     tabs: RootState['tabs'];
     activeTabId: RootState['activeTabId'];
     favoriteTimeframes: RootState['favoriteTimeframes'];
+    favoriteChartTypes: RootState['favoriteChartTypes'];
     chartIndicators: RootState['chartIndicators'];
     chartDrawings: RootState['chartDrawings'];
     alerts: RootState['alerts'];

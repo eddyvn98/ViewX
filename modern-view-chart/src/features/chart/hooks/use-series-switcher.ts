@@ -6,13 +6,15 @@ interface UseSeriesSwitcherProps {
     chartRef: React.RefObject<IChartApi | null>;
     seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
     chartType: string;
+    candleUpColor: string;
+    candleDownColor: string;
 }
 
 type SeriesWithType = ISeriesApi<'Candlestick'> & {
     seriesType?: () => unknown;
 };
 
-export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesSwitcherProps) {
+export function useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor }: UseSeriesSwitcherProps) {
     const getSeriesTypeName = (series: ISeriesApi<'Candlestick'> | null): string => {
         const fn = (series as SeriesWithType | null)?.seriesType;
         if (typeof fn !== 'function') return '';
@@ -52,7 +54,11 @@ export function useSeriesSwitcher({ chartRef, seriesRef, chartType }: UseSeriesS
             }) as unknown as ISeriesApi<'Candlestick'>;
         } else {
             seriesRef.current = chart.addSeries(CandlestickSeries, {
+                upColor: candleUpColor,
+                downColor: candleDownColor,
                 borderVisible: false,
+                wickUpColor: candleUpColor,
+                wickDownColor: candleDownColor,
                 priceLineVisible: true,
                 priceLineWidth: 1,
                 priceLineStyle: 2,

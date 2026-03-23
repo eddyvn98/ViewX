@@ -24,6 +24,8 @@ export function useChartInit(
     chartId: string,
     theme: string = 'dark',
     timezone: string = 'Asia/Ho_Chi_Minh',
+    candleUpColor: string,
+    candleDownColor: string,
     currentContextKey?: string,
 ) {
     const [isReady, setIsReady] = useState(false);
@@ -97,6 +99,23 @@ export function useChartInit(
     }, [isReady, symbolInfo, chartId]);
 
     useEffect(() => {
+        if (!isReady || !seriesRef.current) return;
+        const currentSeries = seriesRef.current as ISeriesApi<'Candlestick'> & { seriesType?: () => unknown };
+        const seriesType = typeof currentSeries.seriesType === 'function' ? String(currentSeries.seriesType()) : '';
+        if (seriesType === 'Custom') return;
+        try {
+            seriesRef.current.applyOptions({
+                upColor: candleUpColor,
+                downColor: candleDownColor,
+                wickUpColor: candleUpColor,
+                wickDownColor: candleDownColor,
+            });
+        } catch {
+            // Ignore option races while switching series/chart type.
+        }
+    }, [isReady, candleUpColor, candleDownColor]);
+
+    useEffect(() => {
         if (!priceContainerRef.current || !subchartContainerRef.current || !timescaleContainerRef.current) return;
         const priceContainer = priceContainerRef.current;
         const subchartContainer = subchartContainerRef.current;
@@ -153,11 +172,11 @@ export function useChartInit(
         const timescaleTouchObserver = createTouchObserver(timescaleContainer);
 
         const candleSeries = priceChart.addSeries(CandlestickSeries, {
-            upColor: '#22c55e',
-            downColor: '#ef4444',
+            upColor: candleUpColor,
+            downColor: candleDownColor,
             borderVisible: false,
-            wickUpColor: '#22c55e',
-            wickDownColor: '#ef4444',
+            wickUpColor: candleUpColor,
+            wickDownColor: candleDownColor,
             priceLineVisible: true,
             priceLineWidth: 1,
             priceLineStyle: 2,
@@ -277,7 +296,7 @@ export function useChartInit(
             subSyncRef.current = null;
             timescaleSyncRef.current = null;
         };
-    }, [chartId, timezone, theme, themeColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef, currentContextKey]);
+    }, [chartId, timezone, theme, themeColor, candleUpColor, candleDownColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef, currentContextKey]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();

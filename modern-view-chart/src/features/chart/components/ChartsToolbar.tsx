@@ -10,9 +10,9 @@ import { TimeframeToolbar } from './TimeframeToolbar';
 import { LayoutGridSelector } from './LayoutGridSelector';
 import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
+import { CandleTypeToolbar } from './CandleTypeToolbar';
 
 type ChartGroup = 'none' | 'A' | 'B' | 'C' | 'D';
-type ChartType = 'candles' | 'heikin_ashi' | 'smart_candles';
 
 const NEXT_GROUP: Record<ChartGroup, ChartGroup> = {
     none: 'A',
@@ -21,14 +21,6 @@ const NEXT_GROUP: Record<ChartGroup, ChartGroup> = {
     C: 'D',
     D: 'none',
 };
-
-const NEXT_CHART_TYPE: Record<ChartType, ChartType> = {
-    candles: 'heikin_ashi',
-    heikin_ashi: 'smart_candles',
-    smart_candles: 'candles',
-};
-
-
 
 export function ChartsToolbar() {
     const { activeChart } = useMarketStore(useShallow((state: RootState) => {
@@ -77,23 +69,7 @@ export function ChartsToolbar() {
                         <Link size={14} />
                     </button>
 
-                    <button
-                        onClick={() => {
-                            if (!activeChart) return;
-                            const currentType = activeChart.chartType as ChartType;
-                            const nextType = NEXT_CHART_TYPE[currentType] || 'candles';
-                            useMarketStore.getState().setChartType(activeChart.id, nextType);
-                        }}
-                        className={cn(
-                            "px-1.5 py-0.5 rounded text-[11px] font-black uppercase transition-all active:scale-95 border",
-                            activeChart?.chartType !== 'candles'
-                                ? "text-primary border-primary/30 bg-primary/10"
-                                : "text-muted-foreground border-border hover:text-foreground hover:bg-secondary/40"
-                        )}
-                        title="Rotate Chart Type (Candles / HA / Smart)"
-                    >
-                        {activeChart?.chartType === 'heikin_ashi' ? 'HA' : activeChart?.chartType === 'smart_candles' ? 'SC' : 'C'}
-                    </button>
+                    <CandleTypeToolbar />
 
                     <LayoutGridSelector />
                 </div>

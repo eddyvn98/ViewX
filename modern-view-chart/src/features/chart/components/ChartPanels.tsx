@@ -45,6 +45,24 @@ export function ChartPanels({
 }: ChartPanelsProps) {
     const isDraggingRef = useRef(false);
     const lastPointerDownAtRef = useRef(0);
+    const [isCompactLandscape, setIsCompactLandscape] = React.useState(false);
+
+    React.useEffect(() => {
+        const updateCompactMode = () => {
+            if (typeof window === 'undefined') return;
+            const isLandscape = window.innerWidth > window.innerHeight;
+            const isShortViewport = window.innerHeight <= 500;
+            setIsCompactLandscape(Boolean(isLandscape && isShortViewport));
+        };
+
+        updateCompactMode();
+        window.addEventListener('resize', updateCompactMode);
+        window.addEventListener('orientationchange', updateCompactMode);
+        return () => {
+            window.removeEventListener('resize', updateCompactMode);
+            window.removeEventListener('orientationchange', updateCompactMode);
+        };
+    }, []);
 
     const startResizeSubchart = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
         if (isMinimized || !isSubchartVisible) return;
@@ -133,14 +151,18 @@ export function ChartPanels({
                     <button
                         onClick={() => setIsSubchartVisible(!isSubchartVisible)}
                         className={cn(
-                            "px-3 md:px-4 py-1 rounded-tr-md border border-border border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md",
+                            "px-3 md:px-4 py-1 rounded-tr-md border border-border border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md text-[11px] leading-none",
+                            isCompactLandscape && "!px-2 !py-0.5 !gap-1 !text-[10px]",
                             isSubchartVisible
                                 ? "bg-secondary/80 text-muted-foreground hover:text-primary"
                                 : "bg-primary/20 text-primary font-bold"
                         )}
                         style={{ marginLeft: '-1px' }}
                     >
-                        <span className="text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest whitespace-nowrap">
+                        <span className={cn(
+                            "text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest whitespace-nowrap",
+                            isCompactLandscape && "!text-[10px] !tracking-tight"
+                        )}>
                             {isSubchartVisible ? 'Hide' : (
                                 <>
                                     <span className="md:inline hidden">Show Indicator</span>
@@ -148,7 +170,7 @@ export function ChartPanels({
                                 </>
                             )}
                         </span>
-                        {isSubchartVisible ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                        {isSubchartVisible ? <ChevronDown size={isCompactLandscape ? 10 : 12} /> : <ChevronUp size={isCompactLandscape ? 10 : 12} />}
                     </button>
                 </div>
 

@@ -20,12 +20,22 @@ export function formatTabPrice(price: number, digits: number): string {
   });
 }
 
-export function getChartHomeLayoutState(viewport: { width: number; height: number }) {
+export function getChartHomeLayoutState(viewport: { width: number; height: number; isTouchDevice?: boolean; isMobileUserAgent?: boolean }) {
   const isLandscape = viewport.width > viewport.height;
-  const isDesktopViewport = viewport.width >= DESKTOP_BREAKPOINT;
+  const isLikelyMobileLandscapeBySize =
+    isLandscape &&
+    viewport.height > 0 &&
+    viewport.height <= 500 &&
+    viewport.width <= 1024;
+  const isMobileLandscapeTouch =
+    isLikelyMobileLandscapeBySize &&
+    (Boolean(viewport.isTouchDevice) || Boolean(viewport.isMobileUserAgent));
+  const isDesktopViewport = viewport.width >= DESKTOP_BREAKPOINT && !isMobileLandscapeTouch;
   const isHeightConstrainedLandscape =
     isLandscape && viewport.height > 0 && viewport.height < DESKTOP_SCALE_HEIGHT_THRESHOLD;
-  const isScaledDesktopMode = isLandscape && (!isDesktopViewport || isHeightConstrainedLandscape);
+  // Only scale desktop when we are already on desktop widths.
+  // Mobile landscape should use dedicated mobile layout instead of scaled desktop.
+  const isScaledDesktopMode = isDesktopViewport && isLandscape && isHeightConstrainedLandscape;
   const showDesktopLayout = isDesktopViewport || isScaledDesktopMode;
   const showMobileLayout = !showDesktopLayout;
   const showDesktopHeader = showDesktopLayout && !isScaledDesktopMode;

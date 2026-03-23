@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,24 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
         [indicators]);
 
     const updateIndicator = useMarketStore(state => state.updateIndicator);
+    const [isCompactLandscape, setIsCompactLandscape] = useState(false);
+
+    useEffect(() => {
+        const updateCompactMode = () => {
+            if (typeof window === 'undefined') return;
+            const isLandscape = window.innerWidth > window.innerHeight;
+            const isShortViewport = window.innerHeight <= 500;
+            setIsCompactLandscape(Boolean(isLandscape && isShortViewport));
+        };
+
+        updateCompactMode();
+        window.addEventListener('resize', updateCompactMode);
+        window.addEventListener('orientationchange', updateCompactMode);
+        return () => {
+            window.removeEventListener('resize', updateCompactMode);
+            window.removeEventListener('orientationchange', updateCompactMode);
+        };
+    }, []);
 
     if (subchartIndicators.length === 0) return null;
 
@@ -39,7 +57,10 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
     };
 
     return (
-        <div className="flex bg-secondary/80 backdrop-blur-md border border-border rounded-t-md overflow-hidden border-b-0">
+        <div className={cn(
+            "flex bg-secondary/80 backdrop-blur-md border border-border rounded-t-md overflow-hidden border-b-0",
+            isCompactLandscape && "rounded-t-sm"
+        )}>
             {subchartIndicators.map((ind, idx) => {
                 const isVisible = ind.visible;
                 return (
@@ -48,6 +69,7 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
                         onClick={() => handleTabClick(ind.id)}
                         className={cn(
                             "px-3 md:px-5 py-1 text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
+                            isCompactLandscape && "!px-2 !py-0.5 !text-[10px] !tracking-tight",
                             isVisible
                                 ? "bg-primary/20 text-primary font-bold"
                                 : "text-muted-foreground hover:text-foreground hover:bg-white/5",

@@ -254,6 +254,7 @@
       "loadingMore": "Đang tải thêm nến quá khứ..."
     },
     "tabs": {
+      "market": "Danh sách",
       "strategy": "Chiến lược",
       "layer": "Chỉ báo",
       "trade": "Giao dịch",
@@ -282,6 +283,19 @@
     "changeLayout": "Đổi bố cục",
     "gridLayout": "Bố cục lưới",
     "addChart": "Thêm biểu đồ"
+  },
+  "MobileMenu": {
+    "guest": "Khách",
+    "live": "Live",
+    "home": "Trang chủ",
+    "accountProfile": "Hồ sơ tài khoản",
+    "notifications": "Thông báo",
+    "displaySettings": "Cài đặt hiển thị",
+    "appSettings": "Cài đặt ứng dụng",
+    "helpSupport": "Trợ giúp & hỗ trợ",
+    "termsOfService": "Điều khoản dịch vụ",
+    "signOut": "Đăng xuất",
+    "version": "OpenTrade Mobile v1.0.0-beta"
   },
   "StrategyDashboard": {
     "page": {

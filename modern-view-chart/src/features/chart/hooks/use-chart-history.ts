@@ -32,12 +32,14 @@ interface UseChartHistoryProps {
     timescaleSyncRef: React.RefObject<ISeriesApi<'Line'> | null>;
     isReady: boolean;
     theme: string;
+    candleUpColor: string;
+    candleDownColor: string;
     contextKey?: string;
     onHistoryLoaded: (lastCandle: Candle) => void;
 }
 
 export function useChartHistory(props: UseChartHistoryProps) {
-    const { chartId, symbol, interval, source, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, contextKey, onHistoryLoaded } = props;
+    const { chartId, symbol, interval, source, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, candleUpColor, candleDownColor, contextKey, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
@@ -73,7 +75,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     });
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
-    const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
+    const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
     const requestHistory = useCallback(() => {
         if (!symbol || !interval) return;
         const sourceText = String(source || '').toUpperCase();
@@ -218,7 +220,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 handleSwitch(isContextChange, previousChartType);
                 lastChartTypeRef.current = nextChartType;
 
-                const formatted = formatCandleData(nextCandles, nextChartType, nextTheme);
+                const formatted = formatCandleData(nextCandles, nextChartType, nextTheme, {
+                    up: candleUpColor,
+                    down: candleDownColor,
+                });
 
                 if (seriesRef.current) {
                     seriesRef.current.setData(formatted);
@@ -262,7 +267,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 lastTailSignatureRef.current = candlesTailSignature;
             });
         }
-    }, [isReady, candlesCount, candlesTailSignature, key, chartType, isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, candlesTailSignature, key, chartType, isConnected, candleUpColor, candleDownColor]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {

@@ -28,11 +28,6 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
                     <span class="tag-label text-[11px] font-black text-foreground uppercase tracking-widest"></span>
                 </div>
 
-                <div class="tp-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
-                    data-draggable="true" data-type="tp" data-ticket="draft">TP</div>
-                <div class="sl-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-bold border border-red-500/20 cursor-pointer hover:bg-red-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
-                    data-draggable="true" data-type="sl" data-ticket="draft">SL</div>
-
                 <div class="lot-container flex items-center h-full bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20 overflow-hidden shrink-0">
                     <div class="lot-minus h-full w-6 flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors active:bg-primary/20 text-primary" title="Decrease Lot" data-no-drag="true">
                         <svg width="10" height="2" viewBox="0 0 24 2" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><line x1="4" y1="1" x2="20" y2="1"></line></svg>
@@ -43,12 +38,33 @@ function createDraftGroupTagElement(tag: TagData): TagElements {
                     </div>
                 </div>
 
+                <div class="sl-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-bold border border-red-500/20 cursor-pointer hover:bg-red-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
+                    data-draggable="true" data-type="sl" data-ticket="draft">SL</div>
+                <div class="tp-btn btn hidden items-center justify-center min-w-[36px] h-full px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500 hover:text-white transition-all duration-200 uppercase tracking-tight"
+                    data-draggable="true" data-type="tp" data-ticket="draft">TP</div>
+
                 <div class="confirm-btn flex items-center justify-center h-full px-2 rounded-lg text-[11px] font-black hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest whitespace-nowrap cursor-pointer shadow-sm" data-no-drag="true">Confirm</div>
 
                 <div class="price-box h-full flex items-center px-3 bg-secondary/50 dark:bg-white/5 border border-border/10 rounded-lg min-w-[85px] justify-center cursor-row-resize hover:bg-secondary/70 transition-colors"
                     data-draggable="true" data-type="entry" data-ticket="draft">
                     <span class="price-text text-[11px] font-bold text-foreground"></span>
                 </div>
+            </div>`);
+}
+
+function createDraftLevelTagElement(tag: TagData): TagElements {
+    return createElementsFromHtml(tag, `
+            <div class="absolute right-[100%] top-1/2 w-screen border-b-[1px] border-dashed pointer-events-none draft-level-line"></div>
+            <div class="tag-body group flex items-center h-7 gap-1 px-1.5 bg-background/85 backdrop-blur-xl border rounded-lg shadow-lg pointer-events-auto touch-none touch-action-none"
+                data-draggable="true" data-type="${tag.type}" data-ticket="draft">
+                <span class="tag-label text-[10px] font-bold uppercase tracking-wide"></span>
+                <span class="lot-text text-[10px] font-semibold text-foreground/80">0.00</span>
+                <span class="pnl-text text-[11px] font-bold tracking-tight"></span>
+                <div class="cancel-btn h-5 w-5 flex items-center justify-center rounded-md hover:bg-red-500/15 text-muted-foreground hover:text-red-500 transition-all duration-200" title="Remove" data-no-drag="true">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+                <span class="price-text hidden"></span>
+                <div class="price-box hidden"></div>
             </div>`);
 }
 
@@ -98,6 +114,7 @@ function createDotTagElement(tag: TagData): TagElements {
 
 export function createTagElement(tag: TagData): TagElements {
     if (tag.type === 'draft_group') return createDraftGroupTagElement(tag);
+    if (tag.ticket === 'draft' && (tag.type === 'sl' || tag.type === 'tp')) return createDraftLevelTagElement(tag);
     if (tag.type === 'alert') return createAlertTagElement(tag);
     return createDotTagElement(tag);
 }

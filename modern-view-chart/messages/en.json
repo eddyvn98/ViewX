@@ -254,6 +254,7 @@
       "loadingMore": "Loading more history..."
     },
     "tabs": {
+      "market": "List",
       "strategy": "Strategy",
       "layer": "Layer",
       "trade": "Trade",
@@ -282,6 +283,19 @@
     "changeLayout": "Change Layout",
     "gridLayout": "Grid Layout",
     "addChart": "Add Chart"
+  },
+  "MobileMenu": {
+    "guest": "Guest",
+    "live": "Live",
+    "home": "Home",
+    "accountProfile": "Account Profile",
+    "notifications": "Notifications",
+    "displaySettings": "Display Settings",
+    "appSettings": "App Settings",
+    "helpSupport": "Help & Support",
+    "termsOfService": "Terms of Service",
+    "signOut": "Sign Out",
+    "version": "OpenTrade Mobile v1.0.0-beta"
   },
   "StrategyDashboard": {
     "page": {

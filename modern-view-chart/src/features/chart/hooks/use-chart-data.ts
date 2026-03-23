@@ -19,6 +19,8 @@ export function useChartData(
     isReady: boolean,
     isAutoScrollEnabledRef: React.RefObject<boolean>,
     theme: string,
+    candleUpColor: string,
+    candleDownColor: string,
     contextKey?: string
 ) {
     // Shared reference to the trusted "Current Candle" (from Store/History)
@@ -33,6 +35,8 @@ export function useChartData(
         subSyncRef, timescaleSyncRef,
         isReady,
         theme,
+        candleUpColor,
+        candleDownColor,
         contextKey,
         onHistoryLoaded: (last) => { lastCandleRef.current = last; }
     });
@@ -49,7 +53,7 @@ export function useChartData(
     // Only updates the EXISTING candle visually to prevent timezone/offset bugs
     const realTimeCandleRef = useChartTicker({
         symbol, interval, source, seriesRef, chartType, lastCandleRef,
-        isAutoScrollEnabledRef, chartRef, theme, contextKey
+        isAutoScrollEnabledRef, chartRef, theme, contextKey, candleUpColor, candleDownColor
     });
 
     return { realTimeCandleRef };
