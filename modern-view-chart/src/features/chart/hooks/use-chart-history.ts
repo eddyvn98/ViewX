@@ -47,6 +47,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const applyDataRafRef = useRef<number | null>(null);
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
+    const lastTailSignatureRef = useRef('0');
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
@@ -55,6 +56,21 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
+    const candlesTailSignature = useMarketStore((state) => {
+        const candles = resolveCandles(state, source, normSymbol, intervalCandidates).candles;
+        if (candles.length === 0) return '0';
+        const first = candles[0];
+        const last = candles[candles.length - 1];
+        return [
+            candles.length,
+            first?.time ?? '',
+            last?.time ?? '',
+            last?.open ?? '',
+            last?.high ?? '',
+            last?.low ?? '',
+            last?.close ?? '',
+        ].join('|');
+    });
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType });
@@ -175,10 +191,12 @@ export function useChartHistory(props: UseChartHistoryProps) {
             lastDataLength.current = 0;
             autoFitProgressRef.current = null;
             clearedForKeyRef.current = null;
+            lastTailSignatureRef.current = '0';
         }
 
         const isTypeChange = chartType !== lastChartTypeRef.current;
-        if (isContextChange || currentCandles.length !== lastDataLength.current || isTypeChange) {
+        const hasTailChange = candlesTailSignature !== lastTailSignatureRef.current;
+        if (isContextChange || currentCandles.length !== lastDataLength.current || isTypeChange || hasTailChange) {
             if (applyDataRafRef.current !== null) {
                 cancelAnimationFrame(applyDataRafRef.current);
                 applyDataRafRef.current = null;
@@ -241,9 +259,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 }
 
                 lastDataLength.current = nextCandles.length;
+                lastTailSignatureRef.current = candlesTailSignature;
             });
         }
-    }, [isReady, candlesCount, key, chartType, isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, candlesTailSignature, key, chartType, isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {
