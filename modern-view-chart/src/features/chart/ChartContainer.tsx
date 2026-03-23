@@ -167,6 +167,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         subchartChartRef,
         timescaleChartRef,
         timezone,
+        isReady,
         isSubchartVisible,
         subchartHeightPct
     );

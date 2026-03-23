@@ -63,15 +63,15 @@ export function useChartInit(
     useEffect(() => {
         if (!isReady) return;
         if (priceChartRef.current && priceContainerRef.current) {
-            priceChartRef.current.applyOptions(getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, themeColor));
+            priceChartRef.current.applyOptions(getPriceChartOptions(priceContainerRef.current.clientWidth, priceContainerRef.current.clientHeight, theme, timezone, themeColor));
         }
         if (subchartChartRef.current && subchartContainerRef.current) {
-            subchartChartRef.current.applyOptions(getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, themeColor));
+            subchartChartRef.current.applyOptions(getSubChartOptions(subchartContainerRef.current.clientWidth, subchartContainerRef.current.clientHeight, theme, timezone, themeColor));
         }
         if (timescaleChartRef.current && timescaleContainerRef.current) {
-            timescaleChartRef.current.applyOptions(getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, themeColor));
+            timescaleChartRef.current.applyOptions(getTimescaleOptions(timescaleContainerRef.current.clientWidth, timescaleContainerRef.current.clientHeight, theme, timezone, themeColor));
         }
-    }, [theme, themeColor, isReady, priceContainerRef, subchartContainerRef, timescaleContainerRef]);
+    }, [theme, timezone, themeColor, isReady, priceContainerRef, subchartContainerRef, timescaleContainerRef]);
 
     const currentSymbol = useMarketStore(state => {
         const activeTab = state.tabs[state.activeTabId];
@@ -121,6 +121,7 @@ export function useChartInit(
                 Math.max(1, Math.round(priceContainer.clientWidth || 1)),
                 Math.max(1, Math.round(priceContainer.clientHeight || 1)),
                 theme,
+                timezone,
                 themeColor
             )
         );
@@ -130,6 +131,7 @@ export function useChartInit(
                 Math.max(1, Math.round(subchartContainer.clientWidth || 1)),
                 Math.max(1, Math.round(subchartContainer.clientHeight || 1)),
                 theme,
+                timezone,
                 themeColor
             )
         );
@@ -139,6 +141,7 @@ export function useChartInit(
                 Math.max(1, Math.round(timescaleContainer.clientWidth || 1)),
                 Math.max(1, Math.round(timescaleContainer.clientHeight || 1)),
                 theme,
+                timezone,
                 themeColor
             )
         );

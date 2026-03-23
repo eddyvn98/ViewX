@@ -2,6 +2,31 @@ import { ColorType, CrosshairMode, DeepPartial, ChartOptions } from 'lightweight
 
 export const initialMinW = 62; // Standard width to prevent excessive right-side gap
 
+const createTimeFormatters = (timezone: string) => {
+    const safeTimezone = timezone || 'Asia/Ho_Chi_Minh';
+    return {
+        timeFormatter: (timestamp: number) => {
+            return new Intl.DateTimeFormat('en-GB', {
+                timeZone: safeTimezone,
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            }).format(timestamp * 1000).replace(',', '');
+        },
+        tickMarkFormatter: (time: number) => {
+            return new Intl.DateTimeFormat('en-GB', {
+                timeZone: safeTimezone,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            }).format(time * 1000);
+        },
+    };
+};
+
 export const getThemeColors = (theme: string, themeColor?: string) => {
     const isDark = theme === 'dark';
 
@@ -33,14 +58,18 @@ export const getThemeColors = (theme: string, themeColor?: string) => {
     };
 };
 
-export const getCommonOptions = (theme: string, themeColor?: string): DeepPartial<ChartOptions> => {
+export const getCommonOptions = (theme: string, timezone: string, themeColor?: string): DeepPartial<ChartOptions> => {
     const colors = getThemeColors(theme, themeColor);
+    const { timeFormatter, tickMarkFormatter } = createTimeFormatters(timezone);
     return {
         layout: {
             background: { type: ColorType.Solid, color: 'transparent' },
             textColor: colors.text,
             fontSize: 11, // Increased to improve line height/readability
             fontFamily: "'Inter', sans-serif"
+        },
+        localization: {
+            timeFormatter,
         },
         grid: { vertLines: { color: colors.grid }, horzLines: { color: colors.grid } },
         crosshair: {
@@ -75,12 +104,13 @@ export const getCommonOptions = (theme: string, themeColor?: string): DeepPartia
             timeVisible: true,
             secondsVisible: false,
             shiftVisibleRangeOnNewBar: false,
+            tickMarkFormatter,
         },
     };
 };
 
-export const getPriceChartOptions = (width: number, height: number, theme: string, themeColor?: string): DeepPartial<ChartOptions> => {
-    const common = getCommonOptions(theme, themeColor);
+export const getPriceChartOptions = (width: number, height: number, theme: string, timezone: string, themeColor?: string): DeepPartial<ChartOptions> => {
+    const common = getCommonOptions(theme, timezone, themeColor);
     return {
         ...common,
         width,
@@ -106,8 +136,8 @@ export const getPriceChartOptions = (width: number, height: number, theme: strin
     };
 };
 
-export const getSubChartOptions = (width: number, height: number, theme: string, themeColor?: string): DeepPartial<ChartOptions> => {
-    const common = getCommonOptions(theme, themeColor);
+export const getSubChartOptions = (width: number, height: number, theme: string, timezone: string, themeColor?: string): DeepPartial<ChartOptions> => {
+    const common = getCommonOptions(theme, timezone, themeColor);
     return {
         ...common,
         layout: { ...common.layout, background: { type: ColorType.Solid, color: 'transparent' } },
@@ -133,8 +163,8 @@ export const getSubChartOptions = (width: number, height: number, theme: string,
     };
 };
 
-export const getTimescaleOptions = (width: number, height: number, theme: string, themeColor?: string): DeepPartial<ChartOptions> => {
-    const common = getCommonOptions(theme, themeColor);
+export const getTimescaleOptions = (width: number, height: number, theme: string, timezone: string, themeColor?: string): DeepPartial<ChartOptions> => {
+    const common = getCommonOptions(theme, timezone, themeColor);
     const colors = getThemeColors(theme, themeColor);
     return {
         ...common,

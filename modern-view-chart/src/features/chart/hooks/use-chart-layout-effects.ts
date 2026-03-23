@@ -10,6 +10,7 @@ export function useChartLayoutEffects(
     subchartChartRef: React.MutableRefObject<IChartApi | null>,
     timescaleChartRef: React.MutableRefObject<IChartApi | null>,
     timezone: string,
+    isReady: boolean,
     isSubchartVisible: boolean,
     subchartHeightPct: number
 ) {
@@ -34,7 +35,7 @@ export function useChartLayoutEffects(
 
     // Apply Timezone to Chart Localization & Scale
     useEffect(() => {
-        if (!priceChartRef.current || !timezone) return;
+        if (!isReady || !priceChartRef.current || !timezone) return;
 
         const timeFormatter = (timestamp: number) => {
             return new Intl.DateTimeFormat('en-GB', {
@@ -94,5 +95,5 @@ export function useChartLayoutEffects(
                 // Ignore transient layout errors while chart instances are being recreated.
             }
         }
-    }, [timezone, priceChartRef, subchartChartRef, timescaleChartRef]);
+    }, [isReady, timezone, priceChartRef, subchartChartRef, timescaleChartRef]);
 }
