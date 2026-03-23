@@ -8,5 +8,5 @@ export async function GET() {
     return NextResponse.json({ configured: false }, { status: 200 });
   }
 
-  return NextResponse.json({ configured: true }, { status: 200 });
+  return NextResponse.json({ configured: true, client_id: clientId }, { status: 200 });
 }

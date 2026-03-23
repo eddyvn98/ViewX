@@ -47,7 +47,6 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const applyDataRafRef = useRef<number | null>(null);
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
-    const leftBackfillRef = useRef<{ key: string; requestedOldestTime: number; requestedAt: number } | null>(null);
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
@@ -87,59 +86,6 @@ export function useChartHistory(props: UseChartHistoryProps) {
         const timer = setInterval(requestHistory, 2500);
         return () => clearInterval(timer);
     }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage, requestHistory]);
-
-    useEffect(() => {
-        if (!isReady || !chartRef.current || !symbol || !interval || !source) return;
-        const timeScale = chartRef.current.timeScale();
-        const LEFT_EDGE_TRIGGER_BARS = 12;
-        const SCROLL_BACKFILL_COOLDOWN_MS = 2500;
-
-        const requestOlderIfNeeded = (range: { from: number; to: number } | null) => {
-            if (!range || !Number.isFinite(range.from)) return;
-            if (range.from > LEFT_EDGE_TRIGGER_BARS) return;
-
-            const candles = getCandles();
-            if (candles.length === 0) return;
-            const oldestTime = toSec(candles[0].time);
-            if (!Number.isFinite(oldestTime)) return;
-
-            const now = Date.now();
-            const state = leftBackfillRef.current;
-            if (
-                state &&
-                state.key === key &&
-                state.requestedOldestTime === oldestTime &&
-                now - state.requestedAt < SCROLL_BACKFILL_COOLDOWN_MS
-            ) {
-                return;
-            }
-
-            leftBackfillRef.current = {
-                key,
-                requestedOldestTime: oldestTime,
-                requestedAt: now,
-            };
-
-            window.dispatchEvent(
-                new CustomEvent('chart-backfill-request', {
-                    detail: {
-                        source,
-                        symbol,
-                        interval,
-                        count: 300,
-                        direction: 'older',
-                        anchorTimeSec: oldestTime,
-                        reason: 'left_edge_scroll',
-                    },
-                }),
-            );
-        };
-
-        timeScale.subscribeVisibleLogicalRangeChange(requestOlderIfNeeded);
-        return () => {
-            timeScale.unsubscribeVisibleLogicalRangeChange(requestOlderIfNeeded);
-        };
-    }, [isReady, chartRef, symbol, interval, source, key, getCandles]);
 
     const getPersistedViewport = (): ChartInstance['viewport'] | undefined => {
         const state = useMarketStore.getState();

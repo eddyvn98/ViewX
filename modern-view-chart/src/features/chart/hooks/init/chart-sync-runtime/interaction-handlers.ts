@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { autoSyncLayout } from '../../../logic/chart-sync';
 import type { Candle } from '@/lib/store/types';
+import { useMarketStore } from '@/lib/store';
 import {
   buildStableTimeScaleViewport,
   LogicalRangeSource,
@@ -58,6 +59,8 @@ export function createInteractionHandlers({
   let autoScrollResumeTimeoutId: ReturnType<typeof setTimeout> | null = null;
   let syncRequestId: number | null = null;
   let lastMaxW = initialMinW;
+  let lastOlderBackfillAt = 0;
+  let lastOlderBackfillOldestTime = 0;
 
   const handleScrollPosition = (range: PersistedRange | null) => {
     if (!range) return;
@@ -180,6 +183,50 @@ export function createInteractionHandlers({
       const dataCount = seriesRef.current?.data().length || 0;
       if (!currentRange || dataCount === 0) return;
       isAutoScrollEnabledRef.current = currentRange.to >= dataCount - 1;
+
+      const LEFT_EDGE_TRIGGER_BARS = 160;
+      const visibleBars = Math.max(1, Math.floor((currentRange.to ?? currentRange.from) - currentRange.from));
+      const dynamicThreshold = Math.max(LEFT_EDGE_TRIGGER_BARS, visibleBars * 2);
+      if (currentRange.from > dynamicThreshold) return;
+
+      const firstPoint = (seriesRef.current?.data() as Array<{ time?: unknown }> | undefined)?.[0];
+      const oldestTime = Number(firstPoint?.time);
+      if (!Number.isFinite(oldestTime) || oldestTime <= 0) return;
+
+      const now = Date.now();
+      if (now - lastOlderBackfillAt < 2500 && Math.floor(oldestTime) === Math.floor(lastOlderBackfillOldestTime)) {
+        return;
+      }
+
+      const state = useMarketStore.getState();
+      let chartMeta: { symbol?: string; interval?: string; source?: string } | undefined;
+      for (const tab of Object.values(state.tabs)) {
+        const candidate = tab?.charts?.[chartId];
+        if (candidate) {
+          chartMeta = candidate;
+          break;
+        }
+      }
+      const symbol = String(chartMeta?.symbol || '').trim();
+      const interval = String(chartMeta?.interval || '').trim();
+      const source = String(chartMeta?.source || '').toUpperCase();
+      if (!symbol || !interval || !source) return;
+
+      lastOlderBackfillAt = now;
+      lastOlderBackfillOldestTime = oldestTime;
+      window.dispatchEvent(
+        new CustomEvent('chart-backfill-request', {
+          detail: {
+            source,
+            symbol,
+            interval,
+            count: 300,
+            direction: 'older',
+            anchorTimeSec: Math.floor(oldestTime),
+            reason: 'pointer_pan_left_edge',
+          },
+        }),
+      );
     }, 120);
 
     if (wasFooterInteraction) {

@@ -19,9 +19,13 @@ services:
       ACCESS_TOKEN: ${ACCESS_TOKEN}
       NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
       NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED: ${NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://vivutrade.io.vn}
     ports:
       - "${FRONTEND_HOST_PORT:-13000}:3000"
+    cpus: 0.75
+    mem_limit: 256m
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -38,9 +42,9 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     restart: unless-stopped
-    # depends_on:
-    #   viewx-mongo:
-    #     condition: service_started
+    depends_on:
+      viewx-mongo:
+        condition: service_started
     environment:
       PORT: ${PORT:-8091}
       ACCESS_TOKEN: ${ACCESS_TOKEN}
@@ -96,6 +100,8 @@ services:
       TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
     ports:
       - "${BACKEND_HOST_PORT:-18091}:8091"
+    cpus: 1.25
+    mem_limit: 512m
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8091/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -105,17 +111,19 @@ services:
     networks:
       - viewx_net
 
-#   viewx-mongo:
-#     profiles: ["staging"]
-#     image: mongo:7
-#     container_name: viewx-mongo-staging
-#     restart: unless-stopped
-#     ports:
-#       - "${MONGO_HOST_PORT:-27028}:27017"
-#     volumes:
-#       - viewx_mongo_data:/data/db
-#     networks:
-#       - viewx_net
+  viewx-mongo:
+    profiles: ["staging"]
+    image: mongo:7
+    container_name: viewx-mongo-staging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MONGO_HOST_PORT:-27027}:27017"
+    volumes:
+      - viewx_mongo_data:/data/db
+    cpus: 1
+    mem_limit: 320m
+    networks:
+      - viewx_net
 
 volumes:
   viewx_mongo_data:

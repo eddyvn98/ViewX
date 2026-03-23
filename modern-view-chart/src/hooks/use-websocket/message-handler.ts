@@ -4,6 +4,7 @@ import { soundService } from '@/features/strategy/logic/SoundService';
 import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_BUFFER_MS } from './constants';
 import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -73,7 +74,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
 
         if ((msgType === 'mt5_candles' || msgType === 'mt5_candles_at') && Array.isArray(msg.candles)) {
             const targetSymbol = String(msg.symbol || '');
-            const targetInterval = String(msg.interval || '');
+            let targetInterval = String(msg.interval || '').trim();
             const normalizedCandles = (msg.candles as Array<Record<string, unknown>>).map((c) => ({
                 ...c,
                 time: c.time ?? c.t ?? c.timestamp ?? c.datetime,
@@ -92,8 +93,38 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 sampleTime: sample?.time,
                 sampleOpen: sample?.open,
             });
+            const source = String(msg.source || 'MT5');
+            if (!targetInterval && targetSymbol) {
+                const state = useMarketStore.getState();
+                const wantedSymbol = normalizeSymbol(targetSymbol);
+                const wantedSource = source.toUpperCase();
+                const activeTab = state.tabs[state.activeTabId];
+                if (activeTab?.activeChartId) {
+                    const activeChart = activeTab.charts?.[activeTab.activeChartId];
+                    if (activeChart) {
+                        const activeSymbol = normalizeSymbol(String(activeChart.symbol || ''));
+                        const activeSource = String(activeChart.source || '').toUpperCase();
+                        if (activeSymbol === wantedSymbol && activeSource === wantedSource) {
+                            targetInterval = String(activeChart.interval || '').trim();
+                        }
+                    }
+                }
+                if (!targetInterval) {
+                    for (const tab of Object.values(state.tabs)) {
+                        for (const chart of Object.values(tab.charts || {})) {
+                            const chartSymbol = normalizeSymbol(String(chart.symbol || ''));
+                            const chartSource = String(chart.source || '').toUpperCase();
+                            if (chartSymbol === wantedSymbol && chartSource === wantedSource) {
+                                targetInterval = String(chart.interval || '').trim();
+                                break;
+                            }
+                        }
+                        if (targetInterval) break;
+                    }
+                }
+            }
+
             if (targetSymbol && targetInterval) {
-                const source = String(msg.source || 'MT5');
                 deps.setCandles(source, targetSymbol, targetInterval, normalizedCandles);
             }
         }

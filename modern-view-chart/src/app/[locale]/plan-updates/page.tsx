@@ -3,7 +3,7 @@ import { Link } from '@/i18n/routing';
 
 export const metadata: Metadata = {
   title: 'Plan Updates',
-  description: 'Explore the latest rollout notes for Vivutrade paid plans.',
+  description: 'Explore the latest rollout notes for Vivutrade plans.',
   alternates: { canonical: '/plan-updates' },
 };
 
@@ -17,31 +17,53 @@ export default async function PlanUpdatesIndexPage({
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-slate-50 px-5 py-10 text-slate-900 md:px-8">
-      <div className="mx-auto w-full max-w-5xl space-y-8">
+      <div className="mx-auto w-full max-w-6xl space-y-8">
         <div className="space-y-3">
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
             {isVi ? 'Cập nhật gói dịch vụ Vivutrade' : 'Vivutrade Plan Updates'}
           </h1>
           <p className="max-w-3xl text-slate-700">
             {isVi
-              ? 'Hai gói trả phí của Vivutrade đang được hoàn thiện theo hai hướng rất khác nhau: một gói tập trung vào web terminal thực chiến cho trader MT5, và một gói tập trung vào sức mạnh AI cho workflow chiến lược chuyên sâu.'
-              : 'Vivutrade paid plans are evolving along two distinct tracks: one optimized for serious MT5 web execution, and one built around advanced AI-powered strategy workflows.'}
+              ? 'Ba gói Free, Nâng cao và Cao cấp được thiết kế cho ba nhóm người dùng khác nhau: bắt đầu có hệ thống, nâng tốc độ workflow MT5 và vận hành chiến lược bằng AI ở cấp độ team.'
+              : 'Free, Pro, and AI plans are built for distinct user needs: structured onboarding, faster MT5 web execution, and strategic AI workflows for teams.'}
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-600">
+                {isVi ? 'Gói Miễn phí' : 'Free Plan'}
+              </p>
+              <h2 className="text-2xl font-black text-slate-900">
+                {isVi ? 'Bắt đầu giao dịch có hệ thống, không tốn phí' : 'Start with a structured workflow, free forever'}
+              </h2>
+              <p className="text-slate-700">
+                {isVi
+                  ? 'Dành cho người mới cần bộ công cụ chart rõ ràng, dễ dùng để xây thói quen phân tích kỷ luật từ đầu.'
+                  : 'Built for beginners who want a clear and practical chart toolkit to build disciplined habits from day one.'}
+              </p>
+              <Link
+                href="/plan-updates/free"
+                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-slate-700"
+              >
+                {isVi ? 'Đọc bài về gói Miễn phí' : 'Read the Free article'}
+              </Link>
+            </div>
+          </article>
+
           <article className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
             <div className="space-y-3">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">
                 {isVi ? 'Gói Nâng cao' : 'Pro Plan'}
               </p>
               <h2 className="text-2xl font-black text-slate-900">
-                {isVi ? 'Web terminal MT5 hiện đại, nhanh và rõ ràng' : 'A modern MT5 web terminal built for speed and clarity'}
+                {isVi ? 'Workflow web MT5 hiện đại, nhanh và liền mạch' : 'A modern MT5 web workflow built for speed'}
               </h2>
               <p className="text-slate-700">
                 {isVi
-                  ? 'Dành cho trader cần một không gian giao dịch web thực sự mạnh, giảm thao tác thừa và theo sát dữ liệu thực chiến.'
-                  : 'Built for traders who want a truly capable web workspace that cuts friction and stays close to live execution realities.'}
+                  ? 'Dành cho user MT5 muốn giảm thao tác rời rạc, đồng bộ dữ liệu tốt hơn và phản ứng nhanh hơn mỗi phiên.'
+                  : 'For MT5 users who want less fragmented execution, better sync, and faster session performance.'}
               </p>
               <Link
                 href="/plan-updates/pro"
@@ -58,12 +80,12 @@ export default async function PlanUpdatesIndexPage({
                 {isVi ? 'Gói Cao cấp' : 'AI Plan'}
               </p>
               <h2 className="text-2xl font-black text-slate-900">
-                {isVi ? 'Lớp AI chiến lược dành cho team và trader nâng cao' : 'An advanced AI strategy layer for teams and power users'}
+                {isVi ? 'Lớp AI chiến lược cho team và power user' : 'A strategic AI layer for teams and power users'}
               </h2>
               <p className="text-slate-700">
                 {isVi
-                  ? 'Phù hợp với người dùng muốn dùng AI để đánh giá, tinh chỉnh và vận hành chiến lược ở mức sâu hơn thị trường hiện tại.'
-                  : 'Designed for users who want AI to analyze, refine, and operate strategies at a depth beyond today’s mainstream platforms.'}
+                  ? 'Phù hợp với nhóm cần tối ưu rule theo dữ liệu, quản trị rủi ro chủ động và theo dõi hiệu suất minh bạch.'
+                  : 'Built for teams that need data-driven rule optimization, active risk control, and transparent performance tracking.'}
               </p>
               <Link
                 href="/plan-updates/ai"

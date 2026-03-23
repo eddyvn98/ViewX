@@ -57,6 +57,7 @@ export function useChartIndicators(
     }, [chartId, symbol, indicators.length, addIndicators]);
 
     const lastBarTimeRef = useRef<number>(0);
+    const lastCandlesLengthRef = useRef<number>(0);
     const stableCandlesRef = useRef<Candle[]>([]);
     const lastKeyRef = useRef<string>('');
 
@@ -66,6 +67,7 @@ export function useChartIndicators(
             lastKeyRef.current = key;
             batchVersionRef.current += 1;
             lastBarTimeRef.current = 0;
+            lastCandlesLengthRef.current = 0;
             stableCandlesRef.current = [];
             runtimeByIdRef.current = {};
             clearChartIndicatorRuntime(chartId);
@@ -91,9 +93,13 @@ export function useChartIndicators(
                 ? Number((lastBar.time as { timestamp?: number }).timestamp ?? 0)
                 : Number(lastBar.time)) || 0;
             const isNewBar = lastTime !== lastBarTimeRef.current;
+            const hasLengthChanged = candles.length !== lastCandlesLengthRef.current;
 
-            if (isNewBar || stableCandlesRef.current.length === 0) {
+            // Rebuild stable candles whenever dataset length changes (e.g. left-side backfill)
+            // or when a new realtime bar starts.
+            if (isNewBar || hasLengthChanged || stableCandlesRef.current.length === 0) {
                 lastBarTimeRef.current = lastTime;
+                lastCandlesLengthRef.current = candles.length;
                 stableCandlesRef.current = formatCandles(candles);
             }
 
@@ -108,7 +114,8 @@ export function useChartIndicators(
             });
 
             const visibleIndicators = indicators.filter(i => i.visible);
-            const needsUpdate = isNewBar || stableCandlesRef.current.length === candles.length;
+            // Force full indicator recomputation when history was prepended/appended.
+            const needsUpdate = isNewBar || hasLengthChanged || stableCandlesRef.current.length === candles.length;
             const indicatorsToCalculate: IndicatorConfig[] = [];
 
             visibleIndicators.forEach(config => {
