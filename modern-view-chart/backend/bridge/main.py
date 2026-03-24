@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+import argparse
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -11,12 +12,7 @@ from websocket_client import BridgeClient
 from alert_service import AlertService
 from memory_service import MemoryService
 import MetaTrader5 as mt5
-
-if sys.platform == "win32":
-    import io
-
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
+# Default settings
 DEFAULT_CORE_SYMBOLS = ["XAUUSDm", "BTCUSDm", "ETHUSDm", "EURUSDm", "GBPUSDm"]
 TIMEFRAME_MAP = {
     "1m": mt5.TIMEFRAME_M1,
@@ -119,15 +115,28 @@ DAILY_OPEN_REFRESH_INTERVAL_SEC = env_float("BRIDGE_DAILY_OPEN_REFRESH_SEC", 300
 
 
 async def main():
+    parser = argparse.ArgumentParser(description="Vivutrade MT5 Bridge")
+    parser.add_argument("--name", default="MT5", help="Bridge instance name")
+    parser.add_argument("--path", default=None, help="Path to MT5 terminal64.exe")
+    args = parser.parse_args()
+
+    print(f"[BRIDGE] Starting bridge: {args.name}")
+    if args.path:
+        print(f"[BRIDGE] Target MT5 path: {args.path}")
+
     core_candidates = parse_core_symbols()
-    service = MT5Service(core_candidates, TIMEFRAME_MAP)
+    service = MT5Service(core_candidates, TIMEFRAME_MAP, terminal_path=args.path)
     alert_service = AlertService()
     memory_service = MemoryService()
+    
+    print("[BRIDGE] Initializing services...")
     await memory_service.initialize()
-
+    
     while not service.initialize():
-        print("[BRIDGE] MT5 not ready. Retrying in 10s...")
+        print(f"[BRIDGE] MT5 ({args.name}) not ready or not found. Retrying in 10s...")
         await asyncio.sleep(10)
+    
+    print(f"[OK] Bridge '{args.name}' connected to MT5 and ready.")
 
     available_symbols = service.fetch_available_symbols()
     available_symbol_map = {}

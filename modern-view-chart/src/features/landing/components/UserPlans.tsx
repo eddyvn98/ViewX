@@ -39,7 +39,7 @@ export function UserPlans() {
             border: 'border-slate-200',
             bg: 'bg-white',
             cta: t('free.cta'),
-            href: '/chart',
+            href: '/plan-details/free',
             bullets: [t('free.b1'), t('free.b2'), t('free.b3'), t('free.b4'), t('free.b5'), t('free.b6'), t('free.b7'), t('free.b8')],
         },
         {
@@ -51,7 +51,7 @@ export function UserPlans() {
             border: 'border-emerald-300',
             bg: 'bg-emerald-50/60',
             cta: t('pro.cta'),
-            href: '/plan-updates/pro',
+            href: '/plan-details/pro',
             bullets: [t('pro.b1'), t('pro.b2'), t('pro.b3'), t('pro.b4'), t('pro.b5')],
             badge: t('pro.badge'),
         },
@@ -64,7 +64,7 @@ export function UserPlans() {
             border: 'border-amber-300',
             bg: 'bg-amber-50/70',
             cta: t('proPlus.cta'),
-            href: '/plan-updates/ai',
+            href: '/plan-details/pro-plus',
             bullets: [t('proPlus.b1'), t('proPlus.b2'), t('proPlus.b3'), t('proPlus.b4'), t('proPlus.b5')],
         },
     ];
@@ -112,7 +112,7 @@ export function UserPlans() {
                                 ))}
                             </ul>
                             <Link
-                                href={plan.href}
+                                href={plan.href as any}
                                 className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-slate-700"
                             >
                                 {plan.cta}

@@ -3,13 +3,19 @@ import time
 import MetaTrader5 as mt5
 
 class MT5Service:
-    def __init__(self, symbols, timeframe_map):
+    def __init__(self, symbols, timeframe_map, terminal_path=None):
         self.symbols = symbols
         self.timeframe_map = timeframe_map
+        self.terminal_path = terminal_path
 
     def initialize(self):
-        if not mt5.initialize():
-            print("[ERROR] MT5 Init failed")
+        init_kwargs = {}
+        if self.terminal_path:
+            init_kwargs["path"] = self.terminal_path
+            
+        if not mt5.initialize(**init_kwargs):
+            error = mt5.last_error()
+            print(f"[ERROR] MT5 Init failed: {error}")
             return False
         return True
 
