@@ -6,7 +6,15 @@ export const routing = defineRouting({
     locales: ['vi', 'en'],
 
     // Used when no locale matches
-    defaultLocale: 'vi'
+    defaultLocale: 'vi',
+
+    // Support localized pathnames
+    pathnames: {
+        '/premium-ai': {
+            en: '/premium-ai',
+            vi: '/goi-cao-cap'
+        }
+    }
 });
 
 // Lightweight wrappers around Next.js' navigation APIs

@@ -87,12 +87,9 @@ export function AIChatView() {
         <div className="flex flex-col h-full bg-secondary/20 rounded-lg border border-border overflow-hidden">
             {/* Inner Header */}
             <div className="flex items-center justify-between px-3 py-2 bg-secondary/60 border-b border-border">
-                <div className="flex items-center gap-2">
-                    <BrainCircuit size={16} className="text-blue-500 animate-pulse" />
-                    <span className="text-[11px] font-black uppercase tracking-wider text-foreground">AI Assistant</span>
-                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-amber-500/40 text-amber-400 bg-amber-500/10">
-                        Coming Soon
-                    </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <BrainCircuit size={16} className="text-primary animate-pulse" />
+                    <span className="text-[11px] font-black uppercase tracking-wider text-foreground whitespace-nowrap">AI Assistant</span>
                 </div>
                 <div className="flex bg-secondary/80 p-0.5 rounded-md border border-border">
                     <button
@@ -112,20 +109,71 @@ export function AIChatView() {
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar" ref={scrollRef}>
-                {isLoading && messages.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center opacity-20 gap-3">
-                        <Loader2 size={32} className="animate-spin" />
-                        <span className="text-xs uppercase font-black">Connecting to Gemini...</span>
-                    </div>
-                ) : !hasAccessToken ? (
-                    <div className="flex-1 flex flex-col items-center justify-center opacity-40 gap-3 text-center">
-                        <ShieldCheck size={36} />
-                        <span className="text-[11px] uppercase font-black max-w-[220px]">Sign in to use AI Assistant</span>
-                    </div>
-                ) : !aiEnabled ? (
-                    <div className="flex-1 flex flex-col items-center justify-center opacity-70 gap-3 text-center">
-                        <ShieldCheck size={36} />
-                        <span className="text-[11px] uppercase font-black max-w-[260px]">AI is temporarily disabled while we finish implementation.</span>
+                {/* FORCE DISPLAY FOR MOCKUP SCREENSHOT */}
+                {true ? (
+                    <div className="flex-1 flex flex-col p-4 relative overflow-hidden group">
+                        {/* Background glow */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+                        
+                        {/* Vision Active Status */}
+                        <div className="flex items-center justify-between mb-6 relative z-10">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--glow-primary)]" />
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Vision Active</span>
+                            </div>
+                            <ShieldCheck size={16} className="text-primary/50" />
+                        </div>
+
+                        {/* Chat Messages Mock */}
+                        <div className="flex-1 flex flex-col gap-4 relative z-10">
+                            {/* User Request */}
+                            <div className="self-end max-w-[85%] bg-primary/10 backdrop-blur-md border border-primary/20 rounded-2xl rounded-tr-sm p-3 shadow-sm">
+                                <p className="text-[12px] text-foreground">Phân tích giúp tôi setup XAUUSD hiện tại trên màn hình. Có nên Long không?</p>
+                            </div>
+
+                            {/* AI Response with Vision Context */}
+                            <div className="self-start max-w-[95%] bg-card/90 backdrop-blur-xl border border-border rounded-2xl rounded-tl-sm p-5 shadow-lg ring-1 ring-border/50">
+                                <div className="flex items-center gap-2 mb-4 drop-shadow-sm">
+                                    <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                        <BrainCircuit size={16} />
+                                    </div>
+                                    <span className="text-[12px] font-black uppercase tracking-widest text-primary">Premium AI</span>
+                                </div>
+                                
+                                <div className="space-y-4 text-[13px] text-muted-foreground leading-relaxed">
+                                    <p>Tôi đã phân tích hình ảnh biểu đồ XAUUSD khung 15m của bạn.</p>
+                                    
+                                    <div className="pl-3 border-l-2 border-primary/40 space-y-2">
+                                        <p className="flex items-start gap-2">
+                                            <span className="text-primary font-bold mt-0.5">•</span>
+                                            <span><strong className="text-foreground">Hành vi giá:</strong> Cây nến hiện tại vừa tạo một cụm Pinbar rút râu mạnh tại vùng cản 2345.0.</span>
+                                        </p>
+                                        <p className="flex items-start gap-2">
+                                            <span className="text-cyan-600 dark:text-cyan-400 font-bold mt-0.5">•</span>
+                                            <span><strong className="text-foreground">Chỉ báo RSI:</strong> Phân kỳ đáy rsi (đường màu tím) đang hình thành ở mức 32.</span>
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 mt-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
+                                        <p className="font-bold text-[12px] uppercase mb-1">💡 Đề xuất giao dịch</p>
+                                        <p className="text-[12px] opacity-90">Có thể mở vị thế Long quanh 2346. Stoploss an toàn đặt dưới râu nến tại 2342.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Demo Overlay for article link */}
+                             <div className="mt-auto pt-6 w-full flex justify-center pb-2">
+                                <a 
+                                    href="/en/premium-ai" 
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-2"
+                                >
+                                    Đọc Chi Tiết Thiết Kế
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <>
