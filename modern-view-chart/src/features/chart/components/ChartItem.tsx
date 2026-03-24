@@ -5,6 +5,7 @@ import { Maximize2, ExternalLink, X, Link, Bell } from 'lucide-react';
 import { useMarketStore, ChartInstance } from '@/lib/store';
 import { ChartContainer } from '../ChartContainer';
 import { cn } from '@/lib/utils';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 
 interface ChartItemProps {
@@ -19,6 +20,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
     const toggleMaximizeChart = useMarketStore((state) => state.toggleMaximizeChart);
     const removeChart = useMarketStore((state) => state.removeChart);
     const updateChart = useMarketStore((state) => state.updateChart);
+    const addNotification = useMarketStore((state) => state.addNotification);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [isNarrow, setIsNarrow] = useState(false);
@@ -36,6 +38,32 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
         observer.observe(containerRef.current);
         return () => observer.disconnect();
     }, []);
+
+    const resolveAlertPrice = React.useCallback((): number => {
+        const store = useMarketStore.getState();
+        const normalizedSymbol = normalizeSymbol(chart.symbol);
+
+        const directTicker = store.tickers[`${chart.source}:${chart.symbol}`]?.price;
+        if (Number.isFinite(directTicker) && Number(directTicker) > 0) return Number(directTicker);
+
+        const normalizedTicker = store.tickers[normalizedSymbol]?.price;
+        if (Number.isFinite(normalizedTicker) && Number(normalizedTicker) > 0) return Number(normalizedTicker);
+
+        const exactKey = `${chart.source}:${normalizedSymbol}:${chart.interval}`;
+        const exactCandles = store.candleData[exactKey];
+        const exactClose = exactCandles?.[exactCandles.length - 1]?.close;
+        if (Number.isFinite(exactClose) && Number(exactClose) > 0) return Number(exactClose);
+
+        const prefix = `${chart.source}:${normalizedSymbol}:`;
+        const anyKey = Object.keys(store.candleData).find((key) => key.startsWith(prefix));
+        if (anyKey) {
+            const candles = store.candleData[anyKey];
+            const close = candles?.[candles.length - 1]?.close;
+            if (Number.isFinite(close) && Number(close) > 0) return Number(close);
+        }
+
+        return 0;
+    }, [chart.interval, chart.source, chart.symbol]);
 
     return (
         <div
@@ -88,7 +116,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const store = useMarketStore.getState();
-                                const price = store.tickers[`${chart.source}:${chart.symbol}`]?.price || store.tickers[chart.symbol]?.price || 0;
+                                const price = resolveAlertPrice();
                                 if (price > 0) {
                                     store.addAlert({
                                         symbol: chart.symbol,
@@ -96,6 +124,9 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                                         active: true,
                                         type: 'crossing'
                                     });
+                                    addNotification(`Alert created: ${chart.symbol} @ ${price}`, 'success');
+                                } else {
+                                    addNotification(`Chua co gia realtime cho ${chart.symbol}. Thu lai sau vai giay.`, 'warning');
                                 }
                             }}
                             className="ml-0.5 p-1 text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-500/5 rounded-lg transition-all group/bell"

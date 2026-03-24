@@ -7,14 +7,14 @@ export interface MarketSlice {
     isBridgeOnline: boolean;
     tickers: Record<string, Ticker>;
     symbolInfo: Record<string, SymbolInfo>; // Cache for symbol specs
-    availableSymbols: Array<Record<string, unknown>>;
+    availableSymbols: Array<Record<string, unknown> | string>;
     watchlist: string[];
     setConnected: (status: boolean) => void;
     setBridgeOnline: (status: boolean) => void;
     updateTicker: (symbol: string, data: Partial<Ticker>) => void;
     updateTickers: (data: Record<string, Partial<Ticker>>) => void;
     setSymbolInfo: (data: SymbolInfo) => void;
-    setAvailableSymbols: (symbols: Array<Record<string, unknown>>) => void;
+    setAvailableSymbols: (symbols: Array<Record<string, unknown> | string>) => void;
     addToWatchlist: (symbol: string) => void;
     removeFromWatchlist: (symbol: string) => void;
 }

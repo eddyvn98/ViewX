@@ -4,7 +4,7 @@ import { resolveDataSource } from './market-list-utils';
 export interface BuildSymbolListParams {
     mode: 'discovery' | 'watchlist';
     watchlist: string[];
-    availableSymbols: Array<{ symbol?: string | undefined }>;
+    availableSymbols: Array<{ symbol?: string | undefined } | string>;
     allSymbols: string[];
     deferredSearch: string;
     sourceTab: SourceTab;
@@ -28,7 +28,8 @@ export function buildSymbolList({
     const normalizedSearch = deferredSearch.toLowerCase();
 
     availableSymbols.forEach((s) => {
-        const symbol = String(s?.symbol || '').trim();
+        const raw = typeof s === 'string' ? s : s?.symbol;
+        const symbol = String(raw || '').trim();
         if (!symbol) return;
         discoveryMap.set(symbol, resolveDataSource(symbol));
     });
