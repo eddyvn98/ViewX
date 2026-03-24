@@ -276,7 +276,57 @@
       "indicators": "Chỉ báo",
       "searchIndicatorPlaceholder": "Tìm chỉ báo...",
       "noResults": "Không có kết quả",
-      "manualDrawingModeEnabled": "Đã bật chế độ vẽ thủ công"
+      "manualDrawingModeEnabled": "Đã bật chế độ vẽ thủ công",
+      "hide": "Ẩn",
+      "show": "Hiện",
+      "removeIndicator": "Xóa chỉ báo",
+      "appearance": "Hiển thị",
+      "mainColor": "Màu chính",
+      "indicatorNames": {
+        "MARKET_STRUCTURE": "Cấu trúc thị trường",
+        "BREAKOUT_RAYS": "Tia phá vỡ",
+        "TREND_LINES": "Đường xu hướng",
+        "FIBONACCI": "Fibonacci",
+        "FIBONACCI_EXTENSION": "Mở rộng Fibonacci"
+      },
+      "drawing": {
+        "appliedObjects": "Đối tượng đã áp dụng",
+        "hideAll": "Ẩn tất cả",
+        "showAll": "Hiện tất cả",
+        "lockAll": "Khóa tất cả",
+        "unlockAll": "Mở khóa tất cả",
+        "deleteAll": "Xóa tất cả",
+        "deleteAllConfirm": "Xóa toàn bộ đối tượng vẽ?",
+        "noManualDrawings": "Chưa có đối tượng vẽ thủ công",
+        "hide": "Ẩn",
+        "show": "Hiện",
+        "lock": "Khóa",
+        "unlock": "Mở khóa",
+        "lineStyle": "Kiểu nét",
+        "width": "Độ dày",
+        "activeLevels": "Mức đang bật",
+        "objectNames": {
+          "fibRetracement": "Thoái lui Fibonacci",
+          "fibExtension": "Mở rộng Fibonacci",
+          "trendLine": "Đường xu hướng",
+          "horizontalLine": "Đường ngang",
+          "verticalLine": "Đường dọc",
+          "crosshair": "Con trỏ chữ thập",
+          "rectangle": "Hình chữ nhật",
+          "horizontalLineShort": "Đường ngang",
+          "fibRetracementShort": "Fib thoái lui",
+          "fibExtensionShort": "Fib mở rộng"
+        },
+        "magnetMode": "Chế độ nam châm",
+        "magnetModeTooltip": "Chế độ nam châm (bám Đỉnh/Đáy)",
+        "clear": "Xóa"
+      },
+      "symbolLink": "Liên kết symbol",
+      "toolbar": {
+        "toggleDrawingToolbar": "Bật/tắt thanh công cụ vẽ",
+        "crosshairSync": "Đồng bộ crosshair",
+        "toggleStrategyMarkers": "Bật/tắt dấu mốc chiến lược"
+      }
     }
   },
   "ChartToolbar": {

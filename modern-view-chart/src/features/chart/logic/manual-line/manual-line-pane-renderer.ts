@@ -104,7 +104,7 @@ export class ManualLinePaneRenderer implements IPrimitivePaneRenderer {
                 if (type === 'horizontal-line') {
                     const y = series.priceToCoordinate(points[0].price);
                     if (y !== null) {
-                        midX = (timeScale.width() - 50) * horizontalPixelRatio;
+                        midX = Math.max(24, timeScale.width() - 80) * horizontalPixelRatio;
                         midY = y * verticalPixelRatio;
                     }
                 } else if (type === 'vertical-line') {

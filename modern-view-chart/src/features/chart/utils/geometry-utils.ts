@@ -53,7 +53,7 @@ export function getDeleteButtonPosition(
     if (drawing.type === 'horizontal-line') {
         const py = series.priceToCoordinate(drawing.points[0].price);
         if (py !== null) {
-            x = timeScale.width() - 50;
+            x = Math.max(24, timeScale.width() - 80);
             y = py;
         }
     } else if (drawing.type === 'vertical-line') {

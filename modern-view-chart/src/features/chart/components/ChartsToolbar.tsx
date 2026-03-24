@@ -11,6 +11,7 @@ import { LayoutGridSelector } from './LayoutGridSelector';
 import { ChartClock } from './ChartClock';
 import { cn } from '@/lib/utils';
 import { CandleTypeToolbar } from './CandleTypeToolbar';
+import { useTranslations } from 'next-intl';
 
 type ChartGroup = 'none' | 'A' | 'B' | 'C' | 'D';
 
@@ -23,6 +24,7 @@ const NEXT_GROUP: Record<ChartGroup, ChartGroup> = {
 };
 
 export function ChartsToolbar() {
+    const t = useTranslations('ChartPanel.layerManager');
     const { activeChart } = useMarketStore(useShallow((state: RootState) => {
         const activeTab = state.activeTabId ? state.tabs[state.activeTabId] : null;
         const activeChartId = activeTab?.activeChartId;
@@ -64,7 +66,7 @@ export function ChartsToolbar() {
                                 ? "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                                 : "text-primary bg-primary/10"
                         )}
-                        title={`Symbol Link: ${activeChart?.group || 'None'}`}
+                        title={`${t('symbolLink')}: ${activeChart?.group || 'None'}`}
                     >
                         <Link size={14} />
                     </button>
@@ -85,12 +87,12 @@ export function ChartsToolbar() {
                                 ? "text-primary bg-primary/10 border border-primary/20"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent"
                         )}
-                        title="Toggle Drawing Toolbar"
+                        title={t('toolbar.toggleDrawingToolbar')}
                     >
                         <Pencil size={14} />
                     </button>
 
-                    <button onClick={() => setCrosshairSync(!isCrosshairSyncEnabled)} className={cn("p-1 rounded transition-all", isCrosshairSyncEnabled ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/40")} title="Crosshair Sync"><Crosshair size={14} /></button>
+                    <button onClick={() => setCrosshairSync(!isCrosshairSyncEnabled)} className={cn("p-1 rounded transition-all", isCrosshairSyncEnabled ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary/40")} title={t('toolbar.crosshairSync')}><Crosshair size={14} /></button>
 
                     {/* Marker Toggle */}
                     <button
@@ -101,7 +103,7 @@ export function ChartsToolbar() {
                                 ? "text-primary bg-primary/10"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                         )}
-                        title="Toggle Strategy Markers"
+                        title={t('toolbar.toggleStrategyMarkers')}
                     >
                         <HistoryIcon size={14} />
                     </button>

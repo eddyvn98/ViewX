@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { IChartApi } from 'lightweight-charts';
+import type { Candle } from '@/lib/store/types';
 
 /**
  * Hook to handle double-click events on chart scales to reset them,
@@ -12,7 +13,8 @@ export function useChartScaleReset(
     priceContainerRef: React.RefObject<HTMLDivElement | null>,
     subchartContainerRef: React.RefObject<HTMLDivElement | null>,
     timescaleContainerRef: React.RefObject<HTMLDivElement | null>,
-    isAutoScrollEnabledRef?: React.RefObject<boolean>
+    isAutoScrollEnabledRef?: React.RefObject<boolean>,
+    candles: Candle[] = []
 ) {
     useEffect(() => {
         const priceContainer = priceContainerRef.current;
@@ -20,6 +22,49 @@ export function useChartScaleReset(
         const timescaleContainer = timescaleContainerRef.current;
 
         if (!priceContainer || !subchartContainer || !timescaleContainer) return;
+
+        const focusRecentCandles = (count = 50) => {
+            const chart = priceChartRef.current;
+            if (!chart) return;
+
+            const total = candles.length;
+            if (total <= 0) {
+                chart.timeScale().fitContent();
+                chart.timeScale().scrollToRealTime();
+                if (isAutoScrollEnabledRef) isAutoScrollEnabledRef.current = true;
+                return;
+            }
+
+            const startIndex = Math.max(0, total - count);
+            const endIndex = total - 1;
+            const slice = candles.slice(startIndex, endIndex + 1);
+
+            let minLow = Number.POSITIVE_INFINITY;
+            let maxHigh = Number.NEGATIVE_INFINITY;
+            for (const candle of slice) {
+                const low = Number(candle.low);
+                const high = Number(candle.high);
+                if (Number.isFinite(low) && low < minLow) minLow = low;
+                if (Number.isFinite(high) && high > maxHigh) maxHigh = high;
+            }
+
+            chart.timeScale().setVisibleLogicalRange({
+                from: Math.max(-0.5, startIndex - 1),
+                to: endIndex + 2,
+            });
+
+            const priceScale = chart.priceScale('right') as { setVisibleRange?: (range: { from: number; to: number }) => void };
+            if (Number.isFinite(minLow) && Number.isFinite(maxHigh) && maxHigh > minLow) {
+                const padding = (maxHigh - minLow) * 0.08;
+                priceScale.setVisibleRange?.({
+                    from: minLow - padding,
+                    to: maxHigh + padding,
+                });
+            } else {
+                chart.priceScale('right').applyOptions({ autoScale: true });
+            }
+            if (isAutoScrollEnabledRef) isAutoScrollEnabledRef.current = true;
+        };
 
         /**
          * Resets price scale to auto when double-clicked on the right side.
@@ -53,17 +98,8 @@ export function useChartScaleReset(
          * Resets time scale to default zoom/position when double-clicked on the timescale footer.
          */
         const handleTimeScaleDblClick = (e: MouseEvent) => {
-            const chart = priceChartRef.current;
-            if (chart) {
-                e.stopPropagation();
-                // We use the main chart for fit calculations because it doesn't have 
-                // the extra future points that the footer chart has.
-                chart.timeScale().fitContent();
-                chart.timeScale().scrollToRealTime();
-                if (isAutoScrollEnabledRef) {
-                    isAutoScrollEnabledRef.current = true;
-                }
-            }
+            e.stopPropagation();
+            focusRecentCandles(50);
         };
 
         const onPriceDblClick = handlePriceScaleDblClick(priceChartRef, priceContainer, true);
@@ -95,6 +131,6 @@ export function useChartScaleReset(
         subchartContainerRef,
         timescaleContainerRef,
         isAutoScrollEnabledRef,
+        candles,
     ]);
 }
-

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore, RootState } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -26,6 +26,17 @@ export function useDrawingEditor(
         updateDrawing: state.updateDrawing,
         removeDrawing: state.removeDrawing,
     })));
+    const dragStateRef = useRef({
+        isDragging: false,
+        isDraggingBody: false,
+        draggedPointIndex: -1,
+        draggedDrawingId: null as string | null,
+        dragStartPos: null as { x: number; y: number } | null,
+        dragStartPoints: null as Array<{ time: number; price: number }> | null,
+        draggedFinalPoints: null as Array<{ time: number; price: number }> | null,
+        lastLogicalDelta: 0,
+        lastPriceDelta: 0,
+    });
 
     const handleClick = useCallback((param: MouseEventParams) => {
         if (!chart || !series) return;
@@ -57,6 +68,7 @@ export function useDrawingEditor(
             candles,
             snapToCandle,
             updateDrawing,
+            stateRef: dragStateRef.current,
         });
     }, [chart, series, chartId, containerRef, isDrawing, selectedDrawingId, chartDrawings, primitivesRef, candles, snapToCandle, updateDrawing]);
 

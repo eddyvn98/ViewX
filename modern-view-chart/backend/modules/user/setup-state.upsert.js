@@ -1,8 +1,10 @@
 import userStateModel from '../../model/user_state.js';
+import userStateDrawingsModel from '../../model/user_state_drawings.js';
 import {
   isDatabaseReadyForUserState,
   isPlainObject,
   parseBaseRevision,
+  parseMaxDrawingsBytes,
   parseMaxStateBytes,
   sanitizeClientId,
 } from './user-state.helpers.js';
@@ -46,16 +48,33 @@ function buildSavedEnvelope(scope, doc) {
 }
 
 function parseStatePayload(req) {
-  const state = req.body?.state;
-  if (!isPlainObject(state)) {
+  const incomingState = req.body?.state;
+  if (!isPlainObject(incomingState)) {
     return { error: { status: 400, payload: { error: 'state must be an object' } } };
   }
+
+  const state = { ...incomingState };
+  let chartDrawings = null;
+  if (isPlainObject(state.chartDrawings)) {
+    chartDrawings = state.chartDrawings;
+  }
+  delete state.chartDrawings;
+
   const serialized = JSON.stringify(state);
   const maxBytes = parseMaxStateBytes();
   if (Buffer.byteLength(serialized, 'utf8') > maxBytes) {
     return { error: { status: 413, payload: { error: 'state payload too large' } } };
   }
-  return { state, serialized };
+
+  if (chartDrawings !== null) {
+    const serializedDrawings = JSON.stringify(chartDrawings);
+    const maxDrawingsBytes = parseMaxDrawingsBytes();
+    if (Buffer.byteLength(serializedDrawings, 'utf8') > maxDrawingsBytes) {
+      return { error: { status: 413, payload: { error: 'drawings payload too large' } } };
+    }
+  }
+
+  return { state, chartDrawings, serialized };
 }
 
 function resolveSchemaVersion(req) {
@@ -71,6 +90,7 @@ function resolveClientUpdatedAt(req) {
 async function persistState({
   scope,
   state,
+  chartDrawings,
   schemaVersion,
   clientUpdatedAt,
   sourceClientId,
@@ -154,6 +174,21 @@ async function persistState({
     };
   }
 
+  if (chartDrawings !== null) {
+    await userStateDrawingsModel.findOneAndUpdate(
+      { scopeType: scope.scopeType, scopeId: scope.scopeId },
+      {
+        $set: {
+          chartDrawings,
+          clientUpdatedAt,
+          lastSourceClientId: sourceClientId,
+          lastSyncedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true },
+    );
+  }
+
   return { doc };
 }
 
@@ -186,6 +221,7 @@ export function createUpsertHandler({ resolveScope, requireDatabase = false }) {
     const result = await persistState({
       scope,
       state: payload.state,
+      chartDrawings: payload.chartDrawings,
       schemaVersion,
       clientUpdatedAt,
       sourceClientId,

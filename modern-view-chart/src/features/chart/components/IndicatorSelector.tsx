@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { X, Plus, Search, Sparkles } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+
 import { filterIndicatorCategories } from './indicator-selector/indicator-selector-filter';
+import { CATEGORY_I18N, INDICATOR_I18N } from './indicator-selector/indicator-localization';
 
 interface IndicatorSelectorProps {
     onClose: () => void;
@@ -11,6 +14,10 @@ interface IndicatorSelectorProps {
 }
 
 export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) {
+    const t = useTranslations('ChartPanel.layerManager');
+    const locale = useLocale();
+    const lang = locale === 'vi' ? 'vi' : 'en';
+
     const addIndicator = useMarketStore(state => state.addIndicator);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
@@ -36,7 +43,7 @@ export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) 
                     <>
                         <div className="flex flex-col">
                             <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-primary text-glow-primary">
-                                Indicators
+                                {t('tabs.indicators')}
                             </h3>
                         </div>
                         <div className="flex items-center gap-1">
@@ -54,7 +61,7 @@ export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) 
                         <input
                             autoFocus
                             type="text"
-                            placeholder="Tìm ch? báo..."
+                            placeholder={t('searchIndicatorPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onBlur={() => !searchQuery && setIsSearching(false)}
@@ -77,13 +84,15 @@ export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) 
                 {filteredCategories.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 opacity-10 gap-3">
                         <Search size={24} />
-                        <span className="text-[9px] font-bold uppercase tracking-widest">No results</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest">{t('noResults')}</span>
                     </div>
                 ) : (
                     filteredCategories.map(category => (
                         <div key={category.id} className="space-y-1.5">
                             <div className="flex items-center gap-2 px-1">
-                                <h4 className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">{category.name}</h4>
+                                <h4 className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
+                                    {CATEGORY_I18N[category.id]?.[lang] ?? category.name}
+                                </h4>
                                 <div className="h-[1px] flex-1 bg-white/5" />
                             </div>
 
@@ -108,7 +117,9 @@ export function IndicatorSelector({ onClose, chartId }: IndicatorSelectorProps) 
                                                 <span className="text-[10px] font-bold text-foreground tracking-tight uppercase truncate">
                                                     {indicator.type === 'RSI' && indicator.pane === 'subchart' ? 'RSI (Sub)' : indicator.type}
                                                 </span>
-                                                <span className="text-[8px] text-muted-foreground/40 font-semibold truncate leading-none">{indicator.name}</span>
+                                                <span className="text-[8px] text-muted-foreground/40 font-semibold truncate leading-none">
+                                                    {INDICATOR_I18N[indicator.type]?.[lang] ?? indicator.name}
+                                                </span>
                                             </div>
                                         </div>
 

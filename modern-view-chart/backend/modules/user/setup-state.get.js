@@ -1,4 +1,5 @@
 import userStateModel from '../../model/user_state.js';
+import userStateDrawingsModel from '../../model/user_state_drawings.js';
 import {
   buildEmptySetupStateResponse,
   isDatabaseReadyForUserState,
@@ -20,10 +21,21 @@ function formatStateResponse(scope, doc) {
 }
 
 export async function fetchState(scope) {
-  return userStateModel
+  const doc = await userStateModel
     .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
     .select(SELECT_STATE_FIELDS)
     .lean();
+  if (!doc) return null;
+
+  const drawingsDoc = await userStateDrawingsModel
+    .findOne({ scopeType: scope.scopeType, scopeId: scope.scopeId })
+    .select('chartDrawings')
+    .lean();
+  if (isPlainObject(drawingsDoc?.chartDrawings)) {
+    doc.state = isPlainObject(doc.state) ? { ...doc.state } : {};
+    doc.state.chartDrawings = drawingsDoc.chartDrawings;
+  }
+  return doc;
 }
 
 export function createGetStateHandler({ resolveScope, requireDatabase = false }) {

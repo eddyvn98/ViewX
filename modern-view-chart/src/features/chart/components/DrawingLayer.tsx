@@ -4,8 +4,10 @@ import { Trash2, Eye, EyeOff, Settings2, Lock, Unlock } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export function DrawingLayer() {
+    const t = useTranslations('ChartPanel.layerManager.drawing');
     const activeTabId = useMarketStore(state => state.activeTabId);
     const activeChartId = useMarketStore(state => state.tabs[activeTabId || '']?.activeChartId);
     const chartId = activeChartId || '';
@@ -28,7 +30,7 @@ export function DrawingLayer() {
             {/* List of active drawings */}
             <div className="p-3 flex flex-col gap-0.5 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-[11px] font-bold uppercase text-muted-foreground/60 tracking-tight">Applied Objects</h4>
+                    <h4 className="text-[11px] font-bold uppercase text-muted-foreground/60 tracking-tight">{t('appliedObjects')}</h4>
                     {drawings.length > 0 && (
                         <div className="flex items-center gap-1">
                             <button
@@ -36,7 +38,7 @@ export function DrawingLayer() {
                                     const anyVisible = drawings.some(d => d.visible);
                                     toggleAllVisibility(chartId, !anyVisible);
                                 }}
-                                title={drawings.some(d => d.visible) ? "Hide All" : "Show All"}
+                                title={drawings.some(d => d.visible) ? t('hideAll') : t('showAll')}
                                 className="p-1 text-muted-foreground/60 hover:text-primary transition-colors"
                             >
                                 {drawings.some(d => d.visible) ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -46,16 +48,16 @@ export function DrawingLayer() {
                                     const anyLocked = drawings.some(d => d.locked);
                                     toggleAllLock(chartId, !anyLocked);
                                 }}
-                                title={drawings.some(d => d.locked) ? "Unlock All" : "Lock All"}
+                                title={drawings.some(d => d.locked) ? t('unlockAll') : t('lockAll')}
                                 className="p-1 text-muted-foreground/60 hover:text-primary transition-colors"
                             >
                                 {drawings.some(d => d.locked) ? <Lock size={12} /> : <Unlock size={12} />}
                             </button>
                             <button
                                 onClick={() => {
-                                    if (confirm('Delete all drawings?')) clearDrawings(chartId);
+                                    if (confirm(t('deleteAllConfirm'))) clearDrawings(chartId);
                                 }}
-                                title="Delete All"
+                                title={t('deleteAll')}
                                 className="p-1 text-muted-foreground/60 hover:text-red-400 transition-colors"
                             >
                                 <Trash2 size={12} />
@@ -66,7 +68,7 @@ export function DrawingLayer() {
 
                 {drawings.length === 0 && (
                     <div className="text-center py-6 text-muted-foreground/30 text-[11px] italic bg-secondary/5 rounded-lg border border-dashed border-border/40">
-                        No manual drawings
+                        {t('noManualDrawings')}
                     </div>
                 )}
 
@@ -79,7 +81,7 @@ export function DrawingLayer() {
                             <button
                                 onClick={() => toggleVisibility(chartId, drawing.id)}
                                 className={cn("transition-colors flex-shrink-0 p-1 rounded hover:bg-secondary/40", drawing.visible ? "text-blue-500" : "text-muted-foreground/40")}
-                                title={drawing.visible ? "Hide" : "Show"}
+                                title={drawing.visible ? t('hide') : t('show')}
                             >
                                 {drawing.visible ? <Eye size={12} /> : <EyeOff size={12} />}
                             </button>
@@ -87,7 +89,7 @@ export function DrawingLayer() {
                             <button
                                 onClick={() => updateDrawing(chartId, drawing.id, { locked: !drawing.locked })}
                                 className={cn("transition-colors flex-shrink-0 p-1 rounded hover:bg-secondary/40", drawing.locked ? "text-amber-500" : "text-muted-foreground/40")}
-                                title={drawing.locked ? "Unlock" : "Lock"}
+                                title={drawing.locked ? t('unlock') : t('lock')}
                             >
                                 {drawing.locked ? <Lock size={12} /> : <Unlock size={12} />}
                             </button>
@@ -95,13 +97,13 @@ export function DrawingLayer() {
                             <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => setExpandedId(expandedId === drawing.id ? null : drawing.id)}>
                                 <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: drawing.color }} />
                                 <span className="text-[11px] truncate text-foreground font-medium">
-                                    {drawing.type === 'fib-retracement' ? 'Fib Retracement' :
-                                        drawing.type === 'fib-extension' ? 'Fib Extension' :
-                                            drawing.type === 'trend-line' ? 'Trend Line' :
-                                                drawing.type === 'horizontal-line' ? 'Horizontal Line' :
-                                                    drawing.type === 'vertical-line' ? 'Vertical Line' :
-                                                        drawing.type === 'crosshair' ? 'Crosshair' :
-                                                            drawing.type === 'rectangle' ? 'Rectangle' : drawing.type}
+                                    {drawing.type === 'fib-retracement' ? t('objectNames.fibRetracement') :
+                                        drawing.type === 'fib-extension' ? t('objectNames.fibExtension') :
+                                            drawing.type === 'trend-line' ? t('objectNames.trendLine') :
+                                                drawing.type === 'horizontal-line' ? t('objectNames.horizontalLine') :
+                                                    drawing.type === 'vertical-line' ? t('objectNames.verticalLine') :
+                                                        drawing.type === 'crosshair' ? t('objectNames.crosshair') :
+                                                            drawing.type === 'rectangle' ? t('objectNames.rectangle') : drawing.type}
                                 </span>
                             </div>
 
@@ -133,7 +135,7 @@ export function DrawingLayer() {
                                         {/* Color & Line Settings */}
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">Line Style</label>
+                                                <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">{t('lineStyle')}</label>
                                                 <div className="flex bg-secondary/30 rounded p-0.5 gap-0.5">
                                                     {(['solid', 'dashed', 'dotted'] as const).map(style => (
                                                         <button
@@ -153,7 +155,7 @@ export function DrawingLayer() {
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">Width ({drawing.lineWidth}px)</label>
+                                                <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">{t('width')} ({drawing.lineWidth}px)</label>
                                                 <input
                                                     type="range"
                                                     min="1"
@@ -170,7 +172,7 @@ export function DrawingLayer() {
                                         {(drawing.type === 'fib-retracement' || drawing.type === 'fib-extension') && (
                                             <div className="flex flex-col gap-2 border-t border-border/30 pt-2">
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">Active Levels</label>
+                                                    <label className="text-[11px] font-bold text-muted-foreground/60 uppercase">{t('activeLevels')}</label>
                                                     <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">FIBONACCI</span>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-1.5">

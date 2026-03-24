@@ -19,14 +19,25 @@ interface DragArgs {
     candles: Candle[];
     snapToCandle: boolean;
     updateDrawing: (chartId: string, drawingId: string, changes: Partial<DrawingConfig>) => void;
+    stateRef?: {
+        isDragging: boolean;
+        isDraggingBody: boolean;
+        draggedPointIndex: number;
+        draggedDrawingId: string | null;
+        dragStartPos: { x: number; y: number } | null;
+        dragStartPoints: DrawingPoint[] | null;
+        draggedFinalPoints: DrawingPoint[] | null;
+        lastLogicalDelta: number;
+        lastPriceDelta: number;
+    };
 }
 
 export function createDrawingDragHandlers(args: DragArgs) {
     const {
-        chartId, chart, series, containerRef, isDrawing, selectedDrawingId, chartDrawings, primitivesRef, candles, snapToCandle, updateDrawing,
+        chartId, chart, series, containerRef, isDrawing, selectedDrawingId, chartDrawings, primitivesRef, candles, snapToCandle, updateDrawing, stateRef,
     } = args;
 
-    const state = {
+    const state = stateRef ?? {
         isDragging: false,
         isDraggingBody: false,
         draggedPointIndex: -1,

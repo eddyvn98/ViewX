@@ -122,7 +122,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         mainContainerRef,
         subchartContainerRef,
         timescaleContainerRef,
-        isAutoScrollEnabledRef
+        isAutoScrollEnabledRef,
+        candles as import('@/lib/store/types').Candle[]
     );
 
     const {

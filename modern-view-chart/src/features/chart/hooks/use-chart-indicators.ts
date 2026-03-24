@@ -18,6 +18,26 @@ type IndicatorInstance = {
     _lastConfigJson?: string;
 };
 
+const CLOSED_BAR_ONLY_INDICATOR_TYPES = new Set([
+    'MARKET_STRUCTURE',
+    'BREAKOUT_RAYS',
+    'TREND_LINES',
+    'FIBONACCI',
+    'FIBONACCI_EXTENSION',
+    'ORDER_BLOCK',
+    'FVG',
+    'MarketStructure',
+    'BreakoutRays',
+    'TrendLines',
+    'Fibonacci',
+    'FibonacciExtension',
+    'OrderBlock',
+]);
+
+function isClosedBarOnlyIndicator(type: string): boolean {
+    return CLOSED_BAR_ONLY_INDICATOR_TYPES.has(type);
+}
+
 export function useChartIndicators(
     chartId: string,
     priceChartRef: React.RefObject<IChartApi | null>,
@@ -147,17 +167,22 @@ export function useChartIndicators(
                 const batchVersion = batchVersionRef.current;
                 const batchKey = key;
                 const batchCandles = stableCandlesRef.current;
+                const closedCandles = batchCandles.length > 1 ? batchCandles.slice(0, -1) : batchCandles;
+                const closedOnlyIndicators = indicatorsToCalculate.filter((cfg) => isClosedBarOnlyIndicator(cfg.type));
+                const normalIndicators = indicatorsToCalculate.filter((cfg) => !isClosedBarOnlyIndicator(cfg.type));
 
-                chartWorkerClient.calculateBatch(indicatorsToCalculate, batchCandles)
-                    .then((results) => {
+                const runBatch = async (configs: IndicatorConfig[], inputCandles: Candle[]) => {
+                    if (configs.length === 0) return;
+                    try {
+                        const results = await chartWorkerClient.calculateBatch(configs, inputCandles);
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
                         if (!Array.isArray(results)) return;
                         const typedResults = results as BatchResult[];
                         const resultsMap = new Map(typedResults.map((result) => [result.id, result.values]));
-                        indicatorsToCalculate.forEach(config => {
+                        configs.forEach(config => {
                             const instance = instancesRef.current[config.id];
                             const values = resultsMap.get(config.id);
-                            if (instance) instance.update(batchCandles, config, values);
+                            if (instance) instance.update(inputCandles, config, values);
                             runtimeByIdRef.current[config.id] = {
                                 type: config.type,
                                 id: config.id,
@@ -170,19 +195,25 @@ export function useChartIndicators(
                                 params: config.params
                             };
                         });
-
-                        const visibleRuntime = visibleIndicators
-                            .map((config) => runtimeByIdRef.current[config.id])
-                            .filter((item): item is IndicatorCache => Boolean(item));
-                        setChartIndicatorRuntime(chartId, visibleRuntime);
-                    })
-                    .catch(() => {
+                    } catch {
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
-                        indicatorsToCalculate.forEach(config => {
+                        configs.forEach(config => {
                             const instance = instancesRef.current[config.id];
-                            if (instance) instance.update(batchCandles, config);
+                            if (instance) instance.update(inputCandles, config);
                         });
-                    });
+                    }
+                };
+
+                Promise.all([
+                    runBatch(normalIndicators, batchCandles),
+                    runBatch(closedOnlyIndicators, closedCandles),
+                ]).then(() => {
+                    if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
+                    const visibleRuntime = visibleIndicators
+                        .map((config) => runtimeByIdRef.current[config.id])
+                        .filter((item): item is IndicatorCache => Boolean(item));
+                    setChartIndicatorRuntime(chartId, visibleRuntime);
+                });
             }
 
             if (indicators.some(i => i.pane === 'subchart' && i.visible)) requestAnimationFrame(() => syncRange());
@@ -221,6 +252,9 @@ export function useChartIndicators(
                 rafId = requestAnimationFrame(() => {
                     Object.values(instancesRef.current).forEach(instance => {
                         if (!instance.updateLastPoint) return;
+                        const indicatorId = Object.entries(instancesRef.current).find(([, value]) => value === instance)?.[0];
+                        const indicatorType = indicatorId ? indicators.find((cfg) => cfg.id === indicatorId)?.type : undefined;
+                        if (indicatorType && isClosedBarOnlyIndicator(indicatorType)) return;
                         const currentCandles = getCandles();
                         const lastIdx = currentCandles.length - 1;
                         if (lastIdx < 0 || !currentCandles[lastIdx]) return;
@@ -238,7 +272,7 @@ export function useChartIndicators(
             unsub();
             if (rafId) cancelAnimationFrame(rafId);
         };
-    }, [isReady, symbol, tickerKey, chartId, interval, getCandles, normSymbol]);
+    }, [isReady, symbol, tickerKey, chartId, interval, getCandles, normSymbol, indicators]);
 
     useEffect(() => {
         return () => {

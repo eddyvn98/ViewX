@@ -73,7 +73,7 @@ export function createDrawingSelectionHandler(args: SelectionArgs) {
 
                     if (y1 !== null && (drawing.type === 'horizontal-line' || (x1 !== null && x2 !== null && y2 !== null))) {
                         if (drawing.type === 'horizontal-line') {
-                            if (Math.abs(y - y1) < 10) clickedId = drawing.id;
+                            if (Math.abs(y - y1) < 15) clickedId = drawing.id;
                         } else {
                             const dist = distanceToSegment(clickX, y, x1!, y1, x2!, y2!);
                             if (dist < 10) clickedId = drawing.id;

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { INDICATOR_REGISTRY } from '../../indicators/registry';
 import type { IndicatorConfig } from '@/lib/store/types';
+import { useTranslations } from 'next-intl';
 
 interface IndicatorItemProps {
     indicator: IndicatorConfig;
@@ -16,7 +17,12 @@ interface IndicatorItemProps {
 }
 
 export function IndicatorItem({ indicator, chartId, editingId, setEditingId, toggleVisibility, updateIndicator, removeIndicator }: IndicatorItemProps) {
+    const t = useTranslations('ChartPanel.layerManager');
     const metadata = INDICATOR_REGISTRY[indicator.type as keyof typeof INDICATOR_REGISTRY];
+    const normalizedType = indicator.type.toUpperCase().replace(/\s+/g, '_');
+    const localizedName = t.has(`indicatorNames.${normalizedType}`)
+        ? t(`indicatorNames.${normalizedType}`)
+        : indicator.type.replace(/_/g, ' ');
 
     return (
         <div className="flex flex-col mb-0.5">
@@ -27,7 +33,7 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                 <button
                     onClick={() => toggleVisibility(chartId, indicator.id)}
                     className={cn('transition-colors flex-shrink-0 p-1 rounded-md hover:bg-secondary/40 active:scale-95', indicator.visible ? 'text-primary' : 'text-muted-foreground/40')}
-                    title={indicator.visible ? 'Hide' : 'Show'}
+                    title={indicator.visible ? t('hide') : t('show')}
                 >
                     {indicator.visible ? <Eye size={13} /> : <EyeOff size={13} />}
                 </button>
@@ -35,7 +41,7 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                 <div className="flex-1 flex items-center gap-2.5 overflow-hidden cursor-pointer select-none" onClick={() => setEditingId(editingId === indicator.id ? null : indicator.id)}>
                     <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0 transition-transform duration-300', editingId === indicator.id && 'scale-125')} style={{ backgroundColor: indicator.color }} />
                     <span className={cn('text-[11px] truncate transition-colors font-semibold', editingId === indicator.id ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground')}>
-                        {indicator.type.replace(/_/g, ' ')}
+                        {localizedName}
                     </span>
                 </div>
 
@@ -52,8 +58,8 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                         'p-1.5 rounded-md text-muted-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-95',
                         editingId === indicator.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                     )}
-                    title="Remove indicator"
-                    aria-label="Remove indicator"
+                    title={t('removeIndicator')}
+                    aria-label={t('removeIndicator')}
                 >
                     <Trash2 size={12} />
                 </button>
@@ -104,7 +110,7 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                             )}
 
                             <div className="flex flex-col gap-2.5 pt-3 border-t border-border/10">
-                                <label className="text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">Appearance</label>
+                                <label className="text-[11px] font-bold text-muted-foreground/50 uppercase tracking-wider">{t('appearance')}</label>
                                 <div className="flex flex-col gap-3">
                                     {metadata?.styles ? (
                                         Object.entries(metadata.styles).map(([key, schema]) => (
@@ -137,7 +143,7 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                                         ))
                                     ) : (
                                         <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[11px] text-muted-foreground font-medium">Main Color</span>
+                                            <span className="text-[11px] text-muted-foreground font-medium">{t('mainColor')}</span>
                                             <div className="flex items-center gap-2">
                                                 <div className="w-10 h-6 rounded border border-border/20 overflow-hidden relative">
                                                     <input

@@ -51,6 +51,11 @@ export function parseMaxStateBytes() {
   return Number.isFinite(configured) && configured > 1024 ? configured : 262144;
 }
 
+export function parseMaxDrawingsBytes() {
+  const configured = Number.parseInt(process.env.USER_DRAWINGS_MAX_BYTES || "2097152", 10);
+  return Number.isFinite(configured) && configured > 1024 ? configured : 2097152;
+}
+
 export function isDatabaseReadyForUserState() {
   const db = getDatabaseHealth();
   return db.state === "connected";

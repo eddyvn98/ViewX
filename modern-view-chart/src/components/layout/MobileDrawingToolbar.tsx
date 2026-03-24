@@ -9,15 +9,7 @@ import {
     Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const DRAWING_TOOLS = [
-    { id: 'trend-line', label: 'Trend Line', icon: TrendingUp },
-    { id: 'horizontal-line', label: 'Horz Line', icon: Minus },
-    { id: 'rectangle', label: 'Rectangle', icon: Square },
-    { id: 'fib-retracement', label: 'Fib Ret', icon: GitCommit },
-    { id: 'fib-extension', label: 'Fib Ext', icon: GitCommit },
-    { id: 'clear', label: 'Clear', icon: Trash2 },
-];
+import { useTranslations } from 'next-intl';
 
 interface MobileDrawingToolbarProps {
     onToolSelect?: (toolId: string) => void;
@@ -25,6 +17,16 @@ interface MobileDrawingToolbarProps {
 }
 
 export const MobileDrawingToolbar = React.memo(function MobileDrawingToolbar({ onToolSelect, isDimmed = false }: MobileDrawingToolbarProps) {
+    const t = useTranslations('ChartPanel.layerManager');
+    const DRAWING_TOOLS = [
+        { id: 'trend-line', label: t('drawing.objectNames.trendLine'), icon: TrendingUp },
+        { id: 'horizontal-line', label: t('drawing.objectNames.horizontalLineShort'), icon: Minus },
+        { id: 'rectangle', label: t('drawing.objectNames.rectangle'), icon: Square },
+        { id: 'fib-retracement', label: t('drawing.objectNames.fibRetracementShort'), icon: GitCommit },
+        { id: 'fib-extension', label: t('drawing.objectNames.fibExtensionShort'), icon: GitCommit },
+        { id: 'clear', label: t('drawing.clear'), icon: Trash2 },
+    ];
+
     const scrollRef = useRef<HTMLDivElement>(null);
     const [activeTool, setActiveTool] = useState('trend-line');
     const [centerTool, setCenterTool] = useState('trend-line');

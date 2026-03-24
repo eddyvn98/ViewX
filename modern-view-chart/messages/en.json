@@ -274,9 +274,59 @@
       "noActiveLayers": "No active layers",
       "smartAnalysis": "Smart Analysis",
       "indicators": "Indicators",
+      "hide": "Hide",
+      "show": "Show",
+      "removeIndicator": "Remove indicator",
+      "appearance": "Appearance",
+      "mainColor": "Main Color",
       "searchIndicatorPlaceholder": "Search indicator...",
       "noResults": "No results",
-      "manualDrawingModeEnabled": "Manual Drawing Mode Enabled"
+      "manualDrawingModeEnabled": "Manual Drawing Mode Enabled",
+      "indicatorNames": {
+        "MARKET_STRUCTURE": "Market Structure",
+        "BREAKOUT_RAYS": "Breakout Rays",
+        "TREND_LINES": "Trend Lines",
+        "FIBONACCI": "Fibonacci",
+        "FIBONACCI_EXTENSION": "Fibonacci Extension"
+      },
+      "drawing": {
+        "appliedObjects": "Applied Objects",
+        "hideAll": "Hide All",
+        "showAll": "Show All",
+        "lockAll": "Lock All",
+        "unlockAll": "Unlock All",
+        "deleteAll": "Delete All",
+        "deleteAllConfirm": "Delete all drawings?",
+        "noManualDrawings": "No manual drawings",
+        "hide": "Hide",
+        "show": "Show",
+        "lock": "Lock",
+        "unlock": "Unlock",
+        "lineStyle": "Line Style",
+        "width": "Width",
+        "activeLevels": "Active Levels",
+        "objectNames": {
+          "fibRetracement": "Fib Retracement",
+          "fibExtension": "Fib Extension",
+          "trendLine": "Trend Line",
+          "horizontalLine": "Horizontal Line",
+          "verticalLine": "Vertical Line",
+          "crosshair": "Crosshair",
+          "rectangle": "Rectangle",
+          "horizontalLineShort": "Horz Line",
+          "fibRetracementShort": "Fib Ret",
+          "fibExtensionShort": "Fib Ext"
+        },
+        "magnetMode": "Magnet Mode",
+        "magnetModeTooltip": "Magnet Mode (Snap to High/Low)",
+        "clear": "Clear"
+      },
+      "symbolLink": "Symbol Link",
+      "toolbar": {
+        "toggleDrawingToolbar": "Toggle Drawing Toolbar",
+        "crosshairSync": "Crosshair Sync",
+        "toggleStrategyMarkers": "Toggle Strategy Markers"
+      }
     }
   },
   "ChartToolbar": {

@@ -73,6 +73,16 @@ export function useChartTicker({
         return 60;
     };
 
+    const isAtRealtimeEdge = useCallback(() => {
+        const chart = chartRef?.current;
+        const dataCount = seriesRef.current?.data().length ?? 0;
+        if (!chart || dataCount <= 0) return false;
+        const range = chart.timeScale().getVisibleLogicalRange();
+        if (!range) return false;
+        const RIGHT_EDGE_TOLERANCE_BARS = 1.5;
+        return range.to >= (dataCount - 1 - RIGHT_EDGE_TOLERANCE_BARS);
+    }, [chartRef, seriesRef]);
+
     // Reset local state when context changes
     useEffect(() => {
         activeContextKeyRef.current = contextKey;
@@ -206,8 +216,13 @@ export function useChartTicker({
                 }
 
                 syncToStore(newCandle, true);
-                if (isAutoScrollEnabledRef?.current && chartRef?.current) {
-                    chartRef.current.timeScale().scrollToRealTime();
+                if (isAutoScrollEnabledRef && chartRef?.current) {
+                    const shouldFollowNow = isAutoScrollEnabledRef.current && isAtRealtimeEdge();
+                    if (shouldFollowNow) {
+                        chartRef.current.timeScale().scrollToRealTime();
+                    } else {
+                        isAutoScrollEnabledRef.current = false;
+                    }
                 }
                 return;
             }
@@ -288,7 +303,7 @@ export function useChartTicker({
         );
 
         return () => unsub();
-    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor]);
+    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
 }
