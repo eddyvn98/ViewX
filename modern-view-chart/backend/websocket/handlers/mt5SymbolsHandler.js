@@ -1,4 +1,6 @@
-export function handleMt5SymbolsAvailable({ ws, clients }, data) {
+import { bridgeRegistry } from "../bridgeRegistry.js";
+
+export function handleMt5SymbolsAvailable({ ws, clients, routeTarget }, data) {
     const senderMeta = clients.get(ws);
     if (!senderMeta?.isBridgeAuthenticated) return;
 
@@ -12,10 +14,8 @@ export function handleMt5SymbolsAvailable({ ws, clients }, data) {
         symbols: data.symbols
     });
 
-    for (const [clientWs, meta] of clients.entries()) {
-        if (meta?.isBridgeAuthenticated) continue;
-        if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
-        }
+    const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });
+    for (const clientWs of recipients) {
+        clientWs.send(payload);
     }
 }

@@ -14,9 +14,17 @@ import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
 import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
 import { handleVirtualTradeCommand } from "./handlers/virtualTradeHandler.js";
 import { safeSend } from "./wsSend.js";
-import { logInfo } from "../logger.js";
+import { logInfo, logWarn } from "../logger.js";
 import { hasRequiredRole } from "../auth/roles.js";
 import { emergencyConfig } from "../config/emergency.js";
+import { isRouteMismatch, resolveRouteTarget } from "./bridgeRegistry.js";
+import { requestIdGuard } from "./services/requestIdGuard.js";
+import {
+    getProEntitlementReason,
+    hasProEntitlement,
+    isProOnlyBinanceCommand,
+    isProOnlyMt5Command,
+} from "./services/proEntitlementGuard.js";
 
 const STRATEGY_ENGINE_ENABLED = ((process.env.STRATEGY_ENGINE_ENABLED || "0").trim() === "1");
 const AI_ENABLED = ((process.env.AI_ENABLED || "0").trim() === "1");
@@ -69,6 +77,41 @@ function isReadOnlyBinanceCommand(command) {
     return BINANCE_READ_ONLY_COMMANDS.has(normalizeCommandName(command));
 }
 
+function rejectReplayRequest(ws, senderMeta, data, topic, classification, ttlMs) {
+    const command = normalizeCommandName(data.command);
+    const requestId = String(data.request_id || data.requestId || "").trim();
+    const detail = classification === "duplicate" ? "duplicate_request_id" : "replay_request_id";
+
+    logWarn("ws.request_id_guard.rejected", {
+        topic,
+        command,
+        request_id: requestId,
+        request_id_classification: classification,
+        request_id_ttl_ms: ttlMs,
+        auth_type: senderMeta.authType || null,
+        role: senderMeta.role || null,
+        plan: senderMeta.plan || null,
+    });
+
+    emitWsError(ws, "conflict", detail);
+}
+
+function applyRequestIdGuard(ws, senderMeta, data, topic) {
+    if (!data || typeof data !== "object") return true;
+
+    const command = normalizeCommandName(data.command);
+    const shouldGuard =
+        (topic === "mt5_command" && !isReadOnlyMt5Command(command)) ||
+        (topic === "binance_command" && !isReadOnlyBinanceCommand(command));
+    if (!shouldGuard) return true;
+
+    const claim = requestIdGuard.claim(data);
+    if (claim.accepted) return true;
+
+    rejectReplayRequest(ws, senderMeta, data, topic, claim.classification || "duplicate", claim.ttlMs);
+    return false;
+}
+
 export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
     return async (ws, msg) => {
         try {
@@ -76,7 +119,29 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
             const senderMeta = clients.get(ws);
             if (!senderMeta) return;
 
-            const context = { ws, clients, mt5Prices, subscriptionIndex };
+            const senderRouteTarget = resolveRouteTarget(senderMeta);
+            const requestedRouteTarget = resolveRouteTarget(data);
+            const hasRequestedRoute = Boolean(requestedRouteTarget.userId || requestedRouteTarget.accountId);
+            if (hasRequestedRoute && isRouteMismatch(senderRouteTarget, requestedRouteTarget)) {
+                logWarn("ws.route.cross_user_blocked", {
+                    topic: data.topic || data.event || data.type || null,
+                    sender_user_id: senderRouteTarget.userId || null,
+                    sender_account_id: senderRouteTarget.accountId || null,
+                    target_user_id: requestedRouteTarget.userId || null,
+                    target_account_id: requestedRouteTarget.accountId || null,
+                });
+                emitWsError(ws, "forbidden", "cross_user_routing_attempt");
+                return;
+            }
+
+            const routeTarget = hasRequestedRoute
+                ? {
+                    userId: requestedRouteTarget.userId || senderRouteTarget.userId || null,
+                    accountId: requestedRouteTarget.accountId || senderRouteTarget.accountId || null,
+                }
+                : senderRouteTarget;
+
+            const context = { ws, clients, mt5Prices, subscriptionIndex, routeTarget };
             const msgTopic = data.topic || data.event || data.type;
             if (typeof msgTopic !== "string" || !msgTopic) return;
 
@@ -131,8 +196,23 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     handleMt5Candles(context, data);
                     break;
                 case "mt5_command":
+                    if (isProOnlyMt5Command(data.command) && !hasProEntitlement(senderMeta, data)) {
+                        const reason = getProEntitlementReason(senderMeta, data);
+                        logWarn("ws.entitlement.blocked", {
+                            topic: msgTopic,
+                            command: normalizeCommandName(data.command),
+                            reason,
+                            role: senderMeta.role || null,
+                            plan: senderMeta.plan || null,
+                        });
+                        emitWsError(ws, "forbidden", reason);
+                        return;
+                    }
                     if (emergencyConfig.enabled && emergencyConfig.blockTrading && !isReadOnlyMt5Command(data.command)) {
                         emitWsError(ws, "service_unavailable", "emergency_mode_trading_blocked");
+                        return;
+                    }
+                    if (!applyRequestIdGuard(ws, senderMeta, data, msgTopic)) {
                         return;
                     }
                     if (!isReadOnlyMt5Command(data.command) && !isTradingCommandAllowed(senderMeta)) {
@@ -159,8 +239,23 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     handleBinanceHistory(context, data);
                     break;
                 case "binance_command":
+                    if (isProOnlyBinanceCommand(data.command) && !hasProEntitlement(senderMeta, data)) {
+                        const reason = getProEntitlementReason(senderMeta, data);
+                        logWarn("ws.entitlement.blocked", {
+                            topic: msgTopic,
+                            command: normalizeCommandName(data.command),
+                            reason,
+                            role: senderMeta.role || null,
+                            plan: senderMeta.plan || null,
+                        });
+                        emitWsError(ws, "forbidden", reason);
+                        return;
+                    }
                     if (emergencyConfig.enabled && emergencyConfig.blockTrading && !isReadOnlyBinanceCommand(data.command)) {
                         emitWsError(ws, "service_unavailable", "emergency_mode_trading_blocked");
+                        return;
+                    }
+                    if (!applyRequestIdGuard(ws, senderMeta, data, msgTopic)) {
                         return;
                     }
                     if (!isReadOnlyBinanceCommand(data.command) && !isTradingCommandAllowed(senderMeta)) {

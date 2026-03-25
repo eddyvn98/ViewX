@@ -1,3 +1,6 @@
+import hashlib
+import os
+import socket
 import time
 
 import MetaTrader5 as mt5
@@ -21,6 +24,94 @@ class MT5Service:
 
     def shutdown(self):
         mt5.shutdown()
+
+    def _first_env(self, *names):
+        for name in names:
+            value = os.getenv(name, "").strip()
+            if value:
+                return value
+        return None
+
+    def _stable_id(self, prefix, *parts):
+        seed = "|".join(str(part).strip() for part in parts if part is not None and str(part).strip())
+        if not seed:
+            seed = prefix
+        digest = hashlib.sha1(seed.encode("utf-8")).hexdigest()[:12]
+        return f"{prefix}_{digest}"
+
+    def get_account_login(self):
+        try:
+            account = mt5.account_info()
+        except Exception:
+            return None
+        if not account:
+            return None
+        login = getattr(account, "login", None)
+        if login in (None, ""):
+            return None
+        try:
+            return int(login)
+        except (TypeError, ValueError):
+            text = str(login).strip()
+            return text or None
+
+    def get_terminal_identity(self):
+        terminal_name = None
+        terminal_path = self.terminal_path
+
+        try:
+            terminal = mt5.terminal_info()
+        except Exception:
+            terminal = None
+
+        if terminal:
+            terminal_name = getattr(terminal, "name", None) or None
+            terminal_path = getattr(terminal, "path", None) or terminal_path
+
+        terminal_id = self._first_env("TERMINAL_ID", "BRIDGE_TERMINAL_ID", "MT5_TERMINAL_ID")
+        if terminal_id:
+            return terminal_id
+
+        return self._stable_id(
+            "terminal",
+            terminal_path or terminal_name,
+            socket.gethostname(),
+        )
+
+    def build_bridge_metadata(self, user_id=None, bridge_id=None, client_mode=None):
+        account_login = self.get_account_login()
+        terminal_id = self.get_terminal_identity()
+
+        resolved_user_id = (
+            user_id
+            or self._first_env("USER_ID", "BRIDGE_USER_ID", "MT5_USER_ID")
+            or (str(account_login) if account_login is not None else None)
+        )
+        resolved_bridge_id = (
+            bridge_id
+            or self._first_env("BRIDGE_ID", "PRO_EXTENSION_BRIDGE_ID", "MT5_BRIDGE_ID")
+            or self._stable_id(
+                "bridge",
+                socket.gethostname(),
+                self.terminal_path,
+                terminal_id,
+                account_login,
+                resolved_user_id,
+            )
+        )
+
+        resolved_client_mode = (client_mode or self._first_env("BRIDGE_CLIENT_MODE") or "service_bridge").strip()
+        if not resolved_client_mode:
+            resolved_client_mode = "service_bridge"
+
+        metadata = {
+            "clientMode": resolved_client_mode,
+            "userId": resolved_user_id,
+            "terminalId": terminal_id,
+            "accountLogin": account_login,
+            "bridgeId": resolved_bridge_id,
+        }
+        return metadata
 
     def fetch_available_symbols(self):
         symbols = mt5.symbols_get()

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight, House } from 'lucide-react';
+import { LogOut, FileText, ChevronRight, House } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
@@ -97,15 +97,8 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
 
             <div className={cn('flex-1 overflow-y-auto space-y-1', compact ? 'p-3' : 'p-4')}>
                 <MenuItem compact={compact} icon={House} label={t('home')} onClick={() => { window.location.href = '/'; }} />
-                <MenuItem compact={compact} icon={User} label={t('accountProfile')} />
-                <MenuItem compact={compact} icon={Bell} label={t('notifications')} badge="3" />
-                <MenuItem compact={compact} icon={Monitor} label={t('displaySettings')} />
-
-                <div className="h-px bg-border/60 my-3 mx-2" />
-
-                <MenuItem compact={compact} icon={Settings} label={t('appSettings')} />
-                <MenuItem compact={compact} icon={HelpCircle} label={t('helpSupport')} />
-                <MenuItem compact={compact} icon={FileText} label={t('termsOfService')} />
+                <MenuItem compact={compact} icon={FileText} label={t('termsOfService')} onClick={() => { window.location.href = '/terms'; }} />
+                <MenuItem compact={compact} icon={FileText} label={t('privacyPolicy')} onClick={() => { window.location.href = '/privacy'; }} />
             </div>
 
             <div className={cn('border-t border-border bg-secondary/10', compact ? 'p-3' : 'p-4')}>

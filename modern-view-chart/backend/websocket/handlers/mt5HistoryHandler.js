@@ -1,11 +1,12 @@
 import { setBridgeOnline } from "../../runtime-state.js";
+import { bridgeRegistry } from "../bridgeRegistry.js";
 
 // Throttle history broadcasts to prevent spam
 let lastHistoryBroadcast = 0;
 let lastHistoryHash = null;
 const HISTORY_THROTTLE_MS = 5000; // 5 seconds
 
-export function handleMt5History({ ws, clients }, data) {
+export function handleMt5History({ ws, clients, routeTarget }, data) {
     const senderMeta = clients.get(ws);
     if (!senderMeta?.isBridgeAuthenticated) return;
 
@@ -19,18 +20,18 @@ export function handleMt5History({ ws, clients }, data) {
 
     // Throttle: Check if same data was sent recently
     const now = Date.now();
-    const historyHash = JSON.stringify(data.data?.slice(0, 3).map(d => d.ticket)); // Hash first 3 tickets
+    const historyTickets = Array.isArray(data.data)
+        ? data.data.slice(0, 3).map((d) => d?.ticket).filter((ticket) => ticket !== undefined && ticket !== null)
+        : [];
+    const historyHash = JSON.stringify(historyTickets); // Hash first 3 tickets
 
     if (historyHash === lastHistoryHash && (now - lastHistoryBroadcast) < HISTORY_THROTTLE_MS) {
         return;
     }
 
-    for (const [clientWs, meta] of clients.entries()) {
-        if (clientWs === ws) continue;
-        if (meta?.isBridgeAuthenticated) continue;
-        if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
-        }
+    const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });
+    for (const clientWs of recipients) {
+        clientWs.send(payload);
     }
 
     lastHistoryBroadcast = now;

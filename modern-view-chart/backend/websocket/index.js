@@ -14,6 +14,7 @@ import { logInfo, logWarn } from "../logger.js";
 import { BRIDGE_TOPICS, resolveQueryAuthPolicy } from "./config.js";
 import { emitWsError, resolveAuthContext } from "./auth.js";
 import { startPeriodicTasks } from "./loopManager.js";
+import { bridgeRegistry } from "./bridgeRegistry.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
@@ -84,6 +85,10 @@ export default function initWebSocket(server) {
             isBridgeLike: false,
             isBridgeAuthenticated: false,
         });
+        bridgeRegistry.register(ws, {
+            userId: authContext.type === "user" ? authContext.userId : null,
+            accountId: authContext.accountId || authContext.account_id || null,
+        });
         ws.isAlive = true;
         addDefaultPriceClient(subscriptionIndex, ws);
         setWsClients(clients.size);
@@ -153,6 +158,7 @@ export default function initWebSocket(server) {
                 setBridgeOnline(false);
                 broadcastBridgeStatus(false);
             }
+            bridgeRegistry.unregister(ws);
             clients.delete(ws);
             removeClientFromIndexes(subscriptionIndex, ws);
             setWsClients(clients.size);

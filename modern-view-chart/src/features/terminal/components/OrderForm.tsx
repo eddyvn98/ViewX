@@ -1,9 +1,13 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo, memo } from 'react';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { cn } from '@/lib/utils';
+import { hasLegalConsent as readLegalConsent, saveLegalConsent, type TradingSource } from '@/lib/legal/consent';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
 // Sub-components
 import { OrderTypeTabs } from './OrderForm/OrderTypeTabs';
 import { SideButtons } from './OrderForm/SideButtons';
@@ -25,6 +29,13 @@ export function useOrderFormLogic() {
     const tp = useMarketStore((state) => state.orderForm.tp);
     const setOrderForm = useMarketStore((state) => state.setOrderForm);
     const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
+    const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
+    const account = useMarketStore((state) => {
+        const tab = state.tabs[state.activeTabId];
+        const source = tab?.activeChartId ? (tab.charts[tab.activeChartId]?.source || 'MT5') : 'MT5';
+        const accountSource = source === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5';
+        return state.accounts[accountSource] || state.accounts['MT5'] || null;
+    });
     const [isDrafting, setIsDrafting] = useState(false);
 
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
@@ -117,19 +128,23 @@ export function useOrderFormLogic() {
     return {
         symbol, side, setSide, orderType, setOrderType, volume, setVolume,
         sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
-        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl
+        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl,
+        isBridgeOnline, account
     };
 }
 
 export const OrderForm = memo(function OrderForm({ forceInline = false }: { forceInline?: boolean }) {
+    const t = useTranslations('ProFlow');
     const {
         symbol, side, setSide, orderType, setOrderType, volume, setVolume,
         sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
-        handleSubmit, setIsDrafting, formatPrice, calculatePnl
+        handleSubmit, setIsDrafting, formatPrice, calculatePnl, isBridgeOnline, account
     } = useOrderFormLogic();
     const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
 
     const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+    const [showLegalConsentDialog, setShowLegalConsentDialog] = useState(false);
+    const [isLegalChecked, setIsLegalChecked] = useState(false);
 
     const slPnl = useMemo(() => calculatePnl(sl), [sl, calculatePnl]);
     const tpPnl = useMemo(() => calculatePnl(tp), [tp, calculatePnl]);
@@ -140,6 +155,44 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
     };
 
     const isCrypto = symbol.includes('BTC') || symbol.includes('ETH'); // Simplified check for display
+    const tradingSource: TradingSource = isCrypto ? 'BINANCE' : 'MT5';
+    const isProUser = getClientEntitlements().isPro;
+    const hasAccountLinked = Boolean(
+        account && (
+            (account as { login?: string | number }).login ||
+            (account as { account_login?: string | number }).account_login ||
+            (account as { number?: string | number }).number
+        )
+    );
+
+    const hasLegalConsent = React.useCallback(() => {
+        return readLegalConsent(tradingSource);
+    }, [tradingSource]);
+    const canAttemptTrade = isProUser && isBridgeOnline && hasAccountLinked;
+    const isFlowReady = canAttemptTrade && hasLegalConsent();
+
+    const handleSubmitWithLegalGuard = React.useCallback(() => {
+        if (!canAttemptTrade) {
+            useMarketStore.getState().addNotification(
+                t('warningSetupRequired'),
+                'warning'
+            );
+            return;
+        }
+        if (!hasLegalConsent()) {
+            setShowLegalConsentDialog(true);
+            return;
+        }
+        handleSubmit();
+    }, [handleSubmit, hasLegalConsent, canAttemptTrade, t]);
+
+    const confirmLegalConsentAndSubmit = React.useCallback(() => {
+        if (!isLegalChecked) return;
+        saveLegalConsent(tradingSource);
+        setShowLegalConsentDialog(false);
+        setIsLegalChecked(false);
+        handleSubmit();
+    }, [handleSubmit, isLegalChecked, tradingSource]);
 
     return (
         <div className="flex-1 bg-background flex flex-col overflow-hidden select-none">
@@ -174,10 +227,26 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
                 />
 
                 <div className="pt-0 space-y-1.5 shrink-0">
-                    <button onClick={handleSubmit} className={cn("w-full py-2 rounded-md text-[11px] font-black shadow-lg active:scale-95 transition-all uppercase tracking-widest", side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white")}>
+                    <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[10px] leading-relaxed text-amber-200">
+                        {t('riskNotice')}
+                    </p>
+                    <button
+                        onClick={handleSubmitWithLegalGuard}
+                        disabled={!canAttemptTrade}
+                        className={cn(
+                            "w-full py-2 rounded-md text-[11px] font-black shadow-lg transition-all uppercase tracking-widest",
+                            side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white",
+                            !canAttemptTrade ? "cursor-not-allowed opacity-60" : "active:scale-95"
+                        )}
+                    >
                         {side === 'buy' ? 'BUY' : 'SELL'} {volume} LOTS
                     </button>
-                    <button onClick={resetForm} className="w-full py-1.5 rounded-md text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all uppercase tracking-tight">Thoát</button>
+                    {!isFlowReady && (
+                        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">
+                            {t('setupRequiredBeforeTrade')}
+                        </div>
+                    )}
+                    <button onClick={resetForm} className="w-full py-1.5 rounded-md text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all uppercase tracking-tight">{t('exit')}</button>
                 </div>
 
                 <OrderDetails
@@ -186,7 +255,61 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
                     spread={spread}
                 />
             </div>
+
+            {showLegalConsentDialog && (
+                <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-md rounded-xl border border-border bg-background p-4 shadow-2xl">
+                        <h3 className="text-sm font-bold text-foreground">{t('legalModalTitle')}</h3>
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                            {t('legalModalDesc', { source: tradingSource })}
+                        </p>
+                        <label className="mt-3 flex items-start gap-2 rounded-md border border-border/70 bg-secondary/20 p-2 text-xs">
+                            <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={isLegalChecked}
+                                onChange={(e) => setIsLegalChecked(e.target.checked)}
+                            />
+                            <span>
+                                {t('iAgreeWith')}{" "}
+                                <Link href="/terms" target="_blank" className="underline underline-offset-2">
+                                    {t('terms')}
+                                </Link>{" "}
+                                {t('and')}{" "}
+                                <Link href="/privacy" target="_blank" className="underline underline-offset-2">
+                                    {t('privacy')}
+                                </Link>
+                                .
+                            </span>
+                        </label>
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowLegalConsentDialog(false);
+                                    setIsLegalChecked(false);
+                                }}
+                                className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary/50"
+                            >
+                                {t('cancel')}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={!isLegalChecked}
+                                onClick={confirmLegalConsentAndSubmit}
+                                className={cn(
+                                    "rounded-md px-3 py-1.5 text-xs font-semibold text-white",
+                                    isLegalChecked ? "bg-primary hover:bg-primary/90" : "cursor-not-allowed bg-primary/50"
+                                )}
+                            >
+                                {t('acceptAndTrade')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 });
+
 

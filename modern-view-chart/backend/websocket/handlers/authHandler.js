@@ -1,12 +1,41 @@
 import { getBinancePrices } from "../services/binanceTickerService.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol, setClientSymbolSubscriptions } from "../subscriptionIndex.js";
+import { bridgeRegistry } from "../bridgeRegistry.js";
+import { normalizeProPlan } from "../services/proEntitlementGuard.js";
 
 export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) {
     const clientData = clients.get(ws);
     let requestedSymbols = [];
     if (clientData) {
         clientData.userId = data.userId || null;
+        clientData.role = data.role || data.user?.role || clientData.role || null;
+        clientData.accountId = data.accountId || data.account_id || clientData.accountId || null;
+        const nextPlan = normalizeProPlan(
+            data.plan ||
+                data.subscription?.plan ||
+                data.session?.plan ||
+                data.user?.subscription?.plan ||
+                clientData.plan ||
+                "",
+        );
+        if (nextPlan) {
+            clientData.plan = nextPlan;
+        }
+        const nextValidUntil =
+            data.subscription?.validUntil ||
+            data.session?.subscription?.validUntil ||
+            data.session?.validUntil ||
+            data.user?.subscription?.validUntil ||
+            null;
+        if (nextValidUntil) {
+            clientData.subscription = {
+                ...(clientData.subscription || {}),
+                plan: clientData.plan || null,
+                validUntil: nextValidUntil,
+            };
+        }
+        bridgeRegistry.register(ws, clientData);
         if (Array.isArray(data.symbols)) {
             const normalized = data.symbols.map((s) => normalizeSymbol(s)).filter(Boolean).slice(0, 300);
             clientData.symbols = setClientSymbolSubscriptions(subscriptionIndex, ws, normalized);

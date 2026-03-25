@@ -6,6 +6,7 @@ import { getClientEntitlements } from '@/lib/auth/entitlements';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminalResize } from './hooks/use-terminal-resize';
+import { hasLegalConsent as readLegalConsent, type TradingSource } from '@/lib/legal/consent';
 
 type TerminalTab = 'positions' | 'orders' | 'history';
 
@@ -17,7 +18,12 @@ type Mt5ModifyPayload = {
     tp?: number;
 };
 
-export function useTerminalState(forceExpanded: boolean) {
+type ProFlowMessages = {
+    warningSetupRequired: string;
+    warningModifyUnavailable: string;
+};
+
+export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessages) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
     const isProUser = getClientEntitlements().isPro;
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
@@ -39,17 +45,45 @@ export function useTerminalState(forceExpanded: boolean) {
     const visibleOrders = isProUser ? orders : [];
     const visibleHistory = isProUser ? history : [];
 
+    const [hasLegalConsent, setHasLegalConsent] = useState(false);
+    const onboardingSource: TradingSource = activeChartSource === 'BINANCE' ? 'BINANCE' : 'MT5';
+    const hasAccountLinked = Boolean(
+        visibleAccount && (
+            (visibleAccount as { login?: string | number }).login ||
+            (visibleAccount as { account_login?: string | number }).account_login ||
+            (visibleAccount as { number?: string | number }).number
+        )
+    );
+    const isProFlowReady = isProUser && isBridgeOnline && hasAccountLinked && hasLegalConsent;
+
     const { sendMessage } = useWebSocket();
-    const [
-        terminalTab,
-        setTerminalTab,
-    ] = useState<TerminalTab>('positions');
+    const [terminalTab, setTerminalTab] = useState<TerminalTab>('positions');
 
     useEffect(() => {
         if (history.length > 0) {
             debugLog(`[TERMINAL] Store has ${history.length} history deals`);
         }
     }, [history.length]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const loadConsent = () => {
+            setHasLegalConsent(readLegalConsent(onboardingSource));
+        };
+
+        loadConsent();
+        window.addEventListener('storage', loadConsent);
+        window.addEventListener('focus', loadConsent);
+        return () => {
+            window.removeEventListener('storage', loadConsent);
+            window.removeEventListener('focus', loadConsent);
+        };
+    }, [onboardingSource]);
+
+    const refreshLegalConsent = useCallback(() => {
+        setHasLegalConsent(readLegalConsent(onboardingSource));
+    }, [onboardingSource]);
 
     const terminalHeightStore = useMarketStore((state) => state.terminalHeight);
     const setTerminalHeight = useMarketStore((state) => state.setTerminalHeight);
@@ -66,6 +100,10 @@ export function useTerminalState(forceExpanded: boolean) {
     const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
     const handleClosePosition = useCallback((ticket: number) => {
+        if (!isProFlowReady) {
+            useMarketStore.getState().addNotification(messages.warningSetupRequired, 'warning');
+            return;
+        }
         const pos = positions.find((p) => p.ticket === ticket);
         const source = pos?.source || (activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5');
 
@@ -76,9 +114,13 @@ export function useTerminalState(forceExpanded: boolean) {
                 ticket,
             });
         }
-    }, [positions, activeChartSource, sendMessage]);
+    }, [positions, activeChartSource, sendMessage, isProFlowReady, messages.warningSetupRequired]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
+        if (!isProFlowReady) {
+            useMarketStore.getState().addNotification(messages.warningModifyUnavailable, 'warning');
+            return;
+        }
         const payload: Mt5ModifyPayload = {
             topic: 'mt5_command',
             command: 'modify',
@@ -91,7 +133,7 @@ export function useTerminalState(forceExpanded: boolean) {
         if (Object.keys(payload).length > 3) {
             sendMessage(payload);
         }
-    }, [sendMessage]);
+    }, [sendMessage, isProFlowReady, messages.warningModifyUnavailable]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();
@@ -129,6 +171,11 @@ export function useTerminalState(forceExpanded: boolean) {
         strategyEngineEnabled,
         isProUser,
         isBridgeOnline,
+        hasLegalConsent,
+        hasAccountLinked,
+        onboardingSource,
+        refreshLegalConsent,
+        isProFlowReady,
         visibleAccount,
         visiblePositions,
         visibleOrders,

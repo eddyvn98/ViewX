@@ -4,6 +4,7 @@ import { binanceTradingService } from '../../services/binanceTradingService.js';
 export async function handleBinanceCommand(ws, data) {
     try {
         const { command, symbol, quantity, price, ticket } = data; // ticket is effectively orderId here
+        const requestId = data?.request_id || data?.requestId || null;
 
         console.log(`📥 Binance Command (REAL): ${command} ${symbol || ''}`);
 
@@ -22,6 +23,7 @@ export async function handleBinanceCommand(ws, data) {
             ws.send(JSON.stringify({
                 topic: 'binance_order_result',
                 status: 'success',
+                request_id: requestId,
                 data: result
             }));
 
@@ -40,6 +42,7 @@ export async function handleBinanceCommand(ws, data) {
                 ws.send(JSON.stringify({
                     topic: 'binance_order_result',
                     status: 'success',
+                    request_id: requestId,
                     message: `Order ${ticket} cancelled`
                 }));
             }
@@ -53,6 +56,7 @@ export async function handleBinanceCommand(ws, data) {
         console.error('Binance Command Error:', error.message);
         ws.send(JSON.stringify({
             topic: 'binance_error',
+            request_id: data?.request_id || data?.requestId || null,
             message: error.response?.data?.msg || error.message
         }));
     }

@@ -1,7 +1,10 @@
 ﻿# PRO MT5 Extension Rollout Plan
 
-Updated: 2026-03-19
+Updated: 2026-03-25
 Owner: Trading Web Platform Team
+
+Related master plan:
+- `DOCS/PRO_FLOW_FULL_IMPLEMENTATION_PLAN_2026-03-25.md`
 
 ## 1) Goal
 Enable Pro users to keep using the current web experience, and additionally connect their own local MT5 via extension so the web can:
@@ -181,3 +184,160 @@ Gate metrics per stage:
 2. Web displays MT5 symbols/charts/terminal from that exact user account.
 3. Web trades are executed on that exact local MT5 account.
 4. Free/Binance existing flow has no regression.
+
+## 10) Addendum: Pro Crypto Personal Exchange Plan
+
+### 10.1) Goal
+Enable Pro users to connect their own crypto exchange accounts (Binance/Bybit/OKX in phased support) so the web can:
+- read personal balances/positions/orders per exchange account
+- render personal tradable symbols and account-specific constraints
+- place/modify/cancel orders on the exact user-owned exchange account
+
+### 10.2) Principles
+1. Keep existing Free/Binance public feed flow unchanged.
+2. Personal crypto exchange state must be strictly per-user/per-exchange/per-account.
+3. No API key is stored in plaintext; encrypted at rest and masked in logs.
+4. Trading actions require explicit entitlement (`pro`) and scoped permissions.
+
+### 10.3) Target Model
+Identity key:
+- `userId + exchange + accountId`
+
+Source model:
+- `BINANCE_PUBLIC` (existing public feed)
+- `CRYPTO_PERSONAL` (new private user exchange account)
+- `MT5_PERSONAL` (existing Pro MT5 path)
+
+### 10.4) Execution Phases (Crypto)
+
+#### Phase C0: Spec + Security Contract (1-2 days)
+Tasks:
+1. Define API/WS schema for account connect/sync/trade commands.
+2. Define encrypted credential storage contract (KMS/env key envelope).
+3. Define permission scopes:
+   - read-only
+   - trade
+4. Define per-exchange rate-limit and retry policy.
+
+Deliverables:
+- `DOCS/WS_EVENT_SCHEMA_CRYPTO_PERSONAL.md`
+- `DOCS/CRYPTO_CREDENTIAL_SECURITY.md`
+
+#### Phase C1: Account Linking + Vault Layer (3-4 days)
+Tasks:
+1. Add Pro UI flow: connect exchange account (API key/secret/passphrase if required).
+2. Build backend vault service for encrypted credential save/load/rotate/delete.
+3. Add account verification handshake (test signed endpoint).
+4. Emit account status to UI (`connected`, `degraded`, `revoked`).
+
+Candidate files:
+- `backend/modules/user/*`
+- `backend/services/*` (new vault and exchange auth services)
+- `src/features/terminal/*`
+- `src/features/chart/components/*`
+
+Exit criteria:
+- Pro user can securely link an exchange account and pass verification.
+
+#### Phase C2: Read-Only Personal Data Path (4-5 days)
+Tasks:
+1. Fetch scoped account data:
+   - balances
+   - open orders
+   - positions (for derivatives venues)
+   - personal fills/history
+2. Normalize symbols and precision by exchange/account.
+3. Cache per `userId+exchange+accountId` with TTL and freshness status.
+4. Add source/account switcher integration in chart and terminal.
+
+Exit criteria:
+- Pro user sees only their own exchange account data in UI.
+
+#### Phase C3: Trading Path + Idempotency (4-6 days)
+Tasks:
+1. Route private trading commands:
+   - place/modify/cancel
+   - market/limit/stop variants by exchange capability
+2. Enforce precision and min-notional filters from exchange metadata.
+3. Add idempotency via `request_id` and dedupe TTL store.
+4. Standardize exchange error mapping to web-facing error model.
+
+Exit criteria:
+- Orders are executed correctly on selected user exchange account with safe retries.
+
+#### Phase C4: Hardening + Rollout (3-4 days)
+Tasks:
+1. Add monitoring:
+   - connect success rate
+   - order failure rate by exchange
+   - rate-limit hit rate
+   - p95 private order ack latency
+2. Add audit logs for all private account/trade actions.
+3. Run chaos tests: key revoke, clock drift, temporary exchange outage, network flap.
+4. Stage rollout by exchange and user cohort.
+
+Exit criteria:
+- Crypto personal account flow is stable and observable under partial failures.
+
+### 10.5) Rollout Strategy (Crypto)
+1. Internal alpha (single exchange: Binance first).
+2. 5-10 Pro users (read-only first, then trading).
+3. 30-50 Pro users (add second exchange).
+4. Full rollout with per-exchange feature flag gating.
+
+Gate metrics:
+- `private_route_success >= 99%`
+- `private_order_ack_p95 < 1200ms`
+- `0` cross-user account leakage incidents
+
+### 10.6) Definition of Done (Crypto)
+1. Pro user can link/unlink personal crypto exchange account securely.
+2. Web shows balances/orders/positions scoped to selected user account only.
+3. Web trading commands execute on the selected user exchange account only.
+4. Free/Binance public flow and MT5 Pro flow have no regression.
+
+## 11) Security Addendum: Client Trust Boundary and Anti "Pro Free" Abuse
+
+### 11.1) Trust Model
+1. Treat all clients as untrusted, including browser UI and extension binaries.
+2. Do not grant Pro capability from client claims alone (`client_mode`, `role`, local flags).
+3. Enforce entitlement and routing ownership on backend for every private command.
+
+### 11.2) Main Abuse Scenarios
+1. User self-builds a custom extension/WS client and impersonates `pro_extension`.
+2. Free user calls private WS/API routes directly without official UI.
+3. Replay or forged command payload attempts (`userId`, `account`, stale requests).
+4. Cross-account routing attempts by tampering request metadata.
+
+### 11.3) Mandatory Server Controls
+1. Entitlement enforcement:
+   - Every Pro path checks `account_tier=pro`, subscription validity window, and revocation state.
+   - Reject private commands from non-Pro users regardless of client type.
+2. Server-owned identity binding:
+   - Ignore client-provided ownership fields for authorization decisions.
+   - Derive routing owner from validated token/session and registry mapping only.
+3. Command integrity and anti-replay:
+   - Require `request_id` + nonce/timestamp window.
+   - Store dedupe keys with TTL to prevent duplicate/replayed execution.
+4. Session hardening:
+   - short-lived access tokens, refresh rotation, server revocation list.
+   - per-user + per-IP/device rate limits for private routes.
+5. Secrets handling:
+   - no plaintext credential storage.
+   - encrypted at rest, masked logs, explicit key rotation path.
+6. Auditability:
+   - immutable audit logs for connect/link/unlink/trade actions.
+   - anomaly alerts for repeated auth failures, route mismatch, replay attempts.
+
+### 11.4) Extension Authenticity Position
+1. Official extension signing/checks can reduce abuse cost but is not a sole trust anchor.
+2. Even if a user uses a custom client, private Pro features remain blocked unless backend entitlement and policy checks pass.
+3. Product decision: "client authenticity is defense-in-depth; server authorization is the enforcement boundary."
+
+### 11.5) Explicit Non-Bypass Requirement (Release Gate)
+1. A Free account must not execute any Pro-only MT5 or Crypto personal command in staging or production.
+2. Security test suite must include:
+   - forged `client_mode=pro_extension` from Free account
+   - direct WS/API private command calls without UI
+   - replayed trading command with reused `request_id`
+3. Release blocked if any test above succeeds.

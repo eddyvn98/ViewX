@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import time
 import websockets
 from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit
 
@@ -38,7 +40,102 @@ class BridgeClient:
         self.memory_service = memory_service
         self.symbols_interest_callback = symbols_interest_callback
         self.auth_credential = (auth_credential or "").strip()
+        self.client_mode = (os.getenv("BRIDGE_CLIENT_MODE", "service_bridge").strip() or "service_bridge")
         self.websocket = None
+        self.bridge_metadata = None
+        self.connected_at = None
+        self.last_rx_monotonic = None
+        self.last_tx_monotonic = None
+        self.last_heartbeat_monotonic = 0.0
+        self.heartbeat_interval_sec = self._read_float_env("BRIDGE_HEARTBEAT_INTERVAL_SEC", 15.0, minimum=5.0)
+        self.stale_timeout_sec = self._read_float_env(
+            "BRIDGE_STALE_TIMEOUT_SEC",
+            max(self.heartbeat_interval_sec * 2.5, 45.0),
+            minimum=self.heartbeat_interval_sec + 5.0,
+        )
+
+    def _read_float_env(self, name, fallback, minimum=None):
+        raw = os.getenv(name, "").strip()
+        if not raw:
+            return fallback
+        try:
+            value = float(raw)
+            if value <= 0:
+                return fallback
+            if minimum is not None:
+                return max(minimum, value)
+            return value
+        except Exception:
+            return fallback
+
+    def _build_bridge_metadata(self):
+        if hasattr(self.mt5, "build_bridge_metadata"):
+            return self.mt5.build_bridge_metadata(client_mode=self.client_mode)
+        return {
+            "clientMode": self.client_mode,
+            "userId": None,
+            "terminalId": None,
+            "accountLogin": None,
+            "bridgeId": None,
+        }
+
+    def _touch_rx(self):
+        now = time.monotonic()
+        self.last_rx_monotonic = now
+        return now
+
+    def _touch_tx(self):
+        now = time.monotonic()
+        self.last_tx_monotonic = now
+        return now
+
+    def _metadata_log_summary(self):
+        meta = self.bridge_metadata or {}
+        bridge_id = str(meta.get("bridgeId") or "")
+        terminal_id = str(meta.get("terminalId") or "")
+        account_login = meta.get("accountLogin")
+        user_id = str(meta.get("userId") or "")
+        return (
+            f"mode={meta.get('clientMode') or self.client_mode} "
+            f"user={user_id[:12] or '-'} "
+            f"term={terminal_id[:12] or '-'} "
+            f"acct={account_login if account_login is not None else '-'} "
+            f"bridge={bridge_id[:12] or '-'}"
+        )
+
+    def _build_heartbeat_payload(self, kind="bridge_heartbeat"):
+        metadata = self.bridge_metadata or self._build_bridge_metadata()
+        payload = {
+            "topic": "app_ping",
+            "sentAt": int(time.time() * 1000),
+            "kind": kind,
+        }
+        payload.update(metadata)
+        return payload
+
+    async def _send_heartbeat(self, kind="bridge_heartbeat", force=False):
+        if not self.websocket:
+            raise ConnectionError("WebSocket is not connected")
+
+        now = time.monotonic()
+        if not force and (now - self.last_heartbeat_monotonic) < self.heartbeat_interval_sec:
+            return False
+
+        await self.websocket.send(json.dumps(self._build_heartbeat_payload(kind), separators=(",", ":")))
+        self._touch_tx()
+        self.last_heartbeat_monotonic = now
+        return True
+
+    async def _ensure_fresh_connection(self):
+        if not self.websocket:
+            raise ConnectionError("WebSocket is not connected")
+
+        now = time.monotonic()
+        last_activity = self.last_rx_monotonic or self.connected_at or now
+        if (now - last_activity) > self.stale_timeout_sec:
+            raise ConnectionError("WebSocket stale")
+
+        await self._send_heartbeat()
 
     async def connect(self):
         connect_kwargs = {
@@ -47,12 +144,19 @@ class BridgeClient:
         if self.auth_credential:
             connect_kwargs["subprotocols"] = [f"bearer.{self.auth_credential}"]
         self.websocket = await websockets.connect(self.ws_url, **connect_kwargs)
+        self.bridge_metadata = self._build_bridge_metadata()
+        self.connected_at = self._touch_rx()
+        self.last_heartbeat_monotonic = 0.0
+        await self._send_heartbeat(kind="bridge_handshake", force=True)
         print(f"[OK] Bridge connected to {mask_url_for_log(self.ws_url)}")
+        print(f"[WS] Handshake sent ({self._metadata_log_summary()})")
         return self.websocket
 
     async def send_json(self, data):
-        if self.websocket:
-            await self.websocket.send(json.dumps(data))
+        if not self.websocket:
+            raise ConnectionError("WebSocket is not connected")
+        await self.websocket.send(json.dumps(data, separators=(",", ":")))
+        self._touch_tx()
 
     async def listen_commands(self):
         async for message in self.websocket:
@@ -61,8 +165,11 @@ class BridgeClient:
     async def dispatch_message(self, message):
         msg_topic = "unknown"
         try:
+            self._touch_rx()
             data = json.loads(message)
             msg_topic = data.get("topic") or data.get("type") or "unknown"
+            if msg_topic == "app_pong":
+                return
             if msg_topic == "mt5_command":
                 await self.handle_command(data)
             elif msg_topic == "alert_command":
@@ -71,6 +178,8 @@ class BridgeClient:
                 await self.handle_memory_command(data)
             elif msg_topic == "bridge_symbols_interest":
                 await self.handle_symbols_interest(data)
+        except ConnectionError:
+            raise
         except Exception as e:
             print(f"[ERROR] Command handling error (topic:{msg_topic}): {e}")
 
@@ -78,12 +187,14 @@ class BridgeClient:
         if not self.websocket:
             return
 
+        await self._ensure_fresh_connection()
         for _ in range(max_messages):
             try:
                 message = await asyncio.wait_for(self.websocket.recv(), timeout=timeout_sec)
             except asyncio.TimeoutError:
                 break
             await self.dispatch_message(message)
+        await self._ensure_fresh_connection()
 
     async def handle_symbols_interest(self, data):
         if not self.symbols_interest_callback:

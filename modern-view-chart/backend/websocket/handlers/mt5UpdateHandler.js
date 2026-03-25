@@ -1,10 +1,11 @@
 import { broadcastCandleForSymbol } from "../services/broadcastService.js";
 import { setBridgeOnline } from "../../runtime-state.js";
 import { safeSend } from "../wsSend.js";
+import { bridgeRegistry } from "../bridgeRegistry.js";
 
 const dailyOpens = new Map();
 
-export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex }, data) {
+export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex, routeTarget }, data) {
     const senderMeta = clients.get(ws);
     if (!senderMeta?.isBridgeAuthenticated) return;
 
@@ -47,11 +48,9 @@ export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex }, d
     }
 
     const payload = JSON.stringify({ topic: "priceUpdate", data: [mt5Prices.get(normalizedSymbol)] });
-    for (const [clientWs, meta] of clients.entries()) {
-        if (meta?.isBridgeAuthenticated) continue;
-        if (clientWs.readyState === clientWs.OPEN) {
-            safeSend(clientWs, payload, { nonCritical: true });
-        }
+    const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });
+    for (const clientWs of recipients) {
+        safeSend(clientWs, payload, { nonCritical: true });
     }
 
     broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, normalizedSymbol, data.price);

@@ -1,14 +1,14 @@
 import { logInfo } from "../../logger.js";
+import { bridgeRegistry } from "../bridgeRegistry.js";
 
-export function handleMt5Candles({ clients }, data) {
+export function handleMt5Candles({ ws, clients, routeTarget }, data) {
     const payload = JSON.stringify(data);
+    const senderMeta = clients.get(ws);
+    const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });
     let delivered = 0;
-    for (const [clientWs, metadata] of clients.entries()) {
-        if (metadata?.isBridgeAuthenticated) continue;
-        if (clientWs.readyState === clientWs.OPEN) {
-            clientWs.send(payload);
-            delivered += 1;
-        }
+    for (const clientWs of recipients) {
+        clientWs.send(payload);
+        delivered += 1;
     }
     if (Array.isArray(data?.candles)) {
         logInfo("ws.mt5_candles.broadcasted", {
