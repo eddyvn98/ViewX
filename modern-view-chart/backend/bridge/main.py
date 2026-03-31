@@ -137,6 +137,7 @@ async def main():
         await asyncio.sleep(10)
     
     print(f"[OK] Bridge '{args.name}' connected to MT5 and ready.")
+    bridge_source = os.getenv("BRIDGE_SOURCE", "").strip() or args.name
 
     available_symbols = service.fetch_available_symbols()
     available_symbol_map = {}
@@ -191,7 +192,13 @@ async def main():
             try:
                 await client.connect()
                 reconnect_sleep_sec = 2
-                await client.send_json({"topic": "mt5_symbols_available", "symbols": available_symbols})
+                await client.send_json(
+                    {
+                        "topic": "mt5_symbols_available",
+                        "symbols": available_symbols,
+                        "mt5_source": bridge_source,
+                    }
+                )
                 last_positions_hash = None
                 last_positions_time = 0
                 position_update_interval = ACTIVE_POSITIONS_INTERVAL_SEC
@@ -233,6 +240,7 @@ async def main():
                                         "ask": tick.ask,
                                         "daily_open": daily_opens.get(symbol),
                                         "time": int(tick.time * 1000),
+                                        "mt5_source": bridge_source,
                                     }
                                 )
 
@@ -260,6 +268,7 @@ async def main():
                                 "account": acc_data,
                                 "positions": pos_list,
                                 "orders": order_list,
+                                "mt5_source": bridge_source,
                             }
                         )
                         last_positions_hash = positions_hash

@@ -258,6 +258,7 @@ class BridgeClient:
     async def handle_command(self, data):
         cmd = data.get("command")
         ticket = int(data.get("ticket")) if data.get("ticket") else 0
+        mt5_source = str((self.bridge_metadata or {}).get("bridgeSource") or "MT5")
 
         if cmd in ["close", "delete", "cancel"]:
             res = self.mt5.close_position(ticket)
@@ -276,6 +277,7 @@ class BridgeClient:
                     "interval": data.get("interval", "1m"),
                     "candles": candles,
                     "request_id": data.get("request_id"),
+                    "mt5_source": mt5_source,
                 }
             )
 
@@ -292,6 +294,7 @@ class BridgeClient:
                     "source": "MT5",
                     "candles": candles,
                     "request_id": data.get("request_id"),
+                    "mt5_source": mt5_source,
                 }
             )
 
@@ -322,13 +325,14 @@ class BridgeClient:
                     "success": success,
                     "command": cmd,
                     "symbol": data.get("symbol"),
+                    "mt5_source": mt5_source,
                 }
             )
 
         elif cmd == "get_symbol_info":
             spec = self.mt5.get_symbol_specification(data.get("symbol"))
             if spec:
-                await self.send_json({"topic": "mt5_symbol_info", "data": spec})
+                await self.send_json({"topic": "mt5_symbol_info", "data": spec, "mt5_source": mt5_source})
 
         elif cmd == "get_history":
             limit = data.get("limit", 100)
@@ -337,7 +341,7 @@ class BridgeClient:
             chunk_size = 500
 
             if total == 0:
-                await self.send_json({"topic": "mt5_history_deals", "data": [], "is_chunk": False})
+                await self.send_json({"topic": "mt5_history_deals", "data": [], "is_chunk": False, "mt5_source": mt5_source})
             else:
                 for i in range(0, total, chunk_size):
                     chunk = history[i : i + chunk_size]
@@ -349,6 +353,7 @@ class BridgeClient:
                             "chunk_index": i // chunk_size,
                             "total_chunks": (total + chunk_size - 1) // chunk_size,
                             "is_last_chunk": (i + chunk_size) >= total,
+                            "mt5_source": mt5_source,
                         }
                     )
                     print(f"[FETCH] Sent chunk {i // chunk_size + 1} with {len(chunk)} deals")

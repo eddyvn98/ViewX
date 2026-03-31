@@ -81,6 +81,12 @@ class MT5Service:
     def build_bridge_metadata(self, user_id=None, bridge_id=None, client_mode=None):
         account_login = self.get_account_login()
         terminal_id = self.get_terminal_identity()
+        bridge_source = (
+            self._first_env("BRIDGE_SOURCE", "MT5_BRIDGE_SOURCE")
+            or (str(account_login) if account_login is not None else None)
+            or terminal_id
+            or "MT5"
+        )
 
         resolved_user_id = (
             user_id
@@ -110,6 +116,7 @@ class MT5Service:
             "terminalId": terminal_id,
             "accountLogin": account_login,
             "bridgeId": resolved_bridge_id,
+            "bridgeSource": bridge_source,
         }
         return metadata
 

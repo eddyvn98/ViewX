@@ -11,7 +11,8 @@ export function handleMt5SymbolsAvailable({ ws, clients, routeTarget }, data) {
 
     const payload = JSON.stringify({
         topic: "mt5_available_symbols",
-        symbols: data.symbols
+        symbols: data.symbols,
+        mt5_source: data.mt5_source || "MT5",
     });
 
     const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });

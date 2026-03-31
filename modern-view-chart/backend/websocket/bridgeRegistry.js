@@ -39,13 +39,21 @@ function resolveRouteTarget(metadata = {}) {
                 source.account ??
                 source.accountNumber ??
                 source.mt5Account ??
-                source.mt5AccountId
+                source.mt5AccountId ??
+                source.accountLogin
         )
     );
+
+    const bridgeId = normalizeKey(source.bridgeId ?? source.bridge_id);
+    const bridgeSource = normalizeKey(source.bridgeSource ?? source.bridge_source ?? source.source);
+    const terminalId = normalizeKey(source.terminalId ?? source.terminal_id);
 
     return {
         userId,
         accountId,
+        bridgeId,
+        bridgeSource,
+        terminalId,
     };
 }
 
@@ -165,11 +173,18 @@ class BridgeRegistry {
     }
 
     getPrimarySocket(metadata = {}, clients = null) {
+        const isBridgeSocket = (ws) => {
+            if (!ws || ws.readyState !== ws.OPEN) return false;
+            if (!clients) return true;
+            const meta = clients.get(ws);
+            return Boolean(meta?.isBridgeAuthenticated);
+        };
+
         const routeTarget = resolveRouteTarget(metadata);
         if (routeTarget.userId) {
             const sockets = this.get(routeTarget.userId, routeTarget.accountId);
             for (const ws of sockets) {
-                if (ws?.readyState === ws.OPEN) return ws;
+                if (isBridgeSocket(ws)) return ws;
             }
             return null;
         }
@@ -198,6 +213,21 @@ class BridgeRegistry {
             if (routeTarget.accountId && normalizeKey(clientMeta?.accountId) !== routeTarget.accountId) continue;
 
             recipients.push(clientWs);
+        }
+
+        // Fallback path:
+        // In some deployments, dashboard auth userId and bridge userId can drift
+        // (for example after bridge restart/env mismatch). In that case, strict
+        // routing yields zero recipients and MT5 candles are effectively dropped.
+        // When strict match has no recipient, degrade to all non-bridge clients
+        // so active dashboards can still recover chart history.
+        if (hasRouteTarget && recipients.length === 0) {
+            for (const [clientWs, clientMeta] of clients.entries()) {
+                if (excludeWs && clientWs === excludeWs) continue;
+                if (clientWs.readyState !== clientWs.OPEN) continue;
+                if (clientMeta?.isBridgeAuthenticated) continue;
+                recipients.push(clientWs);
+            }
         }
 
         return recipients;

@@ -36,7 +36,7 @@ export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex, rou
         ask: data.ask,
         changeValue,
         change: changePercent,
-        source: "MT5",
+        source: data.mt5_source || "MT5",
         serverTime: data.time,
     });
 

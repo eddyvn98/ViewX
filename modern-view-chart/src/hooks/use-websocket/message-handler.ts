@@ -35,11 +35,28 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             wsRuntime.lastAppPongAt = Date.now();
             return;
         }
-        if (msgType === 'error' && String(msg?.code || '').toLowerCase() === 'unauthorized') {
-            wsRuntime.unauthorizedFrameReceived = true;
-            socket.close(1008, 'Unauthorized');
-            return;
+        if (msgType === 'error') {
+            const code = String(msg?.code || '').toLowerCase();
+            const detail = String(msg?.detail || '').toLowerCase();
+            if (code === 'unauthorized') {
+                wsRuntime.unauthorizedFrameReceived = true;
+                socket.close(1008, 'Unauthorized');
+                return;
+            }
+
+            // Recover from stale/mismatched bridge routing without requiring F5.
+            if (code === 'bridge_not_found' || detail.includes('no_bridge_registered')) {
+                deps.setBridgeOnline(false);
+                try {
+                    socket.close(4006, 'bridge_not_found_reconnect');
+                } catch {
+                    // Ignore close races; reconnect path will recover.
+                }
+                return;
+            }
         }
+
+        const mt5Source = String(msg.mt5_source || msg.source || 'MT5');
 
         if ((msgType === 'priceUpdate' && Array.isArray(msg.data)) || msgType === 'tick' || msgType === 'mt5_update') {
             const state = useMarketStore.getState();
@@ -56,7 +73,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         change: Number(item?.change || 0),
                         changeValue: Number(item?.changeValue || 0),
                         volume: 0,
-                        source: String(item?.source || 'MT5'),
+                        source: String(item?.source || item?.mt5_source || mt5Source || 'MT5'),
                         serverTime: item?.time,
                     };
                     usefulUpdate = true;
@@ -89,11 +106,11 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 symbol: targetSymbol,
                 interval: targetInterval,
                 count: normalizedCandles.length,
-                source: String(msg.source || 'MT5'),
+                source: mt5Source,
                 sampleTime: sample?.time,
                 sampleOpen: sample?.open,
             });
-            const source = String(msg.source || 'MT5');
+            const source = mt5Source;
             if (!targetInterval && targetSymbol) {
                 const state = useMarketStore.getState();
                 const wantedSymbol = normalizeSymbol(targetSymbol);
@@ -165,7 +182,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         return;
                     }
                     if (data?.account) {
-                        deps.setAccount('MT5', {
+                        deps.setAccount(mt5Source, {
                             balance: Number((data.account as Record<string, unknown>).balance) || 0,
                             equity: Number((data.account as Record<string, unknown>).equity) || 0,
                             margin: Number((data.account as Record<string, unknown>).margin) || 0,
@@ -187,7 +204,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             profit: p.profit || 0,
                             time: p.time,
                             magic: p.magic || 0,
-                            source: 'MT5',
+                            source: mt5Source,
                         }));
                         deps.setPositions(mappedPositions);
                     }
@@ -204,7 +221,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             profit: o.profit || 0,
                             time: o.time,
                             magic: o.magic || 0,
-                            source: 'MT5',
+                            source: mt5Source,
                         }));
                         deps.setOrders(mappedOrders);
                     }

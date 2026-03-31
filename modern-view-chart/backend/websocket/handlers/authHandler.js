@@ -61,7 +61,9 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) 
         safeSend(ws, JSON.stringify({
             topic: "mt5_positions_update",
             account: global.lastMt5State.account,
-            positions: global.lastMt5State.positions
+            positions: global.lastMt5State.positions,
+            orders: global.lastMt5State.orders || [],
+            mt5_source: global.lastMt5State.mt5_source || "MT5",
         }));
     }
 

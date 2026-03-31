@@ -9,14 +9,16 @@ export function handleMt5Positions({ ws, clients, routeTarget }, data) {
     global.lastMt5State = {
         account: data.account,
         positions: data.positions,
-        orders: data.orders || []
+        orders: data.orders || [],
+        mt5_source: data.mt5_source || "MT5",
     };
 
     const payload = JSON.stringify({
         topic: "mt5_positions_update",
         account: data.account,
         positions: data.positions,
-        orders: data.orders || []
+        orders: data.orders || [],
+        mt5_source: data.mt5_source || "MT5",
     });
 
     const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });
