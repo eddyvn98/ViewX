@@ -1,0 +1,214 @@
+{
+  "generatedAt": "2026-03-23T08:25:57.025Z",
+  "results": [
+    {
+      "name": "iphone-se-portrait",
+      "width": 320,
+      "height": 568,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": false
+      },
+      "consoleErrorCount": 1,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\iphone-se-portrait.png"
+    },
+    {
+      "name": "android-small-portrait",
+      "width": 360,
+      "height": 640,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": false
+      },
+      "consoleErrorCount": 1,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\android-small-portrait.png"
+    },
+    {
+      "name": "iphone-12-portrait",
+      "width": 390,
+      "height": 844,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": false
+      },
+      "consoleErrorCount": 1,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\iphone-12-portrait.png"
+    },
+    {
+      "name": "pixel-7-portrait",
+      "width": 412,
+      "height": 915,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": false
+      },
+      "consoleErrorCount": 1,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\pixel-7-portrait.png"
+    },
+    {
+      "name": "iphone-12-landscape",
+      "width": 844,
+      "height": 390,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": false
+      },
+      "consoleErrorCount": 1,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\iphone-12-landscape.png"
+    },
+    {
+      "name": "ipad-portrait",
+      "width": 768,
+      "height": 1024,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": true
+      },
+      "consoleErrorCount": 3,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()",
+        "[GSI_LOGGER]: The given origin is not allowed for the given client ID."
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\ipad-portrait.png"
+    },
+    {
+      "name": "ipad-landscape",
+      "width": 1024,
+      "height": 768,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": true
+      },
+      "consoleErrorCount": 3,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()",
+        "[GSI_LOGGER]: The given origin is not allowed for the given client ID."
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\ipad-landscape.png"
+    },
+    {
+      "name": "laptop-small",
+      "width": 1280,
+      "height": 720,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": true
+      },
+      "consoleErrorCount": 2,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()"
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\laptop-small.png"
+    },
+    {
+      "name": "laptop-medium",
+      "width": 1440,
+      "height": 900,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": true
+      },
+      "consoleErrorCount": 3,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()",
+        "[GSI_LOGGER]: The given origin is not allowed for the given client ID."
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\laptop-medium.png"
+    },
+    {
+      "name": "desktop-fhd",
+      "width": 1920,
+      "height": 1080,
+      "status": "ok",
+      "layout": {
+        "scrollOverflowX": 0,
+        "scrollOverflowY": 0,
+        "hasHorizontalOverflow": false,
+        "hasVerticalOverflow": false,
+        "hasAside": true
+      },
+      "consoleErrorCount": 3,
+      "pageErrorCount": 0,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()",
+        "[GSI_LOGGER]: The given origin is not allowed for the given client ID."
+      ],
+      "pageErrors": [],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\viewport-check-20260323\\desktop-fhd.png"
+    }
+  ]
+}

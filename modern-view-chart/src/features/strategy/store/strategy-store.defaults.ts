@@ -16,7 +16,7 @@ export function createMergedHullStrategy(): Strategy {
     return {
         id: MERGED_HULL_STRATEGY_ID,
         name: 'Hull HA Gold Scalper',
-        active: true,
+        active: false,
         positionMode: 'single_position',
         executionMode: 'virtual',
         entryType: 'stop',

@@ -1,0 +1,12 @@
+
+> vivutrade@0.1.0 dev
+> next dev --port 3020
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3020
+- Network:       http://172.21.16.1:3020
+- Environments: .env
+
+✓ Starting...
+  Suggestion: If you intended to restart next dev, terminate the other process, and then try again.
+[?25h

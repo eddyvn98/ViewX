@@ -1,5 +1,6 @@
 import createMiddleware from 'next-intl/middleware';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { routing } from './i18n/routing';
 
 const intlMiddleware = createMiddleware(routing);
@@ -31,6 +32,14 @@ function applySecurityHeaders(response: Response) {
 }
 
 export default function proxy(request: NextRequest) {
+    // Keep backward compatibility for legacy Vietnamese premium-ai slug.
+    if (request.nextUrl.pathname === '/vi/goi-cao-cap') {
+        const rewriteUrl = request.nextUrl.clone();
+        rewriteUrl.pathname = '/vi/premium-ai';
+        const response = NextResponse.redirect(rewriteUrl, 308);
+        return applySecurityHeaders(response);
+    }
+
     const response = intlMiddleware(request);
     return applySecurityHeaders(response);
 }

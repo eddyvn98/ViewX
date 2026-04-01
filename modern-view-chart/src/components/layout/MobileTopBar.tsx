@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo, useState } from 'react';
-import { Menu, BarChart2, Zap, Pencil, Star, X } from 'lucide-react';
+import { Menu, BarChart2, Zap, Pencil, Star, X, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
@@ -9,14 +9,16 @@ import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
 import { RootState } from '@/lib/store';
 import { CHART_TYPE_CONFIG, ChartTypeOption } from '@/features/chart/components/candle-type-config';
+import { LayoutGridSelector } from '@/features/chart/components/LayoutGridSelector';
 
 interface MobileTopBarProps {
     className?: string;
     compact?: boolean;
     mini?: boolean;
+    mobileLandscape?: boolean;
 }
 
-export const MobileTopBar = memo(function MobileTopBar({ className, compact = false, mini = false }: MobileTopBarProps) {
+export const MobileTopBar = memo(function MobileTopBar({ className, compact = false, mini = false, mobileLandscape = false }: MobileTopBarProps) {
     const [isChartTypePanelOpen, setIsChartTypePanelOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<ChartTypeOption>('candles');
     const [selectedSide, setSelectedSide] = useState<'up' | 'down'>('up');
@@ -41,6 +43,8 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
     const toggleFavoriteChartType = useMarketStore((state) => state.toggleFavoriteChartType);
     const isDrawingToolbarVisible = useMarketStore((state) => state.isDrawingToolbarVisible);
     const toggleDrawingToolbar = useMarketStore((state) => state.toggleDrawingToolbar);
+    const isRightSidebarOpen = useMarketStore((state) => state.isRightSidebarOpen);
+    const toggleRightSidebar = useMarketStore((state) => state.toggleRightSidebar);
 
     const handleMenuClick = () => {
         if (activeMobileTab === 'menu') {
@@ -98,7 +102,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
     React.useEffect(() => {
         if (!activeChart) return;
         setSelectedType((activeChart.chartType || 'candles') as ChartTypeOption);
-    }, [activeChart?.id, activeChart?.chartType]);
+    }, [activeChart]);
 
     return (
         <>
@@ -166,6 +170,26 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
 
             {/* Right: Theme Controls */}
             <div className={cn("flex items-center", compact ? "gap-1" : "gap-2")}>
+                {mobileLandscape && (
+                    <>
+                        <div className="scale-90 origin-right">
+                            <LayoutGridSelector />
+                        </div>
+                        <button
+                            onClick={toggleRightSidebar}
+                            className={cn(
+                                "p-1.5 rounded-md border transition-all",
+                                isRightSidebarOpen
+                                    ? "text-primary border-primary/30 bg-primary/10"
+                                    : "text-muted-foreground border-border/40 bg-secondary/30 hover:text-foreground"
+                            )}
+                            title={isRightSidebarOpen ? "Thu nhỏ panel phải" : "Mở panel phải"}
+                            aria-label={isRightSidebarOpen ? "Thu nhỏ panel phải" : "Mở panel phải"}
+                        >
+                            {isRightSidebarOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
+                        </button>
+                    </>
+                )}
                 <div className={cn("origin-right", compact ? "scale-75" : "scale-90")}>
                     <ThemeColorSwitcher />
                 </div>

@@ -10,9 +10,61 @@ export const routing = defineRouting({
 
     // Support localized pathnames
     pathnames: {
+        '/': {
+            en: '/',
+            vi: '/'
+        },
+        '/chart': {
+            en: '/chart',
+            vi: '/chart'
+        },
+        '/strategy/dashboard': {
+            en: '/strategy/dashboard',
+            vi: '/strategy/dashboard'
+        },
+        '/landing': {
+            en: '/landing',
+            vi: '/landing'
+        },
+        '/faq': {
+            en: '/faq',
+            vi: '/faq'
+        },
+        '/about': {
+            en: '/about',
+            vi: '/about'
+        },
+        '/methodology': {
+            en: '/methodology',
+            vi: '/methodology'
+        },
+        '/contact': {
+            en: '/contact',
+            vi: '/contact'
+        },
+        '/terms': {
+            en: '/terms',
+            vi: '/terms'
+        },
+        '/privacy': {
+            en: '/privacy',
+            vi: '/privacy'
+        },
+        '/plan-updates/free': {
+            en: '/plan-updates/free',
+            vi: '/plan-updates/free'
+        },
+        '/plan-updates/pro': {
+            en: '/plan-updates/pro',
+            vi: '/plan-updates/pro'
+        },
+        '/plan-updates/ai': {
+            en: '/plan-updates/ai',
+            vi: '/plan-updates/ai'
+        },
         '/premium-ai': {
             en: '/premium-ai',
-            vi: '/goi-cao-cap'
+            vi: '/premium-ai'
         }
     }
 });

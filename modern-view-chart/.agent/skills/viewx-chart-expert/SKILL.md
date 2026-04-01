@@ -132,3 +132,7 @@ Sự phối hợp giữa Canvas (thư viện) và DOM (web) cần tuân thủ c�
 - **Multi-point Snap**: Kiểm tra đồng thời cả 4 mức giá của nến: High, Low, Open, Close để hít vào điểm gần nhất.
 - **Visual Feedback**: Luôn thay đổi thuộc tính hiển thị (Màu sắc nổi bật hơn như Vàng #FFCC00, nét vẽ đậm hơn) khi trạng thái `isSnapped` được kích hoạt. Điều này giúp người dùng xác nhận điểm vẽ đã khớp chính xác vào nến.
 
+
+## Draft Order Note
+- See: ./draft-order-drag-skill.md
+

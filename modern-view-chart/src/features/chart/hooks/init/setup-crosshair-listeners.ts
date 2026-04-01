@@ -76,6 +76,21 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         };
     } | null = null;
     let dispatchRafId: number | null = null;
+    let wasSyncEnabled = useMarketStore.getState().isCrosshairSyncEnabled;
+
+    const clearCrosshairSyncState = (sourceChart: IChartApi, sourcePane: 'price' | 'subchart' | 'timescale') => {
+        if (dispatchRafId !== null) {
+            cancelAnimationFrame(dispatchRafId);
+            dispatchRafId = null;
+        }
+        pendingPayload = null;
+        lastSyncTime = null;
+        lastSyncX = null;
+        lastSyncY = null;
+        syncVerticalLines(sourceChart, charts, elements, series, null, null, null, formatTimeLabel);
+        useMarketStore.getState().syncCrosshair(null);
+        window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { time: null, sourceId: chartId, sourcePane } }));
+    };
 
     const flushPendingPayload = () => {
         if (!pendingPayload) {
@@ -127,6 +142,15 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
             : sourceChart === subchartChart
                 ? 'subchart'
                 : 'timescale';
+        const isCrosshairSyncEnabled = useMarketStore.getState().isCrosshairSyncEnabled;
+
+        if (!isCrosshairSyncEnabled) {
+            if (lastSyncTime !== null || pendingPayload || dispatchRafId !== null) {
+                clearCrosshairSyncState(sourceChart, sourcePane);
+            }
+            return;
+        }
+
         const logical = param.point ? sourceChart.timeScale().coordinateToLogical(param.point.x) : null;
         const normalizedTime = normalizeCrosshairTime(param.time);
         const snappedX = getSnappedCrosshairX(sourceChart, normalizedTime, param.point?.x ?? null);
@@ -146,14 +170,7 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
         // without improving the interaction.
         if (sourcePane === 'timescale') {
             if (!param.point && lastSyncTime !== null) {
-                if (dispatchRafId !== null) {
-                    cancelAnimationFrame(dispatchRafId);
-                    dispatchRafId = null;
-                }
-                pendingPayload = null;
-                lastSyncTime = null;
-                lastSyncX = null;
-                lastSyncY = null;
+                clearCrosshairSyncState(sourceChart, sourcePane);
             }
             return;
         }
@@ -202,17 +219,7 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
                 }
             }
         } else if (!param.point && lastSyncTime !== null) {
-            if (dispatchRafId !== null) {
-                cancelAnimationFrame(dispatchRafId);
-                dispatchRafId = null;
-            }
-
-            pendingPayload = null;
-            lastSyncTime = null;
-            lastSyncX = null;
-            lastSyncY = null;
-            useMarketStore.getState().syncCrosshair(null);
-            window.dispatchEvent(new CustomEvent('chart-crosshair', { detail: { time: null, sourceId: chartId, sourcePane } }));
+            clearCrosshairSyncState(sourceChart, sourcePane);
         }
     };
 
@@ -224,8 +231,20 @@ export function setupCrosshairListeners(args: CrosshairSetupArgs) {
     subchartChart.subscribeCrosshairMove(onSub);
     timescaleChart.subscribeCrosshairMove(onFoot);
 
+    const unsubscribeCrosshairSync = useMarketStore.subscribe(
+        (state) => state.isCrosshairSyncEnabled,
+        (enabled) => {
+            if (enabled === wasSyncEnabled) return;
+            wasSyncEnabled = enabled;
+            if (!enabled) {
+                clearCrosshairSyncState(priceChart, 'price');
+            }
+        }
+    );
+
     return () => {
         if (dispatchRafId !== null) cancelAnimationFrame(dispatchRafId);
+        unsubscribeCrosshairSync();
         priceChart.unsubscribeCrosshairMove(onPrice);
         subchartChart.unsubscribeCrosshairMove(onSub);
         timescaleChart.unsubscribeCrosshairMove(onFoot);

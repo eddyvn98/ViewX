@@ -9,6 +9,14 @@ export interface ConnectionDeps extends MessageHandlerDeps {
 }
 
 export async function connectSocket(deps: ConnectionDeps): Promise<void> {
+    const existing = wsRuntime.globalSocket;
+    if (existing) {
+        if (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING) {
+            return;
+        }
+        wsRuntime.globalSocket = null;
+    }
+
     const mustRefreshTicket = wsRuntime.forceFreshTicketOnReconnect;
     const socketConfig = buildSocketConfig({ ignoreUrlCredential: mustRefreshTicket });
     if (mustRefreshTicket) {
@@ -34,9 +42,10 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
         wsRuntime.lastMessageAt = Date.now();
         wsRuntime.lastAppPongAt = Date.now();
         deps.setConnected(true);
-        const userId = 'user_123';
         const symbols = collectActiveSymbolsFromStore();
-        socket.send(JSON.stringify({ topic: 'auth', userId, symbols }));
+        // Avoid hard-coding dashboard user routing; bridge user/account can vary
+        // by environment and hard-coded user ids can lead to bridge_not_found.
+        socket.send(JSON.stringify({ topic: 'auth', symbols }));
         socket.send(JSON.stringify({ topic: 'subscribeSymbols', symbols }));
     };
 

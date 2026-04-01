@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-03-23T08:27:15.531Z",
+  "results": [
+    {
+      "name": "iphone-12-portrait",
+      "viewport": "390x664",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 0,
+        "hasRightPanelLike": false,
+        "rootWidth": 390
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\iphone-12-portrait.png"
+    },
+    {
+      "name": "iphone-12-landscape",
+      "viewport": "844x390",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 1,
+        "hasRightPanelLike": true,
+        "rootWidth": 844
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\iphone-12-landscape.png"
+    },
+    {
+      "name": "iphone-se-portrait",
+      "viewport": "320x568",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 0,
+        "hasRightPanelLike": false,
+        "rootWidth": 320
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\iphone-se-portrait.png"
+    },
+    {
+      "name": "iphone-se-landscape",
+      "viewport": "667x375",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 1,
+        "hasRightPanelLike": true,
+        "rootWidth": 667
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\iphone-se-landscape.png"
+    },
+    {
+      "name": "pixel-7-portrait",
+      "viewport": "412x839",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 0,
+        "hasRightPanelLike": false,
+        "rootWidth": 412
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\pixel-7-portrait.png"
+    },
+    {
+      "name": "pixel-7-landscape",
+      "viewport": "915x412",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 1,
+        "hasRightPanelLike": true,
+        "rootWidth": 915
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\pixel-7-landscape.png"
+    },
+    {
+      "name": "ipad-mini-portrait",
+      "viewport": "768x1024",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 1,
+        "hasRightPanelLike": true,
+        "rootWidth": 768
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()",
+        "[GSI_LOGGER]: The given origin is not allowed for the given client ID."
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\ipad-mini-portrait.png"
+    },
+    {
+      "name": "ipad-mini-landscape",
+      "viewport": "1024x768",
+      "isMobile": true,
+      "hasTouch": true,
+      "metrics": {
+        "overflowX": 0,
+        "overflowY": 0,
+        "visibleAsideCount": 1,
+        "hasRightPanelLike": true,
+        "rootWidth": 1024
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 403 ()",
+        "[GSI_LOGGER]: The given origin is not allowed for the given client ID."
+      ],
+      "screenshot": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\device-emulation-20260323\\ipad-mini-landscape.png"
+    }
+  ]
+}

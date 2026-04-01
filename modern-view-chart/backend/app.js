@@ -14,6 +14,30 @@ import { runtimeState } from "./runtime-state.js";
 import { normalizeUserRole } from "./auth/roles.js";
 import { getActiveRefreshTokenCount } from "./auth/userJwt.js";
 import { emergencyConfig } from "./config/emergency.js";
+import mongoose from "mongoose";
+import { userStateModel } from "./model/user_state.js";
+import { userModel } from "./model/user.js";
+import { tradeLogModel } from "./model/trade_log.js";
+
+let monitorConnectionPromise = null;
+
+async function getMonitorDb() {
+    const monitorUri = (process.env.MONITOR_MONGO_URI || "mongodb://viewx-mongo:27017/viewx?directConnection=true").trim();
+    if (!monitorUri) return null;
+
+    if (!monitorConnectionPromise) {
+        monitorConnectionPromise = mongoose
+            .createConnection(monitorUri, { serverSelectionTimeoutMS: 3000 })
+            .asPromise()
+            .catch((error) => {
+                monitorConnectionPromise = null;
+                throw error;
+            });
+    }
+
+    const connection = await monitorConnectionPromise;
+    return connection?.db || null;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -248,6 +272,144 @@ export function createApp() {
             },
             db: getDatabaseHealth(),
             emergency_mode: emergencyConfig.enabled,
+        });
+    });
+
+    app.get("/api/metrics/user-activity", (req, res, next) => requireAuth(req, res, next), async (req, res) => {
+        const authType = req.auth?.type;
+        const role = normalizeUserRole(req.auth?.role);
+        if (authType !== "service" && role !== "admin") {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        const rawHours = Number.parseInt(String(req.query?.hours ?? "6"), 10);
+        const hours = Number.isFinite(rawHours) ? Math.max(1, Math.min(24 * 30, rawHours)) : 6;
+        const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+        const recentActivityFilter = { $or: [{ updatedAt: { $gte: since } }, { lastSyncedAt: { $gte: since } }] };
+
+        let activeUsers = [];
+        let guestSessions = 0;
+        let userSessions = 0;
+        let tradeLogs = 0;
+        let source = "primary";
+
+        try {
+            const monitorDb = await getMonitorDb();
+            if (monitorDb) {
+                const [activeUserStates, guestCount, userCount, tradeCount] = await Promise.all([
+                    monitorDb
+                        .collection("userstates")
+                        .find({ scopeType: "user", ...recentActivityFilter }, { projection: { scopeId: 1, updatedAt: 1, lastSyncedAt: 1 } })
+                        .sort({ updatedAt: -1 })
+                        .toArray(),
+                    monitorDb.collection("userstates").distinct("scopeId", { scopeType: "guest", ...recentActivityFilter }).then((ids) => ids.length),
+                    monitorDb.collection("userstates").countDocuments({ scopeType: "user", ...recentActivityFilter }),
+                    monitorDb.collection("tradelogs").countDocuments({ created_at: { $gte: since } }),
+                ]);
+
+                const userIds = Array.from(
+                    new Set(
+                        activeUserStates
+                            .map((state) => String(state.scopeId || "").trim())
+                            .filter((id) => mongoose.isValidObjectId(id)),
+                    ),
+                ).map((id) => new mongoose.Types.ObjectId(id));
+
+                const users = userIds.length
+                    ? await monitorDb
+                          .collection("users")
+                          .find({ _id: { $in: userIds } }, { projection: { username: 1, role: 1, createdAt: 1, updatedAt: 1 } })
+                          .toArray()
+                    : [];
+                const userById = new Map(users.map((user) => [String(user._id), user]));
+
+                activeUsers = activeUserStates.map((state) => {
+                    const user = userById.get(String(state.scopeId));
+                    return {
+                        userId: String(state.scopeId || ""),
+                        username: user?.username || null,
+                        role: user?.role || null,
+                        stateUpdatedAt: state.updatedAt || null,
+                        lastSyncedAt: state.lastSyncedAt || null,
+                        userCreatedAt: user?.createdAt || null,
+                        userUpdatedAt: user?.updatedAt || null,
+                    };
+                });
+                guestSessions = guestCount;
+                userSessions = userCount;
+                tradeLogs = tradeCount;
+                source = "docker_monitor";
+            }
+        } catch {
+            source = "primary_fallback";
+        }
+
+        if (source !== "docker_monitor") {
+            const activeUserStates = await userStateModel
+                .find(
+                    {
+                        scopeType: "user",
+                        ...recentActivityFilter,
+                    },
+                    { scopeId: 1, updatedAt: 1, lastSyncedAt: 1 },
+                )
+                .sort({ updatedAt: -1 })
+                .lean();
+
+            const userIds = Array.from(
+                new Set(
+                    activeUserStates
+                        .map((state) => String(state.scopeId || "").trim())
+                        .filter((id) => mongoose.isValidObjectId(id)),
+                ),
+            );
+
+            const users = await userModel
+                .find(
+                    {
+                        _id: { $in: userIds },
+                    },
+                    { username: 1, role: 1, createdAt: 1, updatedAt: 1 },
+                )
+                .lean();
+
+            const userById = new Map(users.map((user) => [String(user._id), user]));
+            activeUsers = activeUserStates.map((state) => {
+                const user = userById.get(String(state.scopeId));
+                return {
+                    userId: String(state.scopeId || ""),
+                    username: user?.username || null,
+                    role: user?.role || null,
+                    stateUpdatedAt: state.updatedAt || null,
+                    lastSyncedAt: state.lastSyncedAt || null,
+                    userCreatedAt: user?.createdAt || null,
+                    userUpdatedAt: user?.updatedAt || null,
+                };
+            });
+
+            const [guestCount, userCount, tradeCount] = await Promise.all([
+                userStateModel.distinct("scopeId", { scopeType: "guest", ...recentActivityFilter }).then((ids) => ids.length),
+                userStateModel.countDocuments({ scopeType: "user", ...recentActivityFilter }),
+                tradeLogModel.countDocuments({ created_at: { $gte: since } }),
+            ]);
+            guestSessions = guestCount;
+            userSessions = userCount;
+            tradeLogs = tradeCount;
+        }
+
+        return res.status(200).json({
+            ts: new Date().toISOString(),
+            timezone: "UTC",
+            hours,
+            since: since.toISOString(),
+            source,
+            summary: {
+                logged_in_users: activeUsers.length,
+                user_sessions: userSessions,
+                guest_sessions: guestSessions,
+                tradelogs: tradeLogs,
+            },
+            users: activeUsers,
         });
     });
 

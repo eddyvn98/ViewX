@@ -33,6 +33,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     const longPressTriggeredRef = useRef(false);
     const dragMovedRef = useRef(false);
     const pressStartRef = useRef({ x: 0, y: 0 });
+    const lastTouchHandledAtRef = useRef(0);
 
     const infiniteSymbols = [...watchlist, ...watchlist, ...watchlist];
 
@@ -155,7 +156,10 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     };
 
     const selectSymbol = (symbol: string, element: HTMLElement) => {
-        if (symbol === centerSymbol) {
+        // Use chart's current symbol as source of truth.
+        // Centered carousel item can differ from current chart symbol (e.g. guest/default BTCUSDT
+        // while watchlist centers on BTCUSDm), so comparing against centerSymbol can block switching.
+        if (symbol === currentSymbol) {
             if (window.navigator.vibrate) window.navigator.vibrate(10);
             onSymbolTap?.();
             return;
@@ -195,6 +199,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                             style={{ scrollSnapAlign: 'center' }}
                             onClick={(e) => {
                                 e.stopPropagation();
+                                if (Date.now() - lastTouchHandledAtRef.current < 400) return;
                                 if (longPressTriggeredRef.current) {
                                     longPressTriggeredRef.current = false;
                                     return;
@@ -214,6 +219,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                             }}
                             onTouchEnd={(e) => {
                                 if (!dragMovedRef.current && !longPressTriggeredRef.current) {
+                                    lastTouchHandledAtRef.current = Date.now();
                                     selectSymbol(symbol, e.currentTarget);
                                 }
                                 clearLongPress();

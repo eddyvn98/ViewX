@@ -3,14 +3,21 @@
 import React from 'react';
 import Link from 'next/link';
 import { Activity, ArrowLeft } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { StrategySignalScanners } from '@/features/strategy/components/StrategySignalScanners';
 import { SignalsView } from '@/features/strategy/components/SignalsView';
 import { usePathname, useSearchParams } from 'next/navigation';
+
+const StrategyRunnerBootstrap = dynamic(
+    () => import('@/features/strategy/components/StrategyRunnerBootstrap').then((m) => m.StrategyRunnerBootstrap),
+    { ssr: false }
+);
 
 export default function SignalsMonitorPage() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const locale = pathname.split('/').filter(Boolean)[0] || 'en';
+    const strategyEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED !== 'false';
 
     React.useEffect(() => {
         const focus = searchParams.get('focus');
@@ -32,6 +39,7 @@ export default function SignalsMonitorPage() {
 
     return (
         <div className="h-screen bg-secondary/20 text-foreground overflow-hidden flex flex-col">
+            {strategyEnabled && <StrategyRunnerBootstrap />}
             <header className="h-12 shrink-0 border-b border-border/60 bg-background/80 backdrop-blur px-4 flex items-center justify-between">
                 <div className="inline-flex items-center gap-2">
                     <Activity size={15} className="text-primary" />

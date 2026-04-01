@@ -26,14 +26,14 @@ if (!fs.existsSync(featuresDir)) {
 
   // Dashboard features
   console.log('Navigating to dashboard ...');
-  await page.goto('http://localhost:3000/vi/dashboard', { waitUntil: 'load' }).catch(e => {});
+  await page.goto('http://localhost:3000/vi/dashboard', { waitUntil: 'load' }).catch(() => {});
   await page.waitForTimeout(4000);
   await page.screenshot({ path: path.join(featuresDir, 'performance_dashboard_preview.png') }).catch(e=>console.log(e));
   await page.screenshot({ path: path.join(featuresDir, 'ai_performance_preview.png'), clip: { x: 100, y: 100, width: 1000, height: 700 } }).catch(e=>console.log(e));
 
   // Matrix/Algo features
   console.log('Navigating to matrix ...');
-  await page.goto('http://localhost:3000/vi/matrix', { waitUntil: 'load' }).catch(e => {});
+  await page.goto('http://localhost:3000/vi/matrix', { waitUntil: 'load' }).catch(() => {});
   await page.waitForTimeout(4000);
   await page.screenshot({ path: path.join(featuresDir, 'signal_matrix_preview.png') }).catch(e=>console.log(e));
   await page.screenshot({ path: path.join(featuresDir, 'strategy_builder_preview.png'), clip: { x: 300, y: 200, width: 1200, height: 800 } }).catch(e=>console.log(e));
@@ -41,7 +41,7 @@ if (!fs.existsSync(featuresDir)) {
 
   // Pro features => Back to chart
   console.log('Capturing Pro plan features...');
-  await page.goto('http://localhost:3000/vi/chart', { waitUntil: 'load' }).catch(e => {});
+  await page.goto('http://localhost:3000/vi/chart', { waitUntil: 'load' }).catch(() => {});
   await page.waitForTimeout(4000);
   await page.screenshot({ path: path.join(featuresDir, 'symbol_sync_preview.png'), clip: { x: 0, y: 50, width: 350, height: 900 } }).catch(e=>console.log(e));
   await page.screenshot({ path: path.join(featuresDir, 'fast_workflow_preview.png'), clip: { x: 600, y: 200, width: 800, height: 600 } }).catch(e=>console.log(e));

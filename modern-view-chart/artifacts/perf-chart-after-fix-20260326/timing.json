@@ -1,0 +1,78 @@
+{
+  "events": [
+    {
+      "t": 419,
+      "name": "domcontentloaded"
+    },
+    {
+      "t": 424,
+      "name": "load"
+    },
+    {
+      "t": 1549,
+      "name": "mt5_candles_frame",
+      "symbol": "BTCUSDT",
+      "interval": "1",
+      "count": 300
+    },
+    {
+      "t": 1591,
+      "name": "mt5_candles_frame",
+      "symbol": "BTCUSDT",
+      "interval": "1",
+      "count": 300
+    },
+    {
+      "t": 1645,
+      "name": "mt5_candles_frame",
+      "symbol": "BTCUSDT",
+      "interval": "1",
+      "count": 300
+    },
+    {
+      "t": 2257,
+      "name": "screenshot",
+      "file": "01830-initial.png"
+    },
+    {
+      "t": 2453,
+      "name": "action",
+      "action": "symbol:XAUUSDm"
+    },
+    {
+      "t": 4211,
+      "name": "screenshot",
+      "file": "03965-after-symbol-xau.png"
+    },
+    {
+      "t": 4445,
+      "name": "action",
+      "action": "tf:5m"
+    },
+    {
+      "t": 6193,
+      "name": "screenshot",
+      "file": "05954-after-tf-5m.png"
+    },
+    {
+      "t": 6390,
+      "name": "action",
+      "action": "symbol:BTCUSDm"
+    },
+    {
+      "t": 8216,
+      "name": "screenshot",
+      "file": "07898-after-symbol-btc.png"
+    },
+    {
+      "t": 8366,
+      "name": "action",
+      "action": "tf:15m"
+    },
+    {
+      "t": 10581,
+      "name": "screenshot",
+      "file": "10374-after-tf-15m.png"
+    }
+  ]
+}

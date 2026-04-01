@@ -119,7 +119,7 @@ function createWebSocketSession({ url, token, authMode, timeoutMs = 10000 }) {
                     message: summaryForMessage(payload),
                 });
             },
-            async waitFor(predicate, waitMs, description) {
+            async waitFor(predicate, waitMs) {
                 const deadline = Date.now() + waitMs;
                 while (Date.now() < deadline) {
                     for (let i = cursor; i < messages.length; i += 1) {

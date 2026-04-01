@@ -1,0 +1,126 @@
+{
+  "startedAt": "2026-03-26T02:27:45.830Z",
+  "events": [
+    {
+      "t": 616,
+      "name": "domcontentloaded"
+    },
+    {
+      "t": 641,
+      "name": "load"
+    },
+    {
+      "t": 1579,
+      "name": "mt5_candles_frame",
+      "symbol": "BTCUSDT",
+      "interval": "1",
+      "count": 300
+    },
+    {
+      "t": 1910,
+      "name": "mt5_candles_frame",
+      "symbol": "BTCUSDT",
+      "interval": "1",
+      "count": 300
+    },
+    {
+      "t": 1916,
+      "name": "mt5_candles_frame",
+      "symbol": "BTCUSDT",
+      "interval": "1",
+      "count": 300
+    },
+    {
+      "t": 2422,
+      "name": "screenshot",
+      "file": "01847-initial.png"
+    },
+    {
+      "t": 2743,
+      "name": "action",
+      "action": "symbol:XAUUSDm"
+    },
+    {
+      "t": 4144,
+      "name": "screenshot",
+      "file": "03945-after-symbol-xau.png"
+    },
+    {
+      "t": 4283,
+      "name": "action",
+      "action": "tf:1m"
+    },
+    {
+      "t": 5720,
+      "name": "screenshot",
+      "file": "05490-after-tf-1m.png"
+    },
+    {
+      "t": 6050,
+      "name": "action",
+      "action": "tf:5m"
+    },
+    {
+      "t": 7499,
+      "name": "screenshot",
+      "file": "07267-after-tf-5m.png"
+    },
+    {
+      "t": 7698,
+      "name": "action",
+      "action": "symbol:BTCUSDm"
+    },
+    {
+      "t": 9065,
+      "name": "screenshot",
+      "file": "08910-after-symbol-btc.png"
+    },
+    {
+      "t": 9276,
+      "name": "action",
+      "action": "tf:15m"
+    },
+    {
+      "t": 11490,
+      "name": "screenshot",
+      "file": "11288-after-tf-15m.png"
+    },
+    {
+      "t": 13697,
+      "name": "screenshot",
+      "file": "13502-final.png"
+    }
+  ],
+  "actions": [
+    {
+      "action": "symbol:XAUUSDm",
+      "arriveMs": null,
+      "arriveAt": null,
+      "frame": null
+    },
+    {
+      "action": "tf:1m",
+      "arriveMs": null,
+      "arriveAt": null,
+      "frame": null
+    },
+    {
+      "action": "tf:5m",
+      "arriveMs": null,
+      "arriveAt": null,
+      "frame": null
+    },
+    {
+      "action": "symbol:BTCUSDm",
+      "arriveMs": null,
+      "arriveAt": null,
+      "frame": null
+    },
+    {
+      "action": "tf:15m",
+      "arriveMs": null,
+      "arriveAt": null,
+      "frame": null
+    }
+  ]
+}

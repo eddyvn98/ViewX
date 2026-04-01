@@ -38,6 +38,14 @@ function isClosedBarOnlyIndicator(type: string): boolean {
     return CLOSED_BAR_ONLY_INDICATOR_TYPES.has(type);
 }
 
+const toCandleTimeSec = (value: Candle['time']): number => {
+    const raw = typeof value === 'object'
+        ? Number((value as { timestamp?: number }).timestamp ?? 0)
+        : Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    return raw > 10000000000 ? Math.floor(raw / 1000) : raw;
+};
+
 export function useChartIndicators(
     chartId: string,
     priceChartRef: React.RefObject<IChartApi | null>,
@@ -254,6 +262,7 @@ export function useChartIndicators(
                         if (!instance.updateLastPoint) return;
                         const indicatorId = Object.entries(instancesRef.current).find(([, value]) => value === instance)?.[0];
                         const indicatorType = indicatorId ? indicators.find((cfg) => cfg.id === indicatorId)?.type : undefined;
+                        if (indicatorType === 'RSI') return;
                         if (indicatorType && isClosedBarOnlyIndicator(indicatorType)) return;
                         const currentCandles = getCandles();
                         const lastIdx = currentCandles.length - 1;
@@ -262,6 +271,11 @@ export function useChartIndicators(
                         const baseCandle = currentCandles[lastIdx];
                         const currentLivePrice = Number(price);
                         const candleToUpdate = buildLiveCandle(baseCandle, currentLivePrice, interval);
+                        const baseTimeSec = toCandleTimeSec(baseCandle.time);
+                        const updateTimeSec = toCandleTimeSec(candleToUpdate.time);
+                        // Prevent stale resume ticks from creating future-time indicator points
+                        // (causes RSI flat-line to future and subchart/main-chart instability).
+                        if (baseTimeSec <= 0 || updateTimeSec <= 0 || updateTimeSec !== baseTimeSec) return;
                         instance.updateLastPoint(candleToUpdate, currentCandles);
                     });
                 });

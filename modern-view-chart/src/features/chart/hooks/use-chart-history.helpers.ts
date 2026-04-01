@@ -34,6 +34,21 @@ export const buildIntervalCandidates = (interval: string | undefined): string[] 
 
     const out = new Set<string>([raw]);
     const lower = raw.toLowerCase();
+    const toMinutes = (value: number, unit: string): number => {
+        if (unit === 'm') return value;
+        if (unit === 'h') return value * 60;
+        if (unit === 'd') return value * 1440;
+        return value;
+    };
+
+    const addMinuteAliases = (minutes: number) => {
+        if (!Number.isFinite(minutes) || minutes <= 0) return;
+        const m = Math.floor(minutes);
+        out.add(String(m));
+        out.add(`${m}m`);
+        if (m % 60 === 0) out.add(`${m / 60}h`);
+        if (m % 1440 === 0) out.add(`${m / 1440}d`);
+    };
     const m = lower.match(/^(\d+)m$/);
     if (m) out.add(m[1]);
     if (/^\d+$/.test(lower)) out.add(`${lower}m`);
@@ -42,6 +57,15 @@ export const buildIntervalCandidates = (interval: string | undefined): string[] 
     if (mt5) {
         out.add(mt5[1]);
         out.add(`${mt5[1]}m`);
+    }
+
+    const period = lower.match(/^(\d+)\s*([mhd])$/);
+    if (period) {
+        const minutes = toMinutes(Number(period[1]), period[2]);
+        addMinuteAliases(minutes);
+    } else if (/^\d+$/.test(lower)) {
+        const minutes = Number(lower);
+        addMinuteAliases(minutes);
     }
 
     return Array.from(out);

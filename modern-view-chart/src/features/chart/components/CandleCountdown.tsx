@@ -23,6 +23,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
     const countdownRef = useRef<HTMLDivElement>(null);
     const priceRef = useRef<HTMLDivElement>(null);
     const isTimescaleInteractingRef = useRef(false);
+    const lastRecoveryRequestAtRef = useRef(0);
 
     // Use smaller selectors for static config
     const activeChartId = useMarketStore(state => state.tabs[state.activeTabId]?.activeChartId);
@@ -43,6 +44,14 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
         // Disable native last value label to avoid overlap
         series.applyOptions({ lastValueVisible: false });
 
+        const toTimeSec = (time: RealtimeCandleLike['time']): number => {
+            const raw = typeof time === 'object'
+                ? Number((time as { timestamp?: number }).timestamp ?? 0)
+                : Number(time);
+            if (!Number.isFinite(raw) || raw <= 0) return 0;
+            return raw > 10000000000 ? Math.floor(raw / 1000) : raw;
+        };
+
         const updateDOM = () => {
             if (!containerRef.current) return;
             if (isTimescaleInteractingRef.current) {
@@ -51,7 +60,8 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             }
             const state = useMarketStore.getState();
             const symbolInfo = state.symbolInfo[normSymbol];
-            const currentPrice = realTimeRef?.current?.close ?? state.tickers[normSymbol]?.price;
+            const ticker = state.tickers[`${source}:${normSymbol}`] || state.tickers[normSymbol];
+            const currentPrice = realTimeRef?.current?.close ?? ticker?.price;
             const candles = state.candleData[key] || [];
             const lastCandle = realTimeRef?.current || candles[candles.length - 1];
 
@@ -79,7 +89,9 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             }
 
             // 3. Update Countdown Text
-            const now = Math.floor(Date.now() / 1000);
+            const now = Number.isFinite(Number(ticker?.serverTime))
+                ? Math.floor(Number(ticker?.serverTime) / 1000)
+                : Math.floor(Date.now() / 1000);
             let timeframeSeconds = 60;
             if (interval) {
                 if (interval === '1D' || interval === 'D') timeframeSeconds = 86400;
@@ -93,12 +105,35 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
                 }
             }
 
-            const lastCandleTime = typeof lastCandle.time === 'object'
-                ? Number((lastCandle.time as { timestamp?: number }).timestamp ?? 0)
-                : Number(lastCandle.time);
+            const lastCandleTime = toTimeSec(lastCandle.time);
+            if (lastCandleTime <= 0) {
+                if (countdownRef.current) countdownRef.current.textContent = '--:--';
+                return;
+            }
 
             const nextCandleTime = lastCandleTime + timeframeSeconds;
             let secondsLeft = nextCandleTime - now;
+            const staleForSec = now - lastCandleTime;
+            if (staleForSec > timeframeSeconds * 2) {
+                if (countdownRef.current) countdownRef.current.textContent = '--:--';
+                const nowMs = Date.now();
+                if (nowMs - lastRecoveryRequestAtRef.current > 10000 && symbol && interval) {
+                    lastRecoveryRequestAtRef.current = nowMs;
+                    window.dispatchEvent(
+                        new CustomEvent('chart-backfill-request', {
+                            detail: {
+                                source,
+                                symbol,
+                                interval,
+                                count: 300,
+                                reason: 'countdown_stale',
+                            },
+                        })
+                    );
+                }
+                return;
+            }
+
             if (secondsLeft < 0) secondsLeft = 0;
 
             if (secondsLeft >= 0) {
@@ -126,12 +161,19 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
                 requestAnimationFrame(updateDOM);
             }
         };
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                requestAnimationFrame(updateDOM);
+            }
+        };
         window.addEventListener('chart-timescale-interaction', handleTimescaleInteraction as EventListener);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
             clearInterval(intervalId);
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateDOM);
             window.removeEventListener('chart-timescale-interaction', handleTimescaleInteraction as EventListener);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             // Restore native label on unmount
             series.applyOptions({ lastValueVisible: true });
         };

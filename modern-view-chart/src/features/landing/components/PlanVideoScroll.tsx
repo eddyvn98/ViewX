@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 
@@ -93,6 +93,7 @@ export function PlanVideoScroll({ planKey }: { planKey: string }) {
                         {/* Video or Image Background */}
                         {slide.poster ? (
                             <div className="absolute inset-0 h-full w-full">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img 
                                     src={slide.poster} 
                                     alt={slide.title}
@@ -166,6 +167,7 @@ export function PlanVideoScroll({ planKey }: { planKey: string }) {
             {/* Bottom Action */}
             <div className="absolute bottom-10 inset-x-0 z-50 px-8 flex justify-center">
                  <button 
+                    onClick={() => router.push('/chart')}
                     className={`group relative w-full max-w-md overflow-hidden rounded-2xl ${getBrandColor()} px-8 py-5 text-sm font-bold uppercase tracking-widest text-white transition-all hover:scale-[1.02] active:scale-95`}
                     style={{ boxShadow: `0 0 30px ${getGlowColor()}` }}
                  >

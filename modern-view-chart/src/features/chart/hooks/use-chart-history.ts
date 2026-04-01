@@ -7,6 +7,7 @@ import { toSec } from '@/features/chart/utils/time-utils';
 import { formatCandleData } from '@/features/chart/utils/format-candle-data';
 import { useSeriesSwitcher } from './use-series-switcher';
 import { ChartInstance } from '@/lib/store/types';
+import { loadBestCachedCandles } from '@/features/chart/cache/candle-cache';
 import {
     buildIntervalCandidates,
     getNormalizedSymbol,
@@ -17,6 +18,8 @@ import {
 import type { Candle } from '@/lib/store/types';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
+const HISTORY_RETRY_WHEN_EMPTY_MS = 5000;
+const SYMBOL_INFO_COOLDOWN_MS = 15000;
 
 interface UseChartHistoryProps {
     chartId: string;
@@ -50,11 +53,15 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
     const lastTailSignatureRef = useRef('0');
+    const lastSymbolInfoRequestAtRef = useRef<Record<string, number>>({});
+    const cacheHydratedContextRef = useRef<Record<string, boolean>>({});
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
+    const setCandles = useMarketStore(state => state.setCandles);
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
+    const intervalCandidatesKey = intervalCandidates.join('|');
 
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
@@ -76,6 +83,47 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
+
+    useEffect(() => {
+        if (!isReady || !source || !normSymbol || intervalCandidates.length === 0) return;
+        if (candlesCount > 0) return;
+
+        const sourceText = String(source).trim();
+        if (!sourceText) return;
+
+        const baseHydrationKey = `${sourceText.toLowerCase()}:${normSymbol.toLowerCase()}:${intervalCandidates[0].toLowerCase()}`;
+        if (cacheHydratedContextRef.current[baseHydrationKey]) return;
+        cacheHydratedContextRef.current[baseHydrationKey] = true;
+
+        const sourceVariants = Array.from(new Set([sourceText, sourceText.toUpperCase(), sourceText.toLowerCase()]));
+        const cacheKeys: string[] = [];
+        for (const src of sourceVariants) {
+            for (const itv of intervalCandidates) {
+                cacheKeys.push(`${src}:${normSymbol}:${itv}`);
+            }
+        }
+
+        let cancelled = false;
+        void (async () => {
+            const cached = await loadBestCachedCandles(cacheKeys);
+            if (cancelled || !cached || cached.candles.length === 0) return;
+
+            const [cachedSource, cachedSymbol, cachedInterval] = cached.key.split(':');
+            if (!cachedSource || !cachedSymbol || !cachedInterval) return;
+
+            debugLog('[ChartHistory][hydrate-cache]', {
+                requested: baseHydrationKey,
+                hit: cached.key,
+                count: cached.candles.length,
+            });
+            setCandles(cachedSource, cachedSymbol, cachedInterval, cached.candles);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isReady, source, normSymbol, intervalCandidates, intervalCandidatesKey, candlesCount, setCandles]);
+
     const requestHistory = useCallback(() => {
         if (!symbol || !interval) return;
         const sourceText = String(source || '').toUpperCase();
@@ -93,15 +141,22 @@ export function useChartHistory(props: UseChartHistoryProps) {
         }
 
         sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
-        sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
+        const symbolInfoKey = `${sourceText}:${symbol}`;
+        const nowMs = Date.now();
+        const lastInfoAt = lastSymbolInfoRequestAtRef.current[symbolInfoKey] || 0;
+        if (nowMs - lastInfoAt >= SYMBOL_INFO_COOLDOWN_MS) {
+            lastSymbolInfoRequestAtRef.current[symbolInfoKey] = nowMs;
+            sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
+        }
     }, [symbol, interval, source, sendMessage]);
 
     useEffect(() => {
         if (!isReady || !symbol || !interval || !isConnected) return;
-        if (candlesCount >= MIN_CANDLES_THRESHOLD) return;
+        // Once we have any history for this context, stop aggressive polling.
+        if (candlesCount > 0) return;
 
         requestHistory();
-        const timer = setInterval(requestHistory, 2500);
+        const timer = setInterval(requestHistory, HISTORY_RETRY_WHEN_EMPTY_MS);
         return () => clearInterval(timer);
     }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage, requestHistory]);
 
@@ -128,7 +183,11 @@ export function useChartHistory(props: UseChartHistoryProps) {
                     persistedRange &&
                     Number.isFinite(persistedRange.from) &&
                     Number.isFinite(persistedRange.to) &&
-                    persistedRange.to > persistedRange.from
+                    persistedRange.to > persistedRange.from &&
+                    // Guard against stale/corrupted viewport snapshots that point
+                    // outside current candle bounds and make chart look blank.
+                    persistedRange.from <= candles.length + 500 &&
+                    persistedRange.to >= -500
                 ) {
                     chartRef.current?.timeScale().setVisibleLogicalRange({
                         from: persistedRange.from,
@@ -163,7 +222,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         });
         const isContextChange = key !== lastKeyRef.current;
 
-        if (currentCandles.length < MIN_CANDLES_THRESHOLD && isConnected) {
+        if (currentCandles.length === 0 && isConnected) {
             const now = Date.now();
             if (now - lastFetchRequestTimeRef.current > 2000) {
                 lastFetchRequestTimeRef.current = now;
@@ -173,6 +232,17 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
         if (isContextChange && currentCandles.length === 0) {
             chartStateRef.current = 'loading';
+            // Lock to the new context immediately so any pending RAF from the previous
+            // context is ignored and cannot paint stale candles into the current chart.
+            lastKeyRef.current = key;
+            isInitialMount.current = true;
+            lastDataLength.current = 0;
+            autoFitProgressRef.current = null;
+            lastTailSignatureRef.current = '0';
+            if (applyDataRafRef.current !== null) {
+                cancelAnimationFrame(applyDataRafRef.current);
+                applyDataRafRef.current = null;
+            }
             if (clearedForKeyRef.current !== key) {
                 clearedForKeyRef.current = key;
                 try {
@@ -246,6 +316,16 @@ export function useChartHistory(props: UseChartHistoryProps) {
                     clearedForKeyRef.current = null;
                     onHistoryLoaded(nextCandles[nextCandles.length - 1]);
                     updateSyncData(formatted, subSyncRef, timescaleSyncRef);
+
+                    // If chart is visually blank after restore/race, force a safe viewport
+                    // on first data apply for this context.
+                    if (isInitialMount.current) {
+                        try {
+                            chartRef.current?.timeScale().fitContent();
+                        } catch {
+                            // Ignore transient chart teardown races.
+                        }
+                    }
 
                     const autoFitState = autoFitProgressRef.current;
                     const shouldAutoFitOnContextEntry = isContextChange || isInitialMount.current || autoFitState?.key !== nextKey;

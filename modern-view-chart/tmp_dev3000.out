@@ -1,0 +1,12 @@
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.21.16.1:3000
+- Environments: .env
+
+✓ Starting...
+✓ Ready in 10.1s
+○ Compiling /[locale]/signals ...
+ GET /en/signals?focus=matrix 200 in 9.3s (proxy.ts: 19ms)
+ GET /en/signals?focus=matrix 200 in 211ms (compile: 41ms, proxy.ts: 10ms, render: 160ms)
+ GET /en/signals?focus=matrix 200 in 1345ms (compile: 145ms, proxy.ts: 32ms, render: 1168ms)
+ GET /en 200 in 1133ms (compile: 52ms, proxy.ts: 17ms, render: 1064ms)

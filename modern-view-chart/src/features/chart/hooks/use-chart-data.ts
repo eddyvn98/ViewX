@@ -26,6 +26,11 @@ export function useChartData(
     // Shared reference to the trusted "Current Candle" (from Store/History)
     const lastCandleRef = useRef<Candle | null>(null);
 
+    // Prevent candle state leakage across symbol/timeframe/source switches.
+    useEffect(() => {
+        lastCandleRef.current = null;
+    }, [id, symbol, interval, source]);
+
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store
     const { candles } = useChartHistory({

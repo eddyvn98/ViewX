@@ -119,7 +119,7 @@ export const createStrategyStoreState: StateCreator<StrategyState, [], [], Strat
         }),
     updateVirtualPosition: (id: string, updates: Partial<VirtualPosition>) =>
         set((state) => ({ virtualPositions: state.virtualPositions.map((p) => (p.id === id ? { ...p, ...updates } : p)) })),
-    showHistoryMarkers: true,
+    showHistoryMarkers: false,
     toggleShowHistoryMarkers: () => set((state) => ({ showHistoryMarkers: !state.showHistoryMarkers })),
     clearSignals: () => set({ signals: [] }),
     clearVirtualPositions: () => set({ virtualPositions: [] }),

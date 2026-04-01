@@ -1,0 +1,26 @@
+{
+  "dragTp": {
+    "ok": true,
+    "before": {
+      "y": "111",
+      "t": "translateY(98.6918px)"
+    },
+    "after": {
+      "y": "111",
+      "t": "translateY(98.6918px)"
+    },
+    "moved": false
+  },
+  "dragSl": {
+    "ok": true,
+    "before": {
+      "y": "157",
+      "t": "translateY(144.701px)"
+    },
+    "after": {
+      "y": "157",
+      "t": "translateY(144.701px)"
+    },
+    "moved": false
+  }
+}

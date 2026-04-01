@@ -1,0 +1,25 @@
+{
+  "outDir": "D:\\viewx\\ViewX\\modern-view-chart\\artifacts\\draft-drag-check-20260323",
+  "landscape": {
+    "hasDraft": true,
+    "tpResult": {
+      "ok": false,
+      "reason": "no-draft-tp"
+    },
+    "slResult": {
+      "ok": false,
+      "reason": "no-draft-sl"
+    }
+  },
+  "portrait": {
+    "hasDraft": false,
+    "tpResult": {
+      "ok": false,
+      "reason": "no-handle"
+    },
+    "slResult": {
+      "ok": false,
+      "reason": "no-handle"
+    }
+  }
+}

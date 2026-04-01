@@ -1,4 +1,5 @@
 import { getDatabaseHealth } from "../../services/database.js";
+import { createHash } from "crypto";
 
 export function sanitizeClientId(input) {
   const raw = String(input || "").trim();
@@ -39,7 +40,21 @@ export function resolvePublicStateScope(req) {
         : "",
   );
 
-  return { scopeType: "guest", scopeId: clientId };
+  if (clientId && clientId !== "public") {
+    return { scopeType: "guest", scopeId: `cid:${clientId}` };
+  }
+
+  const forwarded = String(req.headers["x-forwarded-for"] || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)[0] || "";
+  const directIp = String(req.ip || req.socket?.remoteAddress || "").trim();
+  const userAgent = String(req.headers["user-agent"] || "").trim();
+  const ipSource = forwarded || directIp || "unknown";
+  const fingerprint = `${ipSource}|${userAgent}`;
+  const digest = createHash("sha256").update(fingerprint).digest("hex").slice(0, 24);
+
+  return { scopeType: "guest", scopeId: `fp:${digest}` };
 }
 
 export function isPlainObject(value) {

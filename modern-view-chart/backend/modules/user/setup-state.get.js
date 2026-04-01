@@ -38,12 +38,32 @@ export async function fetchState(scope) {
   return doc;
 }
 
+async function touchGuestSession(scope) {
+  if (scope?.scopeType !== 'guest' || !scope?.scopeId) return;
+
+  await userStateModel.updateOne(
+    { scopeType: scope.scopeType, scopeId: scope.scopeId },
+    {
+      $set: { lastSyncedAt: new Date() },
+      $setOnInsert: {
+        state: {},
+        schemaVersion: 1,
+        revision: 0,
+        clientUpdatedAt: null,
+        lastSourceClientId: scope.scopeId,
+      },
+    },
+    { upsert: true },
+  );
+}
+
 export function createGetStateHandler({ resolveScope, requireDatabase = false }) {
   return async (req, res) => {
     const scope = resolveScope(req);
     if (requireDatabase && !isDatabaseReadyForUserState()) {
       return res.status(200).json(buildEmptySetupStateResponse(scope));
     }
+    await touchGuestSession(scope);
     const doc = await fetchState(scope);
     if (!doc) {
       return res.status(200).json(buildEmptySetupStateResponse(scope));

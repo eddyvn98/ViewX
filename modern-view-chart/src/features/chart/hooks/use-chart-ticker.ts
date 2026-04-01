@@ -40,14 +40,42 @@ export function useChartTicker({
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
 
+    useEffect(() => {
+        // Keep context switching outside render to satisfy react-hooks/refs rule.
+        if (activeContextKeyRef.current !== contextKey) {
+            activeContextKeyRef.current = contextKey;
+            realTimeCandleRef.current = null;
+        }
+    }, [contextKey]);
+
     const getStoreCandles = useCallback(() => {
         if (!source || !normSymbol || !interval) return [];
         const state = useMarketStore.getState();
         const intervalRaw = String(interval).trim();
         const intervalLower = intervalRaw.toLowerCase();
+        const addAliases = new Set<string>([intervalRaw, intervalLower]);
+        const addMinuteAliases = (minutes: number) => {
+            if (!Number.isFinite(minutes) || minutes <= 0) return;
+            const m = Math.floor(minutes);
+            addAliases.add(String(m));
+            addAliases.add(`${m}m`);
+            if (m % 60 === 0) addAliases.add(`${m / 60}h`);
+            if (m % 1440 === 0) addAliases.add(`${m / 1440}d`);
+        };
+
+        const period = intervalLower.match(/^(\d+)\s*([mhd])$/);
+        if (period) {
+            const value = Number(period[1]);
+            const unit = period[2];
+            if (unit === 'm') addMinuteAliases(value);
+            if (unit === 'h') addMinuteAliases(value * 60);
+            if (unit === 'd') addMinuteAliases(value * 1440);
+        } else if (/^\d+$/.test(intervalLower)) {
+            addMinuteAliases(Number(intervalLower));
+        }
+
         const intervalCandidates = Array.from(new Set([
-            intervalRaw,
-            intervalLower,
+            ...Array.from(addAliases),
             intervalLower.replace(/^m(\d+)$/, '$1'),
             /^\d+$/.test(intervalLower) ? `${intervalLower}m` : intervalLower,
             intervalLower.endsWith('m') ? intervalLower.slice(0, -1) : intervalLower,
@@ -82,11 +110,6 @@ export function useChartTicker({
         const RIGHT_EDGE_TOLERANCE_BARS = 1.5;
         return range.to >= (dataCount - 1 - RIGHT_EDGE_TOLERANCE_BARS);
     }, [chartRef, seriesRef]);
-
-    // Reset local state when context changes
-    useEffect(() => {
-        activeContextKeyRef.current = contextKey;
-    }, [contextKey]);
 
     useEffect(() => {
         realTimeCandleRef.current = null;
@@ -178,12 +201,18 @@ export function useChartTicker({
 
             // 3. Client-side New Bar Generation (single-bar step only)
             if (now >= nextBarTime) {
-                const haOpen = isHA ? (base.open + base.close) / 2 : base.close;
+                const rawBaseOpen = base.rawOpen ?? base.open;
+                const rawBaseHigh = base.rawHigh ?? base.high;
+                const rawBaseLow = base.rawLow ?? base.low;
+                const rawBaseClose = base.rawClose ?? base.close;
+                const prevHaClose = isHA ? (rawBaseOpen + rawBaseHigh + rawBaseLow + rawBaseClose) / 4 : rawBaseClose;
+                const prevHaOpen = isHA ? (base.ha_open ?? prevHaClose) : rawBaseClose;
+                const haOpen = isHA ? (prevHaOpen + prevHaClose) / 2 : rawBaseClose;
                 const newCandle = {
                     time: nextBarTime,
-                    open: isHA ? haOpen : base.close,
+                    open: isHA ? haOpen : rawBaseClose,
                     high: price, low: price, close: price,
-                    rawOpen: base.rawClose || base.close,
+                    rawOpen: rawBaseClose,
                     rawHigh: price, rawLow: price, rawClose: price,
                     ha_open: isHA ? haOpen : undefined,
                 };
@@ -206,10 +235,11 @@ export function useChartTicker({
                         close: newCandle.close,
                     };
                     if (isSmart) {
-                        seriesRef.current?.update({
+                        const smartCandle = {
                             ...seriesNewCandle,
                             candleColor: seriesNewCandle.close >= seriesNewCandle.open ? candleUpColor : candleDownColor,
-                        } as any);
+                        };
+                        seriesRef.current?.update(smartCandle as unknown as Parameters<NonNullable<typeof seriesRef.current>['update']>[0]);
                     } else {
                         seriesRef.current?.update(seriesNewCandle);
                     }
@@ -242,23 +272,20 @@ export function useChartTicker({
             base.rawClose = rClose;
 
             if (isHA) {
-                const haOpen = base.ha_open ?? base.open;
+                const seriesLast = seriesRef.current?.data().at(-1) as { time?: Time; open?: number } | undefined;
+                const seriesLastTime = seriesLast?.time != null ? toSec(seriesLast.time) : null;
+                const seriesOpen = typeof seriesLast?.open === 'number' ? seriesLast.open : undefined;
+                const fallbackOpen = base.rawOpen ?? base.open;
+                const haOpen = base.ha_open
+                    ?? ((seriesLastTime === updateTime && typeof seriesOpen === 'number') ? seriesOpen : fallbackOpen);
                 const haClose = (rOpen + rHigh + rLow + rClose) / 4;
+                base.ha_open = haOpen;
                 const haData = {
                     time: updateTime as Time,
                     open: haOpen, high: Math.max(rHigh, haOpen, haClose),
                     low: Math.min(rLow, haOpen, haClose), close: haClose,
                 };
-                base.open = haOpen; base.close = haClose;
-                base.high = haData.high; base.low = haData.low;
                 seriesRef.current?.update(haData);
-                // Simple Bullish/Bearish Coloring
-                base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
-
-                seriesRef.current?.update({
-                    time: updateTime as Time,
-                    open: rOpen, high: rHigh, low: rLow, close: rClose,
-                });
             } else {
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
 
@@ -268,14 +295,15 @@ export function useChartTicker({
                 };
 
                 if (isSmart) {
-                    seriesRef.current?.update({
+                    const smartCandle = {
                         time: updateTime as Time,
                         open: updateData.open,
                         high: updateData.high,
                         low: updateData.low,
                         close: updateData.close,
                         candleColor: updateData.close >= updateData.open ? candleUpColor : candleDownColor,
-                    } as any);
+                    };
+                    seriesRef.current?.update(smartCandle as unknown as Parameters<NonNullable<typeof seriesRef.current>['update']>[0]);
                 } else {
                     seriesRef.current?.update({
                         time: updateTime as Time,

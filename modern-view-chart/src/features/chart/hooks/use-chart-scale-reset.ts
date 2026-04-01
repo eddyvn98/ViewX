@@ -106,9 +106,60 @@ export function useChartScaleReset(
         const onSubchartDblClick = handlePriceScaleDblClick(subchartChartRef, subchartContainer, false);
         const onTimescaleDblClick = handleTimeScaleDblClick;
 
+        const createTouchDoubleTapHandler = (
+            chartRef: React.RefObject<IChartApi | null>,
+            container: HTMLElement,
+            allowAutoScaleReset: boolean
+        ) => {
+            let lastTapAt = 0;
+            let lastTapX = 0;
+            let lastTapY = 0;
+            return (e: TouchEvent) => {
+                if (e.touches.length !== 1) return;
+                const touch = e.touches[0];
+                if (!touch) return;
+                const now = Date.now();
+                const deltaMs = now - lastTapAt;
+                const deltaX = Math.abs(touch.clientX - lastTapX);
+                const deltaY = Math.abs(touch.clientY - lastTapY);
+                const isDoubleTap = deltaMs > 0 && deltaMs <= 320 && deltaX <= 24 && deltaY <= 24;
+
+                lastTapAt = now;
+                lastTapX = touch.clientX;
+                lastTapY = touch.clientY;
+
+                if (!isDoubleTap) return;
+
+                const chart = chartRef.current;
+                if (!chart) return;
+                const rect = container.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const width = container.clientWidth;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (x > width - 100) {
+                    if (allowAutoScaleReset) {
+                        chart.priceScale('right').applyOptions({ autoScale: true });
+                    }
+                    return;
+                }
+
+                focusRecentCandles(50);
+            };
+        };
+
+        const onPriceTouchStart = createTouchDoubleTapHandler(priceChartRef, priceContainer, true);
+        const onSubchartTouchStart = createTouchDoubleTapHandler(subchartChartRef, subchartContainer, false);
+        const onTimescaleTouchStart = createTouchDoubleTapHandler(timescaleChartRef, timescaleContainer, false);
+
         priceContainer.addEventListener('dblclick', onPriceDblClick);
         subchartContainer.addEventListener('dblclick', onSubchartDblClick);
         timescaleContainer.addEventListener('dblclick', onTimescaleDblClick);
+        priceContainer.addEventListener('touchstart', onPriceTouchStart, { passive: false });
+        subchartContainer.addEventListener('touchstart', onSubchartTouchStart, { passive: false });
+        timescaleContainer.addEventListener('touchstart', onTimescaleTouchStart, { passive: false });
 
         const handleForegroundResync = () => {
             const chart = priceChartRef.current;
@@ -121,6 +172,9 @@ export function useChartScaleReset(
             priceContainer.removeEventListener('dblclick', onPriceDblClick);
             subchartContainer.removeEventListener('dblclick', onSubchartDblClick);
             timescaleContainer.removeEventListener('dblclick', onTimescaleDblClick);
+            priceContainer.removeEventListener('touchstart', onPriceTouchStart);
+            subchartContainer.removeEventListener('touchstart', onSubchartTouchStart);
+            timescaleContainer.removeEventListener('touchstart', onTimescaleTouchStart);
             window.removeEventListener('chart-foreground-resync', handleForegroundResync as EventListener);
         };
     }, [
