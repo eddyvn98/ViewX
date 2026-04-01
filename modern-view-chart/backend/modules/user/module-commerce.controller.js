@@ -10,6 +10,12 @@ import {
 } from "../../services/moduleCommerce.js";
 import { emitModuleActivated } from "../../services/moduleEvents.js";
 
+function normalizeModuleName(value) {
+    const key = String(value || "").trim().toLowerCase();
+    if (key === "mt5_trade") return "your_mt5";
+    return key;
+}
+
 function getAuthUserId(req) {
     return String(req?.auth?.userId || req?.user?.sub || req?.user?._id || "").trim();
 }
@@ -21,7 +27,7 @@ function getAuthRole(req) {
 export async function getMyModuleStatus(req, res) {
     const userId = getAuthUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-    const moduleName = String(req.query?.module || "").trim().toLowerCase();
+    const moduleName = normalizeModuleName(req.query?.module);
     if (!getModuleCatalog(moduleName)) return res.status(400).json({ error: "module_not_supported" });
 
     const user = await userModel.findById(userId).select("_id moduleAccess");
@@ -33,7 +39,7 @@ export async function getMyModuleStatus(req, res) {
 export async function startMyModuleTrial(req, res) {
     const userId = getAuthUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-    const moduleName = String(req.body?.module || "").trim().toLowerCase();
+    const moduleName = normalizeModuleName(req.body?.module);
     try {
         const status = await startModuleTrial({ userId, moduleName });
         return res.status(200).json({ ok: true, ...status });
@@ -45,7 +51,7 @@ export async function startMyModuleTrial(req, res) {
 export async function createMyModuleOrder(req, res) {
     const userId = getAuthUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-    const moduleName = String(req.body?.module || "").trim().toLowerCase();
+    const moduleName = normalizeModuleName(req.body?.module);
     try {
         const order = await createModuleOrder({ userId, moduleName });
         return res.status(201).json({
@@ -176,7 +182,7 @@ export async function rejectAdminModuleOrder(req, res) {
 export async function listAdminModuleMembers(req, res) {
     const role = getAuthRole(req);
     if (role !== "admin") return res.status(403).json({ error: "Forbidden" });
-    const moduleName = String(req.query?.module || "").trim().toLowerCase();
+    const moduleName = normalizeModuleName(req.query?.module);
     const filter = moduleName ? { moduleAccess: { $elemMatch: { module: moduleName } } } : { moduleAccess: { $exists: true, $ne: [] } };
     const users = await userModel
         .find(filter)
@@ -191,7 +197,7 @@ export async function adminExtendMemberModule(req, res) {
     const role = getAuthRole(req);
     if (role !== "admin") return res.status(403).json({ error: "Forbidden" });
     const userId = String(req.params?.userId || "").trim();
-    const moduleName = String(req.body?.module || "").trim().toLowerCase();
+    const moduleName = normalizeModuleName(req.body?.module);
     const days = Math.max(1, Number.parseInt(String(req.body?.days || "30"), 10) || 30);
     if (!getModuleCatalog(moduleName)) return res.status(400).json({ error: "module_not_supported" });
 
@@ -200,7 +206,7 @@ export async function adminExtendMemberModule(req, res) {
 
     const now = new Date();
     const access = Array.isArray(user.moduleAccess) ? [...user.moduleAccess] : [];
-    const idx = access.findIndex((x) => String(x?.module || "").trim().toLowerCase() === moduleName);
+    const idx = access.findIndex((x) => normalizeModuleName(x?.module) === moduleName);
     const current = idx >= 0 ? access[idx] : null;
     const base = current?.activeUntil && new Date(current.activeUntil).getTime() > now.getTime()
         ? new Date(current.activeUntil)
@@ -219,9 +225,9 @@ export async function adminExtendMemberModule(req, res) {
     if (idx >= 0) access[idx] = next;
     else access.push(next);
     user.moduleAccess = access;
-    if (!Array.isArray(user.modules) || !user.modules.includes(moduleName)) {
-        user.modules = [...(user.modules || []), moduleName];
-    }
+    const normalizedModules = Array.isArray(user.modules) ? user.modules.map((item) => normalizeModuleName(item)) : [];
+    if (!normalizedModules.includes(moduleName)) normalizedModules.push(moduleName);
+    user.modules = normalizedModules;
     user.subscription = {
         ...(user.subscription || {}),
         modules: user.modules,
@@ -241,14 +247,14 @@ export async function adminExpireMemberModule(req, res) {
     const role = getAuthRole(req);
     if (role !== "admin") return res.status(403).json({ error: "Forbidden" });
     const userId = String(req.params?.userId || "").trim();
-    const moduleName = String(req.body?.module || "").trim().toLowerCase();
+    const moduleName = normalizeModuleName(req.body?.module);
     if (!getModuleCatalog(moduleName)) return res.status(400).json({ error: "module_not_supported" });
     const user = await userModel.findById(userId);
     if (!user?._id) return res.status(404).json({ error: "user_not_found" });
 
     const now = new Date();
     const access = Array.isArray(user.moduleAccess) ? [...user.moduleAccess] : [];
-    const idx = access.findIndex((x) => String(x?.module || "").trim().toLowerCase() === moduleName);
+    const idx = access.findIndex((x) => normalizeModuleName(x?.module) === moduleName);
     if (idx >= 0) {
         access[idx] = {
             ...access[idx],

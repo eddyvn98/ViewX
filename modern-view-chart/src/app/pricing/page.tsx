@@ -14,7 +14,7 @@ type ModuleItem = {
 };
 
 const MODULES: ModuleItem[] = [
-    { key: 'mt5_trade', title: 'Ket noi va giao dich MT5', desc: 'Mo/khoa lenh truc tiep qua bridge MT5.', price: '30k/thang' },
+    { key: 'your_mt5', title: 'Your MT5 (MT5 cua ban)', desc: 'Ket noi MT5 ca nhan de xem chart va giao dich tren web/app.', price: '30k/thang' },
     { key: 'binance_trade', title: 'Giao dich Binance Demo', desc: 'Mo phong giao dich Binance tren nen web.', price: '20k/thang' },
     { key: 'telegram_notify', title: 'Thong bao Telegram', desc: 'Nhan canh bao gia/tin hieu qua Telegram.', price: '15k/thang' },
     { key: 'telegram_control', title: 'Dieu khien qua Telegram', desc: 'Ra lenh nhanh qua Telegram bot.', price: '20k/thang' },

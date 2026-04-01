@@ -3,11 +3,15 @@ import { normalizeUserRole } from "../../auth/roles.js";
 const PRO_PLAN_ALIASES = new Set(["pro", "pro_plus", "pro+", "premium"]);
 const PRO_ROLE_ALIASES = new Set(["trader", "admin"]);
 const KNOWN_MODULES = new Set([
+    "your_mt5",
     "mt5_trade",
     "binance_trade",
     "telegram_notify",
     "telegram_control",
     "ai_assistant",
+]);
+const MODULE_ALIASES = new Map([
+    ["mt5_trade", "your_mt5"],
 ]);
 
 const MT5_PRO_ONLY_COMMANDS = new Set([
@@ -26,6 +30,11 @@ const BINANCE_PRO_ONLY_COMMANDS = new Set(["buy", "sell", "close"]);
 
 function normalizeValue(value) {
     return String(value || "").trim().toLowerCase();
+}
+
+function normalizeModuleKey(value) {
+    const key = normalizeValue(value);
+    return MODULE_ALIASES.get(key) || key;
 }
 
 function pickFirstValue(...values) {
@@ -58,7 +67,7 @@ function normalizeModules(rawModules) {
     if (!Array.isArray(rawModules)) return [];
     const output = [];
     for (const moduleName of rawModules) {
-        const normalized = normalizeValue(moduleName);
+        const normalized = normalizeModuleKey(moduleName);
         if (!normalized || !KNOWN_MODULES.has(normalized) || output.includes(normalized)) continue;
         output.push(normalized);
     }
@@ -69,16 +78,16 @@ function inferModulesFromPlan(plan) {
     const normalizedPlan = normalizeValue(plan);
     if (!normalizedPlan) return [];
     if (normalizedPlan === "pro_plus" || normalizedPlan === "pro+" || normalizedPlan === "premium") {
-        return ["mt5_trade", "binance_trade", "telegram_notify", "telegram_control", "ai_assistant"];
+        return ["your_mt5", "binance_trade", "telegram_notify", "telegram_control", "ai_assistant"];
     }
     if (normalizedPlan === "pro" || normalizedPlan.startsWith("pro")) {
-        return ["mt5_trade", "binance_trade", "telegram_notify", "telegram_control"];
+        return ["your_mt5", "binance_trade", "telegram_notify", "telegram_control"];
     }
     return [];
 }
 
 function hasLiveModuleAccess(moduleName, meta = {}, data = {}) {
-    const key = normalizeValue(moduleName);
+    const key = normalizeModuleKey(moduleName);
     const list =
         data?.moduleAccess ||
         data?.session?.moduleAccess ||
@@ -168,7 +177,7 @@ export function hasRequiredModule(moduleName, meta = {}, data = {}) {
     if (isExpired(entitlement.validUntil)) return false;
     if (PRO_ROLE_ALIASES.has(entitlement.role)) return true;
     if (hasLiveModuleAccess(moduleName, meta, data)) return true;
-    if (entitlement.modules.includes(normalizeValue(moduleName))) return true;
+    if (entitlement.modules.includes(normalizeModuleKey(moduleName))) return true;
     return hasProEntitlement(meta, data);
 }
 
@@ -181,7 +190,7 @@ export function getProEntitlementReason(meta = {}, data = {}) {
 export function getModuleEntitlementReason(moduleName, meta = {}, data = {}) {
     const entitlement = resolveEntitlementContext(meta, data);
     if (isExpired(entitlement.validUntil)) return "subscription_expired";
-    return `module_required:${normalizeValue(moduleName) || "unknown"}`;
+    return `module_required:${normalizeModuleKey(moduleName) || "unknown"}`;
 }
 
 export function isProOnlyMt5Command(command) {

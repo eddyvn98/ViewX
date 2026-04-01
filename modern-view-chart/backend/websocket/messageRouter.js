@@ -507,8 +507,8 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     handleMt5Candles(context, data);
                     break;
                 case "mt5_command":
-                    if (isProOnlyMt5Command(data.command) && !hasRequiredModule("mt5_trade", senderMeta, data)) {
-                        const reason = getModuleEntitlementReason("mt5_trade", senderMeta, data) || getProEntitlementReason(senderMeta, data);
+                    if (isProOnlyMt5Command(data.command) && !hasRequiredModule("your_mt5", senderMeta, data)) {
+                        const reason = getModuleEntitlementReason("your_mt5", senderMeta, data) || getProEntitlementReason(senderMeta, data);
                         incrementWsProEntitlementBlock();
                         logWarn("ws.entitlement.blocked", {
                             topic: msgTopic,

@@ -255,7 +255,9 @@ class BridgeRegistry {
 
         const routeTarget = resolveRouteTarget(metadata);
         const recipients = [];
-        const hasRouteTarget = Boolean(routeTarget.userId || routeTarget.accountId);
+        // Strict private routing is enabled only when userId is present.
+        // For shared/public bridge feeds (no userId), broadcast to all non-bridge clients.
+        const hasRouteTarget = Boolean(routeTarget.userId);
 
         for (const [clientWs, clientMeta] of clients.entries()) {
             if (excludeWs && clientWs === excludeWs) continue;

@@ -38,7 +38,7 @@ type ModuleMember = {
   moduleAccess?: Record<string, ModuleAccess>;
 };
 
-const MODULE_KEYS = ["mt5_trade", "telegram_notify", "telegram_control", "ai_assistant"];
+const MODULE_KEYS = ["your_mt5", "telegram_notify", "telegram_control", "ai_assistant"];
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {

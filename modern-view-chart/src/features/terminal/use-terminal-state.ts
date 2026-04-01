@@ -18,12 +18,12 @@ type Mt5ModifyPayload = {
     tp?: number;
 };
 
-type ProFlowMessages = {
+type YourMt5FlowMessages = {
     warningSetupRequired: string;
     warningModifyUnavailable: string;
 };
 
-export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessages) {
+export function useTerminalState(forceExpanded: boolean, messages: YourMt5FlowMessages) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
     const initialEnt = getClientEntitlements();
     const [moduleStatus, setModuleStatus] = useState<{
@@ -32,8 +32,8 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
         trialEndsAt: string | null;
         activeUntil: string | null;
     }>({
-        status: initialEnt.hasMt5Trade ? 'active' : 'inactive',
-        canUse: initialEnt.hasMt5Trade,
+        status: initialEnt.hasYourMt5 ? 'active' : 'inactive',
+        canUse: initialEnt.hasYourMt5,
         trialEndsAt: null,
         activeUntil: null,
     });
@@ -66,7 +66,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
             (visibleAccount as { number?: string | number }).number
         )
     );
-    const isProFlowReady = hasMt5Module && isBridgeOnline && hasAccountLinked && hasLegalConsent;
+    const isYourMt5FlowReady = hasMt5Module && isBridgeOnline && hasAccountLinked && hasLegalConsent;
 
     const { sendMessage } = useWebSocket();
     const [terminalTab, setTerminalTab] = useState<TerminalTab>('positions');
@@ -76,11 +76,11 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
         if (typeof window === 'undefined') return;
         const token = (localStorage.getItem('auth_access_token') || '').trim();
         if (!token) {
-            setModuleStatus((prev) => ({ ...prev, canUse: initialEnt.hasMt5Trade, status: initialEnt.hasMt5Trade ? 'active' : 'inactive' }));
+            setModuleStatus((prev) => ({ ...prev, canUse: initialEnt.hasYourMt5, status: initialEnt.hasYourMt5 ? 'active' : 'inactive' }));
             return;
         }
         try {
-            const res = await fetch('/api/user/module-status?module=mt5_trade', {
+            const res = await fetch('/api/user/module-status?module=your_mt5', {
                 method: 'GET',
                 headers: { authorization: `Bearer ${token}` },
                 credentials: 'include',
@@ -97,7 +97,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
         } catch {
             // keep previous status
         }
-    }, [initialEnt.hasMt5Trade]);
+    }, [initialEnt.hasYourMt5]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -173,7 +173,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
     const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
     const handleClosePosition = useCallback((ticket: number) => {
-        if (!isProFlowReady) {
+        if (!isYourMt5FlowReady) {
             useMarketStore.getState().addNotification(messages.warningSetupRequired, 'warning');
             return;
         }
@@ -187,10 +187,10 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
                 ticket,
             });
         }
-    }, [positions, activeChartSource, sendMessage, isProFlowReady, messages.warningSetupRequired]);
+    }, [positions, activeChartSource, sendMessage, isYourMt5FlowReady, messages.warningSetupRequired]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
-        if (!isProFlowReady) {
+        if (!isYourMt5FlowReady) {
             useMarketStore.getState().addNotification(messages.warningModifyUnavailable, 'warning');
             return;
         }
@@ -206,7 +206,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
         if (Object.keys(payload).length > 3) {
             sendMessage(payload);
         }
-    }, [sendMessage, isProFlowReady, messages.warningModifyUnavailable]);
+    }, [sendMessage, isYourMt5FlowReady, messages.warningModifyUnavailable]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();
@@ -248,7 +248,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
         hasAccountLinked,
         onboardingSource,
         refreshLegalConsent,
-        isProFlowReady,
+        isYourMt5FlowReady,
         visibleAccount,
         visiblePositions,
         visibleOrders,

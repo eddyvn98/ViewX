@@ -33,12 +33,12 @@ function canPublishBridgeTopic(topic, meta, payload) {
     if (meta?.authType !== "user") {
         return { allowed: false, reason: "bridge_topic_requires_authenticated_user_or_service" };
     }
-    if (hasRequiredModule("mt5_trade", meta, payload)) {
+    if (hasRequiredModule("your_mt5", meta, payload)) {
         return { allowed: true, reason: null };
     }
     return {
         allowed: false,
-        reason: getModuleEntitlementReason("mt5_trade", meta, payload) || "module_required:mt5_trade",
+        reason: getModuleEntitlementReason("your_mt5", meta, payload) || "module_required:your_mt5",
     };
 }
 

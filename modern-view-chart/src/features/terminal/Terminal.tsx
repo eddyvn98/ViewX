@@ -22,7 +22,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         hasAccountLinked,
         onboardingSource,
         refreshLegalConsent,
-        isProFlowReady,
+        isYourMt5FlowReady,
         visibleAccount,
         visiblePositions,
         visibleOrders,
@@ -38,8 +38,8 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         handleSymbolClick,
         handleAnalyze,
     } = useTerminalState(forceExpanded, {
-        warningSetupRequired: 'MT5 flow chua san sang: can module + bridge + account + legal consent.',
-        warningModifyUnavailable: 'Khong the sua lenh khi luong MT5 chua san sang.',
+        warningSetupRequired: 'Your MT5 chua san sang: can module + bridge + account + legal consent.',
+        warningModifyUnavailable: 'Khong the sua lenh khi luong Your MT5 chua san sang.',
     });
 
     return (
@@ -57,11 +57,11 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                 <div className="flex-1 flex flex-col min-h-0">
                     {!hasMt5Module ? (
                         <div className="border-b border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-                            DU LIEU TERMINAL MT5 CHI MO KHI MODULE MT5 DA KICH HOAT.
+                            DU LIEU TERMINAL MT5 CHI MO KHI MODULE YOUR MT5 DA KICH HOAT.
                         </div>
                     ) : null}
 
-                    {!isProFlowReady ? (
+                    {!isYourMt5FlowReady ? (
                         <Mt5ActivationWizard
                             hasMt5Module={hasMt5Module}
                             isBridgeOnline={isBridgeOnline}
@@ -72,9 +72,9 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                         />
                     ) : null}
 
-                    {hasMt5Module && isProFlowReady ? (
+                    {hasMt5Module && isYourMt5FlowReady ? (
                         <div className="mx-2 mt-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-[10px] text-emerald-800">
-                            MT5 flow da san sang: module, bridge, account va legal consent deu da du.
+                            Your MT5 da san sang: module, bridge, account va legal consent deu da du.
                         </div>
                     ) : null}
 

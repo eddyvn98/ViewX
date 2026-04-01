@@ -4,15 +4,24 @@ import { userModel } from "../model/user.js";
 import { normalizeEntitlementModules } from "../auth/modules.js";
 
 export const MODULE_CATALOG = {
-    mt5_trade: { amount: 30000, durationDays: 30, trialDays: 7, label: "MT5 Trade" },
+    your_mt5: { amount: 30000, durationDays: 30, trialDays: 7, label: "Your MT5" },
     binance_trade: { amount: 20000, durationDays: 30, trialDays: 7, label: "Binance Trade" },
     telegram_notify: { amount: 15000, durationDays: 30, trialDays: 7, label: "Telegram Notify" },
     telegram_control: { amount: 20000, durationDays: 30, trialDays: 7, label: "Telegram Control" },
     ai_assistant: { amount: 70000, durationDays: 30, trialDays: 7, label: "AI Assistant" },
 };
 
-export function getModuleCatalog(moduleName) {
+const MODULE_ALIASES = new Map([
+    ["mt5_trade", "your_mt5"],
+]);
+
+function normalizeModuleKey(moduleName) {
     const key = String(moduleName || "").trim().toLowerCase();
+    return MODULE_ALIASES.get(key) || key;
+}
+
+export function getModuleCatalog(moduleName) {
+    const key = normalizeModuleKey(moduleName);
     return MODULE_CATALOG[key] || null;
 }
 
@@ -23,10 +32,10 @@ function toDate(value) {
 }
 
 export function getModuleAccessSnapshot(user, moduleName) {
-    const key = String(moduleName || "").trim().toLowerCase();
+    const key = normalizeModuleKey(moduleName);
     const now = Date.now();
     const record = Array.isArray(user?.moduleAccess)
-        ? user.moduleAccess.find((x) => String(x?.module || "").trim().toLowerCase() === key)
+        ? user.moduleAccess.find((x) => normalizeModuleKey(x?.module) === key)
         : null;
 
     const trialEndsAt = toDate(record?.trialEndsAt);
@@ -49,7 +58,7 @@ export function getModuleAccessSnapshot(user, moduleName) {
 }
 
 export async function startModuleTrial({ userId, moduleName }) {
-    const key = String(moduleName || "").trim().toLowerCase();
+    const key = normalizeModuleKey(moduleName);
     const catalog = getModuleCatalog(key);
     if (!catalog) throw new Error("module_not_supported");
 
@@ -58,7 +67,7 @@ export async function startModuleTrial({ userId, moduleName }) {
 
     const now = new Date();
     const access = Array.isArray(user.moduleAccess) ? [...user.moduleAccess] : [];
-    const idx = access.findIndex((x) => String(x?.module || "").trim().toLowerCase() === key);
+    const idx = access.findIndex((x) => normalizeModuleKey(x?.module) === key);
     const exists = idx >= 0 ? access[idx] : null;
     const alreadyTried = Boolean(exists?.trialStartedAt);
     if (alreadyTried) {
@@ -108,7 +117,7 @@ export function buildPaymentArtifacts({ orderCode, amount }) {
 }
 
 export async function createModuleOrder({ userId, moduleName }) {
-    const key = String(moduleName || "").trim().toLowerCase();
+    const key = normalizeModuleKey(moduleName);
     const catalog = getModuleCatalog(key);
     if (!catalog) throw new Error("module_not_supported");
 
@@ -140,10 +149,10 @@ export async function activateOrder({ order, confirmedBy = "admin_manual", rawWe
     const now = new Date();
     const durationDays = Number.isFinite(Number(order.durationDays)) ? Number(order.durationDays) : 30;
     const newActiveUntil = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
-    const key = String(order.module || "").trim().toLowerCase();
+    const key = normalizeModuleKey(order.module);
 
     const access = Array.isArray(user.moduleAccess) ? [...user.moduleAccess] : [];
-    const idx = access.findIndex((x) => String(x?.module || "").trim().toLowerCase() === key);
+    const idx = access.findIndex((x) => normalizeModuleKey(x?.module) === key);
     const prevActiveUntil = idx >= 0 ? toDate(access[idx]?.activeUntil) : null;
     const baseMs = prevActiveUntil && prevActiveUntil.getTime() > now.getTime() ? prevActiveUntil.getTime() : now.getTime();
     const extendedActiveUntil = new Date(baseMs + durationDays * 24 * 60 * 60 * 1000);

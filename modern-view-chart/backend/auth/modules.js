@@ -1,4 +1,5 @@
 export const ENTITLEMENT_MODULES = new Set([
+    "your_mt5",
     "mt5_trade",
     "binance_trade",
     "telegram_notify",
@@ -6,11 +7,21 @@ export const ENTITLEMENT_MODULES = new Set([
     "ai_assistant",
 ]);
 
+const MODULE_ALIASES = new Map([
+    ["mt5_trade", "your_mt5"],
+]);
+
+function normalizeModuleKey(value) {
+    const key = String(value || "").trim().toLowerCase();
+    if (!key) return "";
+    return MODULE_ALIASES.get(key) || key;
+}
+
 export function normalizeEntitlementModules(raw) {
     if (!Array.isArray(raw)) return [];
     const output = [];
     for (const item of raw) {
-        const key = String(item || "").trim().toLowerCase();
+        const key = normalizeModuleKey(item);
         if (!key || !ENTITLEMENT_MODULES.has(key) || output.includes(key)) continue;
         output.push(key);
     }
@@ -27,10 +38,10 @@ export function inferPlanFromModules(modules = []) {
 export function inferModulesFromPlan(plan) {
     const normalized = String(plan || "").trim().toLowerCase();
     if (normalized === "pro_plus" || normalized === "premium" || normalized === "pro+") {
-        return ["mt5_trade", "binance_trade", "telegram_notify", "telegram_control", "ai_assistant"];
+        return ["your_mt5", "binance_trade", "telegram_notify", "telegram_control", "ai_assistant"];
     }
     if (normalized === "pro" || normalized.startsWith("pro")) {
-        return ["mt5_trade", "binance_trade", "telegram_notify", "telegram_control"];
+        return ["your_mt5", "binance_trade", "telegram_notify", "telegram_control"];
     }
     return [];
 }
