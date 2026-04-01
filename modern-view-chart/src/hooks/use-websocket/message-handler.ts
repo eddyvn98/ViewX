@@ -47,11 +47,6 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             // Recover from stale/mismatched bridge routing without requiring F5.
             if (code === 'bridge_not_found' || detail.includes('no_bridge_registered')) {
                 deps.setBridgeOnline(false);
-                try {
-                    socket.close(4006, 'bridge_not_found_reconnect');
-                } catch {
-                    // Ignore close races; reconnect path will recover.
-                }
                 return;
             }
         }

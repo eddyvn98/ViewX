@@ -278,6 +278,17 @@ class BridgeRegistry {
             recipients.push(clientWs);
         }
 
+        if (recipients.length === 0 && hasRouteTarget && routeTarget.userId) {
+            for (const [clientWs, clientMeta] of clients.entries()) {
+                if (excludeWs && clientWs === excludeWs) continue;
+                if (clientWs.readyState !== clientWs.OPEN) continue;
+                if (clientMeta?.isBridgeAuthenticated) continue;
+                if (normalizeKey(clientMeta?.userId)) continue;
+                if (routeTarget.accountId && normalizeKey(clientMeta?.accountId) && normalizeKey(clientMeta?.accountId) !== routeTarget.accountId) continue;
+                recipients.push(clientWs);
+            }
+        }
+
         return recipients;
     }
 

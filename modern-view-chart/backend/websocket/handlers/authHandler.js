@@ -36,7 +36,11 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) 
     let requestedSymbols = [];
     if (clientData) {
         const incomingUserId = String(data.userId || "").trim();
-        clientData.userId = incomingUserId && incomingUserId !== "user_123" ? incomingUserId : null;
+        if (incomingUserId && incomingUserId !== "user_123") {
+            clientData.userId = incomingUserId;
+        } else if (!clientData.userId) {
+            clientData.userId = null;
+        }
         clientData.role = data.role || data.user?.role || clientData.role || null;
         clientData.accountId =
             data.accountId ||
