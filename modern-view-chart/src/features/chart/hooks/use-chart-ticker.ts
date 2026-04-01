@@ -92,12 +92,15 @@ export function useChartTicker({
         realTimeCandleRef.current = null;
     }, [symbol, interval, source, contextKey]);
 
-    // Sync visualized candle with store (base truth)
+    // Sync visualized candle with store (base truth) scoped to current context only.
     useEffect(() => {
-        if (lastCandleRef.current) {
-            realTimeCandleRef.current = { ...lastCandleRef.current };
+        const storeCandles = getStoreCandles();
+        if (storeCandles.length === 0) {
+            realTimeCandleRef.current = null;
+            return;
         }
-    }, [lastCandleRef, symbol, interval, source, contextKey]);
+        realTimeCandleRef.current = { ...storeCandles[storeCandles.length - 1] };
+    }, [getStoreCandles, contextKey]);
 
     // Ticker Subscription
     useEffect(() => {

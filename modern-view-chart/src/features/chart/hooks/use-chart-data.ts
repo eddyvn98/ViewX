@@ -26,6 +26,12 @@ export function useChartData(
     // Shared reference to the trusted "Current Candle" (from Store/History)
     const lastCandleRef = useRef<Candle | null>(null);
 
+    // Reset snapshot immediately when chart context changes to avoid carrying
+    // the previous symbol/timeframe candle into the new context.
+    useEffect(() => {
+        lastCandleRef.current = null;
+    }, [contextKey]);
+
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store
     const { candles } = useChartHistory({
