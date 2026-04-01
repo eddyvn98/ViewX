@@ -5,6 +5,7 @@ import { incrementWsRouteMiss, incrementWsRouteSuccess } from "../../runtime-sta
 import { tradeReconciliationService } from "../services/tradeReconciliationService.js";
 
 const TRADE_COMMANDS = new Set(["order", "place_order", "buy", "sell", "modify", "close", "delete", "cancel", "close_by_magic"]);
+const READONLY_COMMANDS = new Set(["get_candles", "get_candles_at", "get_history", "get_symbol_info", "get_positions", "get_symbols", "get_orders", "get_account"]);
 
 function normalizeCommand(command) {
     return String(command || "").trim().toLowerCase();
@@ -64,6 +65,30 @@ export function handleMt5Command({ ws, clients, routeTarget }, data) {
         incrementWsRouteSuccess();
         logTradeAudit({ routeTarget, data, outcome: "forwarded" });
     } else if (hasRouteTarget) {
+        // Route fallback for read-only market data requests:
+        // If a private user/account bridge is missing, forward to any available
+        // authenticated service bridge so chart/history requests still work.
+        if (READONLY_COMMANDS.has(normalizedCommand)) {
+            const publicBridge = bridgeRegistry.getPrimarySocket({}, clients);
+            if (publicBridge) {
+                safeSend(publicBridge, payload);
+                forwarded = 1;
+                incrementWsRouteSuccess();
+                logInfo("ws.mt5_command.route_fallback_public", {
+                    command: normalizedCommand,
+                    symbol: data?.symbol || null,
+                    interval: data?.interval || null,
+                    request_id: requestId,
+                    user_id: routeTarget?.userId || null,
+                    account_id: routeTarget?.accountId || null,
+                });
+            }
+        }
+
+        if (forwarded > 0) {
+            // Keep read-only path successful even when private route is missing.
+            // Caller gets data from the service/public bridge.
+        } else {
         incrementWsRouteMiss();
         const terminalMismatch = Boolean(
             routeTarget?.terminalId &&
@@ -102,6 +127,7 @@ export function handleMt5Command({ ws, clients, routeTarget }, data) {
             reason: "bridge_not_found",
         });
         return;
+        }
     }
 
     if (["get_candles", "get_symbol_info", "get_history", "get_candles_at"].includes(normalizedCommand)) {
