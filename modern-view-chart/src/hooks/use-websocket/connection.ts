@@ -35,12 +35,31 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
         wsRuntime.lastMessageAt = Date.now();
         wsRuntime.lastAppPongAt = Date.now();
         deps.setConnected(true);
-        const userId = 'user_123';
+        let userId: string | null = null;
+        if (typeof window !== 'undefined') {
+            const rawUser = String(localStorage.getItem('auth_user') || '').trim();
+            if (rawUser) {
+                try {
+                    const parsed = JSON.parse(rawUser) as {
+                        id?: string | number;
+                        _id?: string | number;
+                        userId?: string | number;
+                    };
+                    const candidate = parsed.id ?? parsed._id ?? parsed.userId;
+                    if (candidate !== undefined && candidate !== null) {
+                        const normalized = String(candidate).trim();
+                        userId = normalized || null;
+                    }
+                } catch {
+                    userId = null;
+                }
+            }
+        }
         const symbols = collectActiveSymbolsFromStore();
         const entitlements = getClientEntitlements();
         socket.send(JSON.stringify({
             topic: 'auth',
-            userId,
+            ...(userId ? { userId } : {}),
             symbols,
             plan: entitlements.plan,
             modules: entitlements.modules,
