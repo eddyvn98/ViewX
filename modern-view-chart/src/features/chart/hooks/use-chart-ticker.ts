@@ -13,6 +13,7 @@ type RealtimeCandle = Candle & {
     ha_open?: number;
     candleColor?: string;
 };
+type SeriesUpdateData = Parameters<ISeriesApi<'Candlestick'>['update']>[0];
 
 interface UseChartTickerProps {
     symbol: string | undefined;
@@ -212,7 +213,7 @@ export function useChartTicker({
                         seriesRef.current?.update({
                             ...seriesNewCandle,
                             candleColor: seriesNewCandle.close >= seriesNewCandle.open ? candleUpColor : candleDownColor,
-                        } as any);
+                        } as SeriesUpdateData);
                     } else {
                         seriesRef.current?.update(seriesNewCandle);
                     }
@@ -278,7 +279,7 @@ export function useChartTicker({
                         low: updateData.low,
                         close: updateData.close,
                         candleColor: updateData.close >= updateData.open ? candleUpColor : candleDownColor,
-                    } as any);
+                    } as SeriesUpdateData);
                 } else {
                     seriesRef.current?.update({
                         time: updateTime as Time,

@@ -15,7 +15,6 @@ export function AIChatView() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
     const hasAccessToken =
         typeof window !== 'undefined' &&
@@ -24,7 +23,6 @@ export function AIChatView() {
     // Fetch history on mount and when switching to logs
     const fetchHistory = useCallback(async () => {
         if (!hasAccessToken || !aiEnabled) {
-            setIsLoading(false);
             return;
         }
         try {
@@ -36,13 +34,12 @@ export function AIChatView() {
         } catch (err) {
             console.error('Failed to fetch AI history:', err);
         } finally {
-            setIsLoading(false);
+            // no-op
         }
     }, [hasAccessToken, aiEnabled]);
 
     useEffect(() => {
         if (!hasAccessToken) {
-            setIsLoading(false);
             return;
         }
         fetchHistory();

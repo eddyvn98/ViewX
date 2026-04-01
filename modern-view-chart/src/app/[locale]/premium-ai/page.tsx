@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft } from "lucide-react";
@@ -24,7 +25,7 @@ function EnglishContent() {
 
       <main className="relative max-w-4xl mx-auto py-16 px-6 sm:px-8">
         <Link 
-          href={"/" as any} 
+          href={"/"} 
           className="group inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-10"
         >
           <div className="p-2 rounded-full bg-white group-hover:bg-slate-50 transition-colors mr-3 border border-slate-200">
@@ -181,7 +182,7 @@ function VietnameseContent() {
 
       <main className="relative max-w-4xl mx-auto py-16 px-6 sm:px-8">
         <Link 
-          href={"/" as any} 
+          href={"/"} 
           className="group inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-10"
         >
           <div className="p-2 rounded-full bg-white group-hover:bg-slate-50 transition-colors mr-3 border border-slate-200">

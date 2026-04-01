@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useRef, useState } from 'react';
+import Image from 'next/image';
 import { ArrowLeft, ArrowRight, CheckCircle2, Download } from 'lucide-react';
 import { useRouter } from '@/i18n/routing';
 import { ENABLE_NATIVE_APP_DOWNLOAD } from '@/config/feature-flags';
@@ -99,7 +100,13 @@ export function PlanVideoScroll({ planKey }: { planKey: string }) {
 
                         {slide.poster ? (
                             <div className="absolute inset-0 h-full w-full">
-                                <img src={slide.poster} alt={slide.title} className="h-full w-full object-cover opacity-60 contrast-[1.05] brightness-[0.9]" />
+                                <Image
+                                    src={slide.poster}
+                                    alt={slide.title}
+                                    fill
+                                    sizes="100vw"
+                                    className="h-full w-full object-cover opacity-60 contrast-[1.05] brightness-[0.9]"
+                                />
                                 {slide.videoUrl && (
                                     <video autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover opacity-100">
                                         <source src={slide.videoUrl} type="video/mp4" />
