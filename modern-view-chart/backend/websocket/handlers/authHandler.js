@@ -131,32 +131,31 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) 
         safeSend(ws, JSON.stringify({ topic: "priceUpdate", data: combined }), { nonCritical: true });
     }
 
-    if (global.lastMt5State) {
-        safeSend(ws, JSON.stringify({
-            topic: "mt5_positions_update",
-            account: global.lastMt5State.account,
-            positions: global.lastMt5State.positions,
-            orders: global.lastMt5State.orders || [],
-            mt5_source: global.lastMt5State.mt5_source || "MT5",
-        }));
-    }
+    const routeKey = resolveBridgeKey(clientData || {});
+    if (routeKey) {
+        const storageKey = `${routeKey.userId}::${routeKey.accountId}::${routeKey.terminalId}`;
 
-    let availableSymbols = global.mt5AvailableSymbols || null;
-    if (global.mt5AvailableSymbolsByRoute) {
-        const routeKey = resolveBridgeKey(clientData || {});
-        if (routeKey) {
-            const storageKey = `${routeKey.userId}::${routeKey.accountId}::${routeKey.terminalId}`;
-            const scoped = global.mt5AvailableSymbolsByRoute.get(storageKey);
-            if (Array.isArray(scoped) && scoped.length > 0) {
-                availableSymbols = scoped;
+        if (global.mt5StateByRoute) {
+            const scopedMt5State = global.mt5StateByRoute.get(storageKey);
+            if (scopedMt5State) {
+                safeSend(ws, JSON.stringify({
+                    topic: "mt5_positions_update",
+                    account: scopedMt5State.account,
+                    positions: scopedMt5State.positions,
+                    orders: scopedMt5State.orders || [],
+                    mt5_source: scopedMt5State.mt5_source || "MT5",
+                }));
             }
         }
-    }
 
-    if (availableSymbols) {
-        safeSend(ws, JSON.stringify({
-            topic: "mt5_available_symbols",
-            symbols: availableSymbols
-        }));
+        if (global.mt5AvailableSymbolsByRoute) {
+            const availableSymbols = global.mt5AvailableSymbolsByRoute.get(storageKey);
+            if (Array.isArray(availableSymbols) && availableSymbols.length > 0) {
+                safeSend(ws, JSON.stringify({
+                    topic: "mt5_available_symbols",
+                    symbols: availableSymbols
+                }));
+            }
+        }
     }
 }

@@ -278,21 +278,6 @@ class BridgeRegistry {
             recipients.push(clientWs);
         }
 
-        // Fallback path:
-        // In some deployments, dashboard auth userId and bridge userId can drift
-        // (for example after bridge restart/env mismatch). In that case, strict
-        // routing yields zero recipients and MT5 candles are effectively dropped.
-        // When strict match has no recipient, degrade to all non-bridge clients
-        // so active dashboards can still recover chart history.
-        if (hasRouteTarget && recipients.length === 0) {
-            for (const [clientWs, clientMeta] of clients.entries()) {
-                if (excludeWs && clientWs === excludeWs) continue;
-                if (clientWs.readyState !== clientWs.OPEN) continue;
-                if (clientMeta?.isBridgeAuthenticated) continue;
-                recipients.push(clientWs);
-            }
-        }
-
         return recipients;
     }
 

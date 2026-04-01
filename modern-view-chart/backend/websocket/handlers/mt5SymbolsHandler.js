@@ -17,7 +17,6 @@ export function handleMt5SymbolsAvailable({ ws, clients, routeTarget }, data) {
         const storageKey = `${routeKey.userId}::${routeKey.accountId}::${routeKey.terminalId}`;
         global.mt5AvailableSymbolsByRoute.set(storageKey, normalizedSymbols);
     }
-    global.mt5AvailableSymbols = normalizedSymbols;
 
     const payload = JSON.stringify({
         topic: "mt5_available_symbols",
