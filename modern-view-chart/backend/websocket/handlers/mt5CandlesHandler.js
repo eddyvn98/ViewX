@@ -4,7 +4,8 @@ import { bridgeRegistry } from "../bridgeRegistry.js";
 export function handleMt5Candles({ ws, clients, routeTarget }, data) {
     const payload = JSON.stringify(data);
     const senderMeta = clients.get(ws);
-    const recipients = bridgeRegistry.getTargetClientSockets(clients, routeTarget || senderMeta, { excludeWs: ws });
+    const routingMeta = routeTarget ? { ...(senderMeta || {}), ...routeTarget } : senderMeta;
+    const recipients = bridgeRegistry.getTargetClientSockets(clients, routingMeta || {}, { excludeWs: ws });
     let delivered = 0;
     for (const clientWs of recipients) {
         clientWs.send(payload);

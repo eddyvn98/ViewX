@@ -29,10 +29,11 @@ type CandleBufferItem = {
 function normalizeSource(raw: unknown): string {
     const text = String(raw || '').trim();
     if (!text) return 'MT5';
+    if (/^\d+$/.test(text)) return 'MT5';
     const upper = text.toUpperCase();
     if (upper.startsWith('MT5')) return 'MT5';
     if (upper.startsWith('BINANCE')) return 'BINANCE';
-    return text;
+    return 'MT5';
 }
 
 function normalizeIntervalId(raw: unknown): string {

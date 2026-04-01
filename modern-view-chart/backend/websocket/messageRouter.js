@@ -585,7 +585,25 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                         handleVirtualTradeCommand(context, data);
                         return;
                     }
-                    handleMt5Command({ ...context, senderMeta }, data);
+                    const shouldUsePublicMt5Feed =
+                        isReadOnlyMt5Command(data.command) &&
+                        senderMeta.authType === "user" &&
+                        !hasRequiredModule("your_mt5", senderMeta, data);
+
+                    const effectiveMt5RouteTarget = shouldUsePublicMt5Feed
+                        ? { userId: null, accountId: null, terminalId: null }
+                        : routeTarget;
+
+                    logInfo("ws.mt5_command.route_decision", {
+                        command: normalizeCommandName(data.command),
+                        auth_type: senderMeta.authType || null,
+                        has_required_module: hasRequiredModule("your_mt5", senderMeta, data),
+                        should_use_public_feed: shouldUsePublicMt5Feed,
+                        user_id: routeTarget?.userId || null,
+                        account_id: routeTarget?.accountId || null,
+                    });
+
+                    handleMt5Command({ ...context, senderMeta, routeTarget: effectiveMt5RouteTarget }, data);
                     break;
                 case "alert_command":
                     if (emergencyConfig.enabled && emergencyConfig.blockTrading) {

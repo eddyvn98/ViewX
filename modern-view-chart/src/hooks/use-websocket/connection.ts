@@ -3,6 +3,7 @@ import { wsRuntime } from './runtime';
 import { collectActiveSymbolsFromStore } from './symbol-utils';
 import { handleSocketMessage, MessageHandlerDeps } from './message-handler';
 import { getClientEntitlements } from '@/lib/auth/entitlements';
+import { readStoredAccessToken } from '@/lib/auth/session';
 
 export interface ConnectionDeps extends MessageHandlerDeps {
     setConnected: (connected: boolean) => void;
@@ -16,7 +17,10 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
         wsRuntime.wsTicketCache = '';
         wsRuntime.wsTicketExpiresAt = 0;
     }
-    if (socketConfig.protocols.length === 0 || mustRefreshTicket) {
+    const storedAccessToken = readStoredAccessToken();
+    if (storedAccessToken) {
+        socketConfig.protocols = [`bearer.${storedAccessToken}`];
+    } else if (socketConfig.protocols.length === 0 || mustRefreshTicket) {
         const fetchedTicket = await fetchWsTicketFromApi();
         if (fetchedTicket) {
             socketConfig.protocols = [`bearer.${fetchedTicket}`];

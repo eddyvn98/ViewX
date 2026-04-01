@@ -15,61 +15,25 @@ export function useChartRuntime(chartId: string) {
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
 
-    const symbol = useMarketStore((state) => {
+    const chartSnapshot = useMarketStore((state) => {
+        const activeTab = state.tabs[state.activeTabId];
+        const activeChart = activeTab?.charts?.[chartId];
+        if (activeChart) return activeChart;
+
         for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) return chart.symbol;
+            const chart = tab.charts?.[chartId];
+            if (chart) return chart;
         }
         return undefined;
     });
-    const interval = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) return chart.interval;
-        }
-        return undefined;
-    });
-    const source = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) return chart.source;
-        }
-        return undefined;
-    });
-    const timezone = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) return chart.timezone || 'Asia/Ho_Chi_Minh';
-        }
-        return 'Asia/Ho_Chi_Minh';
-    });
-    const chartType = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) return chart.chartType || 'candles';
-        }
-        return 'candles';
-    });
-    const candleUpColor = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) {
-                const palette = chart.candleColors?.[chartType];
-                return palette?.up || chart.candleUpColor || DEFAULT_CANDLE_UP_COLOR;
-            }
-        }
-        return DEFAULT_CANDLE_UP_COLOR;
-    });
-    const candleDownColor = useMarketStore((state) => {
-        for (const tab of Object.values(state.tabs)) {
-            const chart = tab.charts[chartId];
-            if (chart) {
-                const palette = chart.candleColors?.[chartType];
-                return palette?.down || chart.candleDownColor || DEFAULT_CANDLE_DOWN_COLOR;
-            }
-        }
-        return DEFAULT_CANDLE_DOWN_COLOR;
-    });
+
+    const symbol = chartSnapshot?.symbol;
+    const interval = chartSnapshot?.interval;
+    const source = chartSnapshot?.source;
+    const timezone = chartSnapshot?.timezone || 'Asia/Ho_Chi_Minh';
+    const chartType = chartSnapshot?.chartType || 'candles';
+    const candleUpColor = chartSnapshot?.candleColors?.[chartType]?.up || chartSnapshot?.candleUpColor || DEFAULT_CANDLE_UP_COLOR;
+    const candleDownColor = chartSnapshot?.candleColors?.[chartType]?.down || chartSnapshot?.candleDownColor || DEFAULT_CANDLE_DOWN_COLOR;
 
     const normSymbol = normalizeSymbol(symbol);
     const key = source && normSymbol && interval ? `${source}:${normSymbol}:${interval}` : '';
