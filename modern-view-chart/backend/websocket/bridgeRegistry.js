@@ -56,6 +56,7 @@ function resolveRouteTarget(metadata = {}) {
     );
     const bridgeId = normalizeKey(source.bridgeId ?? source.bridge_id);
     const bridgeSource = normalizeKey(source.bridgeSource ?? source.bridge_source ?? source.source);
+    const clientMode = normalizeKey(source.clientMode ?? source.client_mode);
 
     return {
         userId,
@@ -63,6 +64,7 @@ function resolveRouteTarget(metadata = {}) {
         bridgeId,
         bridgeSource,
         terminalId,
+        clientMode,
     };
 }
 
@@ -255,9 +257,15 @@ class BridgeRegistry {
 
         const routeTarget = resolveRouteTarget(metadata);
         const recipients = [];
+        const source = extractRouteSource(metadata);
+        const sourceAuthType = normalizeKey(source.authType ?? source.auth_type);
+        const isServiceBridge =
+            sourceAuthType === "service" ||
+            source.isServiceAuth === true ||
+            routeTarget.clientMode === "service_bridge";
         // Strict private routing is enabled only when userId is present.
         // For shared/public bridge feeds (no userId), broadcast to all non-bridge clients.
-        const hasRouteTarget = Boolean(routeTarget.userId);
+        const hasRouteTarget = Boolean(routeTarget.userId) && !isServiceBridge;
 
         for (const [clientWs, clientMeta] of clients.entries()) {
             if (excludeWs && clientWs === excludeWs) continue;

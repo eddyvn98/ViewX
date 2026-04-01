@@ -4,6 +4,12 @@
 .tmp
 .playwright-cli
 node_modules
+desktop/node_modules
+desktop/dist
+desktop/out
+desktop/release
+desktop/.webpack
+desktop/.next
 logs
 output
 playwright-report

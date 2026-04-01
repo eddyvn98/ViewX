@@ -26,6 +26,47 @@ type CandleBufferItem = {
     candle: Record<string, unknown>;
 };
 
+function normalizeSource(raw: unknown): string {
+    const text = String(raw || '').trim();
+    if (!text) return 'MT5';
+    const upper = text.toUpperCase();
+    if (upper.startsWith('MT5')) return 'MT5';
+    if (upper.startsWith('BINANCE')) return 'BINANCE';
+    return text;
+}
+
+function normalizeIntervalId(raw: unknown): string {
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    if (/^\d+$/.test(text)) return text;
+
+    const normalized = text.toLowerCase();
+    let match = normalized.match(/^m(\d+)$/);
+    if (match) return String(Number(match[1]));
+    match = normalized.match(/^(\d+)m$/);
+    if (match) return String(Number(match[1]));
+
+    match = normalized.match(/^h(\d+)$/);
+    if (match) return String(Number(match[1]) * 60);
+    match = normalized.match(/^(\d+)h$/);
+    if (match) return String(Number(match[1]) * 60);
+
+    match = normalized.match(/^d(\d+)$/);
+    if (match) return String(Number(match[1]) * 1440);
+    match = normalized.match(/^(\d+)d$/);
+    if (match) return String(Number(match[1]) * 1440);
+
+    match = normalized.match(/^w(\d+)$/);
+    if (match) return String(Number(match[1]) * 10080);
+    match = normalized.match(/^(\d+)w$/);
+    if (match) return String(Number(match[1]) * 10080);
+
+    match = normalized.match(/^mn(\d+)$/);
+    if (match) return String(Number(match[1]) * 43200);
+
+    return text;
+}
+
 export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps: MessageHandlerDeps) {
     try {
         wsRuntime.lastMessageAt = Date.now();
@@ -58,7 +99,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             return;
         }
 
-        const mt5Source = String(msg.mt5_source || msg.source || 'MT5');
+        const mt5Source = normalizeSource(msg.mt5_source || msg.source || 'MT5');
 
         if ((msgType === 'priceUpdate' && Array.isArray(msg.data)) || msgType === 'tick' || msgType === 'mt5_update') {
             const state = useMarketStore.getState();
@@ -93,7 +134,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
 
         if ((msgType === 'mt5_candles' || msgType === 'mt5_candles_at') && Array.isArray(msg.candles)) {
             const targetSymbol = String(msg.symbol || '');
-            let targetInterval = String(msg.interval || '').trim();
+            let targetInterval = normalizeIntervalId(msg.interval);
             const normalizedCandles = (msg.candles as Array<Record<string, unknown>>).map((c) => ({
                 ...c,
                 time: c.time ?? c.t ?? c.timestamp ?? c.datetime,
@@ -124,7 +165,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         const activeSymbol = normalizeSymbol(String(activeChart.symbol || ''));
                         const activeSource = String(activeChart.source || '').toUpperCase();
                         if (activeSymbol === wantedSymbol && activeSource === wantedSource) {
-                            targetInterval = String(activeChart.interval || '').trim();
+                            targetInterval = normalizeIntervalId(activeChart.interval);
                         }
                     }
                 }
@@ -134,7 +175,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             const chartSymbol = normalizeSymbol(String(chart.symbol || ''));
                             const chartSource = String(chart.source || '').toUpperCase();
                             if (chartSymbol === wantedSymbol && chartSource === wantedSource) {
-                                targetInterval = String(chart.interval || '').trim();
+                                targetInterval = normalizeIntervalId(chart.interval);
                                 break;
                             }
                         }
@@ -151,8 +192,8 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         if (msgType === 'candleUpdate' && msg.data) {
             const c = msg.data as Record<string, unknown>;
             const symbol = String(c.symbol || '');
-            const interval = String(c.interval || '');
-            const source = symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5';
+            const interval = normalizeIntervalId(c.interval);
+            const source = normalizeSource(symbol.toUpperCase().includes('USDT') ? 'BINANCE' : c.source || c.mt5_source || 'MT5');
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
 
