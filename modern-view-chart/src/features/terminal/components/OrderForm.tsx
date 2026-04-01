@@ -156,7 +156,7 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
 
     const isCrypto = symbol.includes('BTC') || symbol.includes('ETH'); // Simplified check for display
     const tradingSource: TradingSource = isCrypto ? 'BINANCE' : 'MT5';
-    const hasMt5Module = getClientEntitlements().hasMt5Trade;
+    const hasMt5Module = getClientEntitlements().hasYourMt5;
     const hasAccountLinked = Boolean(
         account && (
             (account as { login?: string | number }).login ||
