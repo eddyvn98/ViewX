@@ -14,9 +14,16 @@ interface MobileTopBarProps {
     className?: string;
     compact?: boolean;
     mini?: boolean;
+    mobileLandscape?: boolean;
 }
 
-export const MobileTopBar = memo(function MobileTopBar({ className, compact = false, mini = false }: MobileTopBarProps) {
+export const MobileTopBar = memo(function MobileTopBar({
+    className,
+    compact = false,
+    mini = false,
+    mobileLandscape = false,
+}: MobileTopBarProps) {
+    const effectiveCompact = compact || mobileLandscape;
     const [isChartTypePanelOpen, setIsChartTypePanelOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<ChartTypeOption>('candles');
     const [selectedSide, setSelectedSide] = useState<'up' | 'down'>('up');
@@ -104,7 +111,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
         <>
         <div className={cn(
             "flex items-center justify-between shrink-0 bg-background/80 backdrop-blur-md border-b border-border z-50 sticky top-0 transition-all duration-300",
-            mini ? "px-2 h-8" : compact ? "px-2 h-10" : "px-4 h-12",
+            mini ? "px-2 h-8" : effectiveCompact ? "px-2 h-10" : "px-4 h-12",
             className
         )}>
             {/* Left: Menu */}
@@ -124,7 +131,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                     onClick={handleChartTypeClick}
                     className={cn(
                         "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
-                        compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
+                        effectiveCompact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         activeChart?.chartType !== 'candles'
                             ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.1)]"
                             : "text-muted-foreground border-border/50 bg-secondary/30"
@@ -138,7 +145,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                     onClick={handleIndicatorsClick}
                     className={cn(
                         "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
-                        compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
+                        effectiveCompact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         activeMobileTab === 'indicators'
                             ? "text-blue-500 border-blue-500/30 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
                             : "text-muted-foreground border-border/50 bg-secondary/30"
@@ -152,7 +159,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                     onClick={handleDrawingClick}
                     className={cn(
                         "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
-                        compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
+                        effectiveCompact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         isDrawingToolbarVisible
                             ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
                             : "text-muted-foreground border-border/50 bg-secondary/30"
@@ -160,16 +167,16 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                     title="Toggle Drawing Toolbar"
                 >
                     <Pencil size={14} />
-                    {!compact && !mini && <span>Draw</span>}
+                    {!effectiveCompact && !mini && <span>Draw</span>}
                 </button>
             </div>
 
             {/* Right: Theme Controls */}
-            <div className={cn("flex items-center", compact ? "gap-1" : "gap-2")}>
-                <div className={cn("origin-right", compact ? "scale-75" : "scale-90")}>
+            <div className={cn("flex items-center", effectiveCompact ? "gap-1" : "gap-2")}>
+                <div className={cn("origin-right", effectiveCompact ? "scale-75" : "scale-90")}>
                     <ThemeColorSwitcher />
                 </div>
-                <div className={cn("origin-right", compact ? "scale-75" : "scale-90")}>
+                <div className={cn("origin-right", effectiveCompact ? "scale-75" : "scale-90")}>
                     <ThemeToggle />
                 </div>
             </div>

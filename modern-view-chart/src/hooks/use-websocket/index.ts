@@ -30,7 +30,7 @@ export function useWebSocket(): { sendMessage: (data: WsMessage) => void } {
                 appendHistory(items as unknown as Parameters<typeof appendHistory>[0], isReset),
             setAccount: (source: string, account: Record<string, unknown>) =>
                 setAccount(source, account as unknown as Parameters<typeof setAccount>[1]),
-            setAvailableSymbols: (symbols: string[]) =>
+            setAvailableSymbols: (symbols: Array<Record<string, unknown> | string>) =>
                 setAvailableSymbols(symbols as unknown as Parameters<typeof setAvailableSymbols>[0]),
             setBridgeOnline,
             setCandles: (source: string, symbol: string, interval: string, data: Array<Record<string, unknown>>) =>

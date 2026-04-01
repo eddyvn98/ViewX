@@ -13,6 +13,20 @@ export interface BuildSymbolListParams {
     watchlistSearchIncludesDiscovery: boolean;
 }
 
+export interface SymbolDisplayMeta {
+    canonicalSymbol?: string;
+    rawSymbol?: string;
+    accountLogin?: string;
+    server?: string;
+    terminalId?: string;
+}
+
+export interface SymbolListItem {
+    symbol: string;
+    source: DataSource;
+    meta?: SymbolDisplayMeta;
+}
+
 export function buildSymbolList({
     mode,
     watchlist,
@@ -23,22 +37,39 @@ export function buildSymbolList({
     binanceUniverse,
     prioritizeWatched,
     watchlistSearchIncludesDiscovery,
-}: BuildSymbolListParams): { symbol: string; source: DataSource }[] {
+}: BuildSymbolListParams): SymbolListItem[] {
     const discoveryMap = new Map<string, DataSource>();
+    const metaMap = new Map<string, SymbolDisplayMeta>();
     const normalizedSearch = deferredSearch.toLowerCase();
 
     availableSymbols.forEach((s) => {
-        const raw = typeof s === 'string' ? s : s?.symbol;
+        const item = typeof s === 'string' ? { symbol: s } : s;
+        const raw = typeof s === 'string'
+            ? s
+            : s?.symbol || (s as { canonicalSymbol?: string }).canonicalSymbol;
         const symbol = String(raw || '').trim();
         if (!symbol) return;
         discoveryMap.set(symbol, resolveDataSource(symbol));
+        if (item && typeof item === 'object') {
+            metaMap.set(symbol, {
+                canonicalSymbol: String((item as { canonicalSymbol?: string }).canonicalSymbol || '').trim() || undefined,
+                rawSymbol: String((item as { rawSymbol?: string }).rawSymbol || '').trim() || undefined,
+                accountLogin: String((item as { accountLogin?: string }).accountLogin || '').trim() || undefined,
+                server: String((item as { server?: string }).server || '').trim() || undefined,
+                terminalId: String((item as { terminalId?: string }).terminalId || '').trim() || undefined,
+            });
+        }
     });
 
-    allSymbols.forEach((symbol) => {
-        const normalized = String(symbol || '').trim();
-        if (!normalized) return;
-        discoveryMap.set(normalized, resolveDataSource(normalized));
-    });
+    // Keep discovery mode stable: do not continuously blend in runtime ticker symbols.
+    // Runtime ticker set is only merged for watchlist-oriented flows.
+    if (mode === 'watchlist' || watchlistSearchIncludesDiscovery) {
+        allSymbols.forEach((symbol) => {
+            const normalized = String(symbol || '').trim();
+            if (!normalized) return;
+            discoveryMap.set(normalized, resolveDataSource(normalized));
+        });
+    }
 
     DEFAULT_BINANCE_SYMBOLS.forEach((symbol) => {
         if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
@@ -48,15 +79,20 @@ export function buildSymbolList({
         if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
     });
 
-    let symbols: { symbol: string; source: DataSource }[] = [];
+    let symbols: SymbolListItem[] = [];
 
     if (mode === 'watchlist') {
         symbols = watchlist.map((symbol) => ({
             symbol,
             source: discoveryMap.get(symbol) ?? resolveDataSource(symbol),
+            meta: metaMap.get(symbol),
         }));
     } else {
-        symbols = Array.from(discoveryMap.entries()).map(([symbol, source]) => ({ symbol, source }));
+        symbols = Array.from(discoveryMap.entries()).map(([symbol, source]) => ({
+            symbol,
+            source,
+            meta: metaMap.get(symbol),
+        }));
     }
 
     const filtered = symbols
@@ -90,7 +126,7 @@ export function buildSymbolList({
     }
 
     if (mode === 'watchlist' && watchlistSearchIncludesDiscovery && normalizedSearch) {
-        const merged = new Map<string, { symbol: string; source: DataSource }>();
+        const merged = new Map<string, SymbolListItem>();
         const rawSearch = deferredSearch.trim().toUpperCase();
 
         watchlist.forEach((symbol) => {
@@ -100,6 +136,7 @@ export function buildSymbolList({
                 merged.set(normalized, {
                     symbol: normalized,
                     source: discoveryMap.get(normalized) ?? resolveDataSource(normalized),
+                    meta: metaMap.get(normalized),
                 });
             }
         });
@@ -107,6 +144,11 @@ export function buildSymbolList({
         Array.from(discoveryMap.entries()).forEach(([symbol, source]) => {
             if (symbol.toLowerCase().includes(normalizedSearch)) {
                 merged.set(symbol, { symbol, source });
+                const existing = merged.get(symbol);
+                if (existing) {
+                    existing.meta = existing.meta || metaMap.get(symbol);
+                    merged.set(symbol, existing);
+                }
             }
         });
 
@@ -121,7 +163,7 @@ export function buildSymbolList({
                 const candidate = normalizedCandidate;
                 const candidateSource = resolveDataSource(candidate);
                 if (sourceTab === 'ALL' || sourceTab === candidateSource) {
-                    merged.set(candidate, { symbol: candidate, source: candidateSource });
+                    merged.set(candidate, { symbol: candidate, source: candidateSource, meta: metaMap.get(candidate) });
                 }
             }
         }

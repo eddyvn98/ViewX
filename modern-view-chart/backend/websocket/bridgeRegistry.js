@@ -1,4 +1,5 @@
 const DEFAULT_ACCOUNT_KEY = "__default__";
+const DEFAULT_TERMINAL_KEY = "__default_terminal__";
 
 function normalizeKey(value) {
     if (value === undefined || value === null) return null;
@@ -8,7 +9,7 @@ function normalizeKey(value) {
 
 function normalizeAccountValue(value) {
     if (!value || typeof value !== "object") return value;
-    return value.id ?? value.accountId ?? value.account_id ?? value.number ?? null;
+    return value.id ?? value.accountId ?? value.account_id ?? value.number ?? value.login ?? null;
 }
 
 function extractRouteSource(metadata = {}) {
@@ -38,15 +39,23 @@ function resolveRouteTarget(metadata = {}) {
                 source.account_id ??
                 source.account ??
                 source.accountNumber ??
+                source.accountLogin ??
+                source.account_login ??
                 source.mt5Account ??
                 source.mt5AccountId ??
                 source.accountLogin
         )
     );
 
+    const terminalId = normalizeKey(
+        source.terminalId ??
+            source.terminal_id ??
+            source.terminal ??
+            source.bridgeId ??
+            source.bridge_id
+    );
     const bridgeId = normalizeKey(source.bridgeId ?? source.bridge_id);
     const bridgeSource = normalizeKey(source.bridgeSource ?? source.bridge_source ?? source.source);
-    const terminalId = normalizeKey(source.terminalId ?? source.terminal_id);
 
     return {
         userId,
@@ -64,17 +73,21 @@ function resolveBridgeKey(metadata = {}) {
     return {
         userId: routeTarget.userId,
         accountId: routeTarget.accountId || DEFAULT_ACCOUNT_KEY,
+        terminalId: routeTarget.terminalId || DEFAULT_TERMINAL_KEY,
     };
 }
 
 function isRouteMismatch(base = {}, target = {}) {
     const baseUserId = normalizeKey(base.userId);
     const baseAccountId = normalizeKey(base.accountId);
+    const baseTerminalId = normalizeKey(base.terminalId);
     const targetUserId = normalizeKey(target.userId);
     const targetAccountId = normalizeKey(target.accountId);
+    const targetTerminalId = normalizeKey(target.terminalId);
 
     if (baseUserId && targetUserId && baseUserId !== targetUserId) return true;
     if (baseAccountId && targetAccountId && baseAccountId !== targetAccountId) return true;
+    if (baseTerminalId && targetTerminalId && baseTerminalId !== targetTerminalId) return true;
     return false;
 }
 
@@ -91,7 +104,12 @@ class BridgeRegistry {
         if (!key) return null;
 
         const existingKey = this.bySocket.get(ws);
-        if (existingKey && existingKey.userId === key.userId && existingKey.accountId === key.accountId) {
+        if (
+            existingKey &&
+            existingKey.userId === key.userId &&
+            existingKey.accountId === key.accountId &&
+            existingKey.terminalId === key.terminalId
+        ) {
             return key;
         }
 
@@ -105,12 +123,17 @@ class BridgeRegistry {
             this.byUser.set(key.userId, accountMap);
         }
 
-        let sockets = accountMap.get(key.accountId);
-        if (!sockets) {
-            sockets = new Set();
-            accountMap.set(key.accountId, sockets);
+        let terminalMap = accountMap.get(key.accountId);
+        if (!terminalMap) {
+            terminalMap = new Map();
+            accountMap.set(key.accountId, terminalMap);
         }
 
+        let sockets = terminalMap.get(key.terminalId);
+        if (!sockets) {
+            sockets = new Set();
+            terminalMap.set(key.terminalId, sockets);
+        }
         sockets.add(ws);
         this.bySocket.set(ws, key);
 
@@ -131,7 +154,7 @@ class BridgeRegistry {
         return this.bySocket.get(ws) || null;
     }
 
-    get(userId, accountId) {
+    get(userId, accountId, terminalId = null) {
         const userKey = normalizeKey(userId);
         if (!userKey) return [];
 
@@ -140,25 +163,60 @@ class BridgeRegistry {
 
         if (accountId !== undefined && accountId !== null) {
             const accountKey = normalizeKey(accountId) || DEFAULT_ACCOUNT_KEY;
-            return Array.from(accountMap.get(accountKey) || []);
+            const terminalMap = accountMap.get(accountKey);
+            if (!terminalMap) return [];
+
+            const terminalKey = normalizeKey(terminalId);
+            if (terminalKey) {
+                const exact = Array.from(terminalMap.get(terminalKey) || []);
+                if (exact.length > 0) return exact;
+                return Array.from(terminalMap.get(DEFAULT_TERMINAL_KEY) || []);
+            }
+
+            const sockets = [];
+            for (const accountSockets of terminalMap.values()) {
+                sockets.push(...accountSockets);
+            }
+            return sockets;
         }
 
         const sockets = [];
-        for (const accountSockets of accountMap.values()) {
-            sockets.push(...accountSockets);
+        for (const terminalMap of accountMap.values()) {
+            for (const accountSockets of terminalMap.values()) {
+                sockets.push(...accountSockets);
+            }
         }
         return sockets;
     }
 
     getAnyOpenSocket() {
-        for (const socketsByAccount of this.byUser.values()) {
-            for (const sockets of socketsByAccount.values()) {
-                for (const ws of sockets) {
-                    if (ws?.readyState === ws.OPEN) return ws;
+        for (const terminalMapByAccount of this.byUser.values()) {
+            for (const terminalMap of terminalMapByAccount.values()) {
+                for (const sockets of terminalMap.values()) {
+                    for (const ws of sockets) {
+                        if (ws?.readyState === ws.OPEN) return ws;
+                    }
                 }
             }
         }
         return null;
+    }
+
+    hasAnyBridgeForUserAccount(userId, accountId) {
+        const userKey = normalizeKey(userId);
+        if (!userKey) return false;
+
+        const accountKey = normalizeKey(accountId) || DEFAULT_ACCOUNT_KEY;
+        const accountMap = this.byUser.get(userKey);
+        const terminalMap = accountMap?.get(accountKey);
+        if (!terminalMap) return false;
+
+        for (const sockets of terminalMap.values()) {
+            for (const ws of sockets) {
+                if (ws?.readyState === ws.OPEN) return true;
+            }
+        }
+        return false;
     }
 
     getLegacyBridgeSocket(clients) {
@@ -182,7 +240,7 @@ class BridgeRegistry {
 
         const routeTarget = resolveRouteTarget(metadata);
         if (routeTarget.userId) {
-            const sockets = this.get(routeTarget.userId, routeTarget.accountId);
+            const sockets = this.get(routeTarget.userId, routeTarget.accountId, routeTarget.terminalId);
             for (const ws of sockets) {
                 if (isBridgeSocket(ws)) return ws;
             }
@@ -211,6 +269,11 @@ class BridgeRegistry {
 
             if (normalizeKey(clientMeta?.userId) !== routeTarget.userId) continue;
             if (routeTarget.accountId && normalizeKey(clientMeta?.accountId) !== routeTarget.accountId) continue;
+            if (
+                routeTarget.terminalId &&
+                normalizeKey(clientMeta?.terminalId) &&
+                normalizeKey(clientMeta?.terminalId) !== routeTarget.terminalId
+            ) continue;
 
             recipients.push(clientWs);
         }
@@ -239,13 +302,18 @@ class BridgeRegistry {
 
     _removeSocket(ws, key) {
         const accountMap = this.byUser.get(key.userId);
-        const sockets = accountMap?.get(key.accountId);
+        const terminalMap = accountMap?.get(key.accountId);
+        const sockets = terminalMap?.get(key.terminalId);
 
         if (sockets) {
             sockets.delete(ws);
             if (sockets.size === 0) {
-                accountMap.delete(key.accountId);
+                terminalMap.delete(key.terminalId);
             }
+        }
+
+        if (terminalMap && terminalMap.size === 0) {
+            accountMap.delete(key.accountId);
         }
 
         if (accountMap && accountMap.size === 0) {
@@ -258,6 +326,6 @@ class BridgeRegistry {
 
 export const bridgeRegistry = new BridgeRegistry();
 
-export { DEFAULT_ACCOUNT_KEY, resolveBridgeKey, resolveRouteTarget, isRouteMismatch, BridgeRegistry };
+export { DEFAULT_ACCOUNT_KEY, DEFAULT_TERMINAL_KEY, resolveBridgeKey, resolveRouteTarget, isRouteMismatch, BridgeRegistry };
 
 export default bridgeRegistry;

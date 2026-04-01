@@ -25,7 +25,19 @@ type ProFlowMessages = {
 
 export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessages) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
-    const isProUser = getClientEntitlements().isPro;
+    const initialEnt = getClientEntitlements();
+    const [moduleStatus, setModuleStatus] = useState<{
+        status: 'inactive' | 'trial' | 'active';
+        canUse: boolean;
+        trialEndsAt: string | null;
+        activeUntil: string | null;
+    }>({
+        status: initialEnt.hasMt5Trade ? 'active' : 'inactive',
+        canUse: initialEnt.hasMt5Trade,
+        trialEndsAt: null,
+        activeUntil: null,
+    });
+    const hasMt5Module = moduleStatus.canUse;
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
     const activeChartSource = useMarketStore((state) => {
@@ -40,10 +52,10 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
 
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5';
     const account = useMarketStore((state) => state.accounts[accountSource] || state.accounts['MT5'] || null);
-    const visibleAccount = isProUser ? account : null;
-    const visiblePositions = isProUser ? positions : [];
-    const visibleOrders = isProUser ? orders : [];
-    const visibleHistory = isProUser ? history : [];
+    const visibleAccount = hasMt5Module ? account : null;
+    const visiblePositions = hasMt5Module ? positions : [];
+    const visibleOrders = hasMt5Module ? orders : [];
+    const visibleHistory = hasMt5Module ? history : [];
 
     const [hasLegalConsent, setHasLegalConsent] = useState(false);
     const onboardingSource: TradingSource = activeChartSource === 'BINANCE' ? 'BINANCE' : 'MT5';
@@ -54,16 +66,77 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
             (visibleAccount as { number?: string | number }).number
         )
     );
-    const isProFlowReady = isProUser && isBridgeOnline && hasAccountLinked && hasLegalConsent;
+    const isProFlowReady = hasMt5Module && isBridgeOnline && hasAccountLinked && hasLegalConsent;
 
     const { sendMessage } = useWebSocket();
     const [terminalTab, setTerminalTab] = useState<TerminalTab>('positions');
+    const autoStartRequestedRef = useRef(false);
+
+    const refreshModuleStatus = useCallback(async () => {
+        if (typeof window === 'undefined') return;
+        const token = (localStorage.getItem('auth_access_token') || '').trim();
+        if (!token) {
+            setModuleStatus((prev) => ({ ...prev, canUse: initialEnt.hasMt5Trade, status: initialEnt.hasMt5Trade ? 'active' : 'inactive' }));
+            return;
+        }
+        try {
+            const res = await fetch('/api/user/module-status?module=mt5_trade', {
+                method: 'GET',
+                headers: { authorization: `Bearer ${token}` },
+                credentials: 'include',
+            });
+            if (!res.ok) return;
+            const data = await res.json().catch(() => null);
+            const nextStatus = String(data?.status || 'inactive') as 'inactive' | 'trial' | 'active';
+            setModuleStatus({
+                status: nextStatus,
+                canUse: Boolean(data?.canUse),
+                trialEndsAt: typeof data?.trialEndsAt === 'string' ? data.trialEndsAt : null,
+                activeUntil: typeof data?.activeUntil === 'string' ? data.activeUntil : null,
+            });
+        } catch {
+            // keep previous status
+        }
+    }, [initialEnt.hasMt5Trade]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const runRefresh = () => {
+            window.setTimeout(() => {
+                void refreshModuleStatus();
+            }, 0);
+        };
+        runRefresh();
+        window.addEventListener('focus', runRefresh);
+        window.addEventListener('auth-changed', runRefresh);
+        return () => {
+            window.removeEventListener('focus', runRefresh);
+            window.removeEventListener('auth-changed', runRefresh);
+        };
+    }, [refreshModuleStatus]);
 
     useEffect(() => {
         if (history.length > 0) {
             debugLog(`[TERMINAL] Store has ${history.length} history deals`);
         }
     }, [history.length]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (autoStartRequestedRef.current) return;
+        if (!hasMt5Module || isBridgeOnline) return;
+
+        const enabled = process.env.NEXT_PUBLIC_BRIDGE_AUTOSTART_ENABLED === 'true';
+        if (!enabled) return;
+
+        autoStartRequestedRef.current = true;
+        fetch('/api/bridge/autostart', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+        }).catch(() => {
+            // Keep silent: wizard still shows manual remediation if autostart fails.
+        });
+    }, [isBridgeOnline, hasMt5Module]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -169,7 +242,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
 
     return {
         strategyEngineEnabled,
-        isProUser,
+        hasMt5Module,
         isBridgeOnline,
         hasLegalConsent,
         hasAccountLinked,
@@ -191,5 +264,7 @@ export function useTerminalState(forceExpanded: boolean, messages: ProFlowMessag
         handleSymbolClick,
         handleAnalyze,
         forceExpanded,
+        moduleStatus,
+        refreshModuleStatus,
     };
 }

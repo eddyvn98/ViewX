@@ -51,3 +51,20 @@ Validate that Pro-only MT5 paths cannot be reached by bypassing UI or client cla
 2. Findings are either fixed or explicitly waived with owner approval.
 3. No unexplained route miss or account mix-up remains open.
 
+## 8) Implementation Notes (2026-03-25)
+1. Security smoke automation lives at `scripts/server/pro-security-smoke.mjs`.
+2. Current automated cases:
+   - `forged_client_mode`: Free/viewer + forged `client_mode=pro_extension` must be denied (`error.code=forbidden`).
+   - `direct_private_command`: direct Pro trade command from Free/viewer must be denied (`error.code=forbidden`).
+   - `replay_request_id`: duplicate non-read-only `request_id` must be rejected on replay (`error.code=conflict` on second submit).
+   - `direct_bridge_topic`: non-bridge client sending bridge-only topic must be denied (`error.code=forbidden`, detail contains `bridge_topic_requires_authenticated_bridge`).
+3. Run command:
+   - `node scripts/server/pro-security-smoke.mjs --ws-url ws://127.0.0.1:8091 --auth-mode header --symbol XAUUSDm`
+4. Required env:
+   - `PRO_QA_AUTH_TOKEN` (or `PRO_QA_USER_TOKEN`) must be set to a valid user JWT.
+   - Optional overrides: `PRO_QA_REPLY_TIMEOUT_MS`, `PRO_QA_SETTLE_MS`, `PRO_QA_OUTPUT_DIR`.
+5. Pass criteria for script run:
+   - Report shows `failed=0`.
+   - No case returns an allow/success outcome for forbidden paths.
+   - Replay case records a `conflict` response for the second submit.
+

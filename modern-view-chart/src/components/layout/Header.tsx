@@ -17,6 +17,15 @@ type UserSetupSyncStatusDetail = {
     status: UserSetupSyncStatus;
     lastSavedAt: number | null;
 };
+type ModuleOrder = {
+    _id: string;
+    module: string;
+    orderCode: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    confirmedAt?: string | null;
+};
 
 type MembershipTier = 'free' | 'pro' | 'ai';
 
@@ -80,6 +89,7 @@ export const Header = memo(function Header() {
     const [membershipTier, setMembershipTier] = React.useState<MembershipTier>('free');
     const [isAvatarMenuOpen, setIsAvatarMenuOpen] = React.useState(false);
     const [isTelegramDialogOpen, setIsTelegramDialogOpen] = React.useState(false);
+    const [orders, setOrders] = React.useState<ModuleOrder[]>([]);
     const [isNotificationMenuOpen, setIsNotificationMenuOpen] = React.useState(false);
     const [editingAlert, setEditingAlert] = React.useState<{ id: string; symbol: string; price: number } | null>(null);
     const [syncStatus, setSyncStatus] = React.useState<UserSetupSyncStatus>('idle');
@@ -213,6 +223,23 @@ export const Header = memo(function Header() {
                 const locale = localeMatch?.[1]?.toLowerCase();
                 window.location.href = locale ? `/${locale}` : "/";
             }
+        }
+    }, []);
+
+    const loadOrders = React.useCallback(async () => {
+        const token = (typeof window !== 'undefined' ? localStorage.getItem('auth_access_token') || '' : '').trim();
+        if (!token) return;
+        try {
+            const res = await fetch('/api/user/module-orders', {
+                method: 'GET',
+                headers: { authorization: `Bearer ${token}` },
+                credentials: 'include',
+            });
+            if (!res.ok) return;
+            const data = await res.json().catch(() => null);
+            if (Array.isArray(data?.orders)) setOrders(data.orders as ModuleOrder[]);
+        } catch {
+            // ignore
         }
     }, []);
 
@@ -390,7 +417,7 @@ export const Header = memo(function Header() {
                                     <div className={cn("w-full h-full rounded-full", membershipUi.avatarInnerClassName)} />
                                 </button>
                                 {isAvatarMenuOpen ? (
-                                    <div className="absolute right-0 top-8 w-44 rounded-md border border-border dark:border-white/10 bg-background/95 backdrop-blur p-1 shadow-lg z-[140]">
+                                    <div className="absolute right-0 top-8 w-72 rounded-md border border-border dark:border-white/10 bg-background/95 backdrop-blur p-1 shadow-lg z-[140]">
                                         <div className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">Quick Controls</div>
                                         <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
                                             <span className="text-xs text-foreground dark:text-white">Dark Mode</span>
@@ -401,6 +428,18 @@ export const Header = memo(function Header() {
                                             <ThemeColorSwitcher />
                                         </div>
                                         <div className="my-1 h-px bg-border dark:bg-white/10" />
+                                        <button
+                                            onClick={() => { void loadOrders(); }}
+                                            className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
+                                        >
+                                            <span>Don hang kich hoat</span>
+                                        </button>
+                                        {orders.slice(0, 5).map((order) => (
+                                            <div key={order._id} className="mx-2 my-1 rounded border border-border/40 p-1 text-[10px]">
+                                                <div>{order.module} · {order.status}</div>
+                                                <div className="font-mono">{order.orderCode}</div>
+                                            </div>
+                                        ))}
                                     <button
                                         onClick={() => {
                                             setIsAvatarMenuOpen(false);

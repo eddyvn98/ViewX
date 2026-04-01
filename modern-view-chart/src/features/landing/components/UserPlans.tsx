@@ -1,13 +1,16 @@
-'use client';
+﻿'use client';
 
-import { Link } from '@/i18n/routing';
+import { usePathname } from 'next/navigation';
 import { CheckCircle2, Crown, Gem, Rocket, Shield } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export function UserPlans() {
     const t = useTranslations('HomePage.userPlans');
+    const pathname = usePathname();
+    const localePrefix = pathname?.startsWith('/en') ? '/en' : '/vi';
+
     const renderBulletText = (item: string) => {
-        const EXCLUSIVE_REGEX = /(độc quyền|exclusive)/i;
+        const EXCLUSIVE_REGEX = /(doc quyen|exclusive)/i;
         const match = item.match(EXCLUSIVE_REGEX);
         if (!match || match.index === undefined) return <span>{item}</span>;
 
@@ -69,29 +72,33 @@ export function UserPlans() {
         },
     ];
 
+    const handlePlanAction = (href: string) => {
+        if (typeof window === 'undefined') return;
+        window.location.assign(`${localePrefix}${href}`);
+    };
+
     return (
         <section aria-labelledby="user-plans-title" className="space-y-8 border-t border-sky-100 pt-12">
             <div className="mx-auto max-w-3xl space-y-3 text-center">
                 <h2 id="user-plans-title" className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
                     {t('title')}
                 </h2>
-                <p className="text-slate-600">
-                    {t('description')}
-                </p>
+                <p className="text-slate-600">{t('description')}</p>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
                 {plans.map((plan) => {
                     const Icon = plan.icon;
+                    const detailHref = plan.key === 'pro' ? '/plan-updates/pro' : '/plan-updates/pro-plus';
+                    const slideHref = plan.key === 'pro' ? '/plan-details/pro' : '/plan-details/pro-plus';
+
                     return (
                         <article
                             key={plan.key}
                             className={`relative flex h-full flex-col rounded-2xl border ${plan.border} ${plan.bg} p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg`}
                         >
                             {plan.badge ? (
-                                <p className="absolute -top-3 left-6 rounded-full bg-emerald-600 px-3 py-1 text-xs font-black text-white">
-                                    {plan.badge}
-                                </p>
+                                <p className="absolute -top-3 left-6 rounded-full bg-emerald-600 px-3 py-1 text-xs font-black text-white">{plan.badge}</p>
                             ) : null}
                             <div className="mb-5 flex items-center gap-3">
                                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm">
@@ -111,12 +118,31 @@ export function UserPlans() {
                                     </li>
                                 ))}
                             </ul>
-                            <Link
-                                href={plan.href as any}
+                            <button
+                                type="button"
+                                onClick={() => handlePlanAction(plan.href)}
                                 className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-slate-700"
                             >
                                 {plan.cta}
-                            </Link>
+                            </button>
+                            {(plan.key === 'pro' || plan.key === 'pro_plus') && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePlanAction(detailHref)}
+                                        className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-300/40 bg-white/70 px-4 py-2 text-xs font-bold text-slate-800 transition-colors hover:bg-white"
+                                    >
+                                        {plan.key === 'pro' ? 'Doc bai gioi thieu goi Nang cao' : 'Doc bai gioi thieu goi Cao cap'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePlanAction(slideHref)}
+                                        className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-300/40 bg-slate-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-800"
+                                    >
+                                        {plan.key === 'pro' ? 'Xem slide tinh nang Pro' : 'Xem slide tinh nang Pro Plus'}
+                                    </button>
+                                </>
+                            )}
                         </article>
                     );
                 })}

@@ -1,6 +1,7 @@
 import { userModel } from "../model/user.js";
 import { normalizeUserRole } from "./roles.js";
 import { verifyAccessToken } from "./userJwt.js";
+import { resolveUserEntitlements } from "./modules.js";
 
 function normalizeSessionVersion(value) {
     const parsed = Number.parseInt(String(value ?? "1"), 10);
@@ -11,17 +12,26 @@ export async function resolveUserAuthFromAccessToken(token) {
     const payload = verifyAccessToken(token);
     if (!payload?.sub) return null;
 
-    const user = await userModel.findById(payload.sub).select("_id role sessionVersion");
+    const user = await userModel.findById(payload.sub).select("_id role sessionVersion modules subscription moduleAccess");
     if (!user?._id) return null;
 
     const userSessionVersion = normalizeSessionVersion(user.sessionVersion);
     const tokenSessionVersion = normalizeSessionVersion(payload.sv);
     if (tokenSessionVersion !== userSessionVersion) return null;
 
+    const ent = resolveUserEntitlements(user);
     return {
         userId: String(user._id),
         role: normalizeUserRole(user.role),
         sessionVersion: userSessionVersion,
+        plan: ent.plan,
+        modules: ent.modules,
+        subscription: {
+            plan: ent.plan,
+            modules: ent.modules,
+            validUntil: ent.validUntil,
+        },
+        moduleAccess: Array.isArray(user.moduleAccess) ? user.moduleAccess : [],
     };
 }
 

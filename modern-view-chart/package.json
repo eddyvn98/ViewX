@@ -43,6 +43,9 @@
     "test:e2e": "npx playwright test",
     "test:report": "npx playwright show-report",
     "benchmark:exness": "node scripts/benchmark-exness.mjs"
+    ,
+    "migrate:modules:dry": "node scripts/migrations/backfill-user-modules.mjs",
+    "migrate:modules:apply": "node scripts/migrations/backfill-user-modules.mjs --apply"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

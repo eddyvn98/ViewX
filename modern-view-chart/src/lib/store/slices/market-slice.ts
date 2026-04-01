@@ -66,7 +66,24 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
             [data.symbol]: data
         }
     })),
-    setAvailableSymbols: (symbols) => set({ availableSymbols: symbols }),
+    setAvailableSymbols: (symbols) => set((state) => {
+        const prev = state.availableSymbols;
+        if (prev.length === symbols.length) {
+            let same = true;
+            for (let i = 0; i < prev.length; i += 1) {
+                const p = prev[i];
+                const n = symbols[i];
+                const ps = typeof p === 'string' ? p : JSON.stringify(p);
+                const ns = typeof n === 'string' ? n : JSON.stringify(n);
+                if (ps !== ns) {
+                    same = false;
+                    break;
+                }
+            }
+            if (same) return state;
+        }
+        return { availableSymbols: symbols };
+    }),
 
     addToWatchlist: (symbol) => set((state) => {
         const normalized = normalizeSymbol(symbol);

@@ -1,4 +1,6 @@
-﻿export function getGoogleClientId() {
+import { resolveUserEntitlements } from "../../auth/modules.js";
+
+export function getGoogleClientId() {
     return (process.env.GOOGLE_CLIENT_ID || "").trim();
 }
 
@@ -17,6 +19,7 @@ export function parseJwtPayload(token) {
 }
 
 export function toAuthResponse(user, tokens, normalizedRole) {
+    const ent = resolveUserEntitlements(user);
     return {
         token_type: "Bearer",
         access_token: tokens.accessToken,
@@ -29,6 +32,13 @@ export function toAuthResponse(user, tokens, normalizedRole) {
             auth_provider: user.authProvider || "local",
             display_name: user.displayName || "",
             avatar_url: user.avatarUrl || "",
+            plan: ent.plan,
+            modules: ent.modules,
+            subscription: {
+                plan: ent.plan,
+                modules: ent.modules,
+                validUntil: ent.validUntil,
+            },
         },
     };
 }

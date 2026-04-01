@@ -156,7 +156,7 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
 
     const isCrypto = symbol.includes('BTC') || symbol.includes('ETH'); // Simplified check for display
     const tradingSource: TradingSource = isCrypto ? 'BINANCE' : 'MT5';
-    const isProUser = getClientEntitlements().isPro;
+    const hasMt5Module = getClientEntitlements().hasMt5Trade;
     const hasAccountLinked = Boolean(
         account && (
             (account as { login?: string | number }).login ||
@@ -168,23 +168,54 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
     const hasLegalConsent = React.useCallback(() => {
         return readLegalConsent(tradingSource);
     }, [tradingSource]);
-    const canAttemptTrade = isProUser && isBridgeOnline && hasAccountLinked;
-    const isFlowReady = canAttemptTrade && hasLegalConsent();
+    const consentReady = hasLegalConsent();
+    const isFlowReady = hasMt5Module && isBridgeOnline && hasAccountLinked && consentReady;
+    const missingSetupSteps = useMemo(() => {
+        const missing: Array<{ id: string; label: string; action: string }> = [];
+        if (!hasMt5Module) {
+            missing.push({
+                id: 'plan',
+                label: 'Module MT5 da kich hoat',
+                action: 'Dang nhap tu app, neu chua mua module thi thanh toan tren web.',
+            });
+        }
+        if (!isBridgeOnline) {
+            missing.push({
+                id: 'bridge',
+                label: 'Bridge da ket noi',
+                action: 'Mo app va de app chay tray de bridge online.',
+            });
+        }
+        if (!hasAccountLinked) {
+            missing.push({
+                id: 'account',
+                label: 'Da nhan dien tai khoan',
+                action: 'Dang nhap bang nut trong app de web map dung tai khoan.',
+            });
+        }
+        if (!consentReady) {
+            missing.push({
+                id: 'legal',
+                label: 'Da chap thuan phap ly',
+                action: 'Xac nhan dieu khoan truoc khi gui lenh that.',
+            });
+        }
+        return missing;
+    }, [consentReady, hasAccountLinked, isBridgeOnline, hasMt5Module]);
 
     const handleSubmitWithLegalGuard = React.useCallback(() => {
-        if (!canAttemptTrade) {
+        if (!isFlowReady) {
             useMarketStore.getState().addNotification(
                 t('warningSetupRequired'),
                 'warning'
             );
-            return;
-        }
-        if (!hasLegalConsent()) {
-            setShowLegalConsentDialog(true);
+            if (!consentReady && hasMt5Module && isBridgeOnline && hasAccountLinked) {
+                setShowLegalConsentDialog(true);
+            }
             return;
         }
         handleSubmit();
-    }, [handleSubmit, hasLegalConsent, canAttemptTrade, t]);
+    }, [consentReady, handleSubmit, hasAccountLinked, isBridgeOnline, isFlowReady, hasMt5Module, t]);
 
     const confirmLegalConsentAndSubmit = React.useCallback(() => {
         if (!isLegalChecked) return;
@@ -232,18 +263,25 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
                     </p>
                     <button
                         onClick={handleSubmitWithLegalGuard}
-                        disabled={!canAttemptTrade}
+                        disabled={!isFlowReady}
                         className={cn(
                             "w-full py-2 rounded-md text-[11px] font-black shadow-lg transition-all uppercase tracking-widest",
                             side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white",
-                            !canAttemptTrade ? "cursor-not-allowed opacity-60" : "active:scale-95"
+                            !isFlowReady ? "cursor-not-allowed opacity-60" : "active:scale-95"
                         )}
                     >
                         {side === 'buy' ? 'BUY' : 'SELL'} {volume} LOTS
                     </button>
                     {!isFlowReady && (
-                        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">
-                            {t('setupRequiredBeforeTrade')}
+                        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200 space-y-1">
+                            <p>Can hoan tat luong kich hoat MT5 (module, bridge, account, legal consent) truoc khi gui lenh.</p>
+                            <ul className="space-y-0.5 text-[9px] leading-relaxed text-amber-100/90">
+                                {missingSetupSteps.map((step) => (
+                                    <li key={step.id}>
+                                        - {step.label}: {step.action}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
                     <button onClick={resetForm} className="w-full py-1.5 rounded-md text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all uppercase tracking-tight">{t('exit')}</button>

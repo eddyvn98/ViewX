@@ -16,7 +16,7 @@ export interface MessageHandlerDeps {
     setOrders: (orders: Array<Record<string, unknown>>) => void;
     appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean) => void;
     setSymbolInfo: (info: Record<string, unknown>) => void;
-    setAvailableSymbols: (symbols: string[]) => void;
+    setAvailableSymbols: (symbols: Array<Record<string, unknown> | string>) => void;
 }
 
 type CandleBufferItem = {
@@ -54,6 +54,13 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 }
                 return;
             }
+        }
+        if (msgType === 'module_access_updated') {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('auth-changed'));
+            }
+            useMarketStore.getState().addNotification('Module da duoc kich hoat. He thong dang cap nhat quyen...', 'success');
+            return;
         }
 
         const mt5Source = String(msg.mt5_source || msg.source || 'MT5');
@@ -275,7 +282,21 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_available_symbols') {
-            const symbols = Array.isArray(msg.symbols) ? msg.symbols.map((symbol) => String(symbol)) : [];
+            const symbols = Array.isArray(msg.symbols)
+                ? msg.symbols
+                    .map((entry) => {
+                        if (typeof entry === 'string') return entry.trim();
+                        if (!entry || typeof entry !== 'object') return '';
+                        const raw = (entry as Record<string, unknown>).symbol
+                            ?? (entry as Record<string, unknown>).rawSymbol
+                            ?? (entry as Record<string, unknown>).raw_symbol
+                            ?? (entry as Record<string, unknown>).canonicalSymbol;
+                        const symbol = String(raw || '').trim();
+                        if (!symbol) return '';
+                        return { ...(entry as Record<string, unknown>), symbol };
+                    })
+                    .filter(Boolean)
+                : [];
             deps.setAvailableSymbols(symbols);
         }
 

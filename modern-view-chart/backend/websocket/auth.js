@@ -16,6 +16,10 @@ export async function resolveAuthContext(request, queryAuthPolicy) {
             type: "user",
             userId: bearerUserAuth.userId,
             role: bearerUserAuth.role,
+            plan: bearerUserAuth.plan || "free",
+            modules: bearerUserAuth.modules || [],
+            subscription: bearerUserAuth.subscription || null,
+            moduleAccess: bearerUserAuth.moduleAccess || [],
             via: "authorization_header",
         };
     }
@@ -37,6 +41,10 @@ export async function resolveAuthContext(request, queryAuthPolicy) {
                     type: "user",
                     userId: protocolUserAuth.userId,
                     role: protocolUserAuth.role,
+                    plan: protocolUserAuth.plan || "free",
+                    modules: protocolUserAuth.modules || [],
+                    subscription: protocolUserAuth.subscription || null,
+                    moduleAccess: protocolUserAuth.moduleAccess || [],
                     via: "sec_websocket_protocol",
                 };
             }

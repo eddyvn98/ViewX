@@ -205,6 +205,47 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         const protectedOrders = filterPendingDeletions(merged, state.pendingDeletions, 10000)
             .map((order) => applyPendingOrderLocks(order, state.pendingModifications, 3000));
 
+        if (state.orders.length === protectedOrders.length) {
+            let hasStructuralChange = false;
+            for (const nextOrder of protectedOrders) {
+                const prevOrder = prevMap.get(nextOrder.ticket);
+                if (!prevOrder) {
+                    hasStructuralChange = true;
+                    break;
+                }
+
+                if (
+                    prevOrder.type !== nextOrder.type ||
+                    prevOrder.symbol !== nextOrder.symbol ||
+                    prevOrder.source !== nextOrder.source ||
+                    prevOrder.time !== nextOrder.time
+                ) {
+                    hasStructuralChange = true;
+                    break;
+                }
+            }
+
+            if (!hasStructuralChange) {
+                let hasValueChange = false;
+                for (const nextOrder of protectedOrders) {
+                    const prevOrder = prevMap.get(nextOrder.ticket);
+                    if (!prevOrder) continue;
+                    if (
+                        prevOrder.price_open !== nextOrder.price_open ||
+                        prevOrder.current_price !== nextOrder.current_price ||
+                        prevOrder.sl !== nextOrder.sl ||
+                        prevOrder.tp !== nextOrder.tp ||
+                        prevOrder.profit !== nextOrder.profit ||
+                        prevOrder.volume !== nextOrder.volume
+                    ) {
+                        hasValueChange = true;
+                        break;
+                    }
+                }
+                if (!hasValueChange) return {};
+            }
+        }
+
         return { orders: protectedOrders };
     }),
 

@@ -5,6 +5,11 @@ export const runtimeState = {
     wsDroppedBackpressure: 0,
     wsBufferPressure: 0,
     broadcastLoopMsP95: 0,
+    wsRouteSuccessTotal: 0,
+    wsRouteMissTotal: 0,
+    wsCrossUserBlockTotal: 0,
+    wsProEntitlementBlockTotal: 0,
+    wsReplayRejectTotal: 0,
 };
 
 export function setBridgeOnline(online) {
@@ -26,6 +31,26 @@ export function incrementWsDroppedBackpressure() {
 export function setWsBufferPressure(value) {
     const normalized = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
     runtimeState.wsBufferPressure = normalized;
+}
+
+export function incrementWsRouteSuccess() {
+    runtimeState.wsRouteSuccessTotal += 1;
+}
+
+export function incrementWsRouteMiss() {
+    runtimeState.wsRouteMissTotal += 1;
+}
+
+export function incrementWsCrossUserBlock() {
+    runtimeState.wsCrossUserBlockTotal += 1;
+}
+
+export function incrementWsProEntitlementBlock() {
+    runtimeState.wsProEntitlementBlockTotal += 1;
+}
+
+export function incrementWsReplayReject() {
+    runtimeState.wsReplayRejectTotal += 1;
 }
 
 const broadcastLoopSamples = [];

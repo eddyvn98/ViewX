@@ -33,9 +33,12 @@ export function getChartHomeLayoutState(viewport: { width: number; height: numbe
   const isDesktopViewport = viewport.width >= DESKTOP_BREAKPOINT && !isMobileLandscapeTouch;
   const isHeightConstrainedLandscape =
     isLandscape && viewport.height > 0 && viewport.height < DESKTOP_SCALE_HEIGHT_THRESHOLD;
+  // Keep full desktop layout on wide screens even when devtools reduces height.
+  const isNarrowDesktopViewport = viewport.width < 1200;
   // Only scale desktop when we are already on desktop widths.
   // Mobile landscape should use dedicated mobile layout instead of scaled desktop.
-  const isScaledDesktopMode = isDesktopViewport && isLandscape && isHeightConstrainedLandscape;
+  const isScaledDesktopMode =
+    isDesktopViewport && isLandscape && isHeightConstrainedLandscape && isNarrowDesktopViewport;
   const showDesktopLayout = isDesktopViewport || isScaledDesktopMode;
   const showMobileLayout = !showDesktopLayout;
   const showDesktopHeader = showDesktopLayout && !isScaledDesktopMode;

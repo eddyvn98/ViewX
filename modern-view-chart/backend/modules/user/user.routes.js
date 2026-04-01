@@ -36,6 +36,18 @@ router.route("/telegram/link/start").post(telegramTemporarilyDisabled);
 router.route("/telegram/preferences").put(telegramTemporarilyDisabled);
 router.route("/telegram/test").post(telegramTemporarilyDisabled);
 router.route("/telegram/unlink").post(telegramTemporarilyDisabled);
+router.route("/modules").get(checkLogin, User.getUserModules).put(checkLogin, User.upsertUserModules);
+router.route("/module-status").get(checkLogin, User.getMyModuleStatus);
+router.route("/module-trial/start").post(checkLogin, User.startMyModuleTrial);
+router.route("/module-orders").get(checkLogin, User.listMyModuleOrders).post(checkLogin, User.createMyModuleOrder);
+router.route("/admin/module-orders").get(checkLogin, User.listAdminModuleOrders);
+router.route("/admin/module-stats").get(checkLogin, User.getAdminModuleStats);
+router.route("/admin/module-members").get(checkLogin, User.listAdminModuleMembers);
+router.route("/admin/module-orders/:orderId/confirm").post(checkLogin, User.confirmAdminModuleOrder);
+router.route("/admin/module-orders/:orderId/reject").post(checkLogin, User.rejectAdminModuleOrder);
+router.route("/admin/module-members/:userId/extend").post(checkLogin, User.adminExtendMemberModule);
+router.route("/admin/module-members/:userId/expire").post(checkLogin, User.adminExpireMemberModule);
+router.route("/payments/sepay/webhook").post(User.sepayWebhook);
 
 router.route("/data").post(async (req, res) => {
   const { symbol, interval } = req.body;

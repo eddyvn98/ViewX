@@ -213,6 +213,17 @@ export default function Home() {
         privacy: "Quyền riêng tư",
       };
 
+  const displayLegalNotice = isEnglish
+    ? legalNotice
+    : {
+        title: "Tuyên bố pháp lý:",
+        body:
+          "Nền tảng chỉ là công cụ kỹ thuật hỗ trợ hiển thị dữ liệu và đặt lệnh theo cấu hình của bạn. Chúng tôi không cung cấp tư vấn đầu tư, không cam kết lợi nhuận và không lưu giữ tài sản của người dùng. Bạn tự chịu trách nhiệm với quyết định giao dịch, việc quản lý API key và rủi ro thị trường.",
+        acknowledge: "Đã hiểu",
+        terms: "Điều khoản",
+        privacy: "Quyền riêng tư",
+      };
+
   const {
     isLandscape,
     isDesktopViewport,
@@ -286,24 +297,24 @@ export default function Home() {
                 )}
               >
                 {showLegalNotice && (
-                  <section className="mx-2 mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 sm:text-sm">
+                  <section className="mx-2 mt-2 rounded-lg border border-amber-500/50 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <p className="leading-relaxed">
-                        <strong>{legalNotice.title}</strong> {legalNotice.body}{" "}
-                        <Link href="/terms" className="underline underline-offset-2">
-                          {legalNotice.terms}
+                        <strong>{displayLegalNotice.title}</strong> {displayLegalNotice.body}{" "}
+                        <Link href="/terms" className="font-medium underline underline-offset-2">
+                          {displayLegalNotice.terms}
                         </Link>{" "}
                         |{" "}
-                        <Link href="/privacy" className="underline underline-offset-2">
-                          {legalNotice.privacy}
+                        <Link href="/privacy" className="font-medium underline underline-offset-2">
+                          {displayLegalNotice.privacy}
                         </Link>
                       </p>
                       <button
                         type="button"
                         onClick={handleAcknowledgeLegalNotice}
-                        className="shrink-0 rounded border border-amber-400/50 px-2 py-1 text-[11px] font-medium text-amber-100 hover:bg-amber-400/10"
+                        className="shrink-0 rounded border border-amber-700/40 bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-200"
                       >
-                        {legalNotice.acknowledge}
+                        {displayLegalNotice.acknowledge}
                       </button>
                     </div>
                   </section>

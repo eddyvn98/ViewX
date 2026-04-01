@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
-import { memo } from 'react';
-import { useTranslations } from 'next-intl';
+import React, { memo } from 'react';
 import { TerminalFooter } from './components/TerminalFooter';
 import { TerminalHeader } from './components/TerminalHeader';
 import { TerminalTabs } from './components/TerminalTabs';
-import { ProSetupWizard } from './components/ProSetupWizard';
+import { Mt5ActivationWizard } from './components/Mt5ActivationWizard';
 import { useTerminalState } from './use-terminal-state';
 
 declare global {
@@ -15,10 +14,9 @@ declare global {
 }
 
 export const Terminal = memo(function Terminal({ forceExpanded = false }: { forceExpanded?: boolean }) {
-    const t = useTranslations('ProFlow');
     const {
         strategyEngineEnabled,
-        isProUser,
+        hasMt5Module,
         isBridgeOnline,
         hasLegalConsent,
         hasAccountLinked,
@@ -40,8 +38,8 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         handleSymbolClick,
         handleAnalyze,
     } = useTerminalState(forceExpanded, {
-        warningSetupRequired: t('warningSetupRequired'),
-        warningModifyUnavailable: t('warningModifyUnavailable'),
+        warningSetupRequired: 'MT5 flow chua san sang: can module + bridge + account + legal consent.',
+        warningModifyUnavailable: 'Khong the sua lenh khi luong MT5 chua san sang.',
     });
 
     return (
@@ -55,17 +53,17 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                 visibleAccount={visibleAccount}
             />
 
-            {!effectiveCollapsed && (
+                    {!effectiveCollapsed && (
                 <div className="flex-1 flex flex-col min-h-0">
-                    {!isProUser ? (
-                        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-400 border-b border-amber-500/20 bg-amber-500/10">
-                            {t('terminalProOnly')}
+                    {!hasMt5Module ? (
+                        <div className="border-b border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                            DU LIEU TERMINAL MT5 CHI MO KHI MODULE MT5 DA KICH HOAT.
                         </div>
                     ) : null}
 
-                    {isProUser && !isProFlowReady ? (
-                        <ProSetupWizard
-                            isProUser={isProUser}
+                    {!isProFlowReady ? (
+                        <Mt5ActivationWizard
+                            hasMt5Module={hasMt5Module}
                             isBridgeOnline={isBridgeOnline}
                             hasAccountLinked={hasAccountLinked}
                             hasLegalConsent={hasLegalConsent}
@@ -74,9 +72,9 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                         />
                     ) : null}
 
-                    {isProUser && isProFlowReady ? (
-                        <div className="mx-2 mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] text-emerald-200">
-                            {t('ready')}
+                    {hasMt5Module && isProFlowReady ? (
+                        <div className="mx-2 mt-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-[10px] text-emerald-800">
+                            MT5 flow da san sang: module, bridge, account va legal consent deu da du.
                         </div>
                     ) : null}
 

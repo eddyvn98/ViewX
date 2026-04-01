@@ -26,3 +26,23 @@ export {
   sendTelegramTest,
   unlinkTelegram,
 } from './telegram.controller.js';
+
+export {
+  getUserModules,
+  upsertUserModules,
+} from './modules.controller.js';
+
+export {
+  getMyModuleStatus,
+  startMyModuleTrial,
+  createMyModuleOrder,
+  listMyModuleOrders,
+  listAdminModuleOrders,
+  getAdminModuleStats,
+  confirmAdminModuleOrder,
+  rejectAdminModuleOrder,
+  listAdminModuleMembers,
+  adminExtendMemberModule,
+  adminExpireMemberModule,
+  sepayWebhook,
+} from './module-commerce.controller.js';

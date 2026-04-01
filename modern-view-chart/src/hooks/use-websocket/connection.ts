@@ -2,6 +2,7 @@ import { buildSocketConfig, fetchWsTicketFromApi } from './socket-config';
 import { wsRuntime } from './runtime';
 import { collectActiveSymbolsFromStore } from './symbol-utils';
 import { handleSocketMessage, MessageHandlerDeps } from './message-handler';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
 
 export interface ConnectionDeps extends MessageHandlerDeps {
     setConnected: (connected: boolean) => void;
@@ -36,7 +37,18 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
         deps.setConnected(true);
         const userId = 'user_123';
         const symbols = collectActiveSymbolsFromStore();
-        socket.send(JSON.stringify({ topic: 'auth', userId, symbols }));
+        const entitlements = getClientEntitlements();
+        socket.send(JSON.stringify({
+            topic: 'auth',
+            userId,
+            symbols,
+            plan: entitlements.plan,
+            modules: entitlements.modules,
+            subscription: {
+                plan: entitlements.plan,
+                modules: entitlements.modules,
+            },
+        }));
         socket.send(JSON.stringify({ topic: 'subscribeSymbols', symbols }));
     };
 

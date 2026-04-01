@@ -5,6 +5,7 @@ import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Search, PanelsTopLeft } from 'lucide-react';
 import React, { useCallback, useDeferredValue, useMemo } from 'react';
+import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { List } from 'react-window';
@@ -59,6 +60,8 @@ export function MarketListContent({
     const shouldLoadDiscoveryUniverse =
         mode === 'discovery' || (watchlistSearchIncludesDiscovery && mode === 'watchlist' && deferredSearch.trim().length > 0);
     const binanceUniverse = useBinanceUniverse(shouldLoadDiscoveryUniverse);
+    const [accountFilter, setAccountFilter] = useState('ALL');
+    const [serverFilter, setServerFilter] = useState('ALL');
 
     const symbolList = useMemo(
         () =>
@@ -85,6 +88,35 @@ export function MarketListContent({
             watchlistSearchIncludesDiscovery,
         ],
     );
+
+    const accountOptions = useMemo(() => {
+        const set = new Set<string>();
+        availableSymbols.forEach((entry) => {
+            if (!entry || typeof entry === 'string') return;
+            const accountLogin = String((entry as { accountLogin?: string }).accountLogin || '').trim();
+            if (accountLogin) set.add(accountLogin);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }, [availableSymbols]);
+
+    const serverOptions = useMemo(() => {
+        const set = new Set<string>();
+        availableSymbols.forEach((entry) => {
+            if (!entry || typeof entry === 'string') return;
+            const server = String((entry as { server?: string }).server || '').trim();
+            if (server) set.add(server);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }, [availableSymbols]);
+
+    const filteredSymbolList = useMemo(() => {
+        if (accountFilter === 'ALL' && serverFilter === 'ALL') return symbolList;
+        return symbolList.filter((item) => {
+            const accountMatch = accountFilter === 'ALL' || item.meta?.accountLogin === accountFilter;
+            const serverMatch = serverFilter === 'ALL' || item.meta?.server === serverFilter;
+            return accountMatch && serverMatch;
+        });
+    }, [accountFilter, serverFilter, symbolList]);
 
     const handledWatchlist = useMemo(() => new Set(watchlist), [watchlist]);
 
@@ -125,7 +157,7 @@ export function MarketListContent({
 
     const rowData = useMemo<RowData>(
         () => ({
-            items: symbolList,
+            items: filteredSymbolList,
             mode,
             activeChartSymbol,
             watchedSet: handledWatchlist,
@@ -133,7 +165,7 @@ export function MarketListContent({
             onAdd: addToWatchlist,
             onRemove: removeFromWatchlist,
         }),
-        [symbolList, mode, activeChartSymbol, handledWatchlist, handleSymbolSelect, addToWatchlist, removeFromWatchlist],
+        [filteredSymbolList, mode, activeChartSymbol, handledWatchlist, handleSymbolSelect, addToWatchlist, removeFromWatchlist],
     );
 
     return (
@@ -183,6 +215,35 @@ export function MarketListContent({
                 </div>
             )}
 
+            {(accountOptions.length > 0 || serverOptions.length > 0) && (
+                <div className="px-3 py-2 border-b border-border/50 bg-secondary/30 flex items-center gap-2">
+                    {accountOptions.length > 0 && (
+                        <select
+                            value={accountFilter}
+                            onChange={(e) => setAccountFilter(e.target.value)}
+                            className="h-7 rounded-lg border border-border bg-background px-2 text-[11px] text-foreground"
+                        >
+                            <option value="ALL">All accounts</option>
+                            {accountOptions.map((account) => (
+                                <option key={account} value={account}>{account}</option>
+                            ))}
+                        </select>
+                    )}
+                    {serverOptions.length > 0 && (
+                        <select
+                            value={serverFilter}
+                            onChange={(e) => setServerFilter(e.target.value)}
+                            className="h-7 rounded-lg border border-border bg-background px-2 text-[11px] text-foreground"
+                        >
+                            <option value="ALL">All servers</option>
+                            {serverOptions.map((server) => (
+                                <option key={server} value={server}>{server}</option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+            )}
+
             {mode === 'watchlist' && (
                 <div className="grid grid-cols-[3fr_3fr_4.5fr] items-center mx-3 px-3 py-2 bg-transparent text-[11px] text-muted-foreground font-bold uppercase tracking-wider shrink-0 gap-2 border-b border-border/5 mt-1">
                     <span className="truncate opacity-50">Symbol</span>
@@ -192,7 +253,7 @@ export function MarketListContent({
             )}
 
             <div className="flex-1 min-h-0 bg-background/5">
-                {symbolList.length === 0 ? (
+                {filteredSymbolList.length === 0 ? (
                     <div className="p-10 text-center text-muted-foreground text-xs italic">
                         {mode === 'watchlist'
                             ? deferredSearch.trim()
@@ -205,8 +266,8 @@ export function MarketListContent({
                         renderProp={({ height, width }) => (
                             <List
                                 style={{ height: height ?? 0, width: width ?? 0 }}
-                                rowCount={symbolList.length}
-                                rowHeight={mode === 'watchlist' ? 56 : 52}
+                                rowCount={filteredSymbolList.length}
+                                rowHeight={mode === 'watchlist' ? 62 : 58}
                                 rowComponent={VirtualRow}
                                 rowProps={rowData}
                                 overscanCount={8}

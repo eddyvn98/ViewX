@@ -5,12 +5,14 @@ import { cn } from '@/lib/utils';
 import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
 import { Star, Trash2 } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import type { SymbolDisplayMeta } from './build-symbol-list';
 
 export type TickerRowMode = 'discovery' | 'watchlist';
 
 export interface TickerRowProps {
     symbol: string;
     source: 'BINANCE' | 'MT5';
+    meta?: SymbolDisplayMeta;
     isActive: boolean;
     isWatched: boolean;
     onSelect: (symbol: string, source: 'BINANCE' | 'MT5') => void;
@@ -22,6 +24,7 @@ export interface TickerRowProps {
 export const TickerRow = memo(function TickerRow({
     symbol,
     source,
+    meta,
     isActive,
     isWatched,
     onSelect,
@@ -124,6 +127,12 @@ export const TickerRow = memo(function TickerRow({
         touchRef.current.swiping = false;
     }, [mode, swipeOffset]);
 
+    const rawSymbol = String(meta?.rawSymbol || '').trim();
+    const canonicalSymbol = String(meta?.canonicalSymbol || '').trim();
+    const accountLogin = String(meta?.accountLogin || '').trim();
+    const server = String(meta?.server || '').trim();
+    const hasMultiBrokerMeta = Boolean(accountLogin || server || (canonicalSymbol && canonicalSymbol !== symbol) || (rawSymbol && rawSymbol !== symbol));
+
     return (
         <div
             role="button"
@@ -195,6 +204,12 @@ export const TickerRow = memo(function TickerRow({
                             {symbol.replace('USDT', '').replace('USDTm', '')}
                         </span>
                         <span className="text-[11px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
+                        {hasMultiBrokerMeta && (
+                            <span className="text-[10px] font-medium text-cyan-300/90 leading-none mt-1 truncate max-w-[180px]">
+                                {accountLogin ? `ACC ${accountLogin}` : source}
+                                {server ? ` • ${server}` : ''}
+                            </span>
+                        )}
                     </div>
                 </div>
 

@@ -15,9 +15,32 @@ import { BRIDGE_TOPICS, resolveQueryAuthPolicy } from "./config.js";
 import { emitWsError, resolveAuthContext } from "./auth.js";
 import { startPeriodicTasks } from "./loopManager.js";
 import { bridgeRegistry } from "./bridgeRegistry.js";
+import { onModuleActivated } from "../services/moduleEvents.js";
+import { getModuleEntitlementReason, hasRequiredModule } from "./services/proEntitlementGuard.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
+
+function normalizeMetaValue(value) {
+    if (value === undefined || value === null) return null;
+    const normalized = String(value).trim();
+    return normalized || null;
+}
+
+function canPublishBridgeTopic(topic, meta, payload) {
+    if (!topic || !BRIDGE_TOPICS.has(topic)) return { allowed: true, reason: null };
+    if (meta?.isServiceAuth) return { allowed: true, reason: null };
+    if (meta?.authType !== "user") {
+        return { allowed: false, reason: "bridge_topic_requires_authenticated_user_or_service" };
+    }
+    if (hasRequiredModule("mt5_trade", meta, payload)) {
+        return { allowed: true, reason: null };
+    }
+    return {
+        allowed: false,
+        reason: getModuleEntitlementReason("mt5_trade", meta, payload) || "module_required:mt5_trade",
+    };
+}
 
 export default function initWebSocket(server) {
     const maxClients = emergencyConfig.limits.wsClients;
@@ -58,6 +81,23 @@ export default function initWebSocket(server) {
     });
 
     const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex);
+    const disposeModuleActivated = onModuleActivated((event) => {
+        const userId = String(event?.userId || "").trim();
+        if (!userId) return;
+        const payload = JSON.stringify({
+            topic: "module_access_updated",
+            module: event?.module || null,
+            orderCode: event?.orderCode || null,
+            source: event?.source || null,
+            updatedAt: Date.now(),
+        });
+        for (const [clientWs, meta] of clients.entries()) {
+            if (String(meta?.userId || "").trim() !== userId) continue;
+            if (clientWs.readyState === clientWs.OPEN) {
+                safeSend(clientWs, payload);
+            }
+        }
+    });
 
     wss.on("connection", async (ws, request) => {
         const authContext = await resolveAuthContext(request, queryAuthPolicy);
@@ -75,6 +115,16 @@ export default function initWebSocket(server) {
         clients.set(ws, {
             userId: authContext.type === "user" ? authContext.userId : null,
             role: authContext.type === "user" ? authContext.role : null,
+            plan: authContext.type === "user" ? normalizeMetaValue(authContext.plan || "free") : null,
+            modules: authContext.type === "user" && Array.isArray(authContext.modules) ? authContext.modules : [],
+            subscription: authContext.type === "user" ? authContext.subscription || null : null,
+            moduleAccess: authContext.type === "user" && Array.isArray(authContext.moduleAccess) ? authContext.moduleAccess : [],
+            accountId: normalizeMetaValue(authContext.accountId || authContext.account_id),
+            accountLogin: null,
+            terminalId: null,
+            extensionVersion: null,
+            bridgeVersion: null,
+            protocolVersion: null,
             authType: authContext.type,
             authVia: authContext.via || "unknown",
             isServiceAuth: authContext.type === "service",
@@ -107,10 +157,54 @@ export default function initWebSocket(server) {
             try {
                 const parsed = JSON.parse(msg.toString());
                 const topic = parsed.topic || parsed.type || parsed.event || "";
+                const nextUserId = normalizeMetaValue(parsed.userId || parsed.user_id);
+                const nextAccountId = normalizeMetaValue(
+                    parsed.accountId ||
+                    parsed.account_id ||
+                    parsed.accountLogin ||
+                    parsed.account_login,
+                );
+                const nextAccountLogin = normalizeMetaValue(parsed.accountLogin || parsed.account_login);
+                const nextTerminalId = normalizeMetaValue(
+                    parsed.terminalId ||
+                    parsed.terminal_id ||
+                    parsed.terminal ||
+                    parsed.bridgeId ||
+                    parsed.bridge_id,
+                );
+                const nextExtensionVersion = normalizeMetaValue(
+                    parsed.extensionVersion ||
+                    parsed.extension_version ||
+                    parsed.bridgeVersion ||
+                    parsed.bridge_version,
+                );
+                const nextBridgeVersion = normalizeMetaValue(
+                    parsed.bridgeVersion ||
+                    parsed.bridge_version ||
+                    parsed.extensionVersion ||
+                    parsed.extension_version,
+                );
+                const nextProtocolVersion = normalizeMetaValue(parsed.protocolVersion || parsed.protocol_version);
+                if (nextUserId) meta.userId = nextUserId;
+                if (nextAccountId) meta.accountId = nextAccountId;
+                if (nextAccountLogin) meta.accountLogin = nextAccountLogin;
+                if (nextTerminalId) meta.terminalId = nextTerminalId;
+                if (nextExtensionVersion) meta.extensionVersion = nextExtensionVersion;
+                if (nextBridgeVersion) meta.bridgeVersion = nextBridgeVersion;
+                if (nextProtocolVersion) meta.protocolVersion = nextProtocolVersion;
+
                 if (typeof topic === "string" && BRIDGE_TOPICS.has(topic)) {
-                    if (!meta.isServiceAuth) {
-                        emitWsError(ws, { code: "forbidden", detail: "bridge_topic_requires_service_auth" });
-                        logWarn("ws.bridge_topic.forbidden", { topic, auth_type: meta.authType, role: meta.role || null });
+                    const bridgeAuthCheck = canPublishBridgeTopic(topic, meta, parsed);
+                    if (!bridgeAuthCheck.allowed) {
+                        emitWsError(ws, { code: "forbidden", detail: bridgeAuthCheck.reason || "bridge_topic_forbidden" });
+                        logWarn("ws.bridge_topic.forbidden", {
+                            topic,
+                            auth_type: meta.authType,
+                            role: meta.role || null,
+                            reason: bridgeAuthCheck.reason || null,
+                            plan: meta.plan || null,
+                            modules: meta.modules || null,
+                        });
                         ws.close(1008, "Forbidden");
                         return;
                     }
@@ -119,8 +213,13 @@ export default function initWebSocket(server) {
                         meta.isBridgeAuthenticated = true;
                         ws.isBridgeAuthenticated = true;
                         removeClientFromIndexes(subscriptionIndex, ws);
-                        logInfo("ws.bridge.authenticated", { via: meta.authVia || "unknown" });
+                        logInfo("ws.bridge.authenticated", {
+                            via: meta.authVia || "unknown",
+                            auth_type: meta.authType || "unknown",
+                            role: meta.role || null,
+                        });
                     }
+                    bridgeRegistry.register(ws, meta);
                 }
             } catch {
                 // Non-JSON frames are ignored for role detection.
@@ -167,6 +266,7 @@ export default function initWebSocket(server) {
 
     wss.on("close", () => {
         stopPeriodicTasks();
+        disposeModuleActivated();
     });
 
     return wss;

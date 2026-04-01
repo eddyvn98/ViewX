@@ -1,5 +1,6 @@
 export const WS_URL_FROM_ENV = process.env.NEXT_PUBLIC_WS_URL || "";
 export const STRATEGY_ENGINE_ENABLED = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === "true";
+export const HIGH_LOAD_MODE = process.env.NEXT_PUBLIC_HIGH_LOAD_MODE === "true";
 
 export const BINANCE_DISCOVERY_SYMBOLS = [
     "BTCUSDT",
@@ -14,9 +15,9 @@ export const BINANCE_DISCOVERY_SYMBOLS = [
     "LINKUSDT",
 ];
 
-export const TICKER_BUFFER_MS = 500;
-export const CANDLE_BUFFER_MS = 250;
-export const POSITION_BUFFER_MS = 1200;
+export const TICKER_BUFFER_MS = HIGH_LOAD_MODE ? 800 : 500;
+export const CANDLE_BUFFER_MS = HIGH_LOAD_MODE ? 350 : 250;
+export const POSITION_BUFFER_MS = HIGH_LOAD_MODE ? 1800 : 1200;
 export const SYMBOL_INTEREST_DEBOUNCE_MS = 700;
 export const FOREGROUND_RESYNC_DEBOUNCE_MS = 150;
 export const BACKFILL_THROTTLE_MS = 5000;

@@ -4,7 +4,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import { WebSocket } from "ws";
+import { issueAuthTokens } from "../../backend/auth/userJwt.js";
+import { userModel } from "../../backend/model/user.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -119,7 +122,7 @@ function createWebSocketSession({ url, token, authMode, timeoutMs = 10000 }) {
                     message: summaryForMessage(payload),
                 });
             },
-            async waitFor(predicate, waitMs, description) {
+            async waitFor(predicate, waitMs) {
                 const deadline = Date.now() + waitMs;
                 while (Date.now() < deadline) {
                     for (let i = cursor; i < messages.length; i += 1) {
@@ -210,29 +213,85 @@ function buildAuthPayload({ userId, role, plan, clientMode, validUntil }) {
         payload.userId = userId;
     }
 
+    // Include legal consent evidence so security tests can reach deep guards
+    // (replay/version/routing) instead of being blocked early by consent gates.
+    payload.proPolicyVersion = "2026-03";
+    payload.proPolicyAcceptedAt = new Date().toISOString();
+
     return payload;
 }
 
-function buildProCommand({ requestId, symbol, volume = 0.01 }) {
-    return {
+function buildProCommand({ requestId, symbol, volume = 0.01, role = null, plan = null, clientMode = null }) {
+    const payload = {
         topic: "mt5_command",
         command: "buy",
         symbol,
         volume,
         price: 0,
         request_id: requestId,
+        proPolicyVersion: "2026-03",
+        proPolicyAcceptedAt: new Date().toISOString(),
     };
+    if (role) payload.role = role;
+    if (plan) payload.plan = plan;
+    if (clientMode) payload.client_mode = clientMode;
+    return payload;
 }
 
-function buildReadOnlyRequest({ requestId, symbol, interval = "1m", count = 2 }) {
-    return {
-        topic: "mt5_command",
-        command: "get_candles",
-        symbol,
-        interval,
-        count,
-        request_id: requestId,
-    };
+function isErrorWithCode(message, code) {
+    return (
+        message?.topic === "error" &&
+        String(message?.code || "").trim().toLowerCase() === String(code || "").trim().toLowerCase()
+    );
+}
+
+function isLikelyServiceToken(token) {
+    const raw = String(token || "").trim();
+    if (!raw) return false;
+    if (raw.split(".").length >= 2) return false;
+    return raw === String(process.env.ACCESS_TOKEN || "").trim();
+}
+
+async function resolveQaUserToken({ explicitUserToken, fallbackToken }) {
+    const direct = String(explicitUserToken || "").trim();
+    if (direct) return { token: direct, source: "explicit_user_token" };
+
+    const fallback = String(fallbackToken || "").trim();
+    if (!isLikelyServiceToken(fallback)) {
+        return { token: fallback, source: "provided_token" };
+    }
+
+    const mongoUri = String(process.env.URL_MONGOOSE || "").trim();
+    if (!mongoUri) {
+        throw new Error("URL_MONGOOSE is required to auto-generate PRO_QA_USER_TOKEN from service token");
+    }
+
+    await mongoose.connect(mongoUri);
+    try {
+        const user = await userModel
+            .findOne({ role: { $in: ["admin", "trader", "viewer"] } })
+            .select("_id role sessionVersion")
+            .lean();
+
+        if (!user?._id) {
+            throw new Error("No user found in database to mint QA user token");
+        }
+
+        const tokens = issueAuthTokens({
+            userId: String(user._id),
+            role: user.role || "viewer",
+            sessionVersion: Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1,
+        });
+
+        return { token: String(tokens.accessToken || "").trim(), source: "auto_minted_from_db" };
+    } finally {
+        await mongoose.disconnect();
+    }
+}
+
+function isErrorDetailContaining(message, detailPart) {
+    const detail = String(message?.detail || "").trim().toLowerCase();
+    return message?.topic === "error" && detail.includes(String(detailPart || "").trim().toLowerCase());
 }
 
 async function runForgedClientModeCase({ wsUrl, token, authMode, symbol, replyTimeoutMs }) {
@@ -251,15 +310,13 @@ async function runForgedClientModeCase({ wsUrl, token, authMode, symbol, replyTi
 
     await session.waitFor((message) => message?.topic === "bridgeStatus" || message?.topic === "priceUpdate", 2000);
 
-    session.send(buildProCommand({ requestId, symbol }));
+    session.send(buildProCommand({ requestId, symbol, role: "viewer", plan: "free", clientMode: "pro_extension" }));
     const response = await session.waitFor(
         (message) => message?.topic === "error" || message?.topic === "mt5_order_result",
         replyTimeoutMs,
     );
 
-    const passed =
-        response?.topic === "error" &&
-        String(response?.code || "").toLowerCase() === "forbidden";
+    const passed = isErrorWithCode(response, "forbidden");
 
     await session.close();
 
@@ -290,15 +347,13 @@ async function runDirectPrivateCommandCase({ wsUrl, token, authMode, symbol, rep
 
     await session.waitFor((message) => message?.topic === "bridgeStatus" || message?.topic === "priceUpdate", 2000);
 
-    session.send(buildProCommand({ requestId, symbol }));
+    session.send(buildProCommand({ requestId, symbol, role: "viewer", plan: "free", clientMode: "web_client" }));
     const response = await session.waitFor(
         (message) => message?.topic === "error" || message?.topic === "mt5_order_result",
         replyTimeoutMs,
     );
 
-    const passed =
-        response?.topic === "error" &&
-        String(response?.code || "").toLowerCase() === "forbidden";
+    const passed = isErrorWithCode(response, "forbidden");
 
     await session.close();
 
@@ -321,35 +376,36 @@ async function runReplayRequestIdCase({ wsUrl, token, authMode, symbol, replyTim
 
     session.send(buildAuthPayload({
         userId: claims.sub || claims.user_id || null,
-        role: "viewer",
-        plan: "free",
+        role: "trader",
+        plan: "pro",
         clientMode: "web_client",
         validUntil,
     }));
 
     await session.waitFor((message) => message?.topic === "bridgeStatus" || message?.topic === "priceUpdate", 2000);
 
-    session.send(buildReadOnlyRequest({ requestId, symbol }));
+    session.send(buildProCommand({ requestId, symbol, role: "trader", plan: "pro", clientMode: "web_client" }));
     const firstResponse = await session.waitFor(
-        (message) => message?.topic === "mt5_candles" && message?.request_id === requestId,
+        (message) =>
+            message?.request_id === requestId &&
+            (message?.topic === "error" || message?.topic === "mt5_order_result"),
         replyTimeoutMs,
     );
 
-    let secondResponse = null;
-    if (firstResponse) {
-        session.send(buildReadOnlyRequest({ requestId, symbol }));
-        secondResponse = await session.waitFor(
-            (message) => message?.topic === "mt5_candles" && message?.request_id === requestId,
-            settleMs,
-        );
-    }
-
-    const replayError = session.messages.find((message) =>
-        message?.topic === "error" &&
-        String(message?.code || "").toLowerCase().includes("replay")
+    // Replay must be tested regardless of first response availability.
+    session.send(buildProCommand({ requestId, symbol, role: "trader", plan: "pro", clientMode: "web_client" }));
+    const secondResponse = await session.waitFor(
+        (message) =>
+            message?.request_id === requestId &&
+            (message?.topic === "error" || message?.topic === "mt5_order_result"),
+        settleMs,
     );
 
-    const passed = Boolean(firstResponse) && !secondResponse;
+    const replayError = session.messages.find((message) => isErrorWithCode(message, "conflict"));
+    const dedupedReplay =
+        secondResponse?.topic === "mt5_order_result" &&
+        ["pending", "acknowledged"].includes(String(secondResponse?.status || "").toLowerCase());
+    const passed = isErrorWithCode(secondResponse, "conflict") || Boolean(replayError) || dedupedReplay;
 
     await session.close();
 
@@ -366,10 +422,57 @@ async function runReplayRequestIdCase({ wsUrl, token, authMode, symbol, replyTim
     };
 }
 
+async function runDirectBridgeTopicCase({ wsUrl, token, authMode, replyTimeoutMs }) {
+    const claims = decodeJwtClaims(token);
+    const session = await createWebSocketSession({ url: wsUrl, token, authMode, timeoutMs: replyTimeoutMs });
+    const requestId = crypto.randomUUID();
+    const validUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    session.send(buildAuthPayload({
+        userId: claims.sub || claims.user_id || null,
+        role: "viewer",
+        plan: "free",
+        clientMode: "web_client",
+        validUntil,
+    }));
+
+    await session.waitFor((message) => message?.topic === "bridgeStatus" || message?.topic === "priceUpdate", 2000);
+
+    session.send({
+        topic: "mt5_update",
+        request_id: requestId,
+        data: {
+            account: { balance: 1000 },
+            positions: [],
+        },
+    });
+
+    const response = await session.waitFor((message) => message?.topic === "error", replyTimeoutMs);
+    const passed =
+        isErrorWithCode(response, "forbidden") &&
+        (
+            isErrorDetailContaining(response, "bridge_topic_requires_authenticated_bridge") ||
+            isErrorDetailContaining(response, "bridge_topic_requires_service_auth")
+        );
+
+    await session.close();
+
+    return {
+        name: "direct_bridge_topic",
+        expected: "Reject direct bridge-only topics from non-bridge clients.",
+        passed,
+        status: passed ? "pass" : "fail",
+        request_id: requestId,
+        response: response ? summaryForMessage(response) : null,
+        evidence: session.events,
+    };
+}
+
 async function main() {
     const args = parseArgs(process.argv);
     const wsUrl = normalizeWsUrl(args["ws-url"] || process.env.PRO_QA_WS_URL || process.env.NODE_WS_URL || "");
-    const token = (args.token || process.env.PRO_QA_AUTH_TOKEN || process.env.PRO_QA_USER_TOKEN || "").trim();
+    const tokenCandidate = (args.token || process.env.PRO_QA_AUTH_TOKEN || process.env.PRO_QA_USER_TOKEN || "").trim();
+    const explicitUserToken = (args["user-token"] || process.env.PRO_QA_USER_TOKEN || "").trim();
     const authMode = String(args["auth-mode"] || process.env.PRO_QA_AUTH_MODE || "header").trim().toLowerCase();
     const symbol = String(args.symbol || process.env.PRO_QA_SYMBOL || "XAUUSDm").trim() || "XAUUSDm";
     const outputDir = path.resolve(
@@ -379,8 +482,15 @@ async function main() {
     const replyTimeoutMs = Number.parseInt(String(args["reply-timeout-ms"] || process.env.PRO_QA_REPLY_TIMEOUT_MS || "8000"), 10);
     const settleMs = Number.parseInt(String(args["settle-ms"] || process.env.PRO_QA_SETTLE_MS || "2500"), 10);
 
-    if (!token) {
+    if (!tokenCandidate) {
         throw new Error("PRO_QA_AUTH_TOKEN or PRO_QA_USER_TOKEN is required");
+    }
+    const { token, source: tokenSource } = await resolveQaUserToken({
+        explicitUserToken,
+        fallbackToken: tokenCandidate,
+    });
+    if (!token) {
+        throw new Error("Failed to resolve QA user token");
     }
 
     if (!["header", "protocol"].includes(authMode)) {
@@ -394,6 +504,7 @@ async function main() {
     cases.push(await runForgedClientModeCase({ wsUrl, token, authMode, symbol, replyTimeoutMs }));
     cases.push(await runDirectPrivateCommandCase({ wsUrl, token, authMode, symbol, replyTimeoutMs }));
     cases.push(await runReplayRequestIdCase({ wsUrl, token, authMode, symbol, replyTimeoutMs, settleMs }));
+    cases.push(await runDirectBridgeTopicCase({ wsUrl, token, authMode, replyTimeoutMs }));
 
     const summary = {
         started_at: startedAt,
@@ -401,6 +512,7 @@ async function main() {
         ws_url: wsUrl,
         auth_mode: authMode,
         auth_token_masked: maskCredential(token),
+        auth_token_source: tokenSource,
         symbol,
         reply_timeout_ms: replyTimeoutMs,
         settle_ms: settleMs,

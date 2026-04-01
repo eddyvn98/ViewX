@@ -53,6 +53,7 @@ export interface Order {
     current_price: number;
     sl: number;
     tp: number;
+    profit?: number;
     time: number;
     entry_time?: number;
     sl_time?: number;

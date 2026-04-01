@@ -14,6 +14,7 @@ import { runtimeState } from "./runtime-state.js";
 import { normalizeUserRole } from "./auth/roles.js";
 import { getActiveRefreshTokenCount } from "./auth/userJwt.js";
 import { emergencyConfig } from "./config/emergency.js";
+import { ensureBridgeStarted, isBridgeAutostartEnabled } from "./services/bridgeAutostart.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,11 @@ function originMatches(origin, pattern) {
 
 function isHealthyState(state) {
     return state === "connected" || state === "connecting";
+}
+
+function isLocalRequest(req) {
+    const ip = String(req.ip || req.socket?.remoteAddress || "").trim();
+    return ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
 }
 
 const EMERGENCY_BLOCKED_HTTP_PREFIXES = [
@@ -207,6 +213,21 @@ export function createApp() {
         return res.status(200).json({ status: "ready" });
     });
 
+    app.post("/api/bridge/autostart", (req, res) => {
+        if (!isBridgeAutostartEnabled()) {
+            return res.status(403).json({ ok: false, error: "bridge_autostart_disabled" });
+        }
+        if (!isLocalRequest(req)) {
+            return res.status(403).json({ ok: false, error: "local_request_required" });
+        }
+
+        const result = ensureBridgeStarted();
+        if (!result.ok) {
+            return res.status(500).json(result);
+        }
+        return res.status(200).json(result);
+    });
+
     app.get("/api/metrics", (req, res, next) => requireAuth(req, res, next), (req, res) => {
         const authType = req.auth?.type;
         const role = normalizeUserRole(req.auth?.role);
@@ -239,6 +260,11 @@ export function createApp() {
                 dropped_backpressure: runtimeState.wsDroppedBackpressure,
                 buffer_pressure: runtimeState.wsBufferPressure,
                 broadcast_loop_p95_ms: runtimeState.broadcastLoopMsP95,
+                route_success_total: runtimeState.wsRouteSuccessTotal,
+                route_miss_total: runtimeState.wsRouteMissTotal,
+                cross_user_block_total: runtimeState.wsCrossUserBlockTotal,
+                pro_entitlement_block_total: runtimeState.wsProEntitlementBlockTotal,
+                replay_reject_total: runtimeState.wsReplayRejectTotal,
             },
             bridge: {
                 online: runtimeState.bridgeOnline,
@@ -263,6 +289,7 @@ export function createApp() {
             "/user/trade-logs/public",
             "/user/trade-stats/public",
             "/user/symbols",
+            "/user/payments/sepay/webhook",
         ]);
         if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);
