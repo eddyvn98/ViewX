@@ -38,12 +38,26 @@ function buildErrorEnvelope({ code, message, requestId, command, retryable = fal
     };
 }
 
+function getFirstServiceBridgeSocket(clients) {
+    if (!clients) return null;
+    for (const [clientWs, meta] of clients.entries()) {
+        if (!meta?.isBridgeAuthenticated) continue;
+        if (String(meta?.authType || "").toLowerCase() !== "service") continue;
+        if (clientWs.readyState !== clientWs.OPEN) continue;
+        return clientWs;
+    }
+    return null;
+}
+
 export function handleMt5Command({ ws, clients, routeTarget }, data) {
     const payload = JSON.stringify(data);
     const requestId = data?.request_id || data?.requestId || null;
     const rawCommand = data?.command || null;
     const normalizedCommand = normalizeCommand(rawCommand);
     const requestedBridge = bridgeRegistry.getPrimarySocket(routeTarget || {}, clients);
+    const serviceBridge = getFirstServiceBridgeSocket(clients);
+    const preferServiceBridge = READONLY_COMMANDS.has(normalizedCommand);
+    const targetBridge = preferServiceBridge ? (serviceBridge || requestedBridge) : requestedBridge;
     const hasRouteTarget = Boolean(routeTarget?.userId || routeTarget?.accountId);
 
     const bridgeSockets = [];
@@ -59,17 +73,27 @@ export function handleMt5Command({ ws, clients, routeTarget }, data) {
     }
 
     let forwarded = 0;
-    if (requestedBridge) {
-        safeSend(requestedBridge, payload);
+    if (targetBridge) {
+        safeSend(targetBridge, payload);
         forwarded = 1;
         incrementWsRouteSuccess();
+        if (preferServiceBridge && serviceBridge) {
+            logInfo("ws.mt5_command.route_prefer_service", {
+                command: normalizedCommand,
+                symbol: data?.symbol || null,
+                interval: data?.interval || null,
+                request_id: requestId,
+                user_id: routeTarget?.userId || null,
+                account_id: routeTarget?.accountId || null,
+            });
+        }
         logTradeAudit({ routeTarget, data, outcome: "forwarded" });
     } else if (hasRouteTarget) {
         // Route fallback for read-only market data requests:
         // If a private user/account bridge is missing, forward to any available
         // authenticated service bridge so chart/history requests still work.
         if (READONLY_COMMANDS.has(normalizedCommand)) {
-            const publicBridge = bridgeRegistry.getPrimarySocket({}, clients);
+            const publicBridge = getFirstServiceBridgeSocket(clients);
             if (publicBridge) {
                 safeSend(publicBridge, payload);
                 forwarded = 1;
@@ -81,6 +105,16 @@ export function handleMt5Command({ ws, clients, routeTarget }, data) {
                     request_id: requestId,
                     user_id: routeTarget?.userId || null,
                     account_id: routeTarget?.accountId || null,
+                });
+            } else {
+                logWarn("ws.mt5_command.route_fallback_public.miss", {
+                    command: normalizedCommand,
+                    symbol: data?.symbol || null,
+                    interval: data?.interval || null,
+                    request_id: requestId,
+                    user_id: routeTarget?.userId || null,
+                    account_id: routeTarget?.accountId || null,
+                    reason: "no_service_bridge_socket",
                 });
             }
         }
