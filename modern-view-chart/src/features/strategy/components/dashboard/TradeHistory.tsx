@@ -3,6 +3,7 @@ import { VirtualPosition, PerformanceMetrics } from '../../types';
 import { TrendingUp, TrendingDown, Clock, Hash, Percent, ChevronDown, ChevronUp } from 'lucide-react';
 import { TradeDetailPanel } from './TradeDetailPanel';
 import { useLocale, useTranslations } from 'next-intl';
+import { getAiVerdict } from '../../logic/ai-verdict';
 
 interface Props {
     positions: VirtualPosition[];
@@ -103,6 +104,15 @@ export function TradeHistory({ positions, metrics }: Props) {
                                                         }`}>
                                                         {p.confidence.toFixed(0)}%
                                                     </span>
+                                                    {(() => {
+                                                        const verdict = p.aiVerdict || getAiVerdict(p.confidence);
+                                                        if (!verdict) return null;
+                                                        return (
+                                                            <span className={`text-[10px] font-black px-1.5 py-0.25 rounded border ${verdict === 'PASS' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : verdict === 'WATCH' ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                                                                {verdict}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                     <span className="text-[11px] font-bold text-muted-foreground uppercase italic">{t('confidence')}</span>
                                                 </div>
                                             ) : (

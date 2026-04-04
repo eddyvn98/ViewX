@@ -150,6 +150,7 @@ export async function activateOrder({ order, confirmedBy = "admin_manual", rawWe
     const durationDays = Number.isFinite(Number(order.durationDays)) ? Number(order.durationDays) : 30;
     const newActiveUntil = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
     const key = normalizeModuleKey(order.module);
+    const isAiAssistantModule = key === "ai_assistant";
 
     const access = Array.isArray(user.moduleAccess) ? [...user.moduleAccess] : [];
     const idx = access.findIndex((x) => normalizeModuleKey(x?.module) === key);
@@ -172,6 +173,11 @@ export async function activateOrder({ order, confirmedBy = "admin_manual", rawWe
 
     const normalizedModules = normalizeEntitlementModules([...(user.modules || []), key]);
     user.moduleAccess = access;
+    if (isAiAssistantModule) {
+        const currentCredits = Number(user.aiAssistantCredits || 0);
+        user.aiAssistantCredits = currentCredits + 100;
+        user.aiAssistantCreditsUpdatedAt = now;
+    }
     user.modules = normalizedModules;
     user.subscription = {
         ...(user.subscription || {}),

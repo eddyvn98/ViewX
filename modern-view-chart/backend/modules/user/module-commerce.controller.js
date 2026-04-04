@@ -36,6 +36,24 @@ export async function getMyModuleStatus(req, res) {
     return res.status(200).json({ ok: true, ...status });
 }
 
+export async function getMyAiCredits(req, res) {
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const user = await userModel.findById(userId).select("_id moduleAccess aiAssistantCredits aiAssistantCreditsUpdatedAt");
+    if (!user?._id) return res.status(404).json({ error: "User not found" });
+
+    const status = getModuleAccessSnapshot(user, "ai_assistant");
+    return res.status(200).json({
+        ok: true,
+        module: "ai_assistant",
+        canUse: status.canUse,
+        status: status.status,
+        remainingCredits: Number(user.aiAssistantCredits || 0),
+        updatedAt: user.aiAssistantCreditsUpdatedAt || null,
+    });
+}
+
 export async function startMyModuleTrial(req, res) {
     const userId = getAuthUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });

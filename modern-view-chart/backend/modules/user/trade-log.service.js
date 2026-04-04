@@ -36,6 +36,12 @@ export function sanitizeTradeLogPayload(input) {
         volatility: String(source.volatility || "low").trim() || "low",
         session: String(source.session || "Unknown").trim() || "Unknown",
         indicators,
+        entry_source: String(source.entry_source || "bot").trim().toLowerCase() === "manual" ? "manual" : "bot",
+        trigger_reason: source.trigger_reason ? String(source.trigger_reason).trim() : null,
+        ai_verdict: (() => {
+            const v = String(source.ai_verdict || "").trim().toUpperCase();
+            return v === "PASS" || v === "WATCH" || v === "BLOCK" ? v : null;
+        })(),
         exit_reason: source.exit_reason ? String(source.exit_reason).trim() : null,
         timestamp: normalizeTimestamp(source.timestamp),
     };

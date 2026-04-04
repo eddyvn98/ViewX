@@ -1,0 +1,15 @@
+{
+  "result": {
+    "status": 200,
+    "data": {
+      "status": "ok",
+      "response": "Okay, I can help you with that!\n\nTo chart a route, please tell me the following:\n\n1.  **Starting Point:** (e.g., a specific address, city, landmark, or coordinates)\n2.  **Destination:** (e.g., a specific address, city, landmark, or coordinates)\n3.  **Mode of Transport:** (e.g., Car, Walking, Cycling, Public Transport, Truck, etc.)\n4.  **Any Preferences or Constraints?** (e.g., fastest route, shortest route, avoid highways, scenic route, include specific waypoints, avoid tolls, accessibility needs, etc.)\n\nOnce I have this information, I can generate a route for you, including estimated travel time and distance.",
+      "remainingCredits": 2
+    }
+  },
+  "captured": {
+    "url": "http://127.0.0.1:13000/api/ai/bridge/task",
+    "status": 200,
+    "body": "{\"status\":\"ok\",\"response\":\"Okay, I can help you with that!\\n\\nTo chart a route, please tell me the following:\\n\\n1.  **Starting Point:** (e.g., a specific address, city, landmark, or coordinates)\\n2.  **Destination:** (e.g., a specific address, city, landmark, or coordinates)\\n3.  **Mode of Transport:** (e.g., Car, Walking, Cycling, Public Transport, Truck, etc.)\\n4.  **Any Preferences or Constraints?** (e.g., fastest route, shortest route, avoid highways, scenic route, include specific waypoints, avoid tolls, accessibility needs, etc.)\\n\\nOnce I have this information, I can generate a route for you, including estimated travel time and distance.\",\"remainingCredits\":2}"
+  }
+}

@@ -104,6 +104,15 @@ const schema = new Schema(
       type: [moduleAccessSchema],
       default: [],
     },
+    aiAssistantCredits: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    aiAssistantCreditsUpdatedAt: {
+      type: Date,
+      default: null,
+    },
     subscription: {
       type: subscriptionSchema,
       default: () => ({}),

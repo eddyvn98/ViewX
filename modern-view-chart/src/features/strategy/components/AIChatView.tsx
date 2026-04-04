@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Terminal, MessageSquare, BrainCircuit, Loader2, Clock, ShieldCheck, History } from 'lucide-react';
+import { useMarketStore } from '@/lib/store';
+import { useStrategyStore } from '../store/strategy-store';
+import type { Strategy, VirtualPosition } from '../types';
 
 interface ChatMessage {
     id: string;
@@ -10,15 +13,40 @@ interface ChatMessage {
 }
 
 export function AIChatView() {
-    const aiEnabled = false;
+    const aiEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === '1' || process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
     const [mode, setMode] = useState<'chat' | 'logs'>('chat');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [friendlyError, setFriendlyError] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const marketStore = useMarketStore();
+    const { strategies, virtualPositions, signals } = useStrategyStore();
     const hasAccessToken =
         typeof window !== 'undefined' &&
         Boolean((localStorage.getItem('auth_access_token') || '').trim());
+
+    const getAuthHeaders = useCallback(() => {
+        if (typeof window === 'undefined') return null;
+        const token = (localStorage.getItem('auth_access_token') || '').trim();
+        if (!token) return null;
+        return {
+            authorization: `Bearer ${token}`,
+        };
+    }, []);
+
+    const getAuthUserId = useCallback(() => {
+        if (typeof window === 'undefined') return '';
+        const raw = localStorage.getItem('auth_user') || '';
+        if (!raw) return '';
+        try {
+            const parsed = JSON.parse(raw);
+            return String(parsed?._id || parsed?.id || '').trim();
+        } catch {
+            return '';
+        }
+    }, []);
 
     // Fetch history on mount and when switching to logs
     const fetchHistory = useCallback(async () => {
@@ -26,7 +54,9 @@ export function AIChatView() {
             return;
         }
         try {
-            const res = await fetch('/api/ai/bridge/history');
+            const headers = getAuthHeaders();
+            if (!headers) return;
+            const res = await fetch('/api/ai/bridge/history', { headers, credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -36,16 +66,33 @@ export function AIChatView() {
         } finally {
             // no-op
         }
-    }, [hasAccessToken, aiEnabled]);
+    }, [hasAccessToken, aiEnabled, getAuthHeaders]);
+
+    const fetchCredits = useCallback(async () => {
+        if (!hasAccessToken || !aiEnabled) return;
+        try {
+            const headers = getAuthHeaders();
+            if (!headers) return;
+            const res = await fetch('/api/user/ai-credits', { headers, credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (typeof data?.remainingCredits === 'number') {
+                setRemainingCredits(data.remainingCredits);
+            }
+        } catch (err) {
+            console.error('Failed to fetch AI credits:', err);
+        }
+    }, [hasAccessToken, aiEnabled, getAuthHeaders]);
 
     useEffect(() => {
         if (!hasAccessToken) {
             return;
         }
         fetchHistory();
+        fetchCredits();
         const interval = setInterval(fetchHistory, 5000); // Polling logs
         return () => clearInterval(interval);
-    }, [hasAccessToken, fetchHistory]);
+    }, [hasAccessToken, fetchHistory, fetchCredits]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -59,19 +106,58 @@ export function AIChatView() {
         const prompt = inputValue;
         setInputValue('');
         setIsSending(true);
+        setFriendlyError(null);
 
         try {
+            const headers = getAuthHeaders();
+            if (!headers) return;
+            const userId = getAuthUserId();
+            const localContext = buildLocalContextPack(prompt, marketStore, strategies, virtualPositions, signals);
+            const contextRes = await fetch('/api/ai/bridge/context', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...headers },
+                credentials: 'include',
+                body: JSON.stringify({
+                    question: prompt,
+                    chart: localContext.chart,
+                    strategy: localContext.strategy,
+                    latestSignals: localContext.latestSignals,
+                    lastTrade: localContext.lastTrade,
+                    openPositions: localContext.openPositions,
+                    ...(userId ? { userId } : {})
+                })
+            });
+            const serverContext = contextRes.ok ? await contextRes.json().catch(() => null) : null;
+            const contextualPrompt = buildContextualPrompt(prompt, serverContext?.context || localContext);
             const res = await fetch('/api/ai/bridge/task', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, source: 'chat' })
+                headers: { 'Content-Type': 'application/json', ...headers },
+                credentials: 'include',
+                body: JSON.stringify({ prompt: contextualPrompt, source: 'chat', ...(userId ? { userId } : {}) })
             });
 
             if (res.ok) {
+                const data = await res.json();
+                if (typeof data?.remainingCredits === 'number') {
+                    setRemainingCredits(data.remainingCredits);
+                }
                 await fetchHistory();
+            } else {
+                const errData = await res.json().catch(() => null);
+                const userMessage = String(errData?.user_message || '').trim();
+                const msg = String(errData?.msg || '').trim();
+                if (userMessage) {
+                    setFriendlyError(userMessage);
+                } else if (msg === 'prompt_blocked_by_policy' || msg === 'response_blocked_by_policy') {
+                    setFriendlyError('Yeu cau khong phu hop chinh sach an toan. Vui long hoi ve giao dich va cach su dung Vivutrade.');
+                } else {
+                    setFriendlyError('Khong the xu ly yeu cau luc nay. Vui long thu lai sau.');
+                }
+                await fetchCredits();
             }
         } catch (err) {
             console.error('Chat error:', err);
+            setFriendlyError('Ket noi AI tam thoi gian doan. Vui long thu lai sau.');
         } finally {
             setIsSending(false);
         }
@@ -87,6 +173,11 @@ export function AIChatView() {
                 <div className="flex items-center gap-1.5 shrink-0">
                     <BrainCircuit size={16} className="text-primary animate-pulse" />
                     <span className="text-[11px] font-black uppercase tracking-wider text-foreground whitespace-nowrap">AI Assistant</span>
+                    {aiEnabled && remainingCredits !== null && (
+                        <span className="ml-2 rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                            Credits: {remainingCredits}
+                        </span>
+                    )}
                 </div>
                 <div className="flex bg-secondary/80 p-0.5 rounded-md border border-border">
                     <button
@@ -106,8 +197,13 @@ export function AIChatView() {
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar" ref={scrollRef}>
+                {friendlyError && (
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-300">
+                        {friendlyError}
+                    </div>
+                )}
                 {/* FORCE DISPLAY FOR MOCKUP SCREENSHOT */}
-                {true ? (
+                {!aiEnabled ? (
                     <div className="flex-1 flex flex-col p-4 relative overflow-hidden group">
                         {/* Background glow */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
@@ -255,4 +351,141 @@ export function AIChatView() {
             )}
         </div>
     );
+}
+
+type MarketStoreSnapshot = ReturnType<typeof useMarketStore.getState>;
+
+function detectIntent(prompt: string): 'entry' | 'strategy_tuning' | 'trade_review' | 'general' {
+    const text = prompt.toLowerCase();
+    if (/(vao lenh|vào lệnh|buy|sell|co nen mua|có nên mua|co nen ban|có nên bán|entry)/i.test(text)) return 'entry';
+    if (/(chien luoc|chiến lược|toi uu|tối ưu|thay doi gi|thay đổi gì|optimize|improve)/i.test(text)) return 'strategy_tuning';
+    if (/(lenh vua|lệnh vừa|thang|thắng|thua|hoa von|hòa vốn|exit|dong lenh|đóng lệnh)/i.test(text)) return 'trade_review';
+    return 'general';
+}
+
+function pickTargetStrategy(prompt: string, strategies: Strategy[]): Strategy | null {
+    if (!strategies.length) return null;
+    const text = prompt.toLowerCase();
+    const exact = strategies.find((s) => text.includes((s.name || '').toLowerCase()));
+    if (exact) return exact;
+    return strategies.find((s) => s.active && s.aiGuard) || strategies.find((s) => s.active) || strategies[0] || null;
+}
+
+function getActiveChartContext(state: MarketStoreSnapshot) {
+    const activeTab = state.tabs[state.activeTabId];
+    if (!activeTab || !activeTab.activeChartId) return null;
+    const chart = activeTab.charts[activeTab.activeChartId];
+    if (!chart) return null;
+    const key = `${chart.source}:${chart.symbol}:${chart.interval}`;
+    const candles = state.candleData[key] || [];
+    const recentCandles = candles.slice(-20).map((c) => ({
+        t: c.time,
+        o: Number(c.open),
+        h: Number(c.high),
+        l: Number(c.low),
+        c: Number(c.close),
+        v: Number(c.volume || 0),
+    }));
+    const runtime = state.chartIndicatorRuntime[chart.id] || [];
+    const indicatorRuntime = runtime.map((ind) => {
+        const r = ind.results;
+        if (Array.isArray(r)) {
+            return { type: ind.type, params: ind.params || {}, last: Number(r[r.length - 1] || 0) };
+        }
+        const compact = Object.fromEntries(
+            Object.entries(r || {}).map(([k, arr]) => [k, Number((Array.isArray(arr) ? arr[arr.length - 1] : 0) || 0)])
+        );
+        return { type: ind.type, params: ind.params || {}, last: compact };
+    });
+
+    return {
+        symbol: chart.symbol,
+        timeframe: chart.interval,
+        source: chart.source,
+        candlesCount: candles.length,
+        lastPrice: recentCandles.length ? recentCandles[recentCandles.length - 1].c : null,
+        recentOhlc: recentCandles,
+        indicators: indicatorRuntime,
+    };
+}
+
+function summarizePosition(pos: VirtualPosition) {
+    return {
+        strategyId: pos.strategyId,
+        symbol: pos.symbol,
+        side: pos.type,
+        status: pos.status,
+        entryPrice: pos.entryPrice,
+        exitPrice: pos.exitPrice ?? null,
+        pnl: pos.pnl ?? null,
+        confidence: pos.confidence ?? null,
+        entryTime: pos.timestamp,
+        exitTime: pos.exitTimestamp ?? null,
+        metadata: pos.metadata || null,
+    };
+}
+
+function buildLocalContextPack(
+    userPrompt: string,
+    marketState: MarketStoreSnapshot,
+    strategies: Strategy[],
+    virtualPositions: VirtualPosition[],
+    signals: Array<{ strategyId: string; symbol: string; type: string; timestamp: number; price: number }>
+) {
+    const intent = detectIntent(userPrompt);
+    const chartContext = getActiveChartContext(marketState);
+    const strategy = pickTargetStrategy(userPrompt, strategies);
+    const lastPosition = [...virtualPositions].sort((a, b) => b.timestamp - a.timestamp)[0];
+    const latestSignals = [...signals]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 5)
+        .map((s) => ({ strategyId: s.strategyId, symbol: s.symbol, type: s.type, timestamp: s.timestamp, price: s.price }));
+
+    const strategyContext = strategy
+        ? {
+            id: strategy.id,
+            name: strategy.name,
+            active: strategy.active,
+            aiGuard: !!strategy.aiGuard,
+            symbol: strategy.symbol || null,
+            timeframe: strategy.timeframe || null,
+            executionMode: strategy.executionMode,
+            entryType: strategy.entryType,
+            positionMode: strategy.positionMode,
+            buyRules: strategy.buy?.entry || strategy.entry || null,
+            sellRules: strategy.sell?.entry || strategy.entry || null,
+            riskBuy: strategy.buy?.risk || strategy.risk || null,
+            riskSell: strategy.sell?.risk || strategy.risk || null,
+        }
+        : null;
+
+    return {
+        intent,
+        chart: chartContext,
+        strategy: strategyContext,
+        latestSignals,
+        lastTrade: lastPosition ? summarizePosition(lastPosition) : null,
+        openPositions: virtualPositions.filter((p) => p.status === 'open').slice(-5).map(summarizePosition),
+        now: new Date().toISOString(),
+    };
+}
+
+function buildContextualPrompt(userPrompt: string, contextPack: unknown) {
+    return [
+        'You are Vivutrade Trading AI. Use only CONTEXT_JSON for concrete analysis and avoid generic advice.',
+        'If context is missing, explicitly state what data is missing and do not fabricate.',
+        'Answer in Vietnamese, concise and practical.',
+        'Required output sections:',
+        '1) Ket luan',
+        '2) Do tu tin (0-100) + ly do du lieu',
+        '3) Muc vao/SL/TP tham khao (neu co du lieu)',
+        '4) Rui ro chinh',
+        '5) Dieu can bo sung neu chua du du lieu',
+        '',
+        'CONTEXT_JSON:',
+        JSON.stringify(contextPack),
+        '',
+        'USER_QUESTION:',
+        userPrompt,
+    ].join('\n');
 }

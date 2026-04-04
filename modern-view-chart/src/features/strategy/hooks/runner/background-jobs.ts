@@ -4,6 +4,7 @@ import { ContextCollector } from '../../logic/ContextCollector';
 import { StatsService } from '../../logic/StatsService';
 import { TradeLogger } from '../../logic/TradeLogger';
 import { soundService } from '../../logic/SoundService';
+import { getAiVerdict } from '../../logic/ai-verdict';
 import { useStrategyStore } from '../../store/strategy-store';
 import type { Strategy, VirtualPosition } from '../../types';
 import type { StrategySignal } from '../../types';
@@ -73,12 +74,13 @@ export function runAiAuditAndTradeLogging(
                     AnalysisType.PRE_TRADE
                 );
                 aiResult = ai;
+                const aiVerdict = getAiVerdict(ai.confidence) || undefined;
 
                 const store = useStrategyStore.getState();
                 const latestSignals = store.signals;
                 const sigIndex = latestSignals.findIndex((s) => s.symbol === symbol && s.timestamp === signal.timestamp);
                 if (sigIndex !== -1) {
-                    const updatedSig = { ...latestSignals[sigIndex], aiAnalysis: ai };
+                    const updatedSig = { ...latestSignals[sigIndex], aiAnalysis: ai, aiVerdict };
                     store.updateSignal(sigIndex, updatedSig);
                 }
 
@@ -91,6 +93,7 @@ export function runAiAuditAndTradeLogging(
                             (!signal.matrixScopeKey || p.matrixScopeKey === signal.matrixScopeKey)
                     );
                     if (latestPos) store.updateVirtualPosition(latestPos.id, { confidence: ai.confidence });
+                    if (latestPos && aiVerdict) store.updateVirtualPosition(latestPos.id, { aiVerdict });
                 }
             }
 

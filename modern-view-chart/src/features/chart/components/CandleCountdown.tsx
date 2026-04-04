@@ -7,6 +7,8 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 
 type RealtimeCandleLike = {
     open?: number;
+    high?: number;
+    low?: number;
     close?: number;
     time?: number | { timestamp?: number };
 };
@@ -51,23 +53,27 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             }
             const state = useMarketStore.getState();
             const symbolInfo = state.symbolInfo[normSymbol];
-            const currentPrice = realTimeRef?.current?.close ?? state.tickers[normSymbol]?.price;
             const candles = state.candleData[key] || [];
+            const currentPrice =
+                realTimeRef?.current?.close
+                ?? candles[candles.length - 1]?.close
+                ?? state.tickers[normSymbol]?.price;
             const lastCandle = realTimeRef?.current || candles[candles.length - 1];
 
-            if (!lastCandle || currentPrice === null || currentPrice === undefined) {
+            if (!lastCandle || !Number.isFinite(Number(currentPrice))) {
                 containerRef.current.style.display = 'none';
                 return;
             }
+            const safeCurrentPrice = Number(currentPrice);
 
             // 1. Update Position & Color
-            const coordinate = series.priceToCoordinate(currentPrice);
+            const coordinate = series.priceToCoordinate(safeCurrentPrice);
             if (coordinate !== null) {
                 containerRef.current.style.display = 'flex';
                 containerRef.current.style.top = `${coordinate}px`;
 
                 // Color based on trend
-                const isUp = currentPrice >= (lastCandle.open || currentPrice);
+                const isUp = safeCurrentPrice >= (lastCandle.open || safeCurrentPrice);
                 containerRef.current.className = `absolute right-0 z-50 flex flex-col items-start pl-2 justify-center pointer-events-none select-none transition-colors duration-200 ${isUp ? 'bg-emerald-600' : 'bg-rose-600'} rounded-l-md shadow-sm border-y border-l border-white/20 w-[62px] h-[36px]`;
             } else {
                 containerRef.current.style.display = 'none';
@@ -75,7 +81,7 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
 
             // 2. Update Price Text
             if (priceRef.current) {
-                priceRef.current.textContent = currentPrice.toFixed(symbolInfo?.digits || 2);
+                priceRef.current.textContent = safeCurrentPrice.toFixed(symbolInfo?.digits || 2);
             }
 
             // 3. Update Countdown Text
@@ -93,9 +99,13 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
                 }
             }
 
-            const lastCandleTime = typeof lastCandle.time === 'object'
+            const rawLastCandleTime = typeof lastCandle.time === 'object'
                 ? Number((lastCandle.time as { timestamp?: number }).timestamp ?? 0)
                 : Number(lastCandle.time);
+            const lastCandleTime =
+                rawLastCandleTime > 10000000000
+                    ? Math.floor(rawLastCandleTime / 1000)
+                    : rawLastCandleTime;
 
             const nextCandleTime = lastCandleTime + timeframeSeconds;
             let secondsLeft = nextCandleTime - now;

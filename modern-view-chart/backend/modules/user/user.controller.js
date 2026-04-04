@@ -34,6 +34,7 @@ export {
 
 export {
   getMyModuleStatus,
+  getMyAiCredits,
   startMyModuleTrial,
   createMyModuleOrder,
   listMyModuleOrders,

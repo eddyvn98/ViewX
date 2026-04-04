@@ -1,0 +1,8 @@
+{
+  "httpStatus": 200,
+  "data": {
+    "status": "ok",
+    "response": "Here's a concise AI audit note for an empty backtest dashboard:\n\n---\n\n**AI Audit Note: Empty Backtest Dashboard**\n\n**Observation:** The backtest performance dashboard for the [AI Model Name/System] currently displays no populated metrics, historical trade data, or performance summaries.\n\n**Finding:** This critically impedes the ability to assess the AI model's historical effectiveness, profitability, risk profile, and overall suitability for deployment or further development. Without validated backtest results, the model's performance characteristics remain unknown, presenting significant operational and financial risk if deployed.\n\n**Recommendation:** Immediately investigate the root cause of the empty dashboard (e.g., data pipeline failures, backtesting engine errors, model integration issues, configuration discrepancies). Ensure the backtesting process is correctly executed and the dashboard is populated with accurate, comprehensive historical performance data as a critical prerequisite for any further evaluation or decision-making.\n\n---",
+    "remainingCredits": 3
+  }
+}

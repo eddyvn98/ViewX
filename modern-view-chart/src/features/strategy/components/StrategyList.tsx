@@ -4,6 +4,7 @@ import { Plus, Trash2, Bot, Settings, BrainCircuit } from 'lucide-react';
 import { Strategy, Condition, ConditionGroup, StrategyDirection, SLTPConfig } from '@/features/strategy/types';
 import { getPrimaryStrategyRisk, getStrategyDirections, getStrategyLeg } from '../strategy-helpers';
 import { useTranslations } from 'next-intl';
+import { useMarketStore } from '@/lib/store';
 
 interface StrategyListProps {
     onEdit: (strategy: Strategy) => void;
@@ -50,7 +51,14 @@ function summarizeTP(tp: number | SLTPConfig | undefined, trailing: boolean, dis
 export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
     const t = useTranslations('Strategy');
     const { strategies, toggleStrategy, toggleAiGuard, deleteStrategy } = useStrategyStore();
-    void toggleAiGuard;
+    const setStrategyPanelView = useMarketStore((state) => state.setStrategyPanelView);
+    const aiEnabled = process.env.NEXT_PUBLIC_AI_ENABLED === '1' || process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
+
+    const handleToggleAi = (strategyId: string) => {
+        if (!aiEnabled) return;
+        toggleAiGuard(strategyId);
+        setStrategyPanelView('ai_chat');
+    };
 
     return (
         <div className="flex flex-col gap-2 animate-in slide-in-from-left-4 duration-300 w-full">
@@ -104,13 +112,14 @@ export function StrategyList({ onEdit, onAdd }: StrategyListProps) {
                                     </button>
                                     <button
                                         type="button"
-                                        disabled
-                                        aria-disabled="true"
-                                        className="p-1 rounded transition-all flex items-center gap-1 text-muted-foreground/50 border border-border/40 cursor-not-allowed opacity-70"
-                                        title="AI theo dõi chiến lược tạm khóa - sẽ nâng cấp sau"
+                                        onClick={() => handleToggleAi(s.id)}
+                                        disabled={!aiEnabled}
+                                        aria-disabled={!aiEnabled}
+                                        className={`p-1 rounded transition-all flex items-center gap-1 border ${s.aiGuard ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' : 'text-muted-foreground border-border/40 hover:text-foreground hover:bg-secondary'} ${!aiEnabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                                        title={!aiEnabled ? 'AI chưa bật ở môi trường hiện tại' : (s.aiGuard ? 'Tắt AI theo dõi cho bot này' : 'Bật AI theo dõi và mở AI chat')}
                                     >
                                         <BrainCircuit size={11} />
-                                        <span className="text-[11px] font-semibold uppercase">Tạm khóa</span>
+                                        <span className="text-[11px] font-semibold uppercase">{s.aiGuard ? 'AI Bật' : 'AI Tắt'}</span>
                                     </button>
                                     <button onClick={() => onEdit(s)} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-all">
                                         <Settings size={11} />

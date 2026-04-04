@@ -210,6 +210,9 @@ export interface StrategySignal {
     price: number;
     timeframe?: string;
     source?: 'MT5' | 'BINANCE';
+    entrySource?: 'bot' | 'manual';
+    triggerReason?: string;
+    aiVerdict?: 'PASS' | 'WATCH' | 'BLOCK';
     matrixScopeKey?: string;
     risk: StrategyRisk;
     direction?: StrategyDirection;
@@ -279,5 +282,6 @@ export interface VirtualPosition {
     pnl?: number;
     metadata?: TradeContext;
     confidence?: number; // AI Confidence Score (0-100)
+    aiVerdict?: 'PASS' | 'WATCH' | 'BLOCK';
     isHistorical?: boolean; // Tag for backtest results
 }

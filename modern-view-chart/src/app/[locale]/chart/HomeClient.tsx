@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale } from "next-intl";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -78,6 +79,17 @@ export default function Home() {
   useUserSetupSync();
   const [showLegalNotice, setShowLegalNotice] = React.useState(false);
   const pathname = usePathname();
+  const locale = useLocale();
+  const [moduleGate, setModuleGate] = React.useState<{
+    loading: boolean;
+    isAuthed: boolean;
+    canUse: boolean;
+  }>({
+    loading: true,
+    isAuthed: false,
+    canUse: false,
+  });
+  const [showModuleGateModal, setShowModuleGateModal] = React.useState(false);
 
   const strategyEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED !== "false";
   const {
@@ -194,6 +206,45 @@ export default function Home() {
     setShowLegalNotice(false);
   }, []);
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const refreshModuleGate = async () => {
+      const token = (localStorage.getItem("auth_access_token") || "").trim();
+      if (!token) {
+        setModuleGate({ loading: false, isAuthed: false, canUse: false });
+        return;
+      }
+
+      setModuleGate((prev) => ({ ...prev, loading: true, isAuthed: true }));
+      try {
+        const res = await fetch("/api/user/module-status?module=your_mt5", {
+          method: "GET",
+          headers: { authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        if (!res.ok) {
+          setModuleGate({ loading: false, isAuthed: true, canUse: false });
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        setModuleGate({ loading: false, isAuthed: true, canUse: Boolean(data?.canUse) });
+      } catch {
+        setModuleGate({ loading: false, isAuthed: true, canUse: false });
+      }
+    };
+
+    void refreshModuleGate();
+    window.addEventListener("focus", refreshModuleGate);
+    window.addEventListener("auth-changed", refreshModuleGate);
+    window.addEventListener("auth-state-changed", refreshModuleGate);
+    return () => {
+      window.removeEventListener("focus", refreshModuleGate);
+      window.removeEventListener("auth-changed", refreshModuleGate);
+      window.removeEventListener("auth-state-changed", refreshModuleGate);
+    };
+  }, []);
+
   const isEnglish = pathname?.startsWith("/en");
   const legalNotice = isEnglish
     ? {
@@ -296,6 +347,18 @@ export default function Home() {
                   showDesktopLayout ? "p-1.5 pb-0" : "p-0 pb-0"
                 )}
               >
+                {!moduleGate.loading && !moduleGate.canUse && (
+                  <div className="absolute left-1/2 top-2 z-[240] -translate-x-1/2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModuleGateModal(true)}
+                      className="h-10 rounded-full border border-amber-500/40 bg-amber-500/15 px-5 text-[12px] font-black uppercase tracking-wide text-amber-100 shadow-lg hover:bg-amber-500/25"
+                    >
+                      Mở khóa giao dịch · Yêu cầu module
+                    </button>
+                  </div>
+                )}
+
                 {showLegalNotice && (
                   <section className="mx-2 mt-2 rounded-lg border border-amber-500/50 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:text-sm">
                     <div className="flex items-start justify-between gap-3">
@@ -376,6 +439,42 @@ export default function Home() {
           onTabChange={handleMobileTabChange}
           isHidden={isScrollingPanel && activeMobileTab !== "chart"}
         />
+      )}
+
+      {showModuleGateModal && (
+        <div className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl rounded-xl border border-primary/30 bg-background p-5 shadow-2xl">
+            <h2 className="text-sm font-black uppercase tracking-wider text-foreground">Yêu cầu module</h2>
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              {moduleGate.isAuthed
+                ? "Bạn chưa kích hoạt module Your MT5. /chart vẫn hiển thị để xem, nhưng chức năng giao dịch và chiến lược sẽ bị giới hạn cho tới khi kích hoạt."
+                : "Bạn cần đăng nhập và kích hoạt module Your MT5 để dùng đầy đủ chức năng giao dịch và chiến lược."}
+            </p>
+            <div className="mt-4 flex items-center gap-2">
+              <Link
+                href={`/${locale}/pricing`}
+                className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-primary/90"
+              >
+                Mua module
+              </Link>
+              {!moduleGate.isAuthed && (
+                <Link
+                  href={`/${locale}`}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-border px-4 text-xs font-semibold text-foreground hover:bg-secondary/70"
+                >
+                  Đăng nhập
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowModuleGateModal(false)}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border px-4 text-xs font-semibold text-foreground hover:bg-secondary/70"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

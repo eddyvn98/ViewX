@@ -216,6 +216,8 @@ export function processStrategySignal(
 
     store.addSignal({
         ...finalSignal,
+        entrySource: finalSignal.type === 'BUY' || finalSignal.type === 'SELL' ? 'bot' : finalSignal.entrySource,
+        triggerReason: finalSignal.type === 'EXIT' ? 'strategy_exit_signal' : 'strategy_entry_signal',
         barTime: lastTime,
         timeframe,
         source,

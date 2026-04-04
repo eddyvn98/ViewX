@@ -5,11 +5,13 @@ test('verify chart render', async ({ page }) => {
     const logs: string[] = [];
     page.on('console', msg => logs.push(`[${msg.type()}] ${msg.text()}`));
 
-    console.log('Navigating to http://localhost:3000');
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle', timeout: 20000 }).catch(e => console.error('Navigation error:', e));
+    console.log('Navigating to /en/chart');
+    await page.goto('/en/chart', { waitUntil: 'networkidle', timeout: 30000 }).catch(e => console.error('Navigation error:', e));
 
-    console.log('Waiting 10 seconds for chart to render and fetch data...');
-    await page.waitForTimeout(10000);
+    console.log('Waiting for chart canvas...');
+    await page.waitForSelector('canvas', { timeout: 30000 }).catch(async () => {
+        await page.waitForTimeout(5000);
+    });
 
     await page.screenshot({ path: 'chart_screenshot.png' });
     console.log('Saved screenshot to chart_screenshot.png');

@@ -9,6 +9,9 @@ type TradeLogCreatePayload = {
     volatility: string;
     session: string;
     indicators: Record<string, unknown>;
+    entry_source?: "bot" | "manual";
+    trigger_reason?: string;
+    ai_verdict?: "PASS" | "WATCH" | "BLOCK";
     timestamp: string;
 };
 

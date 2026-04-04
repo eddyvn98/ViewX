@@ -23,6 +23,9 @@ export class TradeLogger {
                 volatility: metrics.volatility > 60 ? 'high' : metrics.volatility > 30 ? 'medium' : 'low',
                 session: metrics.session || 'Unknown',
                 indicators: metrics,
+                entry_source: signal.entrySource || 'bot',
+                trigger_reason: signal.triggerReason || undefined,
+                ai_verdict: signal.aiVerdict || undefined,
                 timestamp: new Date().toISOString(),
             })) as TradeLogResponse;
             return data?.id ? data : undefined;

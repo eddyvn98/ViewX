@@ -59,6 +59,23 @@ const schema = new Schema(
             type: Schema.Types.Mixed,
             default: {},
         },
+        entry_source: {
+            type: String,
+            enum: ["bot", "manual"],
+            default: "bot",
+            trim: true,
+        },
+        trigger_reason: {
+            type: String,
+            default: null,
+            trim: true,
+        },
+        ai_verdict: {
+            type: String,
+            enum: ["PASS", "WATCH", "BLOCK"],
+            default: null,
+            trim: true,
+        },
         exit_reason: {
             type: String,
             default: null,

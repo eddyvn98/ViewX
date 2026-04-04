@@ -2,6 +2,7 @@ import React from 'react';
 import { BrainCircuit, X as XIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VirtualPosition } from '@/features/strategy/types';
+import { getAiVerdict } from '@/features/strategy/logic/ai-verdict';
 
 interface ActivePositionItemProps {
     position: VirtualPosition;
@@ -23,6 +24,7 @@ export function ActivePositionItem({
     onCloseOrCancel,
 }: ActivePositionItemProps) {
     const isBuy = position.type === 'BUY';
+    const verdict = position.aiVerdict || getAiVerdict(position.confidence);
 
     return (
         <div className="relative group overflow-hidden rounded-xl border border-border dark:border-white/5 bg-secondary/50 dark:bg-white/[0.03] transition-all hover:bg-secondary/70 dark:hover:bg-white/[0.05] shadow-sm">
@@ -54,6 +56,14 @@ export function ActivePositionItem({
                             <BrainCircuit size={8} />
                             <span className="text-[11px] font-bold">{position.confidence.toFixed(0)}%</span>
                         </div>
+                    )}
+                    {verdict && aiGuardEnabled && (
+                        <span className={cn(
+                            'text-[10px] font-black px-1 py-0.25 rounded uppercase border',
+                            verdict === 'PASS' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : verdict === 'WATCH' ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        )}>
+                            {verdict}
+                        </span>
                     )}
                 </div>
                 <div className="flex items-center gap-2">

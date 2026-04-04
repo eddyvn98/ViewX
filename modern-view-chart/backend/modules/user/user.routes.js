@@ -38,6 +38,7 @@ router.route("/telegram/test").post(telegramTemporarilyDisabled);
 router.route("/telegram/unlink").post(telegramTemporarilyDisabled);
 router.route("/modules").get(checkLogin, User.getUserModules).put(checkLogin, User.upsertUserModules);
 router.route("/module-status").get(checkLogin, User.getMyModuleStatus);
+router.route("/ai-credits").get(checkLogin, User.getMyAiCredits);
 router.route("/module-trial/start").post(checkLogin, User.startMyModuleTrial);
 router.route("/module-orders").get(checkLogin, User.listMyModuleOrders).post(checkLogin, User.createMyModuleOrder);
 router.route("/admin/module-orders").get(checkLogin, User.listAdminModuleOrders);

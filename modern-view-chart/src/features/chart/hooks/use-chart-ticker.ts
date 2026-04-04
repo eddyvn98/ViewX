@@ -37,6 +37,7 @@ export function useChartTicker({
     const realTimeCandleRef = useRef<RealtimeCandle | null>(null);
     const lastBackfillRequestAtRef = useRef<Record<string, number>>({});
     const activeContextKeyRef = useRef(contextKey);
+    const lastKnownPriceRef = useRef<number | null>(null);
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
@@ -130,6 +131,7 @@ export function useChartTicker({
         const handleTick = (price: number, serverTimeMs?: number) => {
             if (!price) return;
             if (activeContextKeyRef.current !== effectContextKey) return;
+            lastKnownPriceRef.current = price;
 
             // 1. Get Base Candle
             const storeCandles = getStoreCandles();
@@ -176,6 +178,57 @@ export function useChartTicker({
                             },
                         }),
                     );
+                }
+                // Realtime fallback for symbol-specific stale feeds:
+                // keep UI/countdown alive by snapping to current interval bar.
+                const currentIntervalStart = Math.floor(now / intervalSec) * intervalSec;
+                if (currentIntervalStart > lastCandleTime) {
+                    const synthetic = {
+                        time: currentIntervalStart,
+                        open: base.close,
+                        high: Math.max(base.close, price),
+                        low: Math.min(base.close, price),
+                        close: price,
+                        rawOpen: base.rawClose ?? base.close,
+                        rawHigh: Math.max(base.rawClose ?? base.close, price),
+                        rawLow: Math.min(base.rawClose ?? base.close, price),
+                        rawClose: price,
+                        ha_open: isHA ? (base.open + base.close) / 2 : undefined,
+                    };
+
+                    realTimeCandleRef.current = synthetic;
+                    lastSeriesUpdateTimeRef.current = currentIntervalStart;
+
+                    if (isHA) {
+                        const haOpen = synthetic.ha_open ?? synthetic.open;
+                        const haClose = (synthetic.rawOpen + synthetic.rawHigh + synthetic.rawLow + synthetic.rawClose) / 4;
+                        seriesRef.current?.update({
+                            time: currentIntervalStart as Time,
+                            open: haOpen,
+                            high: Math.max(synthetic.rawHigh, haOpen, haClose),
+                            low: Math.min(synthetic.rawLow, haOpen, haClose),
+                            close: haClose,
+                        });
+                    } else if (isSmart) {
+                        seriesRef.current?.update({
+                            time: currentIntervalStart as Time,
+                            open: synthetic.open,
+                            high: synthetic.high,
+                            low: synthetic.low,
+                            close: synthetic.close,
+                            candleColor: synthetic.close >= synthetic.open ? candleUpColor : candleDownColor,
+                        } as SeriesUpdateData);
+                    } else {
+                        seriesRef.current?.update({
+                            time: currentIntervalStart as Time,
+                            open: synthetic.open,
+                            high: synthetic.high,
+                            low: synthetic.low,
+                            close: synthetic.close,
+                        });
+                    }
+
+                    syncToStore(synthetic, true);
                 }
                 return;
             }
@@ -306,7 +359,27 @@ export function useChartTicker({
             }
         );
 
-        return () => unsub();
+        // Fallback heartbeat: keep bar progression alive even when MT5 tick stream
+        // is temporarily silent but history endpoint still works.
+        const heartbeatId = window.setInterval(() => {
+            if (activeContextKeyRef.current !== effectContextKey) return;
+
+            const store = useMarketStore.getState();
+            const ticker = store.tickers[tickerKey] || store.tickers[normSymbol];
+            const fallbackPrice =
+                Number(ticker?.price)
+                || lastKnownPriceRef.current
+                || Number(realTimeCandleRef.current?.close)
+                || Number(lastCandleRef.current?.close);
+
+            if (!Number.isFinite(fallbackPrice) || fallbackPrice <= 0) return;
+            handleTick(fallbackPrice);
+        }, 1000);
+
+        return () => {
+            unsub();
+            window.clearInterval(heartbeatId);
+        };
     }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
