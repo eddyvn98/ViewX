@@ -279,10 +279,10 @@ export function ActivationChecklist() {
                     </p>
                     {hasYourMt5Module ? (
                         <button
-                            onClick={() => router.push('/mt5-activation')}
+                            onClick={() => router.push('/your-mt5-guide')}
                             className="inline-flex items-center gap-2 rounded-xl bg-yellow-500 px-5 py-2.5 text-sm font-bold text-yellow-950 transition-all hover:scale-[1.02] hover:bg-yellow-400 active:scale-95"
                         >
-                            {t('buttons.openPage')}
+                            {t('buttons.openGuide')}
                             <ChevronRight className="h-4 w-4" />
                         </button>
                     ) : (

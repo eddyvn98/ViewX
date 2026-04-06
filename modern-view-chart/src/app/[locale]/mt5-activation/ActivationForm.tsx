@@ -182,10 +182,10 @@ export function ActivationForm() {
                     <div className="space-y-2 text-sm text-muted-foreground">
                         <div>{helperText}</div>
                         <Link
-                            href="/pricing"
+                            href={hasYourMt5Module ? '/your-mt5-guide' : '/pricing'}
                             className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
                         >
-                            {t('buttons.viewPricing')}
+                            {hasYourMt5Module ? t('buttons.openGuide') : t('buttons.viewPricing')}
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
                     </div>
