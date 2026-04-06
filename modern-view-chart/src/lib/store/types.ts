@@ -24,6 +24,11 @@ export interface AccountInfo {
     free_margin: number;
     margin_level: number;
     profit: number;
+    login?: string | number;
+    server?: string;
+    name?: string;
+    company?: string;
+    currency?: string;
 }
 
 export interface Position {

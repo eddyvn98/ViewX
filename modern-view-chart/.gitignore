@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -75,6 +75,9 @@ MANIFEST
 
 # custom
 output/
+desktop/bridge-build/
+desktop/bridge-dist/
+backend/bridge/*.spec
 .tmp*
 *.err.log
 *.log

@@ -10,10 +10,24 @@ export const routing = defineRouting({
 
     // Support localized pathnames
     pathnames: {
+        '/': '/',
+        '/about': '/about',
+        '/chart': '/chart',
+        '/contact': '/contact',
+        '/faq': '/faq',
+        '/landing': '/',
+        '/methodology': '/methodology',
+        '/mt5-activation': '/mt5-activation',
+        '/plan-updates/ai': '/plan-updates/ai',
+        '/plan-updates/free': '/plan-updates/free',
+        '/plan-updates/pro': '/plan-updates/pro',
+        '/privacy': '/privacy',
         '/premium-ai': {
             en: '/premium-ai',
             vi: '/goi-cao-cap'
-        }
+        },
+        '/strategy/dashboard': '/strategy/dashboard',
+        '/terms': '/terms'
     }
 });
 
