@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { ActivationForm } from './ActivationForm';
 
 export const metadata: Metadata = {
@@ -6,7 +7,9 @@ export const metadata: Metadata = {
     description: 'Activate your MT5 connection securely.',
 };
 
-export default function Mt5ActivationPage() {
+export default async function Mt5ActivationPage() {
+    const t = await getTranslations('Mt5Activation');
+
     return (
         <main className="min-h-screen w-full overflow-y-auto bg-slate-950 px-4">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -17,13 +20,13 @@ export default function Mt5ActivationPage() {
             <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center py-10">
                 <div className="mx-auto mb-8 w-full max-w-2xl text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.34em] text-emerald-300">
-                        MT5 consent flow
+                        {t('page.heroEyebrow')}
                     </p>
                     <h2 className="mt-3 text-2xl font-bold text-white md:text-3xl">
-                        Complete consent, then return to chart
+                        {t('page.heroTitle')}
                     </h2>
                     <p className="mt-3 text-sm leading-relaxed text-slate-300">
-                        This screen records your consent locally and unlocks the terminal once the bridge and account state are ready.
+                        {t('page.heroDescription')}
                     </p>
                 </div>
 
@@ -33,7 +36,7 @@ export default function Mt5ActivationPage() {
             </div>
             
              <footer className="relative z-10 py-8 text-center text-xs text-muted-foreground/50">
-                &copy; 2026 Vivutrade Global. All rights reserved.
+                &copy; 2026 Vivutrade.
             </footer>
         </main>
     );

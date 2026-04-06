@@ -486,7 +486,10 @@
       "note": "Bạn đang ở bước xác nhận consent cho MT5. Flow này ghi nhận trên máy hiện tại và chỉ mở khóa terminal khi bridge/account state phù hợp.",
       "ready": "Sẵn sàng lưu consent và quay lại chart.",
       "needBoth": "Cần tick đủ hai checkbox trước khi tiếp tục.",
-      "redirecting": "Đã lưu. Đang quay lại chart..."
+      "redirecting": "Đã lưu. Đang quay lại chart...",
+      "heroEyebrow": "Luồng xác nhận MT5",
+      "heroTitle": "Hoàn tất xác nhận rồi quay lại chart",
+      "heroDescription": "Màn hình này lưu consent trên máy hiện tại, hiển thị rõ các bước onboarding, và chỉ mở khóa terminal khi bridge cùng dữ liệu account đã sẵn sàng."
     },
     "terms": {
       "riskWarning": "Tôi đã đọc và chấp nhận rủi ro về vốn khi đồng bộ MT5 với hệ thống. Mọi quyết định giao dịch do tôi chịu trách nhiệm.",
@@ -496,6 +499,7 @@
       "openPage": "Mở trang kích hoạt",
       "activate": "Xác nhận & Kích hoạt",
       "backToChart": "Quay lại Chart",
+      "viewPricing": "Xem bảng giá",
       "saving": "Đang lưu...",
       "saved": "Đã lưu"
     },

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import { useMarketStore } from '@/lib/store';
 import type { AccountInfo } from '@/lib/store';
 import { buildMt5TermsStorageKey } from '@/lib/store/slices/ui-slice';
@@ -151,8 +151,15 @@ export function ActivationForm() {
                 </div>
 
                 <div className="mt-6 flex flex-col gap-4 border-t border-white/5 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-sm text-muted-foreground">
-                        {helperText}
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                        <div>{helperText}</div>
+                        <Link
+                            href="/pricing"
+                            className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
+                        >
+                            {t('buttons.viewPricing')}
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
                     </div>
 
                     <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
