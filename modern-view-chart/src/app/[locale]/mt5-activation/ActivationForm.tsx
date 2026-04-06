@@ -66,6 +66,8 @@ export function ActivationForm() {
     const canActivate = hasYourMt5Module && riskAccepted && accountAccepted && submitState !== 'saving';
     const isSaving = submitState === 'saving';
     const isSaved = submitState === 'saved';
+    const supportHref = hasYourMt5Module ? '/your-mt5-guide' : '/pricing';
+    const supportLabel = hasYourMt5Module ? t('buttons.openGuide') : t('buttons.buyModule');
 
     useEffect(() => {
         syncHasAcceptedMt5Terms(storageKey);
@@ -182,10 +184,10 @@ export function ActivationForm() {
                     <div className="space-y-2 text-sm text-muted-foreground">
                         <div>{helperText}</div>
                         <Link
-                            href={hasYourMt5Module ? '/your-mt5-guide' : '/pricing'}
+                            href={supportHref}
                             className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
                         >
-                            {hasYourMt5Module ? t('buttons.openGuide') : t('buttons.viewPricing')}
+                            {supportLabel}
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
                     </div>

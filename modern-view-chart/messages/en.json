@@ -456,59 +456,76 @@
   },
   "Mt5Activation": {
     "title": "Activate MT5 Connection",
-    "subtitle": "Confirm legal and risk management terms to finalize trade data synchronization",
+    "subtitle": "Confirm the consent items below to finish MT5 onboarding on this machine.",
     "labels": {
-      "riskManagement": "Risk & capital management",
-      "accountSync": "Account sync status"
+      "riskManagement": "Risk and capital responsibility",
+      "accountSync": "Account sync confirmation"
     },
     "checklist": {
       "title": "MT5 readiness",
-      "subtitle": "Buy the module first, then complete bridge onboarding and consent to unlock the terminal.",
-      "bridgeState": "Bridge status is read from the live store.",
+      "subtitle": "Buy the module first, then finish native bridge onboarding and consent before unlocking the terminal.",
+      "bridgeState": "Bridge status is read directly from the live terminal store.",
       "online": "Bridge online",
       "waiting": "Waiting for bridge",
-      "accountLinked": "Account data detected",
-      "accountMissing": "No account detected",
+      "accountLinked": "Account detected",
+      "accountMissing": "Account not detected yet",
       "accountReady": "The current store already contains account data.",
-      "accountPending": "The terminal will unlock once an account is synced.",
+      "accountPending": "The terminal unlocks after account data is synced.",
       "mt5Account": "MT5 account",
       "binanceAccount": "Binance demo",
       "consentSaved": "Consent saved",
       "consentRequired": "Consent required",
       "consentReady": "You can return to the chart and continue working.",
-      "consentPending": "You need both checkboxes checked before saving consent.",
-      "footer": "This checklist reflects the live terminal state. It does not claim the account is ready if the store has no data.",
+      "consentPending": "Check both consent boxes before saving.",
+      "footer": "This checklist reflects the live terminal state. It does not claim the account is ready when the store has no data.",
       "done": "DONE",
       "required": "REQUIRED"
     },
     "page": {
       "kicker": "Activation step",
-      "note": "You are confirming MT5 consent on this machine. The flow records local consent and only unlocks the terminal when bridge/account state is valid.",
-      "ready": "Ready to save consent and return to chart.",
+      "note": "You are confirming MT5 consent on this machine. The flow stores local consent and unlocks the terminal only when the bridge and account state are valid.",
+      "ready": "Ready to save consent and go back to the chart.",
       "needBoth": "Check both boxes before continuing.",
       "redirecting": "Saved. Returning to the chart...",
       "heroEyebrow": "MT5 consent flow",
       "heroTitle": "Complete consent, then return to chart",
-      "heroDescription": "This screen records your consent locally, keeps onboarding steps visible, and unlocks the terminal only when bridge and account state are ready."
+      "heroDescription": "This screen stores local consent, keeps onboarding visible, and unlocks the terminal only when bridge and account data are ready."
     },
     "terms": {
-      "riskWarning": "I have read and accepted the capital risks when syncing MT5 with the system. All trading decisions are my responsibility.",
+      "riskWarning": "I have read and accepted the capital risk when syncing MT5 with the system. All trading decisions remain my responsibility.",
       "accountSync": "I agree to link my internal MT5 account number with my Vivutrade account for valid trade tracking."
     },
     "buttons": {
       "openPage": "Open Activation Page",
-      "openGuide": "Open Setup Guide",
-      "activate": "Confirm & Activate",
+      "openGuide": "Open Your MT5 guide",
+      "activate": "Confirm and Activate",
       "backToChart": "Back to Chart",
-      "buyModule": "Buy Your MT5",
-      "viewPricing": "View Pricing",
+      "buyModule": "Go to pricing",
+      "viewPricing": "View pricing",
+      "openLogs": "Open Logs",
+      "restartBridge": "Restart Bridge",
+      "openSettings": "Open Desktop Settings",
       "saving": "Saving...",
       "saved": "Saved"
     },
     "gating": {
       "purchaseTitle": "This account has not purchased the Your MT5 module",
-      "purchaseBody": "Buy the module on the pricing page first. After purchase, return here to finish bridge onboarding and legal consent.",
-      "activationBlocked": "This activation step is available only after the Your MT5 module has been purchased for the current account."
+      "purchaseBody": "Buy the module on the pricing page first. After purchase, return to the guide to install the bridge and continue activation.",
+      "activationBlocked": "This activation step is available only after the current account has purchased the Your MT5 module."
+    },
+    "native": {
+      "waitingLoginTitle": "Desktop app is waiting for login",
+      "waitingLoginBody": "Sign in to Vivutrade inside the desktop app so it can obtain an access token and start the local bridge.",
+      "startingTitle": "Desktop bridge is starting",
+      "startingBody": "The desktop app is launching the native bridge. Keep MT5 open on this machine and wait a moment for the connection.",
+      "errorTitle": "Desktop bridge needs attention",
+      "errorBody": "The desktop app reported a bridge error. Open logs or restart the bridge before trying the activation flow again.",
+      "waitingMt5Title": "Bridge is running, waiting for MT5",
+      "waitingMt5Body": "The bridge is online but MT5 data has not arrived yet. Open MT5 on this machine and keep it signed in.",
+      "waitingAccountTitle": "Waiting for account data",
+      "waitingAccountBody": "The bridge is online, but the terminal has not received account identity yet. Wait for MT5 to finish syncing.",
+      "activeTitle": "Desktop bridge is active",
+      "activeBody": "The local bridge is running and the account can continue with the MT5 consent flow."
     },
     "successMessage": "MT5 consent saved. Returning to chart..."
   }

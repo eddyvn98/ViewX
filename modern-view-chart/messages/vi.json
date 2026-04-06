@@ -456,60 +456,77 @@
   },
   "Mt5Activation": {
     "title": "Kích hoạt kết nối MT5",
-    "subtitle": "Xác nhận pháp lý và quản trị rủi ro để hoàn tất đồng bộ dữ liệu giao dịch",
+    "subtitle": "Xác nhận các mục đồng ý bên dưới để hoàn tất onboarding MT5 trên máy này.",
     "labels": {
-      "riskManagement": "Rủi ro & Quản trị vốn",
-      "accountSync": "Đồng bộ trạng thái"
+      "riskManagement": "Trách nhiệm rủi ro và vốn",
+      "accountSync": "Xác nhận đồng bộ tài khoản"
     },
     "checklist": {
       "title": "Trạng thái sẵn sàng MT5",
-      "subtitle": "Hãy mua module trước, sau đó hoàn tất onboarding bridge và consent để mở khóa terminal.",
-      "bridgeState": "Kết nối bridge đang là tín hiệu thật từ hệ thống.",
+      "subtitle": "Mua module trước, rồi hoàn tất cài native bridge và consent trước khi mở khóa terminal.",
+      "bridgeState": "Trạng thái bridge được đọc trực tiếp từ terminal store.",
       "online": "Bridge online",
       "waiting": "Đang chờ bridge",
-      "accountLinked": "Tài khoản đã có dữ liệu",
-      "accountMissing": "Chưa thấy tài khoản",
-      "accountReady": "Dữ liệu account đang được đọc từ store hiện tại.",
-      "accountPending": "Terminal sẽ tự mở khóa sau khi account được sync.",
-      "mt5Account": "MT5 account",
+      "accountLinked": "Đã nhận được tài khoản",
+      "accountMissing": "Chưa nhận được tài khoản",
+      "accountReady": "Store hiện tại đã có dữ liệu tài khoản.",
+      "accountPending": "Terminal sẽ mở khóa sau khi dữ liệu tài khoản được đồng bộ.",
+      "mt5Account": "Tài khoản MT5",
       "binanceAccount": "Binance demo",
-      "consentSaved": "Consent đã lưu",
+      "consentSaved": "Đã lưu consent",
       "consentRequired": "Cần consent",
-      "consentReady": "Bạn có thể quay lại chart để tiếp tục làm việc.",
-      "consentPending": "Cần tick đủ hai checkbox để lưu consent.",
-      "footer": "Checklist này phản ánh đúng trạng thái hiện tại của terminal. Nó không giả định rằng tài khoản đã sẵn sàng nếu store chưa có dữ liệu.",
+      "consentReady": "Bạn có thể quay lại chart và tiếp tục.",
+      "consentPending": "Cần tick đủ hai ô consent trước khi lưu.",
+      "footer": "Checklist này phản ánh đúng trạng thái terminal hiện tại. Nó không báo tài khoản sẵn sàng nếu store chưa có dữ liệu.",
       "done": "XONG",
-      "required": "CẦN LÀM"
+      "required": "BẮT BUỘC"
     },
     "page": {
-      "kicker": "Activation step",
-      "note": "Bạn đang ở bước xác nhận consent cho MT5. Flow này ghi nhận trên máy hiện tại và chỉ mở khóa terminal khi bridge/account state phù hợp.",
+      "kicker": "Bước kích hoạt",
+      "note": "Bạn đang xác nhận consent MT5 trên máy này. Flow sẽ lưu consent cục bộ và chỉ mở khóa terminal khi bridge và account hợp lệ.",
       "ready": "Sẵn sàng lưu consent và quay lại chart.",
-      "needBoth": "Cần tick đủ hai checkbox trước khi tiếp tục.",
+      "needBoth": "Cần tick đủ hai ô trước khi tiếp tục.",
       "redirecting": "Đã lưu. Đang quay lại chart...",
-      "heroEyebrow": "Luồng xác nhận MT5",
-      "heroTitle": "Hoàn tất xác nhận rồi quay lại chart",
-      "heroDescription": "Màn hình này lưu consent trên máy hiện tại, hiển thị rõ các bước onboarding, và chỉ mở khóa terminal khi bridge cùng dữ liệu account đã sẵn sàng."
+      "heroEyebrow": "Luồng consent MT5",
+      "heroTitle": "Hoàn tất consent rồi quay lại chart",
+      "heroDescription": "Màn hình này lưu consent cục bộ, giữ các bước onboarding rõ ràng và chỉ mở khóa terminal khi bridge và tài khoản đã sẵn sàng."
     },
     "terms": {
-      "riskWarning": "Tôi đã đọc và chấp nhận rủi ro về vốn khi đồng bộ MT5 với hệ thống. Mọi quyết định giao dịch do tôi chịu trách nhiệm.",
+      "riskWarning": "Tôi đã đọc và chấp nhận rủi ro về vốn khi đồng bộ MT5 với hệ thống. Mọi quyết định giao dịch do tôi tự chịu trách nhiệm.",
       "accountSync": "Tôi đồng ý liên kết số tài khoản MT5 nội bộ với tài khoản Vivutrade để hệ thống theo dõi lệnh hợp lệ."
     },
     "buttons": {
       "openPage": "Mở trang kích hoạt",
-      "openGuide": "Mở hướng dẫn cài app",
-      "activate": "Xác nhận & Kích hoạt",
-      "backToChart": "Quay lại Chart",
-      "buyModule": "Mua Your MT5",
-      "viewPricing": "Xem bảng giá",
+      "openGuide": "Mở guide Your MT5",
+      "activate": "Xác nhận và kích hoạt",
+      "backToChart": "Quay lại chart",
+      "buyModule": "Đi tới pricing",
+      "viewPricing": "Xem pricing",
+      "openLogs": "Mở logs",
+      "restartBridge": "Khởi động lại bridge",
+      "openSettings": "Mở cài đặt desktop",
       "saving": "Đang lưu...",
       "saved": "Đã lưu"
     },
     "gating": {
       "purchaseTitle": "Tài khoản này chưa mua module Your MT5",
-      "purchaseBody": "Hãy mua module ở trang bảng giá trước. Sau khi mua xong, quay lại đây để hoàn tất onboarding bridge và bước consent pháp lý.",
+      "purchaseBody": "Hãy mua module ở trang pricing trước. Sau khi mua xong, quay lại guide để cài bridge và hoàn tất consent pháp lý.",
       "activationBlocked": "Bước kích hoạt này chỉ mở sau khi tài khoản hiện tại đã mua module Your MT5."
     },
-    "successMessage": "Consent MT5 đã được lưu. Đang quay lại chart..."
+    "native": {
+      "waitingLoginTitle": "Desktop app đang chờ đăng nhập",
+      "waitingLoginBody": "Hãy đăng nhập Vivutrade trong desktop app để ứng dụng lấy access token và khởi động native bridge.",
+      "startingTitle": "Desktop bridge đang khởi động",
+      "startingBody": "Desktop app đang mở native bridge. Hãy giữ MT5 mở trên máy này và chờ trong giây lát.",
+      "errorTitle": "Desktop bridge cần được xử lý",
+      "errorBody": "Desktop app báo bridge đang lỗi. Hãy mở logs hoặc khởi động lại bridge trước khi thử lại flow kích hoạt.",
+      "waitingMt5Title": "Bridge đang chạy, đang chờ MT5",
+      "waitingMt5Body": "Bridge đã online nhưng dữ liệu MT5 chưa tới. Hãy mở MT5 trên máy này và giữ đăng nhập.",
+      "waitingAccountTitle": "Đang chờ dữ liệu tài khoản",
+      "waitingAccountBody": "Bridge đã online nhưng terminal chưa nhận được identity của tài khoản. Hãy đợi MT5 đồng bộ xong.",
+      "activeTitle": "Desktop bridge đang hoạt động",
+      "activeBody": "Bridge cục bộ đang chạy và tài khoản có thể tiếp tục flow consent MT5."
+    },
+    "successMessage": "Đã lưu consent MT5. Đang quay lại chart..."
   }
 }
