@@ -27,29 +27,29 @@ export default async function YourMt5GuidePage({ params }: PageProps) {
     const steps = isVi
         ? [
               'Tải và cài app Vivutrade Desktop Native trên máy Windows đang chạy MT5.',
-              'Mở app và đăng nhập đúng tài khoản Vivutrade đã mua module Your MT5.',
+              'Mở app và đăng nhập bằng đúng tài khoản Vivutrade đã mua module Your MT5.',
               'Mở MT5 local trên cùng máy, rồi đăng nhập account giao dịch.',
-              'Quay lại web trong app để kiểm tra bridge online và account đã được nhận diện.',
+              'Quay lại web trong app để kiểm tra native bridge đang online và account đã được nhận diện.',
               'Mở bước kích hoạt MT5, xác nhận consent, rồi quay lại chart để mở khóa terminal.',
           ]
         : [
               'Download and install the Vivutrade Desktop Native app on the Windows machine that runs MT5.',
               'Open the app and sign in with the Vivutrade account that purchased the Your MT5 module.',
               'Open local MT5 on the same machine and sign in to the trading account.',
-              'Return to the web view inside the app and confirm bridge online plus account detection.',
+              'Return to the web view inside the app and confirm the native bridge is online plus account detection.',
               'Open MT5 activation, complete consent, then return to the chart to unlock the terminal.',
           ];
 
     const faq = isVi
         ? [
               ['Tôi đã mua module nhưng terminal vẫn bị khóa?', 'Đăng nhập lại trong desktop app bằng đúng tài khoản vừa mua module. Entitlement hiện đọc theo module `your_mt5` của account hiện tại.'],
-              ['Cần cài gì trên máy user?', 'Chỉ cần app Vivutrade Desktop Native và MT5 local. Bridge đã được đóng gói sẵn trong app native.'],
+              ['Cần cài gì trên máy user?', 'Chỉ cần app Vivutrade Desktop Native và MT5 local. Native bridge đã được đóng gói sẵn trong app native.'],
               ['Bridge online rồi nhưng chưa thấy account?', 'Mở MT5 trên đúng máy, đăng nhập account, chờ vài giây để account payload được gửi về web.'],
               ['Khi nào cần mở log?', 'Khi app báo bridge error hoặc web không thấy bridge/account sau khi bạn đã login MT5.'],
           ]
         : [
               ['I bought the module but the terminal is still locked.', 'Sign in again inside the desktop app with the same account that purchased the module. Entitlements now follow the `your_mt5` module on the current account.'],
-              ['What does the user need to install?', 'Only the Vivutrade Desktop Native app and local MT5. The bridge is already bundled in the native app.'],
+              ['What does the user need to install?', 'Only the Vivutrade Desktop Native app and local MT5. The native bridge is already bundled in the app.'],
               ['The bridge is online but the account is still missing.', 'Open MT5 on the same machine, sign in to the account, and wait a few seconds for the account payload to reach the web app.'],
               ['When should I open logs?', 'Open logs when the app reports a bridge error or the web view still cannot detect bridge/account after MT5 login.'],
           ];
@@ -68,7 +68,7 @@ export default async function YourMt5GuidePage({ params }: PageProps) {
                     </h1>
                     <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
                         {isVi
-                            ? 'Trang này là đích đến sau khi mua module Your MT5. Nó gom đủ link tải app, các bước cài, cách dùng, FAQ và đường quay lại activation flow.'
+                            ? 'Trang này là đích đến sau khi mua module Your MT5. Nó gom đủ link tải app, các bước cài native bridge, cách dùng, FAQ và đường quay lại activation flow.'
                             : 'This is the post-purchase destination for the Your MT5 module. It gathers the native app download, installation steps, usage guidance, FAQ, and the way back to activation.'}
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
@@ -76,13 +76,19 @@ export default async function YourMt5GuidePage({ params }: PageProps) {
                             href={NATIVE_SETUP_DOWNLOAD}
                             className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:scale-[1.01] hover:bg-emerald-400"
                         >
-                            {isVi ? 'Tải app desktop native' : 'Download native desktop app'}
+                            {isVi ? 'Tai app desktop native' : 'Download native desktop app'}
                         </a>
                         <Link
                             href={`/${locale}/mt5-activation`}
                             className="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
                         >
                             {isVi ? 'Tiếp tục kích hoạt MT5' : 'Continue MT5 activation'}
+                        </Link>
+                        <Link
+                            href={`/${locale}/pricing`}
+                            className="inline-flex items-center rounded-2xl border border-white/10 bg-slate-900/70 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-900"
+                        >
+                            {isVi ? 'Xem pricing' : 'View pricing'}
                         </Link>
                         <Link
                             href={`/${locale}/faq`}
@@ -131,6 +137,12 @@ export default async function YourMt5GuidePage({ params }: PageProps) {
                                 {isVi
                                     ? 'Nếu user đã mua module nhưng app chưa nhận quyền, hãy đăng xuất rồi đăng nhập lại trong desktop app trước khi xử lý bridge hoặc MT5.'
                                     : 'If the user already purchased the module but the app still does not see the entitlement, sign out and sign back in inside the desktop app before troubleshooting bridge or MT5.'}
+                            </p>
+                            <p className="mt-3 text-sm leading-7 text-amber-50/90">
+                                {isVi ? 'Chưa mua module? ' : 'No module yet? '}
+                                <Link href={`/${locale}/pricing`} className="font-semibold text-amber-50 underline-offset-4 hover:underline">
+                                    {isVi ? 'Đi tới pricing' : 'Go to pricing'}
+                                </Link>
                             </p>
                         </div>
                     </div>

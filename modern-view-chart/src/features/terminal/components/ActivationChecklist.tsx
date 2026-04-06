@@ -105,50 +105,52 @@ export function ActivationChecklist() {
     }, []);
 
     const nativeBridgeStatus = String(desktopStatus?.bridgeStatus || '').trim();
-    const isNativeDesktop = Boolean(desktopStatus?.isNativeDesktop || window?.vivutradeDesktop?.isNativeDesktop);
+    const isNativeDesktop = Boolean(
+        desktopStatus?.isNativeDesktop || (typeof window !== 'undefined' && window.vivutradeDesktop?.isNativeDesktop)
+    );
 
     const nativeHint = useMemo(() => {
         if (!isNativeDesktop) return null;
 
-        if (nativeBridgeStatus === 'missing_access_token' || !desktopStatus?.hasAccessToken) {
-            return {
-                title: 'Desktop is waiting for your Vivutrade login',
-                body: 'Sign in inside this desktop app. The bridge will start automatically after the access token is detected.',
-            };
-        }
-        if (nativeBridgeStatus === 'starting') {
-            return {
-                title: 'Desktop bridge is starting',
-                body: 'Keep this app open for a moment while the local MT5 bridge boots.',
-            };
-        }
-        if (nativeBridgeStatus === 'error') {
-            return {
-                title: 'Desktop bridge needs attention',
-                body: 'Open the logs to inspect the local bridge error, then restart the bridge from this app.',
-            };
-        }
-        if (nativeBridgeStatus === 'running' && !isBridgeOnline) {
-            return {
-                title: 'Desktop bridge is running, waiting for MT5',
-                body: 'Open MT5 on this machine and sign in to your trading account so the web terminal can detect it.',
-            };
-        }
-        if (nativeBridgeStatus === 'running' && isBridgeOnline && !account) {
-            return {
-                title: 'Bridge is online, waiting for account data',
-                body: 'MT5 is connected but the account payload has not arrived yet. Keep MT5 open and wait for sync.',
-            };
-        }
         if (!hasYourMt5Module) {
             return {
                 title: t('gating.purchaseTitle'),
                 body: t('gating.purchaseBody'),
             };
         }
+        if (nativeBridgeStatus === 'missing_access_token' || !desktopStatus?.hasAccessToken) {
+            return {
+                title: t('native.waitingLoginTitle'),
+                body: t('native.waitingLoginBody'),
+            };
+        }
+        if (nativeBridgeStatus === 'starting') {
+            return {
+                title: t('native.startingTitle'),
+                body: t('native.startingBody'),
+            };
+        }
+        if (nativeBridgeStatus === 'error') {
+            return {
+                title: t('native.errorTitle'),
+                body: t('native.errorBody'),
+            };
+        }
+        if (nativeBridgeStatus === 'running' && !isBridgeOnline) {
+            return {
+                title: t('native.waitingMt5Title'),
+                body: t('native.waitingMt5Body'),
+            };
+        }
+        if (nativeBridgeStatus === 'running' && isBridgeOnline && !account) {
+            return {
+                title: t('native.waitingAccountTitle'),
+                body: t('native.waitingAccountBody'),
+            };
+        }
         return {
-            title: 'Desktop native path is active',
-            body: 'Bridge status is being read from the native app. Complete consent below to unlock the terminal.',
+            title: t('native.activeTitle'),
+            body: t('native.activeBody'),
         };
     }, [account, desktopStatus?.hasAccessToken, hasYourMt5Module, isBridgeOnline, isNativeDesktop, nativeBridgeStatus, t]);
 
@@ -187,14 +189,14 @@ export function ActivationChecklist() {
                                                     className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                                                 >
                                                     <FileText className="h-3.5 w-3.5" />
-                                                    Open Logs
+                                                    {t('buttons.openLogs')}
                                                 </button>
                                                 <button
                                                     onClick={() => window.vivutradeDesktop?.restartBridge?.()}
                                                     className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                                                 >
                                                     <RefreshCw className="h-3.5 w-3.5" />
-                                                    Restart Bridge
+                                                    {t('buttons.restartBridge')}
                                                 </button>
                                             </>
                                         )}
@@ -205,7 +207,7 @@ export function ActivationChecklist() {
                                                     className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                                                 >
                                                     <Settings2 className="h-3.5 w-3.5" />
-                                                    Open Desktop Settings
+                                                    {t('buttons.openSettings')}
                                                 </button>
                                                 <Link
                                                     href="/pricing"
