@@ -486,7 +486,10 @@
       "note": "You are confirming MT5 consent on this machine. The flow records local consent and only unlocks the terminal when bridge/account state is valid.",
       "ready": "Ready to save consent and return to chart.",
       "needBoth": "Check both boxes before continuing.",
-      "redirecting": "Saved. Returning to the chart..."
+      "redirecting": "Saved. Returning to the chart...",
+      "heroEyebrow": "MT5 consent flow",
+      "heroTitle": "Complete consent, then return to chart",
+      "heroDescription": "This screen records your consent locally, keeps onboarding steps visible, and unlocks the terminal only when bridge and account state are ready."
     },
     "terms": {
       "riskWarning": "I have read and accepted the capital risks when syncing MT5 with the system. All trading decisions are my responsibility.",
@@ -496,6 +499,7 @@
       "openPage": "Open Activation Page",
       "activate": "Confirm & Activate",
       "backToChart": "Back to Chart",
+      "viewPricing": "View Pricing",
       "saving": "Saving...",
       "saved": "Saved"
     },

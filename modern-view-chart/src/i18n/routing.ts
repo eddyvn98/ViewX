@@ -18,6 +18,7 @@ export const routing = defineRouting({
         '/landing': '/',
         '/methodology': '/methodology',
         '/mt5-activation': '/mt5-activation',
+        '/pricing': '/pricing',
         '/plan-updates/ai': '/plan-updates/ai',
         '/plan-updates/free': '/plan-updates/free',
         '/plan-updates/pro': '/plan-updates/pro',

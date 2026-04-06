@@ -1,5 +1,6 @@
 'use client';
 import type { HistoryDeal, Order, Position } from '@/lib/store/types';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { HistoryTable } from './HistoryTable';
 import { MobileHistoryTable } from './MobileHistoryTable';
@@ -50,6 +51,24 @@ export function TerminalTabs({
     const tabs: TerminalTab[] = ['positions', 'orders', 'history'];
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const hasAcceptedMt5Terms = useMarketStore((state) => state.hasAcceptedMt5Terms);
+    const [isNativeDesktop, setIsNativeDesktop] = useState(
+        () => typeof window !== 'undefined' && Boolean(window.vivutradeDesktop?.isNativeDesktop)
+    );
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.vivutradeDesktop) return;
+        window.vivutradeDesktop.getStatus?.()
+            .then((payload) => setIsNativeDesktop(Boolean(payload?.isNativeDesktop)))
+            .catch(() => undefined);
+        const unsubscribe = window.vivutradeDesktop.onStatus?.((payload) => {
+            setIsNativeDesktop(Boolean(payload?.isNativeDesktop));
+        });
+        return () => {
+            if (typeof unsubscribe === 'function') unsubscribe();
+        };
+    }, []);
+
+    const shouldShowActivationChecklist = !hasAcceptedMt5Terms && (isBridgeOnline || isNativeDesktop);
 
     return (
         <div
@@ -79,7 +98,7 @@ export function TerminalTabs({
                 delete window._terminalTouchStart;
             }}
         >
-            {isBridgeOnline && !hasAcceptedMt5Terms && <ActivationChecklist />}
+            {shouldShowActivationChecklist && <ActivationChecklist />}
             <div
                 className={cn('flex h-full w-full', forceExpanded && 'transition-transform duration-300 ease-out')}
                 style={

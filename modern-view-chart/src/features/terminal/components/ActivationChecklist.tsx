@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/routing';
 import { useMarketStore } from '@/lib/store';
 import type { AccountInfo } from '@/lib/store';
 import { buildMt5TermsStorageKey } from '@/lib/store/slices/ui-slice';
@@ -173,13 +173,21 @@ export function ActivationChecklist() {
                                             </>
                                         )}
                                         {(nativeBridgeStatus === 'missing_access_token' || !desktopStatus?.hasAccessToken) && (
-                                            <button
-                                                onClick={() => window.vivutradeDesktop?.openSettings?.()}
-                                                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
-                                            >
-                                                <Settings2 className="h-3.5 w-3.5" />
-                                                Open Desktop Settings
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={() => window.vivutradeDesktop?.openSettings?.()}
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                                                >
+                                                    <Settings2 className="h-3.5 w-3.5" />
+                                                    Open Desktop Settings
+                                                </button>
+                                                <Link
+                                                    href="/pricing"
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+                                                >
+                                                    {t('buttons.viewPricing')}
+                                                </Link>
+                                            </>
                                         )}
                                     </div>
                                 </div>
