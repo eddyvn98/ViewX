@@ -15,7 +15,7 @@ declare global {
 export const Terminal = memo(function Terminal({ forceExpanded = false }: { forceExpanded?: boolean }) {
     const {
         strategyEngineEnabled,
-        isProUser,
+        hasYourMt5Module,
         isBridgeOnline,
         visibleAccount,
         visiblePositions,
@@ -46,9 +46,9 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
 
             {!effectiveCollapsed && (
                 <div className="flex-1 flex flex-col min-h-0">
-                    {!isProUser ? (
+                    {!hasYourMt5Module ? (
                         <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-400 border-b border-amber-500/20 bg-amber-500/10">
-                            Terminal data is available for Pro. You can explore the layout in Free mode.
+                            Your MT5 terminal data is locked until this account purchases the `your_mt5` module.
                         </div>
                     ) : null}
 

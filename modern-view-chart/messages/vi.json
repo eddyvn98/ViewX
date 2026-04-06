@@ -463,7 +463,7 @@
     },
     "checklist": {
       "title": "Trạng thái sẵn sàng MT5",
-      "subtitle": "Chỉ mở trang kích hoạt khi bridge đang online và terminal chưa được mở khóa.",
+      "subtitle": "Hãy mua module trước, sau đó hoàn tất onboarding bridge và consent để mở khóa terminal.",
       "bridgeState": "Kết nối bridge đang là tín hiệu thật từ hệ thống.",
       "online": "Bridge online",
       "waiting": "Đang chờ bridge",
@@ -499,9 +499,15 @@
       "openPage": "Mở trang kích hoạt",
       "activate": "Xác nhận & Kích hoạt",
       "backToChart": "Quay lại Chart",
+      "buyModule": "Mua Your MT5",
       "viewPricing": "Xem bảng giá",
       "saving": "Đang lưu...",
       "saved": "Đã lưu"
+    },
+    "gating": {
+      "purchaseTitle": "Tài khoản này chưa mua module Your MT5",
+      "purchaseBody": "Hãy mua module ở trang bảng giá trước. Sau khi mua xong, quay lại đây để hoàn tất onboarding bridge và bước consent pháp lý.",
+      "activationBlocked": "Bước kích hoạt này chỉ mở sau khi tài khoản hiện tại đã mua module Your MT5."
     },
     "successMessage": "Consent MT5 đã được lưu. Đang quay lại chart..."
   }

@@ -19,7 +19,7 @@ type Mt5ModifyPayload = {
 
 export function useTerminalState(forceExpanded: boolean) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
-    const isProUser = getClientEntitlements().isPro;
+    const hasYourMt5Module = getClientEntitlements().hasYourMt5;
     const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
     const activeChartSource = useMarketStore((state) => {
@@ -34,10 +34,10 @@ export function useTerminalState(forceExpanded: boolean) {
 
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5';
     const account = useMarketStore((state) => state.accounts[accountSource] || state.accounts['MT5'] || null);
-    const visibleAccount = isProUser ? account : null;
-    const visiblePositions = isProUser ? positions : [];
-    const visibleOrders = isProUser ? orders : [];
-    const visibleHistory = isProUser ? history : [];
+    const visibleAccount = hasYourMt5Module ? account : null;
+    const visiblePositions = hasYourMt5Module ? positions : [];
+    const visibleOrders = hasYourMt5Module ? orders : [];
+    const visibleHistory = hasYourMt5Module ? history : [];
 
     const { sendMessage } = useWebSocket();
     const [
@@ -127,7 +127,7 @@ export function useTerminalState(forceExpanded: boolean) {
 
     return {
         strategyEngineEnabled,
-        isProUser,
+        hasYourMt5Module,
         isBridgeOnline,
         visibleAccount,
         visiblePositions,
