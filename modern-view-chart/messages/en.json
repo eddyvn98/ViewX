@@ -463,7 +463,7 @@
     },
     "checklist": {
       "title": "MT5 readiness",
-      "subtitle": "Open the activation page only when the bridge is online and the terminal is still locked.",
+      "subtitle": "Buy the module first, then complete bridge onboarding and consent to unlock the terminal.",
       "bridgeState": "Bridge status is read from the live store.",
       "online": "Bridge online",
       "waiting": "Waiting for bridge",
@@ -499,9 +499,15 @@
       "openPage": "Open Activation Page",
       "activate": "Confirm & Activate",
       "backToChart": "Back to Chart",
+      "buyModule": "Buy Your MT5",
       "viewPricing": "View Pricing",
       "saving": "Saving...",
       "saved": "Saved"
+    },
+    "gating": {
+      "purchaseTitle": "This account has not purchased the Your MT5 module",
+      "purchaseBody": "Buy the module on the pricing page first. After purchase, return here to finish bridge onboarding and legal consent.",
+      "activationBlocked": "This activation step is available only after the Your MT5 module has been purchased for the current account."
     },
     "successMessage": "MT5 consent saved. Returning to chart..."
   }

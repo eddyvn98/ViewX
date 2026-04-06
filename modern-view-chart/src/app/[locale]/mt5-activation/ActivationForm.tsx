@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useMarketStore } from '@/lib/store';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
 import type { AccountInfo } from '@/lib/store';
 import { buildMt5TermsStorageKey } from '@/lib/store/slices/ui-slice';
 import { ArrowRight, Check, ShieldAlert, ShieldCheck, Loader2 } from 'lucide-react';
@@ -30,6 +31,9 @@ export function ActivationForm() {
     const [riskAccepted, setRiskAccepted] = useState(false);
     const [accountAccepted, setAccountAccepted] = useState(false);
     const [submitState, setSubmitState] = useState<SubmitState>('idle');
+    const [hasYourMt5Module, setHasYourMt5Module] = useState(
+        () => typeof window !== 'undefined' && getClientEntitlements().hasYourMt5
+    );
 
     const activeChartSource = (() => {
         const tab = tabs[activeTabId];
@@ -43,7 +47,23 @@ export function ActivationForm() {
         [account]
     );
 
-    const canActivate = riskAccepted && accountAccepted && submitState !== 'saving';
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const syncEntitlements = () => setHasYourMt5Module(getClientEntitlements().hasYourMt5);
+        syncEntitlements();
+        window.addEventListener('storage', syncEntitlements);
+        window.addEventListener('focus', syncEntitlements);
+        window.addEventListener('auth-changed', syncEntitlements);
+        window.addEventListener('auth-state-changed', syncEntitlements);
+        return () => {
+            window.removeEventListener('storage', syncEntitlements);
+            window.removeEventListener('focus', syncEntitlements);
+            window.removeEventListener('auth-changed', syncEntitlements);
+            window.removeEventListener('auth-state-changed', syncEntitlements);
+        };
+    }, []);
+
+    const canActivate = hasYourMt5Module && riskAccepted && accountAccepted && submitState !== 'saving';
     const isSaving = submitState === 'saving';
     const isSaved = submitState === 'saved';
 
@@ -66,6 +86,8 @@ export function ActivationForm() {
 
     const helperText = isSaved
         ? t('page.redirecting')
+        : !hasYourMt5Module
+            ? t('gating.activationBlocked')
         : canActivate
             ? t('page.ready')
             : t('page.needBoth');
@@ -93,6 +115,12 @@ export function ActivationForm() {
                 <div className="mb-5 rounded-2xl border border-white/5 bg-black/20 p-4 text-sm text-slate-300">
                     {t('page.note')}
                 </div>
+
+                {!hasYourMt5Module ? (
+                    <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+                        {t('gating.activationBlocked')}
+                    </div>
+                ) : null}
 
                 <div className="space-y-4">
                     <label
@@ -178,22 +206,22 @@ export function ActivationForm() {
                                     ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 hover:scale-[1.02] active:scale-95'
                                     : 'cursor-not-allowed bg-white/5 text-muted-foreground/50 opacity-50'}`}
                         >
-                            {isSaving ? (
+                                {isSaving ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     {t('buttons.saving')}
                                 </>
-                            ) : isSaved ? (
+                                ) : isSaved ? (
                                 <>
                                     {t('buttons.saved')}
                                     <ArrowRight className="h-4 w-4" />
                                 </>
-                            ) : (
-                                <>
-                                    {t('buttons.activate')}
-                                    <ArrowRight className="h-4 w-4" />
-                                </>
-                            )}
+                                ) : (
+                                    <>
+                                        {t('buttons.activate')}
+                                        <ArrowRight className="h-4 w-4" />
+                                    </>
+                                )}
                         </button>
                     </div>
                 </div>

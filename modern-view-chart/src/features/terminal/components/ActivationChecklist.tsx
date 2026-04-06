@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
 import { useMarketStore } from '@/lib/store';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
 import type { AccountInfo } from '@/lib/store';
 import { buildMt5TermsStorageKey } from '@/lib/store/slices/ui-slice';
 import { CheckCircle2, CircleAlert, ChevronRight, Wallet, Wifi, ShieldAlert, MonitorSmartphone, RefreshCw, FileText, Settings2 } from 'lucide-react';
@@ -45,6 +46,9 @@ export function ActivationChecklist() {
     const tabs = useMarketStore((state) => state.tabs);
     const accounts = useMarketStore((state) => state.accounts);
     const [desktopStatus, setDesktopStatus] = useState<NativeDesktopStatus | null>(null);
+    const [hasYourMt5Module, setHasYourMt5Module] = useState(
+        () => typeof window !== 'undefined' && getClientEntitlements().hasYourMt5
+    );
 
     const activeChartSource = (() => {
         const tab = tabs[activeTabId];
@@ -84,6 +88,22 @@ export function ActivationChecklist() {
         };
     }, []);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const syncEntitlements = () => setHasYourMt5Module(getClientEntitlements().hasYourMt5);
+        syncEntitlements();
+        window.addEventListener('storage', syncEntitlements);
+        window.addEventListener('focus', syncEntitlements);
+        window.addEventListener('auth-changed', syncEntitlements);
+        window.addEventListener('auth-state-changed', syncEntitlements);
+        return () => {
+            window.removeEventListener('storage', syncEntitlements);
+            window.removeEventListener('focus', syncEntitlements);
+            window.removeEventListener('auth-changed', syncEntitlements);
+            window.removeEventListener('auth-state-changed', syncEntitlements);
+        };
+    }, []);
+
     const nativeBridgeStatus = String(desktopStatus?.bridgeStatus || '').trim();
     const isNativeDesktop = Boolean(desktopStatus?.isNativeDesktop || window?.vivutradeDesktop?.isNativeDesktop);
 
@@ -120,11 +140,17 @@ export function ActivationChecklist() {
                 body: 'MT5 is connected but the account payload has not arrived yet. Keep MT5 open and wait for sync.',
             };
         }
+        if (!hasYourMt5Module) {
+            return {
+                title: t('gating.purchaseTitle'),
+                body: t('gating.purchaseBody'),
+            };
+        }
         return {
             title: 'Desktop native path is active',
             body: 'Bridge status is being read from the native app. Complete consent below to unlock the terminal.',
         };
-    }, [account, desktopStatus?.hasAccessToken, isBridgeOnline, isNativeDesktop, nativeBridgeStatus]);
+    }, [account, desktopStatus?.hasAccessToken, hasYourMt5Module, isBridgeOnline, isNativeDesktop, nativeBridgeStatus, t]);
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/65 p-4 backdrop-blur-md">
@@ -251,13 +277,23 @@ export function ActivationChecklist() {
                     <p className="max-w-sm text-xs leading-relaxed text-slate-400">
                         {t('checklist.footer')}
                     </p>
-                    <button
-                        onClick={() => router.push('/mt5-activation')}
-                        className="inline-flex items-center gap-2 rounded-xl bg-yellow-500 px-5 py-2.5 text-sm font-bold text-yellow-950 transition-all hover:scale-[1.02] hover:bg-yellow-400 active:scale-95"
-                    >
-                        {t('buttons.openPage')}
-                        <ChevronRight className="h-4 w-4" />
-                    </button>
+                    {hasYourMt5Module ? (
+                        <button
+                            onClick={() => router.push('/mt5-activation')}
+                            className="inline-flex items-center gap-2 rounded-xl bg-yellow-500 px-5 py-2.5 text-sm font-bold text-yellow-950 transition-all hover:scale-[1.02] hover:bg-yellow-400 active:scale-95"
+                        >
+                            {t('buttons.openPage')}
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    ) : (
+                        <Link
+                            href="/pricing"
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.02] hover:bg-emerald-400 active:scale-95"
+                        >
+                            {t('buttons.buyModule')}
+                            <ChevronRight className="h-4 w-4" />
+                        </Link>
+                    )}
                 </div>
             </div>
         </div>
