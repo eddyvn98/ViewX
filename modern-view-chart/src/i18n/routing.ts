@@ -27,6 +27,7 @@ export const routing = defineRouting({
             en: '/premium-ai',
             vi: '/goi-cao-cap'
         },
+        '/your-mt5-guide': '/your-mt5-guide',
         '/strategy/dashboard': '/strategy/dashboard',
         '/terms': '/terms'
     }

@@ -497,6 +497,7 @@
     },
     "buttons": {
       "openPage": "Open Activation Page",
+      "openGuide": "Open Setup Guide",
       "activate": "Confirm & Activate",
       "backToChart": "Back to Chart",
       "buyModule": "Buy Your MT5",

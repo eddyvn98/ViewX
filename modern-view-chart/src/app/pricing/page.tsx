@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { useUserPlan } from '@/hooks/use-user-plan';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
+import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 import {
     Check,
@@ -9,12 +11,7 @@ import {
     Zap,
     Shield,
     Sparkles,
-    Bot,
-    TrendingUp,
-    Bell,
-    Globe,
-    ArrowRight,
-    Crown
+    Bot
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -35,6 +32,23 @@ const FEATURES = [
 
 export default function PricingPage() {
     const { plan, isAuthenticated } = useUserPlan();
+    const [hasYourMt5Module, setHasYourMt5Module] = React.useState(false);
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const syncEntitlements = () => setHasYourMt5Module(getClientEntitlements().hasYourMt5);
+        syncEntitlements();
+        window.addEventListener('storage', syncEntitlements);
+        window.addEventListener('focus', syncEntitlements);
+        window.addEventListener('auth-changed', syncEntitlements);
+        window.addEventListener('auth-state-changed', syncEntitlements);
+        return () => {
+            window.removeEventListener('storage', syncEntitlements);
+            window.removeEventListener('focus', syncEntitlements);
+            window.removeEventListener('auth-changed', syncEntitlements);
+            window.removeEventListener('auth-state-changed', syncEntitlements);
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-primary/30 py-20 px-4 overflow-hidden relative">
@@ -154,6 +168,34 @@ export default function PricingPage() {
                         </Button>
                     </div>
                 </div>
+
+                {hasYourMt5Module ? (
+                    <div className="mb-20 rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-6 text-center shadow-xl shadow-emerald-500/10">
+                        <div className="text-sm font-black uppercase tracking-[0.28em] text-emerald-300">
+                            Your MT5
+                        </div>
+                        <h2 className="mt-3 text-2xl font-black tracking-tight text-white md:text-3xl">
+                            Module Ä‘Ã£ sáºµn sÃ ng. MÃ´Ì‰ hÆ°á»›ng dáº«n cÃ i app native vÃ kêÌt ná»‘i MT5.
+                        </h2>
+                        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-emerald-50/85">
+                            Sau khi mua xong module, user nÃªn Ä‘i tiáº¿p vÃ o trang hÆ°á»›ng dáº«n nÃ y Ä‘á»ƒ táº£i app, xem cÃ¡c bÆ°á»›c cÃ i Ä‘áº·t, FAQ vÃ quay láº¡i activation flow.
+                        </p>
+                        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                            <Link
+                                href="/your-mt5-guide"
+                                className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:scale-[1.01] hover:bg-emerald-400"
+                            >
+                                Má»Ÿ hÆ°á»›ng dáº«n Your MT5
+                            </Link>
+                            <Link
+                                href="/mt5-activation"
+                                className="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-white transition hover:bg-white/10"
+                            >
+                                Tiáº¿p tá»¥c kÃ­ch hoáº¡t
+                            </Link>
+                        </div>
+                    </div>
+                ) : null}
 
                 {/* Detailed Comparison */}
                 <div className="hidden md:block">

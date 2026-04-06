@@ -497,6 +497,7 @@
     },
     "buttons": {
       "openPage": "Mở trang kích hoạt",
+      "openGuide": "Mở hướng dẫn cài app",
       "activate": "Xác nhận & Kích hoạt",
       "backToChart": "Quay lại Chart",
       "buyModule": "Mua Your MT5",
