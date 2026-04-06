@@ -453,5 +453,52 @@
         "applyFailed": "Không thể tự động áp dụng khuyến nghị."
       }
     }
+  },
+  "Mt5Activation": {
+    "title": "Kích hoạt kết nối MT5",
+    "subtitle": "Xác nhận pháp lý và quản trị rủi ro để hoàn tất đồng bộ dữ liệu giao dịch",
+    "labels": {
+      "riskManagement": "Rủi ro & Quản trị vốn",
+      "accountSync": "Đồng bộ trạng thái"
+    },
+    "checklist": {
+      "title": "Trạng thái sẵn sàng MT5",
+      "subtitle": "Chỉ mở trang kích hoạt khi bridge đang online và terminal chưa được mở khóa.",
+      "bridgeState": "Kết nối bridge đang là tín hiệu thật từ hệ thống.",
+      "online": "Bridge online",
+      "waiting": "Đang chờ bridge",
+      "accountLinked": "Tài khoản đã có dữ liệu",
+      "accountMissing": "Chưa thấy tài khoản",
+      "accountReady": "Dữ liệu account đang được đọc từ store hiện tại.",
+      "accountPending": "Terminal sẽ tự mở khóa sau khi account được sync.",
+      "mt5Account": "MT5 account",
+      "binanceAccount": "Binance demo",
+      "consentSaved": "Consent đã lưu",
+      "consentRequired": "Cần consent",
+      "consentReady": "Bạn có thể quay lại chart để tiếp tục làm việc.",
+      "consentPending": "Cần tick đủ hai checkbox để lưu consent.",
+      "footer": "Checklist này phản ánh đúng trạng thái hiện tại của terminal. Nó không giả định rằng tài khoản đã sẵn sàng nếu store chưa có dữ liệu.",
+      "done": "XONG",
+      "required": "CẦN LÀM"
+    },
+    "page": {
+      "kicker": "Activation step",
+      "note": "Bạn đang ở bước xác nhận consent cho MT5. Flow này ghi nhận trên máy hiện tại và chỉ mở khóa terminal khi bridge/account state phù hợp.",
+      "ready": "Sẵn sàng lưu consent và quay lại chart.",
+      "needBoth": "Cần tick đủ hai checkbox trước khi tiếp tục.",
+      "redirecting": "Đã lưu. Đang quay lại chart..."
+    },
+    "terms": {
+      "riskWarning": "Tôi đã đọc và chấp nhận rủi ro về vốn khi đồng bộ MT5 với hệ thống. Mọi quyết định giao dịch do tôi chịu trách nhiệm.",
+      "accountSync": "Tôi đồng ý liên kết số tài khoản MT5 nội bộ với tài khoản Vivutrade để hệ thống theo dõi lệnh hợp lệ."
+    },
+    "buttons": {
+      "openPage": "Mở trang kích hoạt",
+      "activate": "Xác nhận & Kích hoạt",
+      "backToChart": "Quay lại Chart",
+      "saving": "Đang lưu...",
+      "saved": "Đã lưu"
+    },
+    "successMessage": "Consent MT5 đã được lưu. Đang quay lại chart..."
   }
 }

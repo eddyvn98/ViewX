@@ -1,0 +1,53 @@
+{
+  "name": "vivutrade-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.cjs",
+  "description": "Vivutrade native desktop shell",
+  "author": "VivuTrade",
+  "scripts": {
+    "clean:dist": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$out = '../public/downloads/desktop-native'; if (Test-Path $out) { @('win-unpacked','*.7z','*.__uninstaller.exe','builder-debug.yml','builder-effective-config.yaml') | ForEach-Object { Get-ChildItem $out -Filter $_ -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } }\"",
+    "start": "electron .",
+    "prepare:icon": "node scripts/generate-icon.cjs",
+    "prebuild:bridge": "powershell -ExecutionPolicy Bypass -File scripts/compile-bridge.ps1",
+    "dist": "npm run clean:dist && npm run prebuild:bridge && npm run prepare:icon && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^26.8.1",
+    "png-to-ico": "^2.1.8"
+  },
+  "build": {
+    "compression": "store",
+    "appId": "vn.vivutrade.desktop.native.v2",
+    "productName": "Vivutrade Desktop Native",
+    "executableName": "VivutradeDesktopNative",
+    "directories": {
+      "output": "../public/downloads/desktop-native"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "bridge-dist",
+        "to": "bridge",
+        "filter": [
+          "mt5_bridge.exe"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false,
+      "icon": "assets/vivutrade-logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

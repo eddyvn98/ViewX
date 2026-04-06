@@ -7,6 +7,8 @@ import { MobileOrdersTable } from './MobileOrdersTable';
 import { MobilePositionsTable } from './MobilePositionsTable';
 import { OrdersTable } from './OrdersTable';
 import { PositionsTable } from './PositionsTable';
+import { ActivationChecklist } from './ActivationChecklist';
+import { useMarketStore } from '@/lib/store';
 
 declare global {
     interface Window {
@@ -46,6 +48,8 @@ export function TerminalTabs({
     strategyEngineEnabled,
 }: TerminalTabsProps) {
     const tabs: TerminalTab[] = ['positions', 'orders', 'history'];
+    const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
+    const hasAcceptedMt5Terms = useMarketStore((state) => state.hasAcceptedMt5Terms);
 
     return (
         <div
@@ -75,6 +79,7 @@ export function TerminalTabs({
                 delete window._terminalTouchStart;
             }}
         >
+            {isBridgeOnline && !hasAcceptedMt5Terms && <ActivationChecklist />}
             <div
                 className={cn('flex h-full w-full', forceExpanded && 'transition-transform duration-300 ease-out')}
                 style={

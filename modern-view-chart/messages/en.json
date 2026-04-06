@@ -453,5 +453,52 @@
         "applyFailed": "Failed to apply recommendation automatically."
       }
     }
+  },
+  "Mt5Activation": {
+    "title": "Activate MT5 Connection",
+    "subtitle": "Confirm legal and risk management terms to finalize trade data synchronization",
+    "labels": {
+      "riskManagement": "Risk & capital management",
+      "accountSync": "Account sync status"
+    },
+    "checklist": {
+      "title": "MT5 readiness",
+      "subtitle": "Open the activation page only when the bridge is online and the terminal is still locked.",
+      "bridgeState": "Bridge status is read from the live store.",
+      "online": "Bridge online",
+      "waiting": "Waiting for bridge",
+      "accountLinked": "Account data detected",
+      "accountMissing": "No account detected",
+      "accountReady": "The current store already contains account data.",
+      "accountPending": "The terminal will unlock once an account is synced.",
+      "mt5Account": "MT5 account",
+      "binanceAccount": "Binance demo",
+      "consentSaved": "Consent saved",
+      "consentRequired": "Consent required",
+      "consentReady": "You can return to the chart and continue working.",
+      "consentPending": "You need both checkboxes checked before saving consent.",
+      "footer": "This checklist reflects the live terminal state. It does not claim the account is ready if the store has no data.",
+      "done": "DONE",
+      "required": "REQUIRED"
+    },
+    "page": {
+      "kicker": "Activation step",
+      "note": "You are confirming MT5 consent on this machine. The flow records local consent and only unlocks the terminal when bridge/account state is valid.",
+      "ready": "Ready to save consent and return to chart.",
+      "needBoth": "Check both boxes before continuing.",
+      "redirecting": "Saved. Returning to the chart..."
+    },
+    "terms": {
+      "riskWarning": "I have read and accepted the capital risks when syncing MT5 with the system. All trading decisions are my responsibility.",
+      "accountSync": "I agree to link my internal MT5 account number with my Vivutrade account for valid trade tracking."
+    },
+    "buttons": {
+      "openPage": "Open Activation Page",
+      "activate": "Confirm & Activate",
+      "backToChart": "Back to Chart",
+      "saving": "Saving...",
+      "saved": "Saved"
+    },
+    "successMessage": "MT5 consent saved. Returning to chart..."
   }
 }

@@ -172,6 +172,11 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             free_margin: Number((data.account as Record<string, unknown>).free_margin) || 0,
                             margin_level: Number((data.account as Record<string, unknown>).margin_level) || 0,
                             profit: Number((data.account as Record<string, unknown>).profit) || 0,
+                            login: (data.account as Record<string, unknown>).login ? String((data.account as Record<string, unknown>).login) : undefined,
+                            server: (data.account as Record<string, unknown>).server ? String((data.account as Record<string, unknown>).server) : undefined,
+                            name: (data.account as Record<string, unknown>).name ? String((data.account as Record<string, unknown>).name) : undefined,
+                            company: (data.account as Record<string, unknown>).company ? String((data.account as Record<string, unknown>).company) : undefined,
+                            currency: (data.account as Record<string, unknown>).currency ? String((data.account as Record<string, unknown>).currency) : undefined,
                         });
                     }
                     if (data.positions && Array.isArray(data.positions)) {

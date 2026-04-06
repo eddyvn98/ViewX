@@ -7,6 +7,39 @@ export type StrategyPanelView = 'build' | 'list' | 'signals' | 'ai_chat';
 export type SignalHistoryRange = 'day' | 'week' | 'month';
 export type MarketSourceTab = 'ALL' | 'BINANCE' | 'MT5';
 
+const MT5_TERMS_STORAGE_PREFIX = 'mt5-consent:v1';
+
+type Mt5TermsScope = {
+    userId?: string | null;
+    accountId?: string | null;
+};
+
+function readStoredAuthUserId() {
+    if (typeof window === 'undefined') return '';
+    try {
+        const raw = localStorage.getItem('auth_user') || '';
+        if (!raw) return '';
+        const parsed = JSON.parse(raw) as { _id?: string; id?: string; username?: string; email?: string };
+        return String(parsed._id || parsed.id || parsed.username || parsed.email || '').trim();
+    } catch {
+        return '';
+    }
+}
+
+export function buildMt5TermsStorageKey(scope?: Mt5TermsScope) {
+    const userId = String(scope?.userId || readStoredAuthUserId() || 'anonymous').trim();
+    const accountId = String(scope?.accountId || '').trim();
+    if (accountId) {
+        return `${MT5_TERMS_STORAGE_PREFIX}:user:${userId}:account:${accountId}`;
+    }
+    return `${MT5_TERMS_STORAGE_PREFIX}:user:${userId}`;
+}
+
+function readMt5TermsAccepted(scope?: Mt5TermsScope) {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(buildMt5TermsStorageKey(scope)) === 'true';
+}
+
 export interface StrategyBuilderDraft {
     editingStrategyId: string | null;
     name: string;
@@ -53,6 +86,7 @@ export interface UISlice {
     signalHistoryRange: SignalHistoryRange;
     marketListSearchQuery: string;
     marketListSourceTab: MarketSourceTab;
+    hasAcceptedMt5Terms: boolean;
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
@@ -81,6 +115,8 @@ export interface UISlice {
     setSignalHistoryRange: (range: SignalHistoryRange) => void;
     setMarketListSearchQuery: (query: string) => void;
     setMarketListSourceTab: (tab: MarketSourceTab) => void;
+    setHasAcceptedMt5Terms: (accepted: boolean, storageKey?: string) => void;
+    syncHasAcceptedMt5Terms: (storageKey?: string) => void;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
@@ -106,6 +142,7 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     signalHistoryRange: 'day',
     marketListSearchQuery: '',
     marketListSourceTab: 'ALL',
+    hasAcceptedMt5Terms: readMt5TermsAccepted(),
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -166,4 +203,16 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setSignalHistoryRange: (range) => set({ signalHistoryRange: range }),
     setMarketListSearchQuery: (query) => set({ marketListSearchQuery: query }),
     setMarketListSourceTab: (tab) => set({ marketListSourceTab: tab }),
+    setHasAcceptedMt5Terms: (accepted, storageKey) => {
+        set({ hasAcceptedMt5Terms: accepted });
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(storageKey || buildMt5TermsStorageKey(), accepted ? 'true' : 'false');
+        }
+    },
+    syncHasAcceptedMt5Terms: (storageKey) => {
+        const accepted = typeof window !== 'undefined'
+            ? localStorage.getItem(storageKey || buildMt5TermsStorageKey()) === 'true'
+            : false;
+        set((state) => state.hasAcceptedMt5Terms === accepted ? state : { hasAcceptedMt5Terms: accepted });
+    },
 });
