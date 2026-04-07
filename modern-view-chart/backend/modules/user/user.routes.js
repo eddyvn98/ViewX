@@ -36,6 +36,20 @@ router.route("/telegram/link/start").post(telegramTemporarilyDisabled);
 router.route("/telegram/preferences").put(telegramTemporarilyDisabled);
 router.route("/telegram/test").post(telegramTemporarilyDisabled);
 router.route("/telegram/unlink").post(telegramTemporarilyDisabled);
+router.route("/modules").get(checkLogin, User.getUserModules).put(checkLogin, User.upsertUserModules);
+router.route("/module-access").get(checkLogin, User.getMyModuleStatus);
+router.route("/module-trial").post(checkLogin, User.startMyModuleTrial);
+router.route("/module-orders").get(checkLogin, User.listMyModuleOrders).post(checkLogin, User.createMyModuleOrder);
+router.route("/module-orders/:orderId/cancel").post(checkLogin, User.cancelMyModuleOrder);
+router.route("/module-ai-credits").get(checkLogin, User.getMyAiCredits);
+router.route("/module-payment/sepay").post(User.sepayWebhook);
+router.route("/admin/module-orders").get(checkLogin, User.listAdminModuleOrders);
+router.route("/admin/module-orders/stats").get(checkLogin, User.getAdminModuleStats);
+router.route("/admin/module-orders/:orderId/confirm").post(checkLogin, User.confirmAdminModuleOrder);
+router.route("/admin/module-orders/:orderId/reject").post(checkLogin, User.rejectAdminModuleOrder);
+router.route("/admin/module-members").get(checkLogin, User.listAdminModuleMembers);
+router.route("/admin/module-members/:userId/extend").post(checkLogin, User.adminExtendMemberModule);
+router.route("/admin/module-members/:userId/expire").post(checkLogin, User.adminExpireMemberModule);
 
 router.route("/data").post(async (req, res) => {
   const { symbol, interval } = req.body;

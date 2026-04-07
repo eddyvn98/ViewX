@@ -1,0 +1,34 @@
+  [AI API] ⚠️ GEMINI_API_KEY not found. Falling back to Bridge Mode.
+{"ts":"2026-04-07T03:06:08.119Z","level":"warn","event":"db.disconnected"}
+{"ts":"2026-04-07T03:06:08.119Z","level":"error","event":"db.connect.initial_failed","error":"connect ECONNREFUSED 127.0.0.1:27017"}
+{"ts":"2026-04-07T03:06:08.119Z","level":"error","event":"db.connection.error","error":"connect ECONNREFUSED 127.0.0.1:27017"}
+{"ts":"2026-04-07T03:08:18.205Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":120068,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:09:03.213Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":180084,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:11:18.263Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":300127,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:12:03.285Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":360155,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:14:18.345Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":480209,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:15:03.365Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":540236,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:17:18.411Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":660274,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:18:03.436Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":720307,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:20:18.492Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":840356,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:21:03.526Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":900397,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:23:18.600Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":1020464,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:24:03.621Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":1080492,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:26:18.719Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":1200583,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:27:03.746Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":1260617,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:29:18.823Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":1380687,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:30:03.832Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":1440703,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:32:18.926Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":1560790,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:33:03.965Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":1620836,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:35:19.009Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":1740873,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:36:04.019Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":1800890,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:38:19.089Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":1920953,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:39:04.108Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":1980979,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:41:19.186Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":2101049,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:42:04.214Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":2161085,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:44:19.280Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":2281144,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:45:04.314Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":2341185,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:47:19.380Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":2461244,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:48:04.392Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":2521263,"threshold_ms":180000}}
+{"ts":"2026-04-07T03:50:19.441Z","level":"warn","event":"ops.alert.raised","type":"db_disconnected","details":{"state":"disconnected","disconnected_ms":2641305,"threshold_ms":120000,"last_error":"connect ECONNREFUSED 127.0.0.1:27017"}}
+{"ts":"2026-04-07T03:51:04.453Z","level":"warn","event":"ops.alert.raised","type":"bridge_offline","details":{"offline_ms":2701324,"threshold_ms":180000}}

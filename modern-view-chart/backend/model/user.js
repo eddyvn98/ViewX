@@ -26,6 +26,31 @@ const telegramSchema = new Schema(
   { _id: false },
 );
 
+const subscriptionSchema = new Schema(
+  {
+    plan: { type: String, default: "free" },
+    modules: { type: [String], default: [] },
+    status: { type: String, default: "inactive" },
+    validUntil: { type: Date, default: null },
+    trialEndsAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
+const moduleAccessSchema = new Schema(
+  {
+    module: { type: String, required: true },
+    trialStartedAt: { type: Date, default: null },
+    trialEndsAt: { type: Date, default: null },
+    activeUntil: { type: Date, default: null },
+    status: { type: String, default: "inactive" },
+    source: { type: String, default: "" },
+    lastOrderCode: { type: String, default: "" },
+    updatedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
 const schema = new Schema(
   {
     username: {
@@ -75,6 +100,30 @@ const schema = new Schema(
     telegram: {
       type: telegramSchema,
       default: () => ({}),
+    },
+    plan: {
+      type: String,
+      default: "free",
+    },
+    modules: {
+      type: [String],
+      default: [],
+    },
+    subscription: {
+      type: subscriptionSchema,
+      default: () => ({}),
+    },
+    moduleAccess: {
+      type: [moduleAccessSchema],
+      default: [],
+    },
+    aiAssistantCredits: {
+      type: Number,
+      default: 0,
+    },
+    aiAssistantCreditsUpdatedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

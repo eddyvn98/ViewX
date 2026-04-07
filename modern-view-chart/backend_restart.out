@@ -1,0 +1,9 @@
+
+> vivutrade@0.1.0 server:start
+> node backend/index.js
+
+[dotenv@17.2.3] injecting env (28) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Config] Loaded env from: .env
+🔌 Starting Binance Global Ticker Stream...
+{"ts":"2026-04-07T03:06:03.129Z","level":"info","event":"ops.alert.monitor_started","enabled":true,"scanIntervalMs":15000,"bridgeOfflineMs":180000,"dbDisconnectedMs":120000,"wsDropSpikeWindowMs":60000,"wsDropSpikeDelta":30,"cooldownMs":180000,"webhookUrl":""}
+{"ts":"2026-04-07T03:06:03.133Z","level":"info","event":"server.started","port":8091}

@@ -155,9 +155,9 @@ export function ActivationChecklist() {
     }, [account, desktopStatus?.hasAccessToken, hasYourMt5Module, isBridgeOnline, isNativeDesktop, nativeBridgeStatus, t]);
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/65 p-4 backdrop-blur-md">
-            <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-yellow-500/20 bg-slate-950/95 shadow-2xl">
-                <div className="border-b border-yellow-500/15 bg-gradient-to-r from-yellow-500/10 to-transparent p-5">
+        <div className="relative z-20 mx-auto w-full max-w-5xl px-3 pt-3">
+            <div className="max-h-[42vh] overflow-y-auto rounded-3xl border border-yellow-500/20 bg-slate-950/95 shadow-2xl">
+                <div className="border-b border-yellow-500/15 bg-gradient-to-r from-yellow-500/10 to-transparent p-4 md:p-5">
                     <div className="flex items-start gap-3">
                         <div className="mt-0.5 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-3">
                             <ShieldAlert className="h-6 w-6 text-yellow-400" />
@@ -171,7 +171,7 @@ export function ActivationChecklist() {
                     </div>
                 </div>
 
-                <div className="space-y-4 p-6">
+                <div className="space-y-4 p-4 md:p-6">
                     {nativeHint && (
                         <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
                             <div className="flex items-start gap-3">
@@ -186,14 +186,14 @@ export function ActivationChecklist() {
                                             <>
                                                 <button
                                                     onClick={() => window.vivutradeDesktop?.openLogs?.()}
-                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-slate-200 transition hover:bg-white/10"
                                                 >
                                                     <FileText className="h-3.5 w-3.5" />
                                                     {t('buttons.openLogs')}
                                                 </button>
                                                 <button
                                                     onClick={() => window.vivutradeDesktop?.restartBridge?.()}
-                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-slate-200 transition hover:bg-white/10"
                                                 >
                                                     <RefreshCw className="h-3.5 w-3.5" />
                                                     {t('buttons.restartBridge')}
@@ -204,14 +204,14 @@ export function ActivationChecklist() {
                                             <>
                                                 <button
                                                     onClick={() => window.vivutradeDesktop?.openSettings?.()}
-                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-slate-200 transition hover:bg-white/10"
                                                 >
                                                     <Settings2 className="h-3.5 w-3.5" />
                                                     {t('buttons.openSettings')}
                                                 </button>
                                                 <Link
                                                     href="/pricing"
-                                                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
                                                 >
                                                     {t('buttons.viewPricing')}
                                                 </Link>
@@ -275,14 +275,14 @@ export function ActivationChecklist() {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 border-t border-yellow-500/15 bg-yellow-500/5 p-5">
+                <div className="flex flex-col gap-3 border-t border-yellow-500/15 bg-yellow-500/5 p-4 md:flex-row md:items-center md:justify-between md:p-5">
                     <p className="max-w-sm text-xs leading-relaxed text-slate-400">
                         {t('checklist.footer')}
                     </p>
                     {hasYourMt5Module ? (
                         <button
                             onClick={() => router.push('/your-mt5-guide')}
-                            className="inline-flex items-center gap-2 rounded-xl bg-yellow-500 px-5 py-2.5 text-sm font-bold text-yellow-950 transition-all hover:scale-[1.02] hover:bg-yellow-400 active:scale-95"
+                            className="inline-flex items-center gap-2 rounded-xl bg-yellow-500 px-4 py-2 text-sm font-bold text-yellow-950 transition-all hover:scale-[1.02] hover:bg-yellow-400 active:scale-95"
                         >
                             {t('buttons.openGuide')}
                             <ChevronRight className="h-4 w-4" />
@@ -290,7 +290,7 @@ export function ActivationChecklist() {
                     ) : (
                         <Link
                             href="/pricing"
-                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.02] hover:bg-emerald-400 active:scale-95"
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition-all hover:scale-[1.02] hover:bg-emerald-400 active:scale-95"
                         >
                             {t('buttons.buyModule')}
                             <ChevronRight className="h-4 w-4" />
