@@ -4,11 +4,11 @@ import { userModel } from "../model/user.js";
 import { normalizeEntitlementModules } from "../auth/modules.js";
 
 export const MODULE_CATALOG = {
-  your_mt5: { amount: 30000, durationDays: 30, trialDays: 7, label: "Your MT5" },
-  binance_trade: { amount: 20000, durationDays: 30, trialDays: 7, label: "Binance Trade" },
-  telegram_notify: { amount: 15000, durationDays: 30, trialDays: 7, label: "Telegram Notify" },
-  telegram_control: { amount: 20000, durationDays: 30, trialDays: 7, label: "Telegram Control" },
-  ai_assistant: { amount: 70000, durationDays: 30, trialDays: 7, label: "AI Assistant" },
+  your_mt5: { amount: 10000, durationDays: 30, trialDays: 7, label: "Your MT5" },
+  binance_trade: { amount: 10000, durationDays: 30, trialDays: 7, label: "Binance Trade" },
+  telegram_notify: { amount: 10000, durationDays: 30, trialDays: 7, label: "Telegram Notify" },
+  telegram_control: { amount: 10000, durationDays: 30, trialDays: 7, label: "Telegram Control" },
+  ai_assistant: { amount: 10000, durationDays: 30, trialDays: 7, label: "AI Assistant" },
 };
 
 const MODULE_ALIASES = new Map([["mt5_trade", "your_mt5"]]);

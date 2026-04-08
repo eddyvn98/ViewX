@@ -1,14 +1,14 @@
 'use client';
 
 import React, { memo, useState } from 'react';
-import { Menu, BarChart2, Zap, Pencil, Star, X } from 'lucide-react';
+import Link from 'next/link';
+import { Menu, BarChart2, Zap, Pencil, Star, X, BrainCircuit, HeartHandshake } from 'lucide-react';
 import { useMarketStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
-import { ThemeToggle } from './ThemeToggle';
-import { ThemeColorSwitcher } from './ThemeColorSwitcher';
 import { RootState } from '@/lib/store';
 import { CHART_TYPE_CONFIG, ChartTypeOption } from '@/features/chart/components/candle-type-config';
+import { useLocale } from 'next-intl';
 
 interface MobileTopBarProps {
     className?: string;
@@ -17,6 +17,7 @@ interface MobileTopBarProps {
 }
 
 export const MobileTopBar = memo(function MobileTopBar({ className, compact = false, mini = false }: MobileTopBarProps) {
+    const locale = useLocale();
     const [isChartTypePanelOpen, setIsChartTypePanelOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<ChartTypeOption>('candles');
     const [selectedSide, setSelectedSide] = useState<'up' | 'down'>('up');
@@ -65,6 +66,14 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
     const handleDrawingClick = () => {
         if (activeMobileTab !== 'chart') setActiveMobileTab('chart');
         toggleDrawingToolbar();
+    };
+
+    const handleAiClick = () => {
+        if (activeMobileTab === 'ai_overlay') {
+            setActiveMobileTab('chart');
+            return;
+        }
+        setActiveMobileTab('ai_overlay');
     };
 
     const getChartTypeLabel = (type: string | undefined) => {
@@ -164,14 +173,33 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                 </button>
             </div>
 
-            {/* Right: Theme Controls */}
+            {/* Right: AI + Support */}
             <div className={cn("flex items-center", compact ? "gap-1" : "gap-2")}>
-                <div className={cn("origin-right", compact ? "scale-75" : "scale-90")}>
-                    <ThemeColorSwitcher />
-                </div>
-                <div className={cn("origin-right", compact ? "scale-75" : "scale-90")}>
-                    <ThemeToggle />
-                </div>
+                <button
+                    onClick={handleAiClick}
+                    className={cn(
+                        "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
+                        compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
+                        activeMobileTab === 'ai_overlay'
+                            ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
+                            : "text-muted-foreground border-border/50 bg-secondary/30"
+                    )}
+                    title="Toggle AI assistant"
+                >
+                    <BrainCircuit size={14} />
+                    {!mini && <span>AI</span>}
+                </button>
+                <Link
+                    href={`/${locale}/pricing`}
+                    className={cn(
+                        "flex items-center rounded-full border font-black transition-all active:scale-95",
+                        compact ? "px-2 py-1" : "px-3 py-1.5",
+                        "bg-amber-500 text-slate-950 border-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.35)] hover:bg-amber-400"
+                    )}
+                    title="Ủng hộ Vivutrade"
+                >
+                    <HeartHandshake size={14} />
+                </Link>
             </div>
         </div>
 

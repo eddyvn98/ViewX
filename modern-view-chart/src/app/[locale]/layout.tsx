@@ -3,11 +3,7 @@ import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import type { Metadata, Viewport } from "next";
-import "../globals.css";
 import { getSiteOrigin, getSiteUrl } from "@/lib/site-url";
-import { Toaster } from 'sonner';
-import { ThemeProvider } from "@/components/layout/theme-provider";
-import NextTopLoader from 'nextjs-toploader';
 import React from 'react';
 
 const siteOrigin = getSiteOrigin();
@@ -109,42 +105,16 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body
-        className="antialiased"
-        suppressHydrationWarning
-      >
-        <NextTopLoader
-          color="#0ea5e9"
-          initialPosition={0.08}
-          crawlSpeed={200}
-          height={3}
-          crawl={true}
-          showSpinner={false}
-          easing="ease"
-          speed={200}
-          shadow="0 0 10px #0ea5e9,0 0 5px #0ea5e9"
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
-        />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <NextIntlClientProvider messages={messages}>
-            {children}
-          </NextIntlClientProvider>
-          <Toaster theme="light" position="top-right" richColors closeButton />
-        </ThemeProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider messages={messages}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+      />
+      {children}
+    </NextIntlClientProvider>
   );
 }

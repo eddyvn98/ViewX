@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { AIChatView } from "@/features/strategy/components/AIChatView";
 
 function PanelFallback({ className = "" }: { className?: string }) {
   return <div className={cn("h-full w-full animate-pulse bg-secondary/20", className)} />;
@@ -106,7 +107,7 @@ export function MobilePanels({
   setActiveMobileTab: (tab: string) => void;
   panelTouchStartYRef: React.RefObject<number | null>;
   Terminal: React.ComponentType<{ forceExpanded?: boolean }>;
-  StrategyPanel: React.ComponentType;
+  StrategyPanel: React.ComponentType<{ hideAiTab?: boolean }>;
   MobileMenu: React.ComponentType<{ compact?: boolean }>;
   LayerManager: React.ComponentType;
 }) {
@@ -151,8 +152,22 @@ export function MobilePanels({
           </div>
           <div className="flex-1 overflow-hidden">
             <React.Suspense fallback={<PanelFallback />}>
-              <StrategyPanel />
+              <StrategyPanel hideAiTab />
             </React.Suspense>
+          </div>
+        </div>
+      )}
+
+      {showMobileLayout && activeMobileTab === "ai_overlay" && (
+        <div className="absolute inset-0 z-[70] bg-background flex flex-col">
+          <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">AI Assistant</h2>
+            <button onClick={handleClosePanel} className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-all">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden p-2">
+            <AIChatView />
           </div>
         </div>
       )}

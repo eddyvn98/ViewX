@@ -1,8 +1,10 @@
 import React from 'react';
-import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight, House } from 'lucide-react';
+import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight, House, Palette, MoonStar } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { ThemeToggle } from './ThemeToggle';
+import { ThemeColorSwitcher } from './ThemeColorSwitcher';
 
 interface MobileMenuProps {
     compact?: boolean;
@@ -99,6 +101,12 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
                 <MenuItem compact={compact} icon={House} label={t('home')} onClick={() => { window.location.href = '/'; }} />
                 <MenuItem compact={compact} icon={User} label={t('accountProfile')} />
                 <MenuItem compact={compact} icon={Bell} label={t('notifications')} badge="3" />
+                <MenuRow compact={compact} icon={MoonStar} label="Dark Mode">
+                    <ThemeToggle />
+                </MenuRow>
+                <MenuRow compact={compact} icon={Palette} label="Theme Color">
+                    <ThemeColorSwitcher />
+                </MenuRow>
                 <MenuItem compact={compact} icon={Monitor} label={t('displaySettings')} />
 
                 <div className="h-px bg-border/60 my-3 mx-2" />
@@ -153,5 +161,27 @@ function MenuItem({ icon: Icon, label, onClick, badge, compact = false }: MenuIt
             )}
             <ChevronRight size={compact ? 12 : 14} className="text-muted-foreground group-hover:text-foreground" />
         </button>
+    );
+}
+
+function MenuRow({
+    icon: Icon,
+    label,
+    children,
+    compact = false,
+}: {
+    icon: React.ComponentType<{ size?: number }>;
+    label: string;
+    children: React.ReactNode;
+    compact?: boolean;
+}) {
+    return (
+        <div className={cn('flex items-center gap-3 w-full rounded-lg hover:bg-secondary/60 transition-colors', compact ? 'p-2.5' : 'p-3')}>
+            <div className={cn('rounded-md bg-secondary text-muted-foreground', compact ? 'p-1.5' : 'p-2')}>
+                <Icon size={compact ? 16 : 18} />
+            </div>
+            <span className={cn('font-medium flex-1 text-left text-foreground', compact ? 'text-[13px]' : 'text-sm')}>{label}</span>
+            <div className="shrink-0">{children}</div>
+        </div>
     );
 }

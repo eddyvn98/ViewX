@@ -179,7 +179,15 @@ export async function listAdminModuleOrders(req, res) {
   const status = String(req.query?.status || "pending").trim().toLowerCase();
   const filter = status ? { status } : {};
   const orders = await moduleOrderModel.find(filter).sort({ createdAt: -1 }).limit(200).lean();
-  return res.status(200).json({ ok: true, orders, catalog: MODULE_CATALOG });
+  const normalizedOrders = [];
+  for (const order of orders) {
+    const hydrated = await moduleOrderModel.findById(order._id);
+    if (!hydrated?._id) continue;
+    await expireOrderIfNeeded(hydrated);
+    if (status && String(hydrated.status) !== status) continue;
+    normalizedOrders.push(toClientOrder(hydrated));
+  }
+  return res.status(200).json({ ok: true, orders: normalizedOrders, catalog: MODULE_CATALOG });
 }
 
 export async function getAdminModuleStats(req, res) {
@@ -219,6 +227,8 @@ export async function confirmAdminModuleOrder(req, res) {
   const orderId = String(req.params?.orderId || "").trim();
   const order = await moduleOrderModel.findById(orderId);
   if (!order?._id) return res.status(404).json({ error: "order_not_found" });
+  await expireOrderIfNeeded(order);
+  if (String(order.status) !== "pending") return res.status(400).json({ error: "order_not_pending" });
   const activated = await activateOrder({
     order,
     confirmedBy: `admin:${String(req.auth?.userId || "unknown")}`,
@@ -241,6 +251,7 @@ export async function rejectAdminModuleOrder(req, res) {
   const orderId = String(req.params?.orderId || "").trim();
   const order = await moduleOrderModel.findById(orderId);
   if (!order?._id) return res.status(404).json({ error: "order_not_found" });
+  await expireOrderIfNeeded(order);
   if (String(order.status) !== "pending") return res.status(400).json({ error: "order_not_pending" });
   order.status = "canceled";
   order.confirmedBy = `admin_reject:${String(req.auth?.userId || "unknown")}`;

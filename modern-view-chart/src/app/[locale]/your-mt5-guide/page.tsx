@@ -85,6 +85,12 @@ export default async function YourMt5GuidePage({ params }: PageProps) {
                             {isVi ? 'Tiếp tục kích hoạt MT5' : 'Continue MT5 activation'}
                         </Link>
                         <Link
+                            href={`/${locale}/chart`}
+                            className="inline-flex items-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-5 py-3 text-sm font-bold text-emerald-200 transition hover:bg-emerald-400/20"
+                        >
+                            {isVi ? 'Vào chart để dùng' : 'Go to chart to use it'}
+                        </Link>
+                        <Link
                             href={`/${locale}/pricing`}
                             className="inline-flex items-center rounded-2xl border border-white/10 bg-slate-900/70 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-900"
                         >

@@ -29,6 +29,12 @@ export function toAuthResponse(user, tokens, normalizedRole) {
             auth_provider: user.authProvider || "local",
             display_name: user.displayName || "",
             avatar_url: user.avatarUrl || "",
+            plan: user.plan || "free",
+            modules: Array.isArray(user.modules) ? user.modules : [],
+            subscription: user.subscription || { plan: user.plan || "free", modules: Array.isArray(user.modules) ? user.modules : [] },
+            moduleAccess: Array.isArray(user.moduleAccess) ? user.moduleAccess : [],
+            aiAssistantCredits: Number(user.aiAssistantCredits || 0),
+            aiAssistantCreditsUpdatedAt: user.aiAssistantCreditsUpdatedAt || null,
         },
     };
 }

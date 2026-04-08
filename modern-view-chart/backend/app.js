@@ -59,8 +59,13 @@ export function createApp() {
     const app = new Express();
     const allowedOrigins = getAllowedOrigins();
     const isProduction = process.env.NODE_ENV === "production";
+    const trustProxyEnv = String(process.env.TRUST_PROXY || "").trim();
+    const trustProxyValue = trustProxyEnv === ""
+        ? (isProduction ? 1 : false)
+        : (trustProxyEnv === "true" ? true : trustProxyEnv === "false" ? false : Number.isFinite(Number(trustProxyEnv)) ? Number(trustProxyEnv) : trustProxyEnv);
 
     app.disable("x-powered-by");
+    app.set("trust proxy", trustProxyValue);
     app.use(
         helmet({
             contentSecurityPolicy: false,

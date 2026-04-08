@@ -57,18 +57,25 @@ export default function LandingPage() {
                                 </p>
                             </div>
                             <div className="flex flex-col gap-3 sm:flex-row">
-                                <Link
-                                    href="/pricing"
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 py-3 font-black text-white shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5"
-                                >
-                                    {isVi ? 'Xem module' : 'View modules'}
-                                    <ArrowRight className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                    href="/your-mt5-guide"
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 font-black text-slate-950 transition hover:bg-slate-50"
-                                >
-                                    {isVi ? 'Hướng dẫn Your MT5' : 'Your MT5 guide'}
+                            <Link
+                                href="/pricing"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 py-3 font-black text-white shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5"
+                            >
+                                {isVi ? 'Xem module' : 'View modules'}
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                            <Link
+                                href="/modules"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-3 font-black text-emerald-800 transition hover:bg-emerald-100"
+                            >
+                                {isVi ? 'Trang module của tôi' : 'My module hub'}
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                            <Link
+                                href="/your-mt5-guide"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 font-black text-slate-950 transition hover:bg-slate-50"
+                            >
+                                {isVi ? 'Hướng dẫn Your MT5' : 'Your MT5 guide'}
                                 </Link>
                             </div>
                             <div className="grid gap-3 pt-2 sm:grid-cols-3">
@@ -159,6 +166,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-4 lg:text-right">
                         <div className="flex flex-wrap gap-6 text-sm font-semibold text-slate-700 lg:justify-end">
                             <Link className="transition-colors hover:text-primary" href="/chart">{navT('chart')}</Link>
+                            <Link className="transition-colors hover:text-primary" href="/modules">{isVi ? 'Module hub' : 'Module hub'}</Link>
                             <Link className="transition-colors hover:text-primary" href="/strategy/dashboard">{navT('dashboard')}</Link>
                         </div>
                         <p className="text-xs text-slate-400">

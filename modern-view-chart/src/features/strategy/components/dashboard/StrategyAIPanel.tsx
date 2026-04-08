@@ -14,9 +14,24 @@ export function StrategyAIPanel({ metrics }: Props) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
-    const aiEnabled = false;
+    const aiEnabled = true;
     const [isLoading, setIsLoading] = useState(false);
     const [analysis, setAnalysis] = useState<string | null>(null);
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
+    const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+    const toFriendlyError = (raw: string) => {
+        const value = String(raw || '').trim();
+        if (value.startsWith('Yeu cau ') || value.startsWith('Noi dung ')) {
+            return value;
+        }
+        if (raw.includes('prompt_blocked_by_policy') || raw.includes('response_blocked_by_policy')) {
+            return 'Yeu cau khong phu hop chinh sach an toan. Vui long dat cau hoi ve giao dich va cach dung Vivutrade.';
+        }
+        if (raw.includes('missing_auth_token')) {
+            return 'Ban can dang nhap de su dung AI.';
+        }
+        return 'Khong the phan tich luc nay. Vui long thu lai sau.';
+    };
 
     const bestSession = Object.entries(metrics.sessionStats).sort((a, b) => b[1].winRate - a[1].winRate)[0];
     const avgConfidence = metrics.avgConfidence || 0;
@@ -24,22 +39,73 @@ export function StrategyAIPanel({ metrics }: Props) {
     const handleMacroAnalyze = async () => {
         if (!aiEnabled) return;
         setIsLoading(true);
-        setTimeout(() => {
-            let mockAnalysis = "";
-            const pf = metrics.profitFactor;
-            const conf = avgConfidence;
+        setAnalysisError(null);
+        setAnalysis(null);
+        setRemainingCredits(null);
 
-            if (conf > 75 && pf > 1.2) {
-                mockAnalysis = `System high-trust phase: AI Confidence is high (${conf.toFixed(0)}%) and aligning with profitability. Signals with >80% confidence are prime candidates for MT5 execution. Logic behavior is highly consistent in ${bestSession?.[0] || 'London'} session.`;
-            } else if (conf < 50) {
-                mockAnalysis = `Low confidence phase: The bot is currently entering in high-noise conditions. Most signals are below 50% confidence. Recommendation: Monitor only; avoid MT5 execution until MAE stabilizes and Confidence returns to >70%.`;
-            } else {
-                mockAnalysis = `Optimization needed: Bot is profitable but "shaky". Average confidence is ${conf.toFixed(0)}%. You are capturing profit but taking too much "Logic Heat" (MAE). Tighten entry triggers to boost confidence scores.`;
+        try {
+            if (typeof window === 'undefined') throw new Error('client_only');
+            const accessToken = (localStorage.getItem('auth_access_token') || '').trim();
+            if (!accessToken) throw new Error('missing_auth_token');
+
+            const authUserRaw = localStorage.getItem('auth_user') || '';
+            let userId = '';
+            if (authUserRaw) {
+                try {
+                    const authUser = JSON.parse(authUserRaw);
+                    userId = String(authUser?._id || authUser?.id || '').trim();
+                } catch {
+                    userId = '';
+                }
             }
 
-            setAnalysis(mockAnalysis);
+            const prompt = [
+                'You are an expert trading strategy analyst.',
+                'Analyze the metrics and provide 3 short sections: (1) Strengths, (2) Risks, (3) Actionable next steps.',
+                `Profit factor: ${Number(metrics.profitFactor || 0).toFixed(2)}`,
+                `Average confidence: ${Number(avgConfidence || 0).toFixed(2)}%`,
+                `Average MAE: ${Number(metrics.avgMae || 0).toFixed(2)} pips`,
+                `Average MFE: ${Number(metrics.avgMfe || 0).toFixed(2)} pips`,
+                `Best session by win rate: ${bestSession?.[0] || 'N/A'}`,
+                'Respond in concise plain text only.',
+            ].join('\n');
+
+            const payload: {
+                prompt: string;
+                source: 'chat';
+                userId?: string;
+            } = { prompt, source: 'chat' };
+            if (userId) payload.userId = userId;
+
+            const response = await fetch('/api/ai/bridge/task', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${accessToken}`,
+                },
+                credentials: 'include',
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data) {
+                const userMessage = String(data?.user_message || '').trim();
+                throw new Error(userMessage || String(data?.msg || data?.error || `request_failed_${response.status}`));
+            }
+
+            const text = String(data?.response || '').trim();
+            if (!text) throw new Error('empty_ai_response');
+
+            setAnalysis(text);
+            if (typeof data?.remainingCredits === 'number') {
+                setRemainingCredits(data.remainingCredits);
+            }
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'ai_request_failed';
+            setAnalysisError(toFriendlyError(msg));
+        } finally {
             setIsLoading(false);
-        }, 1800);
+        }
     };
 
     return (
@@ -80,6 +146,11 @@ export function StrategyAIPanel({ metrics }: Props) {
 
                 {analysis && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {remainingCredits !== null && (
+                            <div className="text-[11px] font-black uppercase tracking-wider text-primary">
+                                AI Live | Credits: {remainingCredits}
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-secondary/40 p-4 rounded-xl border border-border/50 flex items-start gap-4">
                                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -122,6 +193,12 @@ export function StrategyAIPanel({ metrics }: Props) {
                                 {t('recalculate')}
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {analysisError && !isLoading && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-[11px] font-bold text-red-300">
+                        AI request failed: {analysisError}
                     </div>
                 )}
 

@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Terminal, MessageSquare, BrainCircuit, Loader2, Clock, ShieldCheck, History } from 'lucide-react';
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Terminal, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+import { useMarketStore } from '@/lib/store';
+import type { Candle, ChartInstance, Position, RootState } from '@/lib/store';
+import { cn } from '@/lib/utils';
+import { useStrategyStore } from '../store/strategy-store';
+import type { Strategy, StrategySignal, VirtualPosition } from '../types';
 
 interface ChatMessage {
     id: string;
@@ -9,253 +17,589 @@ interface ChatMessage {
     timestamp: number;
 }
 
+type ChatMode = 'chat' | 'history' | 'logs';
+type IntentKey = 'entry' | 'exit' | 'strategy' | 'risk' | 'summary' | 'general';
+
+interface PromptPreset {
+    id: string;
+    group: string;
+    label: string;
+    prompt: string;
+    intent: IntentKey;
+    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
+
+interface ConversationGroup {
+    id: string;
+    title: string;
+    startedAt: number;
+    endedAt: number;
+    items: ChatMessage[];
+}
+
+const AI_ENABLED = true;
+const CONVERSATION_GAP_MS = 30 * 60 * 1000;
+const PRESET_PROMPTS: PromptPreset[] = [
+    { id: 'entry-now', group: 'Vào lệnh', label: 'Có nên vào lệnh', prompt: 'Phân tích nhanh chart hiện tại và cho biết có nên vào lệnh ngay bây giờ không.', intent: 'entry', icon: TrendingUp },
+    { id: 'entry-side', group: 'Vào lệnh', label: 'Nghiêng Long hay Short', prompt: 'Ngay lúc này chart đang nghiêng về Long hay Short? Trả lời thật ngắn gọn và nêu lý do chính.', intent: 'entry', icon: Scale },
+    { id: 'entry-levels', group: 'Vào lệnh', label: 'Mức vào lệnh', prompt: 'Nếu setup hiện tại ổn, gợi ý mức vào lệnh, SL và TP ngắn gọn theo chart đang mở.', intent: 'entry', icon: Target },
+    { id: 'entry-wait', group: 'Vào lệnh', label: 'Nên vào ngay hay chờ', prompt: 'Tôi nên vào lệnh ngay hay chờ thêm xác nhận? Nếu chờ thì chờ điều gì.', intent: 'entry', icon: CircleHelp },
+    { id: 'entry-invalid', group: 'Vào lệnh', label: 'Kèo hỏng ở đâu', prompt: 'Nếu vào kèo này thì điều kiện nào làm setup bị vô hiệu? Nêu mốc giá hoặc tín hiệu cần chú ý.', intent: 'entry', icon: BadgeAlert },
+    { id: 'entry-confidence', group: 'Vào lệnh', label: 'Độ chắc kèo', prompt: 'Đánh giá nhanh độ chắc của setup hiện tại theo chart và strategy đang chạy.', intent: 'entry', icon: ScanSearch },
+    { id: 'exit-manage', group: 'Quản lý lệnh', label: 'Quản lý lệnh', prompt: 'Lệnh đang mở có nên giữ, dời SL hay chốt bớt không? Trả lời ngắn gọn theo dữ liệu hiện tại.', intent: 'exit', icon: Compass },
+    { id: 'exit-now', group: 'Quản lý lệnh', label: 'Có nên thoát lệnh', prompt: 'Nếu đang có lệnh trên chart này thì bây giờ có nên thoát không? Nêu lý do chính.', intent: 'exit', icon: ShieldCheck },
+    { id: 'exit-sl', group: 'Quản lý lệnh', label: 'Dời SL thế nào', prompt: 'Nếu đang giữ lệnh thì nên dời stop loss về đâu để giảm rủi ro mà không quá chặt.', intent: 'exit', icon: Target },
+    { id: 'exit-partial', group: 'Quản lý lệnh', label: 'Có nên chốt một phần', prompt: 'Lệnh hiện tại có nên chốt một phần lợi nhuận không hay giữ nguyên kế hoạch.', intent: 'exit', icon: Wallet },
+    { id: 'exit-danger', group: 'Quản lý lệnh', label: 'Dấu hiệu cần thoát', prompt: 'Hãy chỉ ra những dấu hiệu quan trọng cho thấy tôi nên thoát lệnh sớm.', intent: 'exit', icon: BadgeAlert },
+    { id: 'strategy-fit', group: 'Bot và Strategy', label: 'Hợp với bot nào', prompt: 'Chart hiện tại hợp với strategy nào đang bật? Nếu không hợp thì nói lý do ngắn gọn.', intent: 'strategy', icon: BrainCircuit },
+    { id: 'strategy-ignore', group: 'Bot và Strategy', label: 'Bot có nên bỏ qua', prompt: 'Với bot đang chạy, có nên bỏ qua setup hiện tại không? Nếu có thì vì sao.', intent: 'strategy', icon: ListChecks },
+    { id: 'strategy-fix', group: 'Bot và Strategy', label: 'Bot cần chỉnh gì', prompt: 'Strategy hiện tại đang yếu ở điểm nào trên chart này và nên chỉnh gì trước.', intent: 'strategy', icon: ScanSearch },
+    { id: 'strategy-match', group: 'Bot và Strategy', label: 'Chart có đúng style bot', prompt: 'Chart hiện tại có đúng môi trường mà bot này hoạt động tốt không?', intent: 'strategy', icon: Compass },
+    { id: 'risk-check', group: 'Rủi ro', label: 'Rủi ro hiện tại', prompt: 'Đánh giá rủi ro hiện tại và nêu 1-2 điểm cần cảnh báo ngay.', intent: 'risk', icon: Wallet },
+    { id: 'risk-size', group: 'Rủi ro', label: 'Khối lượng có ổn không', prompt: 'Nếu vào lệnh theo setup này thì khối lượng hiện tại có quá tay không xét theo rủi ro.', intent: 'risk', icon: Scale },
+    { id: 'risk-account', group: 'Rủi ro', label: 'Tài khoản chịu nổi không', prompt: 'Với trạng thái hiện tại, tài khoản có đang chịu rủi ro quá mức không.', intent: 'risk', icon: ShieldCheck },
+    { id: 'risk-stack', group: 'Rủi ro', label: 'Có bị chồng rủi ro', prompt: 'Các lệnh hoặc bot hiện tại có đang chồng rủi ro lên nhau không.', intent: 'risk', icon: BadgeAlert },
+    { id: 'chart-summary', group: 'Đọc chart', label: 'Tóm tắt chart', prompt: 'Tóm tắt nhanh chart đang xem trong 3 ý ngắn gọn, chỉ giữ điểm quan trọng.', intent: 'summary', icon: MessageSquare },
+    { id: 'chart-bias', group: 'Đọc chart', label: 'Bias chính của chart', prompt: 'Bias chính của chart hiện tại là gì và mốc nào đang quyết định bias đó.', intent: 'summary', icon: TrendingUp },
+    { id: 'chart-key-levels', group: 'Đọc chart', label: 'Vùng giá quan trọng', prompt: 'Chỉ ra các vùng giá quan trọng nhất trên chart hiện tại để tôi theo dõi.', intent: 'summary', icon: Target },
+    { id: 'chart-explain', group: 'Đọc chart', label: 'Giải thích tín hiệu', prompt: 'Giải thích ngắn gọn vì sao chart này đang cho tín hiệu như hiện tại.', intent: 'summary', icon: CircleHelp },
+    { id: 'chart-next', group: 'Đọc chart', label: 'Kịch bản tiếp theo', prompt: 'Kịch bản giá có khả năng cao tiếp theo là gì nếu không có dữ liệu mới.', intent: 'summary', icon: ScanSearch },
+];
+
+function toFriendlyError(raw: string) {
+    const value = String(raw || '').trim();
+    if (!value) return 'Không thể gửi yêu cầu lúc này.';
+    if (value.startsWith('Yeu cau ') || value.startsWith('Noi dung ')) return value;
+    if (value.includes('missing_auth_token')) return 'Bạn cần đăng nhập để sử dụng AI.';
+    if (value.includes('ai_assistant_module_required')) return 'Tài khoản này chưa có quyền sử dụng AI Assistant.';
+    if (value.includes('ai_chat_credits_exhausted')) return 'Tài khoản đã hết credits AI.';
+    return 'Không thể lấy phản hồi AI lúc này. Vui lòng thử lại.';
+}
+
+function getAuthContext() {
+    if (typeof window === 'undefined') return { accessToken: '', userId: '', hasAccessToken: false };
+    const accessToken = (localStorage.getItem('auth_access_token') || '').trim();
+    const rawUser = localStorage.getItem('auth_user') || '';
+    let userId = '';
+    if (rawUser) {
+        try {
+            const parsed = JSON.parse(rawUser) as { _id?: string; id?: string; userId?: string };
+            userId = String(parsed?._id || parsed?.id || parsed?.userId || '').trim();
+        } catch {}
+    }
+    return { accessToken, userId, hasAccessToken: Boolean(accessToken) };
+}
+
+function getVisibleUserPrompt(rawPrompt: string) {
+    const value = String(rawPrompt || '').trim();
+    const match = value.match(/USER_QUESTION:\s*([\s\S]*?)(?:\nCONTEXT_JSON:|$)/i);
+    return match?.[1]?.trim() || value;
+}
+
+function formatTime(ts: number) {
+    return new Date(ts).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function classifyIntent(question: string): IntentKey {
+    const value = question.toLowerCase();
+    if (/(vao lenh|entry|long|short|mua|ban|buy|sell|sl|tp)/.test(value)) return 'entry';
+    if (/(thoat|giu lenh|chot|trailing|dich sl|dong lenh|exit)/.test(value)) return 'exit';
+    if (/(strategy|chien luoc|bot|rule|toi uu|setup bot)/.test(value)) return 'strategy';
+    if (/(rui ro|risk|drawdown|khoi luong|lot|von|account)/.test(value)) return 'risk';
+    if (/(tom tat|tong quan|summary|overview)/.test(value)) return 'summary';
+    return 'general';
+}
+
+function buildConversationGroups(messages: ChatMessage[]): ConversationGroup[] {
+    const sorted = [...messages].filter((m) => m.source === 'chat').sort((a, b) => a.timestamp - b.timestamp);
+    const groups: ConversationGroup[] = [];
+    for (const item of sorted) {
+        const current = groups[groups.length - 1];
+        if (!current || item.timestamp - current.endedAt > CONVERSATION_GAP_MS) {
+            groups.push({ id: `conv-${item.timestamp}-${item.id}`, title: getVisibleUserPrompt(item.prompt).slice(0, 48) || 'Cuoc tro chuyen moi', startedAt: item.timestamp, endedAt: item.timestamp, items: [item] });
+        } else {
+            current.items.push(item);
+            current.endedAt = item.timestamp;
+        }
+    }
+    return groups.reverse();
+}
+
+function sanitizeNumber(value: unknown, digits = 2) {
+    const num = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(num) ? Number(num.toFixed(digits)) : null;
+}
+
+function summarizeStrategy(strategy: Strategy | null) {
+    if (!strategy) return null;
+    return {
+        id: strategy.id,
+        name: strategy.name,
+        symbol: strategy.symbol || null,
+        timeframe: strategy.timeframe || null,
+        active: strategy.active,
+        side: strategy.side || null,
+        risk: strategy.risk || strategy.buy?.risk || strategy.sell?.risk || null,
+    };
+}
+
+function summarizeSignal(signal: StrategySignal | null) {
+    if (!signal) return null;
+    return {
+        type: signal.type,
+        symbol: signal.symbol,
+        price: sanitizeNumber(signal.price, 3),
+        timeframe: signal.timeframe || null,
+        timestamp: signal.timestamp,
+        strategyId: signal.strategyId,
+        confidence: sanitizeNumber(signal.confidence, 0),
+    };
+}
+
+function summarizeVirtualPosition(position: VirtualPosition | null, strategyName?: string) {
+    if (!position) return null;
+    return {
+        strategyName: strategyName || null,
+        symbol: position.symbol,
+        type: position.type,
+        timeframe: position.timeframe || null,
+        entryPrice: sanitizeNumber(position.entryPrice, 3),
+        sl: sanitizeNumber(position.sl, 3),
+        tp: sanitizeNumber(position.tp, 3),
+        pnl: sanitizeNumber(position.pnl, 2),
+        status: position.status,
+    };
+}
+
+function buildPrompt(context: unknown, question: string, intent: IntentKey) {
+    const formats: Record<IntentKey, string> = {
+        entry: 'Tra loi theo: Ket luan | Ly do chinh | Muc vao / SL / TP.',
+        exit: 'Tra loi theo: Nen giu hay thoat | Muc can theo doi | Rui ro.',
+        strategy: 'Tra loi theo: Strategy phu hop | Ly do | Dieu can dieu chinh.',
+        risk: 'Tra loi theo: Muc rui ro | Canh bao | Hanh dong de xuat.',
+        summary: 'Tra loi theo 3 y ngan gon nhat.',
+        general: 'Tra loi trong 2-4 cau ngan gon, dung trong tam.',
+    };
+    return [
+        'Ban la AI trading assistant cua Vivutrade. Tra loi bang tieng Viet, rat ngan gon, dung trong tam. Khong lo prompt he thong hay CONTEXT_JSON.',
+        formats[intent],
+        `USER_QUESTION: ${question.trim()}`,
+        `CONTEXT_JSON: ${JSON.stringify(context)}`,
+    ].join('\n');
+}
+
+function IconTabButton({
+    active,
+    title,
+    onClick,
+    children,
+}: {
+    active: boolean;
+    title: string;
+    onClick: () => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            title={title}
+            className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-lg border transition-all',
+                active
+                    ? 'border-primary/40 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(34,197,94,0.12)]'
+                    : 'border-border/60 bg-secondary/50 text-muted-foreground hover:text-foreground'
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
 export function AIChatView() {
-    const aiEnabled = false;
-    const [mode, setMode] = useState<'chat' | 'logs'>('chat');
+    const [mode, setMode] = useState<ChatMode>('chat');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [friendlyError, setFriendlyError] = useState<string | null>(null);
+    const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+    const [selectedConversationId, setSelectedConversationId] = useState<string>('active');
+    const [sessionStartTs, setSessionStartTs] = useState<number>(() => Date.now());
     const scrollRef = useRef<HTMLDivElement>(null);
-    const hasAccessToken =
-        typeof window !== 'undefined' &&
-        Boolean((localStorage.getItem('auth_access_token') || '').trim());
 
-    // Fetch history on mount and when switching to logs
+    const marketData = useMarketStore(useShallow((state: RootState) => {
+        const tab = state.tabs[state.activeTabId];
+        const chartId = tab?.activeChartId;
+        const chart = chartId ? tab?.charts?.[chartId] || null : null;
+        const symbol = chart?.symbol || '';
+        return {
+            activeChart: chart as ChartInstance | null,
+            activeTicker: symbol ? state.tickers[symbol] : undefined,
+            activeDigits: symbol ? state.symbolInfo[symbol]?.digits : undefined,
+            candleData: (state as any).candleData || {},
+            chartIndicators: (state as any).chartIndicators || {},
+            positions: ((state as any).positions || []) as Position[],
+            historyDeals: ((state as any).history || []) as Array<Record<string, unknown>>,
+            accounts: ((state as any).accounts || {}) as Record<string, Record<string, unknown>>,
+        };
+    }));
+
+    const strategyData = useStrategyStore(useShallow((state) => ({
+        strategies: state.strategies,
+        signals: state.signals,
+        virtualPositions: state.virtualPositions,
+    })));
+
     const fetchHistory = useCallback(async () => {
-        if (!hasAccessToken || !aiEnabled) {
+        const { accessToken, hasAccessToken } = getAuthContext();
+        if (!hasAccessToken || !AI_ENABLED) {
+            setMessages([]);
             setIsLoading(false);
             return;
         }
         try {
-            const res = await fetch('/api/ai/bridge/history');
-            if (res.ok) {
-                const data = await res.json();
-                setMessages(data);
-            }
-        } catch (err) {
-            console.error('Failed to fetch AI history:', err);
+            const response = await fetch('/api/ai/bridge/history', { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {}, credentials: 'include' });
+            if (!response.ok) throw new Error(`history_failed_${response.status}`);
+            const data = await response.json() as ChatMessage[];
+            setMessages([...data].sort((a, b) => a.timestamp - b.timestamp));
         } finally {
             setIsLoading(false);
         }
-    }, [hasAccessToken, aiEnabled]);
+    }, []);
+
+    const fetchCredits = useCallback(async () => {
+        const { accessToken, hasAccessToken } = getAuthContext();
+        if (!hasAccessToken) return;
+        try {
+            const response = await fetch('/api/user/module-ai-credits', { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {}, credentials: 'include' });
+            if (!response.ok) return;
+            const data = await response.json();
+            const credits = typeof data?.remainingCredits === 'number' ? data.remainingCredits : typeof data?.aiAssistantCredits === 'number' ? data.aiAssistantCredits : null;
+            setRemainingCredits(credits);
+        } catch {}
+    }, []);
 
     useEffect(() => {
+        fetchHistory();
+        fetchCredits();
+        const interval = window.setInterval(fetchHistory, 10000);
+        return () => window.clearInterval(interval);
+    }, [fetchCredits, fetchHistory]);
+
+    useEffect(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, [messages, selectedConversationId, mode]);
+
+    const conversations = useMemo(() => buildConversationGroups(messages), [messages]);
+    const normalizedInput = inputValue.trim().toLowerCase();
+    const filteredPresetItems = useMemo(() => {
+        if (!normalizedInput) return [];
+        return PRESET_PROMPTS.filter((item) => {
+            const haystack = `${item.group} ${item.label} ${item.prompt}`.toLowerCase();
+            return haystack.includes(normalizedInput);
+        }).slice(0, 8);
+    }, [normalizedInput]);
+    const isFilteringSuggestions = normalizedInput.length > 0;
+    const activeStrategy = useMemo(() => {
+        const symbol = marketData.activeChart?.symbol;
+        return strategyData.strategies.find((s) => s.active && s.symbol === symbol) || strategyData.strategies.find((s) => s.active) || null;
+    }, [marketData.activeChart?.symbol, strategyData.strategies]);
+
+    const chartKey = useMemo(() => marketData.activeChart?.symbol && marketData.activeChart?.interval ? `${marketData.activeChart.symbol}:${marketData.activeChart.interval}` : '', [marketData.activeChart?.interval, marketData.activeChart?.symbol]);
+    const recentCandles = useMemo(() => chartKey ? ((marketData.candleData as Record<string, Candle[]>)[chartKey] || []).slice(-80) : [], [chartKey, marketData.candleData]);
+    const indicatorSnapshot = useMemo(() => marketData.activeChart?.id ? (((marketData.chartIndicators as Record<string, Array<Record<string, unknown>>>)[marketData.activeChart.id] || []).slice(0, 8).map((it) => ({ type: it.type || 'unknown', params: it.params || {}, visible: it.visible !== false, pane: it.pane || 'main' }))) : [], [marketData.activeChart?.id, marketData.chartIndicators]);
+    const latestSignal = useMemo(() => strategyData.signals.find((s) => s.symbol === marketData.activeChart?.symbol) || strategyData.signals[0] || null, [marketData.activeChart?.symbol, strategyData.signals]);
+    const openVirtualPositions = useMemo(() => strategyData.virtualPositions.filter((p) => p.status !== 'closed'), [strategyData.virtualPositions]);
+    const relevantVirtualPosition = useMemo(() => openVirtualPositions.find((p) => p.symbol === marketData.activeChart?.symbol) || openVirtualPositions.find((p) => p.strategyId === activeStrategy?.id) || openVirtualPositions[0] || null, [activeStrategy?.id, marketData.activeChart?.symbol, openVirtualPositions]);
+    const liveTerminalPosition = useMemo(() => marketData.positions.find((p) => p.symbol === marketData.activeChart?.symbol) || marketData.positions[0] || null, [marketData.activeChart?.symbol, marketData.positions]);
+    const lastHistoryDeal = useMemo(() => marketData.historyDeals.find((d) => d.symbol === marketData.activeChart?.symbol) || marketData.historyDeals[0] || null, [marketData.activeChart?.symbol, marketData.historyDeals]);
+    const strategyById = useMemo(() => Object.fromEntries(strategyData.strategies.map((s) => [s.id, s])), [strategyData.strategies]);
+
+    const visibleChatMessages = useMemo(() => {
+        const chat = messages.filter((m) => m.source === 'chat');
+        if (selectedConversationId === 'active') return chat.filter((m) => m.timestamp >= sessionStartTs);
+        return conversations.find((item) => item.id === selectedConversationId)?.items || [];
+    }, [conversations, messages, selectedConversationId, sessionStartTs]);
+
+    const systemLogs = useMemo(() => messages.filter((m) => m.source === 'system').slice().reverse(), [messages]);
+
+    const buildLocalContextPack = useCallback((question: string, intent: IntentKey) => {
+        const latest = recentCandles[recentCandles.length - 1] || null;
+        const prev = recentCandles[recentCandles.length - 2] || null;
+        const chart = marketData.activeChart ? {
+            symbol: marketData.activeChart.symbol,
+            timeframe: marketData.activeChart.interval,
+            source: marketData.activeChart.source,
+            lastPrice: sanitizeNumber(marketData.activeTicker?.price, marketData.activeDigits ?? 2),
+            changePercent: sanitizeNumber(marketData.activeTicker?.change, 2),
+            latestCandle: latest ? { t: latest.time, o: sanitizeNumber(latest.open, marketData.activeDigits ?? 2), h: sanitizeNumber(latest.high, marketData.activeDigits ?? 2), l: sanitizeNumber(latest.low, marketData.activeDigits ?? 2), c: sanitizeNumber(latest.close, marketData.activeDigits ?? 2) } : null,
+            previousCandle: prev ? { t: prev.time, o: sanitizeNumber(prev.open, marketData.activeDigits ?? 2), h: sanitizeNumber(prev.high, marketData.activeDigits ?? 2), l: sanitizeNumber(prev.low, marketData.activeDigits ?? 2), c: sanitizeNumber(prev.close, marketData.activeDigits ?? 2) } : null,
+            indicators: indicatorSnapshot,
+        } : null;
+        const base = { question, intent, generatedAt: new Date().toISOString(), chart };
+        if (intent === 'entry') return { ...base, strategy: summarizeStrategy(activeStrategy), latestSignal: summarizeSignal(latestSignal), openPosition: summarizeVirtualPosition(relevantVirtualPosition, relevantVirtualPosition ? strategyById[relevantVirtualPosition.strategyId]?.name : undefined) };
+        if (intent === 'exit') return { ...base, latestSignal: summarizeSignal(latestSignal), openPosition: summarizeVirtualPosition(relevantVirtualPosition, relevantVirtualPosition ? strategyById[relevantVirtualPosition.strategyId]?.name : undefined), terminalPosition: liveTerminalPosition ? { symbol: liveTerminalPosition.symbol, type: liveTerminalPosition.type, volume: sanitizeNumber(liveTerminalPosition.volume, 2), openPrice: sanitizeNumber(liveTerminalPosition.open_price, marketData.activeDigits ?? 2), currentPrice: sanitizeNumber(liveTerminalPosition.current_price, marketData.activeDigits ?? 2), sl: sanitizeNumber(liveTerminalPosition.sl, marketData.activeDigits ?? 2), tp: sanitizeNumber(liveTerminalPosition.tp, marketData.activeDigits ?? 2), profit: sanitizeNumber(liveTerminalPosition.profit, 2) } : null, lastTrade: lastHistoryDeal };
+        if (intent === 'strategy') return { ...base, activeStrategy: summarizeStrategy(activeStrategy), otherStrategies: strategyData.strategies.filter((s) => s.active).slice(0, 4).map((s) => summarizeStrategy(s)), latestSignal: summarizeSignal(latestSignal) };
+        if (intent === 'risk') return { ...base, strategy: summarizeStrategy(activeStrategy), account: Object.values(marketData.accounts || {})[0] || null, openPositions: openVirtualPositions.slice(0, 3).map((p) => summarizeVirtualPosition(p, strategyById[p.strategyId]?.name)), terminalPosition: liveTerminalPosition ? { symbol: liveTerminalPosition.symbol, type: liveTerminalPosition.type, volume: sanitizeNumber(liveTerminalPosition.volume, 2), profit: sanitizeNumber(liveTerminalPosition.profit, 2) } : null };
+        if (intent === 'summary') return { ...base, chart: { ...chart, recentCandles: recentCandles.slice(-6).map((c) => ({ t: c.time, o: sanitizeNumber(c.open, marketData.activeDigits ?? 2), h: sanitizeNumber(c.high, marketData.activeDigits ?? 2), l: sanitizeNumber(c.low, marketData.activeDigits ?? 2), c: sanitizeNumber(c.close, marketData.activeDigits ?? 2) })) }, latestSignal: summarizeSignal(latestSignal) };
+        return { ...base, strategy: summarizeStrategy(activeStrategy), latestSignal: summarizeSignal(latestSignal) };
+    }, [activeStrategy, indicatorSnapshot, lastHistoryDeal, latestSignal, liveTerminalPosition, marketData.accounts, marketData.activeChart, marketData.activeDigits, marketData.activeTicker?.change, marketData.activeTicker?.price, openVirtualPositions, recentCandles, relevantVirtualPosition, strategyById, strategyData.strategies]);
+
+    const sendPrompt = useCallback(async (rawQuestion: string) => {
+        const question = rawQuestion.trim();
+        const { accessToken, userId, hasAccessToken } = getAuthContext();
+        if (!question || !AI_ENABLED || isSending) return;
         if (!hasAccessToken) {
-            setIsLoading(false);
+            setFriendlyError('Bạn cần đăng nhập để sử dụng AI.');
             return;
         }
-        fetchHistory();
-        const interval = setInterval(fetchHistory, 5000); // Polling logs
-        return () => clearInterval(interval);
-    }, [hasAccessToken, fetchHistory]);
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages, mode]);
-
-    const handleSend = async () => {
-        if (!hasAccessToken || !aiEnabled || !inputValue.trim() || isSending) return;
-
-        const prompt = inputValue;
-        setInputValue('');
+        setFriendlyError(null);
         setIsSending(true);
-
         try {
-            const res = await fetch('/api/ai/bridge/task', {
+            const intent = classifyIntent(question);
+            const prompt = buildPrompt(buildLocalContextPack(question, intent), question, intent);
+            const payload: { prompt: string; source: 'chat'; userId?: string } = { prompt, source: 'chat' };
+            if (userId) payload.userId = userId;
+            const response = await fetch('/api/ai/bridge/task', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, source: 'chat' })
+                headers: { 'content-type': 'application/json', ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}) },
+                credentials: 'include',
+                body: JSON.stringify(payload),
             });
-
-            if (res.ok) {
-                await fetchHistory();
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data) throw new Error(String(data?.user_message || data?.msg || data?.error || `request_failed_${response.status}`));
+            if (typeof data?.remainingCredits === 'number') setRemainingCredits(data.remainingCredits);
+            if (selectedConversationId !== 'active') {
+                setSelectedConversationId('active');
+                setSessionStartTs(Date.now());
             }
-        } catch (err) {
-            console.error('Chat error:', err);
+            await fetchHistory();
+        } catch (error) {
+            setFriendlyError(toFriendlyError(error instanceof Error ? error.message : 'ai_request_failed'));
         } finally {
             setIsSending(false);
         }
-    };
+    }, [buildLocalContextPack, fetchHistory, isSending, selectedConversationId]);
 
-    const chatMessages = messages.filter(m => m.source === 'chat');
-    const systemLogs = messages.filter(m => m.source === 'system');
+    const handleSend = useCallback(async () => {
+        const question = inputValue.trim();
+        if (!question) return;
+        setInputValue('');
+        await sendPrompt(question);
+    }, [inputValue, sendPrompt]);
+
+    const handleNewConversation = useCallback(() => {
+        setSelectedConversationId('active');
+        setSessionStartTs(Date.now());
+        setInputValue('');
+        setFriendlyError(null);
+    }, []);
 
     return (
-        <div className="flex flex-col h-full bg-secondary/20 rounded-lg border border-border overflow-hidden">
-            {/* Inner Header */}
-            <div className="flex items-center justify-between px-3 py-2 bg-secondary/60 border-b border-border">
-                <div className="flex items-center gap-1.5 shrink-0">
-                    <BrainCircuit size={16} className="text-primary animate-pulse" />
-                    <span className="text-[11px] font-black uppercase tracking-wider text-foreground whitespace-nowrap">AI Assistant</span>
-                </div>
-                <div className="flex bg-secondary/80 p-0.5 rounded-md border border-border">
-                    <button
-                        onClick={() => setMode('chat')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all ${mode === 'chat' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        <MessageSquare size={12} /> CHAT
-                    </button>
-                    <button
-                        onClick={() => setMode('logs')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all ${mode === 'logs' ? 'bg-secondary-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        <Terminal size={12} /> LOGS
-                    </button>
-                </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar" ref={scrollRef}>
-                {/* FORCE DISPLAY FOR MOCKUP SCREENSHOT */}
-                {true ? (
-                    <div className="flex-1 flex flex-col p-4 relative overflow-hidden group">
-                        {/* Background glow */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-                        
-                        {/* Vision Active Status */}
-                        <div className="flex items-center justify-between mb-6 relative z-10">
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--glow-primary)]" />
-                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Vision Active</span>
-                            </div>
-                            <ShieldCheck size={16} className="text-primary/50" />
+        <div className="flex h-full min-h-0 overflow-hidden rounded-lg border border-border bg-secondary/20">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="border-b border-border bg-secondary/60 px-3 py-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            {remainingCredits !== null && (
+                                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-primary">
+                                    Credits: {remainingCredits}
+                                </span>
+                            )}
                         </div>
-
-                        {/* Chat Messages Mock */}
-                        <div className="flex-1 flex flex-col gap-4 relative z-10">
-                            {/* User Request */}
-                            <div className="self-end max-w-[85%] bg-primary/10 backdrop-blur-md border border-primary/20 rounded-2xl rounded-tr-sm p-3 shadow-sm">
-                                <p className="text-[12px] text-foreground">Phân tích giúp tôi setup XAUUSD hiện tại trên màn hình. Có nên Long không?</p>
-                            </div>
-
-                            {/* AI Response with Vision Context */}
-                            <div className="self-start max-w-[95%] bg-card/90 backdrop-blur-xl border border-border rounded-2xl rounded-tl-sm p-5 shadow-lg ring-1 ring-border/50">
-                                <div className="flex items-center gap-2 mb-4 drop-shadow-sm">
-                                    <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                                        <BrainCircuit size={16} />
-                                    </div>
-                                    <span className="text-[12px] font-black uppercase tracking-widest text-primary">Premium AI</span>
-                                </div>
-                                
-                                <div className="space-y-4 text-[13px] text-muted-foreground leading-relaxed">
-                                    <p>Tôi đã phân tích hình ảnh biểu đồ XAUUSD khung 15m của bạn.</p>
-                                    
-                                    <div className="pl-3 border-l-2 border-primary/40 space-y-2">
-                                        <p className="flex items-start gap-2">
-                                            <span className="text-primary font-bold mt-0.5">•</span>
-                                            <span><strong className="text-foreground">Hành vi giá:</strong> Cây nến hiện tại vừa tạo một cụm Pinbar rút râu mạnh tại vùng cản 2345.0.</span>
-                                        </p>
-                                        <p className="flex items-start gap-2">
-                                            <span className="text-cyan-600 dark:text-cyan-400 font-bold mt-0.5">•</span>
-                                            <span><strong className="text-foreground">Chỉ báo RSI:</strong> Phân kỳ đáy rsi (đường màu tím) đang hình thành ở mức 32.</span>
-                                        </p>
-                                    </div>
-
-                                    <div className="p-3 mt-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400">
-                                        <p className="font-bold text-[12px] uppercase mb-1">💡 Đề xuất giao dịch</p>
-                                        <p className="text-[12px] opacity-90">Có thể mở vị thế Long quanh 2346. Stoploss an toàn đặt dưới râu nến tại 2342.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Demo Overlay for article link */}
-                             <div className="mt-auto pt-6 w-full flex justify-center pb-2">
-                                <a 
-                                    href="/en/premium-ai" 
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-2"
-                                >
-                                    Đọc Chi Tiết Thiết Kế
-                                </a>
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <IconTabButton active={mode === 'history'} title="Lịch sử" onClick={() => setMode('history')}>
+                                <History size={15} />
+                            </IconTabButton>
+                            <IconTabButton active={mode === 'logs'} title="Logs" onClick={() => setMode('logs')}>
+                                <Terminal size={15} />
+                            </IconTabButton>
+                            <IconTabButton active={mode === 'chat'} title="Cuộc trò chuyện mới" onClick={() => { handleNewConversation(); setMode('chat'); }}>
+                                <SquarePen size={15} />
+                            </IconTabButton>
                         </div>
                     </div>
-                ) : (
-                    <>
-                        {mode === 'chat' && (
-                            chatMessages.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center opacity-10 gap-2 text-center">
-                                    <MessageSquare size={48} />
-                                    <span className="text-[11px] uppercase font-black max-w-[200px]">Start a conversation with Gemini Flash 2.5</span>
-                                </div>
-                            ) : (
-                                chatMessages.map((msg) => (
-                                    <div key={msg.id} className="flex flex-col gap-3">
-                                        <div className="self-end max-w-[85%] bg-blue-600/10 border border-blue-500/20 rounded-2xl rounded-tr-none p-3 text-[13px] text-foreground leading-relaxed shadow-sm">
-                                            {msg.prompt}
-                                        </div>
-                                        <div className="self-start max-w-[90%] bg-secondary/40 border border-border rounded-2xl rounded-tl-none p-4 text-[13px] text-foreground leading-relaxed shadow-lg flex flex-col gap-2">
-                                            <div className="flex items-center gap-2 mb-1 opacity-50">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                <span className="text-[11px] font-black uppercase tracking-tight">Gemini AI</span>
-                                            </div>
-                                            {msg.response}
-                                        </div>
-                                    </div>
-                                ))
-                            )
-                        )}
+                </div>
 
-                        {mode === 'logs' && (
-                            systemLogs.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center opacity-10 gap-2 text-center">
-                                    <History size={48} />
-                                    <span className="text-[11px] uppercase font-black">No system communication logs yet</span>
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                    {isLoading ? (
+                        <div className="flex h-full items-center justify-center">
+                            <Loader2 size={24} className="animate-spin text-primary" />
+                        </div>
+                    ) : mode === 'chat' ? (
+                        visibleChatMessages.length === 0 ? (
+                            <div className="flex h-full flex-col items-center justify-center gap-3 text-center opacity-60">
+                                <div className="max-w-[320px] text-[12px] leading-relaxed text-muted-foreground">
+                                    Hỏi ngắn gọn về chart, lệnh đang mở, strategy đang chạy hoặc rủi ro hiện tại. AI sẽ chỉ lấy dữ liệu phù hợp với câu hỏi.
                                 </div>
-                            ) : (
-                                systemLogs.map((msg) => (
-                                    <div key={msg.id} className="bg-secondary/20 rounded border border-border p-3 flex flex-col gap-2 group hover:bg-secondary/30 transition-colors">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2 text-cyan-500/80">
-                                                <ShieldCheck size={12} />
-                                                <span className="text-[11px] font-black uppercase tracking-tighter">System Audit Log</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-mono">
-                                                <Clock size={10} />
-                                                {new Date(msg.timestamp).toLocaleTimeString()}
-                                            </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {visibleChatMessages.map((msg) => (
+                                    <div key={msg.id} className="flex flex-col gap-3">
+                                        <div className="self-end max-w-[88%] rounded-2xl rounded-tr-sm border border-primary/20 bg-primary/10 p-3 text-[13px] leading-relaxed text-foreground shadow-sm">
+                                            {getVisibleUserPrompt(msg.prompt)}
                                         </div>
-                                        <div className="text-[11px] text-muted-foreground font-medium pl-2 border-l border-border italic">
-                                            &quot;{msg.prompt.substring(0, 100)}...&quot;
-                                        </div>
-                                        <div className="text-[11px] text-blue-400/80 bg-blue-500/5 p-2 rounded border border-blue-500/10 font-mono leading-tight">
-                                            {msg.response.substring(0, 200)}...
+                                        <div className="self-start max-w-[92%] rounded-2xl rounded-tl-sm border border-border bg-card/80 p-4 shadow-lg">
+                                            <div className="mb-2 flex items-center gap-2">
+                                                <span className="text-[11px] font-black uppercase tracking-wider text-primary">Premium AI</span>
+                                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{formatTime(msg.timestamp)}</span>
+                                            </div>
+                                            <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{msg.response}</div>
                                         </div>
                                     </div>
+                                ))}
+                            </div>
+                        )
+                    ) : mode === 'history' ? (
+                        <div className="mx-auto flex h-full w-full max-w-2xl flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-[11px] font-black uppercase tracking-[0.24em] text-muted-foreground">Lịch sử</div>
+                                    <div className="mt-1 text-sm font-bold text-foreground">Chọn lại cuộc trò chuyện gần đây</div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        handleNewConversation();
+                                        setMode('chat');
+                                    }}
+                                    className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-primary transition hover:bg-primary/15"
+                                >
+                                    <Plus size={13} />
+                                    Mới
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedConversationId('active');
+                                    setMode('chat');
+                                }}
+                                className={cn(
+                                    'rounded-2xl border p-4 text-left transition',
+                                    selectedConversationId === 'active'
+                                        ? 'border-primary/40 bg-primary/10'
+                                        : 'border-border/60 bg-card/60 hover:border-primary/20'
+                                )}
+                            >
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="text-[11px] font-black uppercase tracking-wide text-foreground">Cuộc trò chuyện hiện tại</div>
+                                    <SquarePen size={14} className="text-primary" />
+                                </div>
+                                <div className="mt-2 text-[12px] leading-relaxed text-muted-foreground">Tiếp tục hỏi thêm trên phiên hiện tại hoặc bắt đầu lại từ đầu.</div>
+                            </button>
+                            {conversations.length === 0 ? (
+                                <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-card/40 p-6 text-center text-[12px] text-muted-foreground">
+                                    Chưa có lịch sử hội thoại để hiển thị.
+                                </div>
+                            ) : (
+                                conversations.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setSelectedConversationId(item.id);
+                                            setMode('chat');
+                                        }}
+                                        className={cn(
+                                            'rounded-2xl border p-4 text-left transition',
+                                            selectedConversationId === item.id
+                                                ? 'border-primary/40 bg-primary/10'
+                                                : 'border-border/60 bg-card/60 hover:border-primary/20'
+                                        )}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <div className="line-clamp-2 text-[13px] font-bold leading-relaxed text-foreground">{item.title}</div>
+                                                <div className="mt-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{formatTime(item.startedAt)}</div>
+                                            </div>
+                                            <History size={14} className="mt-0.5 text-primary/80" />
+                                        </div>
+                                        <div className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+                                            {item.items.length} tin nhắn
+                                        </div>
+                                    </button>
                                 ))
-                            )
+                            )}
+                        </div>
+                    ) : systemLogs.length === 0 ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 text-center opacity-50">
+                            <History size={40} />
+                            <span className="text-[11px] font-black uppercase tracking-wider">Chưa có log hệ thống</span>
+                        </div>
+                    ) : (
+                        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
+                            {systemLogs.map((msg) => (
+                                <div key={msg.id} className="rounded-xl border border-border/70 bg-card/60 p-3">
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-cyan-400">
+                                            <ShieldCheck size={12} />
+                                            System Audit Log
+                                        </div>
+                                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{formatTime(msg.timestamp)}</div>
+                                    </div>
+                                    <div className="line-clamp-2 text-[11px] text-muted-foreground">{getVisibleUserPrompt(msg.prompt)}</div>
+                                    <div className="mt-2 line-clamp-3 text-[11px] text-foreground/85">{msg.response}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {mode === 'chat' && (
+                    <div className="border-t border-border bg-secondary/80 p-3">
+                        {friendlyError && (
+                            <div className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] font-bold text-red-300">
+                                {friendlyError}
+                            </div>
                         )}
-                    </>
+                        <div className="relative flex items-center gap-2">
+                            {isFilteringSuggestions && (
+                                <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-20 overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-2xl backdrop-blur">
+                                    <div className="max-h-48 overflow-y-auto custom-scrollbar p-2">
+                                        {filteredPresetItems.length === 0 ? (
+                                            <div className="px-3 py-2 text-[11px] text-muted-foreground">Không có gợi ý phù hợp.</div>
+                                        ) : (
+                                            filteredPresetItems.map((item) => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => {
+                                                        setInputValue(item.prompt);
+                                                        void sendPrompt(item.prompt);
+                                                    }}
+                                                    disabled={isSending}
+                                                    className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-primary/5 disabled:opacity-60"
+                                                >
+                                                    <item.icon width={13} height={13} className="mt-0.5 shrink-0 text-primary" />
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-[11px] font-black uppercase tracking-wide text-foreground">{item.label}</div>
+                                                        <div className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{item.prompt}</div>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') void handleSend();
+                                }}
+                                placeholder="Hỏi về chart, lệnh đang mở, strategy, SL/TP..."
+                                className="w-full rounded-full border border-border bg-secondary px-5 py-3 pr-12 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:border-blue-500/50 focus:outline-none"
+                            />
+                            <button
+                                onClick={() => void handleSend()}
+                                disabled={!AI_ENABLED || isSending || !inputValue.trim()}
+                                className="absolute right-1 flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white transition hover:bg-blue-500 disabled:opacity-40"
+                            >
+                                {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
-
-            {/* Input - Only for Chat Mode */}
-            {mode === 'chat' && (
-                <div className="p-3 bg-secondary/80 border-t border-border">
-                    <div className="relative flex items-center gap-2">
-                        <input
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Ask anything..."
-                            className="flex-1 bg-secondary border border-border rounded-full py-2.5 px-5 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-blue-500/50 transition-all pr-12"
-                        />
-                        <button
-                            onClick={handleSend}
-                            disabled={!hasAccessToken || !aiEnabled || isSending || !inputValue.trim()}
-                            className="absolute right-1 w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-30 disabled:hover:bg-blue-600 transition-all shadow-lg active:scale-90"
-                        >
-                            {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

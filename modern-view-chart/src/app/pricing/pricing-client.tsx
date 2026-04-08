@@ -45,50 +45,70 @@ type RecentOrder = {
   createdAt?: string;
 };
 
+function getLocaleFromPathname() {
+  if (typeof window === 'undefined') return 'vi';
+  const match = window.location.pathname.match(/^\/(vi|en)(?:\/|$)/i);
+  return (match?.[1] || 'vi').toLowerCase();
+}
+
+function clearSessionAndRedirect() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('auth_access_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('client_modules');
+    window.dispatchEvent(new Event('auth-changed'));
+    const locale = getLocaleFromPathname();
+    window.location.href = `/${locale}`;
+  } catch {
+    window.location.href = '/';
+  }
+}
+
 const MODULES: ModuleCard[] = [
   {
     key: 'your_mt5',
     title: 'Your MT5',
     description: 'Kết nối trực tiếp MT5 để quản lý chart và thực thi lệnh nhanh.',
-    priceLabel: '20k/tháng',
-    amount: 20000,
+    priceLabel: '10k/tháng',
+    amount: 10000,
     icon: <BriefcaseBusiness className="h-4 w-4" />,
   },
   {
     key: 'binance_trade',
     title: 'Binance Demo',
     description: 'Mô phỏng giao dịch Crypto với dữ liệu thời gian thực.',
-    priceLabel: '20k/tháng',
-    amount: 20000,
+    priceLabel: '10k/tháng',
+    amount: 10000,
     icon: <ChartCandlestick className="h-4 w-4" />,
   },
   {
     key: 'telegram_notify',
     title: 'Telegram Notify',
     description: 'Nhận cảnh báo tín hiệu và biến động giá qua Telegram.',
-    priceLabel: '20k/tháng',
-    amount: 20000,
+    priceLabel: '10k/tháng',
+    amount: 10000,
     icon: <BellRing className="h-4 w-4" />,
   },
   {
     key: 'telegram_control',
     title: 'Telegram Control',
     description: 'Điều khiển bot và thao tác nhanh qua Telegram.',
-    priceLabel: '20k/tháng',
-    amount: 20000,
+    priceLabel: '10k/tháng',
+    amount: 10000,
     icon: <Bot className="h-4 w-4" />,
   },
   {
     key: 'ai_assistant',
     title: 'AI Assistant',
     description: 'Trợ lý AI phân tích và gợi ý quyết định giao dịch.',
-    priceLabel: '20k/tháng',
-    amount: 20000,
+    priceLabel: '10k/tháng',
+    amount: 10000,
     icon: <Sparkles className="h-4 w-4" />,
   },
 ];
 
-const DEFAULT_UNIT_PRICE = 20000;
+const DEFAULT_UNIT_PRICE = 10000;
 
 function getModuleAmount(moduleKey: ClientModule) {
   return MODULES.find((item) => item.key === moduleKey)?.amount ?? DEFAULT_UNIT_PRICE;
@@ -109,6 +129,7 @@ function formatCountdown(seconds: number) {
 export default function PricingClient() {
   const [selected, setSelected] = React.useState<ClientModule[]>([]);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [accountLabel, setAccountLabel] = React.useState('Guest');
   const [isCreatingOrder, setIsCreatingOrder] = React.useState(false);
   const [notice, setNotice] = React.useState('');
   const [checkoutOrder, setCheckoutOrder] = React.useState<CheckoutOrder | null>(null);
@@ -136,6 +157,18 @@ export default function PricingClient() {
       const entitlements = getClientEntitlements();
       setSelected(entitlements.modules);
       setIsAuthenticated(entitlements.isAuthenticated);
+      const raw = String(localStorage.getItem('auth_user') || '').trim();
+      if (!raw) {
+        setAccountLabel('Guest');
+        return;
+      }
+      try {
+        const user = JSON.parse(raw);
+        const nextLabel = String(user?.display_name || user?.displayName || user?.username || 'Guest').trim();
+        setAccountLabel(nextLabel || 'Guest');
+      } catch {
+        setAccountLabel('Guest');
+      }
     };
 
     syncEntitlements();
@@ -185,6 +218,7 @@ export default function PricingClient() {
   }, []);
 
   const totalAmount = selected.reduce((sum, moduleKey) => sum + getModuleAmount(moduleKey), 0);
+  const accountHint = accountLabel || 'Guest';
 
   const refreshOrders = React.useCallback(async () => {
     const accessToken = (localStorage.getItem('auth_access_token') || '').trim();
@@ -208,6 +242,12 @@ export default function PricingClient() {
     if (prevStatus !== 'paid' && current.status === 'paid') {
       setNotice('Thanh toán thành công. Module đã được kích hoạt.');
       setShowPaidGuide(true);
+      setSelected([]);
+      setClientModulesLocal([]);
+      const locale = getLocaleFromPathname();
+      window.setTimeout(() => {
+        window.location.href = `/${locale}/modules`;
+      }, 900);
     }
     if (current.status === 'expired') {
       setNotice('Đơn đã hết hạn sau 15 phút. Vui lòng tạo đơn mới để thanh toán.');
@@ -226,6 +266,12 @@ export default function PricingClient() {
       return;
     }
     setCountdownSeconds(Number(checkoutOrder.remainingSeconds || 0));
+  }, [checkoutOrder]);
+
+  React.useEffect(() => {
+    if (!checkoutOrder || checkoutOrder.status !== 'paid') return;
+    setSelected([]);
+    setClientModulesLocal([]);
   }, [checkoutOrder]);
 
   React.useEffect(() => {
@@ -307,6 +353,23 @@ export default function PricingClient() {
 
       <main className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pb-56 pt-14 md:px-6 md:pb-40 md:pt-20">
         <section className="relative mb-14 text-center">
+          <div className="mb-5 flex flex-wrap justify-center gap-3">
+            <a
+              href={`/${getLocaleFromPathname()}/modules`}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 transition hover:bg-emerald-400/20"
+            >
+              Module của tôi
+            </a>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={clearSessionAndRedirect}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-[#dee3ea] transition hover:bg-white/10"
+              >
+                Đăng xuất
+              </button>
+            ) : null}
+          </div>
           <h1 className="text-[3rem] font-black tracking-tighter leading-[0.95] md:text-7xl">
             Nâng tầm giao dịch <br /> với <span className="text-[#4edea3]">VivuTrade</span>
           </h1>
@@ -316,6 +379,27 @@ export default function PricingClient() {
           {notice ? (
             <div className="mx-auto mt-5 max-w-2xl rounded-xl border border-[#4edea3]/20 bg-[#1b2025]/80 px-4 py-3 text-sm text-[#93f3c8]">
               {notice}
+            </div>
+          ) : null}
+          {isAuthenticated ? (
+            <div className="mx-auto mt-4 max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-4 text-left md:p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#86948a]">Module của tôi</p>
+                  <p className="mt-1 text-sm text-[#bbcabf]">
+                    Vào hub để mở nhanh module đã mua, xem hướng dẫn và quay lại chart.
+                  </p>
+                  <p className="mt-1 text-xs text-[#86948a]">
+                    Tài khoản hiện tại: <span className="font-semibold text-[#dee3ea]">{accountHint}</span>
+                  </p>
+                </div>
+                <a
+                  href={`/${getLocaleFromPathname()}/modules`}
+                  className="inline-flex items-center justify-center rounded-xl bg-[#4edea3] px-4 py-2.5 text-sm font-black text-[#003824] transition hover:shadow-[0_0_20px_rgba(78,222,163,0.24)]"
+                >
+                  Mở module hub
+                </a>
+              </div>
             </div>
           ) : null}
         </section>
@@ -499,13 +583,29 @@ export default function PricingClient() {
               </button>
             ) : (
               <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleLogin((v) => !v)}
-                  className="h-10 min-w-[150px] whitespace-nowrap rounded-lg px-3 text-[13px] font-bold bg-[#4edea3] text-[#003824] transition hover:shadow-[0_0_20px_rgba(78,222,163,0.3)] md:h-12 md:min-w-[250px] md:rounded-xl md:px-5 md:text-base"
-                >
-                  Đăng nhập để thanh toán
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleLogin((v) => !v)}
+                    className="h-10 min-w-[150px] whitespace-nowrap rounded-lg px-3 text-[13px] font-bold bg-[#4edea3] text-[#003824] transition hover:shadow-[0_0_20px_rgba(78,222,163,0.3)] md:h-12 md:min-w-[250px] md:rounded-xl md:px-5 md:text-base"
+                  >
+                    Đăng nhập để thanh toán
+                  </button>
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={clearSessionAndRedirect}
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-[#dee3ea] transition hover:bg-white/10"
+                    >
+                      Đăng xuất
+                    </button>
+                  ) : null}
+                  {isAuthenticated ? (
+                    <p className="text-[11px] text-[#86948a] text-right">
+                      Đang dùng: <span className="font-semibold text-[#dee3ea]">{accountHint}</span>
+                    </p>
+                  ) : null}
+                </div>
                 {showGoogleLogin ? (
                   <div className="absolute bottom-[calc(100%+8px)] right-0 z-[60] w-[190px] rounded-lg border border-white/10 bg-[#1b2025] p-1.5 shadow-xl md:w-[250px] md:p-2">
                     <GoogleSignInButton redirectTo="/vi/pricing" size="medium" text="continue_with" theme="filled_black" width={170} />

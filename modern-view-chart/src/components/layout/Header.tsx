@@ -1,5 +1,7 @@
 import React, { memo } from 'react';
+import Link from 'next/link';
 import { Bell, BarChart2, Settings, PanelRightClose, LogOut } from 'lucide-react';
+import { HeartHandshake } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
 import { TabContainer } from './TabContainer';
@@ -358,6 +360,14 @@ export const Header = memo(function Header() {
                 </div>
 
                 <div className="flex items-center gap-2 pl-2 group cursor-pointer h-7">
+                    <Link
+                        href={`/${locale}/pricing`}
+                        className="hidden sm:flex h-7 w-7 items-center justify-center rounded-full border border-amber-300 bg-amber-500 text-slate-950 shadow-[0_0_14px_rgba(245,158,11,0.35)] transition-all hover:bg-amber-400 active:scale-90"
+                        title="Ủng hộ Vivutrade"
+                    >
+                        <HeartHandshake size={14} />
+                    </Link>
+
                     {!isAuthenticated ? (
                         <GoogleSignInButton
                             className="mr-1"

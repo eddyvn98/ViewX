@@ -14,7 +14,7 @@ import { useTranslations } from 'next-intl';
 
 import { motion, LayoutGroup } from 'framer-motion';
 
-export function StrategyPanel() {
+export function StrategyPanel({ hideAiTab = false }: { hideAiTab?: boolean }) {
     type PanelView = 'build' | 'list' | 'signals' | 'ai_chat';
     const view = useMarketStore((state) => state.strategyPanelView) as PanelView;
     const setView = useMarketStore((state) => state.setStrategyPanelView);
@@ -47,7 +47,7 @@ export function StrategyPanel() {
         { id: 'signals' as PanelView, label: t('signals'), icon: Activity },
         { id: 'list' as PanelView, label: t('createStrategy'), icon: Bot, matches: ['list', 'build'] },
         { id: 'ai_chat' as PanelView, label: t('aiChat'), icon: MessageSquare }
-    ];
+    ].filter((tab) => !(hideAiTab && tab.id === 'ai_chat'));
 
     return (
         <div className="flex flex-col h-full bg-background text-foreground overflow-hidden font-sans">

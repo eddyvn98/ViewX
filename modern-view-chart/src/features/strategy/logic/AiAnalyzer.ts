@@ -7,6 +7,7 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
+const AI_ENABLED = true;
 
 export enum AnalysisType {
     PRE_TRADE = 'PRE_TRADE',
@@ -66,6 +67,7 @@ export class AiAnalyzer {
             return typeof value === 'string' && value.length > 0 ? value : fallback;
         };
         const signalTimestamp = toNumber(signal.timestamp, Date.now());
+        const signalContext = (signal.context as Record<string, unknown> | undefined) || {};
         const metadata = (signal.metadata as Record<string, unknown> | undefined) || {};
         const mae = toNumber(metadata.mae, 0);
         const mfe = toNumber(metadata.mfe, 0);
@@ -73,6 +75,8 @@ export class AiAnalyzer {
         const metricsVolatility = toNumber(metrics.volatility, 0);
         const metricsTrendStrength = toNumber(metrics.trendStrength, 0);
         const metricsSession = toText(metrics.session, 'Unknown');
+        const entryIndicators = (signalContext.indicators_snapshot as Record<string, unknown> | undefined) || {};
+        const riskConfig = leg.risk ? JSON.stringify(leg.risk) : '{}';
 
         if (type === AnalysisType.POST_TRADE) {
             const pnl = toNumber(signal.pnl, 0);
@@ -92,6 +96,9 @@ export class AiAnalyzer {
       Entry Time: ${new Date(signalTimestamp).toISOString()}
       MAE (Max Adverse Excursion): ${mae.toFixed(1)} pips
       MFE (Max Favorable Excursion): ${mfe.toFixed(1)} pips
+      Exit Reason: ${toText(signalContext.exit_reason, 'Unknown')}
+      Risk Config: ${riskConfig}
+      Entry Indicator Snapshot: ${JSON.stringify(entryIndicators)}
 
       [MARKET CONTEXT AT ENTRY]
       RSI: ${metricsRsi || 'N/A'}
@@ -124,6 +131,8 @@ export class AiAnalyzer {
       Trend: ${metricsTrendStrength > 20 ? 'Strong' : 'Weak'}
       Volatility: ${metricsVolatility > 50 ? 'High' : 'Low'} (vs historical average)
       Session: ${metricsSession}
+      Risk Config: ${riskConfig}
+      Entry Indicator Snapshot: ${JSON.stringify(entryIndicators)}
 
       [HISTORICAL PERFORMANCE STATS]
       Overall Winrate: ${(stats.overallWinrate * 100).toFixed(1)}%
@@ -170,15 +179,29 @@ export class AiAnalyzer {
     }
 
     private static async callBridgeAi(prompt: string): Promise<AiResponse> {
-        const aiEnabled = false;
-        if (!aiEnabled) {
+        if (!AI_ENABLED) {
             throw new Error("AI is temporarily disabled");
+        }
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_access_token') || '' : '';
+        const rawUser = typeof window !== 'undefined' ? localStorage.getItem('auth_user') : null;
+        let userId: string | undefined;
+        if (rawUser) {
+            try {
+                const parsed = JSON.parse(rawUser) as { id?: string; userId?: string; _id?: string };
+                userId = parsed.id || parsed.userId || parsed._id;
+            } catch {
+                userId = undefined;
+            }
         }
         try {
             const res = await fetch('/api/ai/bridge/task', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, timeout: 120000 })
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ prompt, timeout: 120000, source: 'strategy', userId })
             });
 
             if (!res.ok) throw new Error(`Bridge error: ${res.statusText}`);
