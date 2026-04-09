@@ -10,6 +10,7 @@ import { OrdersTable } from './OrdersTable';
 import { PositionsTable } from './PositionsTable';
 import { ActivationChecklist } from './ActivationChecklist';
 import { useMarketStore } from '@/lib/store';
+import { getClientEntitlements } from '@/lib/auth/entitlements';
 
 declare global {
     interface Window {
@@ -49,26 +50,28 @@ export function TerminalTabs({
     strategyEngineEnabled,
 }: TerminalTabsProps) {
     const tabs: TerminalTab[] = ['positions', 'orders', 'history'];
-    const isBridgeOnline = useMarketStore((state) => state.isBridgeOnline);
     const hasAcceptedMt5Terms = useMarketStore((state) => state.hasAcceptedMt5Terms);
-    const [isNativeDesktop, setIsNativeDesktop] = useState(
-        () => typeof window !== 'undefined' && Boolean(window.vivutradeDesktop?.isNativeDesktop)
+    const [hasYourMt5Module, setHasYourMt5Module] = useState(
+        () => typeof window !== 'undefined' && getClientEntitlements().hasYourMt5
     );
 
     useEffect(() => {
-        if (typeof window === 'undefined' || !window.vivutradeDesktop) return;
-        window.vivutradeDesktop.getStatus?.()
-            .then((payload) => setIsNativeDesktop(Boolean(payload?.isNativeDesktop)))
-            .catch(() => undefined);
-        const unsubscribe = window.vivutradeDesktop.onStatus?.((payload) => {
-            setIsNativeDesktop(Boolean(payload?.isNativeDesktop));
-        });
+        if (typeof window === 'undefined') return;
+        const syncEntitlements = () => setHasYourMt5Module(getClientEntitlements().hasYourMt5);
+        syncEntitlements();
+        window.addEventListener('storage', syncEntitlements);
+        window.addEventListener('focus', syncEntitlements);
+        window.addEventListener('auth-changed', syncEntitlements);
+        window.addEventListener('auth-state-changed', syncEntitlements);
         return () => {
-            if (typeof unsubscribe === 'function') unsubscribe();
+            window.removeEventListener('storage', syncEntitlements);
+            window.removeEventListener('focus', syncEntitlements);
+            window.removeEventListener('auth-changed', syncEntitlements);
+            window.removeEventListener('auth-state-changed', syncEntitlements);
         };
     }, []);
 
-    const shouldShowActivationChecklist = !hasAcceptedMt5Terms && (isBridgeOnline || isNativeDesktop);
+    const shouldShowActivationChecklist = !hasYourMt5Module || !hasAcceptedMt5Terms;
 
     return (
         <div

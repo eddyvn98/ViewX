@@ -19,18 +19,32 @@ export function parseIntervalSeconds(interval: string): number {
 
 export function deriveDefaultSocketUrl(): string {
     if (typeof window === 'undefined') return wsRuntime.socketUrl || 'ws://127.0.0.1:8091';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const hostname = window.location.hostname;
+    const host = window.location.host;
     const isLocalHost =
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1';
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1';
     if (isLocalHost) {
-        // In local development, prefer configured public WS if provided.
-        if (WS_URL_FROM_ENV) return WS_URL_FROM_ENV;
-        return 'ws://127.0.0.1:8091';
+        const localBackendPort =
+            window.location.port === '13000'
+                ? '18091'
+                : window.location.port === '3000'
+                    ? '8091'
+                    : '18091';
+        return `${protocol}//${hostname}:${localBackendPort}`;
     }
+    if (WS_URL_FROM_ENV) return WS_URL_FROM_ENV;
     if (wsRuntime.socketUrl) return wsRuntime.socketUrl;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    if (hostname === 'vivutrade.io.vn') {
+        return 'wss://api.vivutrade.io.vn';
+    }
+    if (hostname.endsWith('.vivutrade.io.vn') && !hostname.startsWith('api.')) {
+        const suffix = hostname.slice(hostname.indexOf('.'));
+        return `${protocol}//api${suffix}`;
+    }
+
     return `${protocol}//${host}`;
 }
 
@@ -121,16 +135,22 @@ export async function fetchWsTicketFromApi(): Promise<string> {
                     },
                 });
             }
-            if (!response.ok) return '';
+            if (!response.ok) {
+                // Fallback to direct user access token for WS auth when the
+                // ws-ticket endpoint or upstream proxy is temporarily broken.
+                return accessToken;
+            }
             const data = await response.json().catch(() => null);
             const ticket = typeof data?.access_ticket === 'string' ? data.access_ticket.trim() : '';
             const expiresAt = Number.parseInt(String(data?.expires_at || '0'), 10);
-            if (!ticket) return '';
+            if (!ticket) {
+                return accessToken;
+            }
             wsRuntime.wsTicketCache = ticket;
             wsRuntime.wsTicketExpiresAt = Number.isFinite(expiresAt) ? expiresAt : Math.floor(Date.now() / 1000) + 300;
             return wsRuntime.wsTicketCache;
         })
-        .catch(() => '')
+        .catch(() => accessToken || '')
         .finally(() => {
             wsRuntime.wsTicketPromise = null;
         });

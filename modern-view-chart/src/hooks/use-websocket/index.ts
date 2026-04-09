@@ -63,6 +63,34 @@ export function useWebSocket(): { sendMessage: (data: WsMessage) => void } {
         updateTickers,
     ]);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const reconnectWithFreshAuth = () => {
+            const socket = wsRuntime.globalSocket;
+            wsRuntime.forceFreshTicketOnReconnect = true;
+            wsRuntime.wsTicketCache = '';
+            wsRuntime.wsTicketExpiresAt = 0;
+
+            if (!socket) {
+                return;
+            }
+
+            try {
+                socket.close(4005, 'auth_state_changed');
+            } catch {
+                // Ignore close races; reconnect path will recover.
+            }
+        };
+
+        window.addEventListener('auth-changed', reconnectWithFreshAuth);
+        window.addEventListener('auth-state-changed', reconnectWithFreshAuth);
+        return () => {
+            window.removeEventListener('auth-changed', reconnectWithFreshAuth);
+            window.removeEventListener('auth-state-changed', reconnectWithFreshAuth);
+        };
+    }, []);
+
     useInitialHistoryAndForegroundResyncEffect(isConnected);
     useBackfillEventEffect(isConnected);
     useSymbolInterestEffect(isConnected);
