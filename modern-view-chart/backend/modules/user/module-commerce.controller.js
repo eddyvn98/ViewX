@@ -190,6 +190,63 @@ export async function listAdminModuleOrders(req, res) {
   return res.status(200).json({ ok: true, orders: normalizedOrders, catalog: MODULE_CATALOG });
 }
 
+export async function getMyMt5Consent(req, res) {
+  const userId = getAuthUserId(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  const accountScope = String(req.query?.accountScope || "").trim();
+  if (!accountScope) return res.status(400).json({ error: "account_scope_required" });
+
+  const user = await userModel.findById(userId).select("_id mt5Consents");
+  if (!user?._id) return res.status(404).json({ error: "User not found" });
+
+  const record = Array.isArray(user.mt5Consents)
+    ? user.mt5Consents.find((item) => String(item?.accountScope || "").trim() === accountScope)
+    : null;
+
+  return res.status(200).json({
+    ok: true,
+    accountScope,
+    riskAccepted: Boolean(record?.riskAccepted),
+    accountAccepted: Boolean(record?.accountAccepted),
+    accepted: Boolean(record?.accepted),
+    updatedAt: record?.updatedAt || null,
+  });
+}
+
+export async function saveMyMt5Consent(req, res) {
+  const userId = getAuthUserId(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const accountScope = String(req.body?.accountScope || "").trim();
+  if (!accountScope) return res.status(400).json({ error: "account_scope_required" });
+
+  const riskAccepted = Boolean(req.body?.riskAccepted);
+  const accountAccepted = Boolean(req.body?.accountAccepted);
+  const accepted = riskAccepted && accountAccepted;
+
+  const user = await userModel.findById(userId);
+  if (!user?._id) return res.status(404).json({ error: "User not found" });
+
+  const now = new Date();
+  const next = {
+    accountScope,
+    riskAccepted,
+    accountAccepted,
+    accepted,
+    updatedAt: now,
+  };
+
+  const records = Array.isArray(user.mt5Consents) ? [...user.mt5Consents] : [];
+  const idx = records.findIndex((item) => String(item?.accountScope || "").trim() === accountScope);
+  if (idx >= 0) records[idx] = next;
+  else records.push(next);
+
+  user.mt5Consents = records;
+  await user.save();
+
+  return res.status(200).json({ ok: true, ...next });
+}
+
 export async function getAdminModuleStats(req, res) {
   const role = getAuthRole(req);
   if (role !== "admin") return res.status(403).json({ error: "Forbidden" });

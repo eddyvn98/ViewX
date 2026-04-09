@@ -1,10 +1,14 @@
 import { logInfo } from "../../logger.js";
+import { isRecipientForMt5Owner, resolveBridgeOwnerUserId } from "../mt5Scope.js";
 
-export function handleMt5Candles({ clients }, data) {
+export function handleMt5Candles({ ws, clients }, data) {
+    const senderMeta = clients.get(ws);
+    if (!senderMeta?.isBridgeAuthenticated) return;
+    const ownerUserId = resolveBridgeOwnerUserId(senderMeta);
     const payload = JSON.stringify(data);
     let delivered = 0;
     for (const [clientWs, metadata] of clients.entries()) {
-        if (metadata?.isBridgeAuthenticated) continue;
+        if (!isRecipientForMt5Owner(metadata, ownerUserId)) continue;
         if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
             delivered += 1;

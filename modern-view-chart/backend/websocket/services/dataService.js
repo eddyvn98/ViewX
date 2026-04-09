@@ -1,17 +1,15 @@
 import fetch from "node-fetch";
+import { getScopedMt5Price } from "../mt5Scope.js";
 
 const currentCandleCache = {};
 
-export async function fetchLatestCandle(mt5Prices, symbol, interval) {
+export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId = null) {
     const symbolLower = (symbol || "").toLowerCase();
-    const isMt5 = symbolLower.endsWith('m') || symbolLower.endsWith('.m') || mt5Prices.has(symbol);
+    const scopedMt5Price = getScopedMt5Price(mt5Prices, ownerUserId, symbol);
+    const isMt5 = symbolLower.endsWith('m') || symbolLower.endsWith('.m') || Boolean(scopedMt5Price);
 
     if (isMt5) {
-        let p = mt5Prices.get(symbol);
-        if (!p) {
-            const entry = Array.from(mt5Prices.entries()).find(([k]) => k.toLowerCase() === symbolLower);
-            if (entry) p = entry[1];
-        }
+        const p = scopedMt5Price;
         if (!p) return null;
 
         const intervalStr = interval.toString();
@@ -29,7 +27,7 @@ export async function fetchLatestCandle(mt5Prices, symbol, interval) {
         const brokerOffsetSeconds = 0;
         const candleTime = Math.floor((nowSeconds + brokerOffsetSeconds) / secondsPerCandle) * secondsPerCandle;
 
-        const key = `${symbol}|${interval}`;
+        const key = `${ownerUserId || "__global__"}|${symbol}|${interval}`;
         let cached = currentCandleCache[key];
 
         if (!cached || cached.time !== candleTime) {
@@ -78,7 +76,7 @@ export async function fetchLatestCandle(mt5Prices, symbol, interval) {
                 volume: +volume,
             },
         };
-    } catch (e) {
+    } catch {
         return null;
     }
 }

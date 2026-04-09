@@ -51,6 +51,17 @@ const moduleAccessSchema = new Schema(
   { _id: false },
 );
 
+const mt5ConsentSchema = new Schema(
+  {
+    accountScope: { type: String, required: true },
+    riskAccepted: { type: Boolean, default: false },
+    accountAccepted: { type: Boolean, default: false },
+    accepted: { type: Boolean, default: false },
+    updatedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
 const schema = new Schema(
   {
     username: {
@@ -115,6 +126,10 @@ const schema = new Schema(
     },
     moduleAccess: {
       type: [moduleAccessSchema],
+      default: [],
+    },
+    mt5Consents: {
+      type: [mt5ConsentSchema],
       default: [],
     },
     aiAssistantCredits: {

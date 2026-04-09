@@ -1,10 +1,14 @@
 import { logInfo, logWarn } from "../../logger.js";
+import { resolveBridgeOwnerUserId } from "../mt5Scope.js";
 
-export function handleMt5Command({ clients }, data) {
+export function handleMt5Command({ ws, clients }, data) {
+    const senderMeta = clients.get(ws);
+    const targetOwnerUserId = senderMeta?.userId ? String(senderMeta.userId) : null;
     const payload = JSON.stringify(data);
     const bridgeSockets = [];
     for (const [clientWs, meta] of clients.entries()) {
         if (!meta?.isBridgeAuthenticated) continue;
+        if (resolveBridgeOwnerUserId(meta) !== targetOwnerUserId) continue;
         if (clientWs.readyState === clientWs.OPEN) bridgeSockets.push(clientWs);
     }
 
@@ -28,6 +32,7 @@ export function handleMt5Command({ clients }, data) {
             symbol: data?.symbol || null,
             interval: data?.interval || null,
             count: data?.count ?? null,
+            owner_user_id: targetOwnerUserId,
             forwarded_bridge_clients: forwarded,
         });
     }

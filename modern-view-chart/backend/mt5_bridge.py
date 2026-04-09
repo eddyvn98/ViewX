@@ -82,7 +82,12 @@ async def fetch_and_send_positions(websocket):
                 "margin": account.margin,
                 "free_margin": account.margin_free,
                 "margin_level": account.margin_level,
-                "profit": account.profit
+                "profit": account.profit,
+                "login": str(account.login) if getattr(account, "login", None) is not None else "",
+                "server": str(account.server) if getattr(account, "server", None) is not None else "",
+                "name": str(account.name) if getattr(account, "name", None) is not None else "",
+                "company": str(account.company) if getattr(account, "company", None) is not None else "",
+                "currency": str(account.currency) if getattr(account, "currency", None) is not None else "",
             }
 
         # Get Positions

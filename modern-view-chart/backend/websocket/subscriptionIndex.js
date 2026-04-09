@@ -73,14 +73,18 @@ export function setClientSymbolSubscriptions(index, ws, symbols) {
     return normalized;
 }
 
-export function collectInterestSymbolsFromIndex(index) {
+export function collectInterestSymbolsFromIndex(index, wsFilter = null) {
     const collected = new Set();
-    for (const symbol of index.symbolSubscribers.keys()) {
+    for (const [symbol, subscribers] of index.symbolSubscribers.entries()) {
+        const hasMatchingSubscriber = !wsFilter || Array.from(subscribers).some((ws) => wsFilter(ws));
+        if (!hasMatchingSubscriber) continue;
         const normalized = normalizeSymbol(symbol);
         if (normalized) collected.add(normalized);
     }
 
-    for (const key of index.chartSubscribers.keys()) {
+    for (const [key, subscribers] of index.chartSubscribers.entries()) {
+        const hasMatchingSubscriber = !wsFilter || Array.from(subscribers).some((ws) => wsFilter(ws));
+        if (!hasMatchingSubscriber) continue;
         const [symbol] = String(key).split("|");
         const normalized = normalizeSymbol(symbol);
         if (normalized) collected.add(normalized);
@@ -89,6 +93,11 @@ export function collectInterestSymbolsFromIndex(index) {
     if (collected.size === 0) {
         // No explicit subscriptions and no default viewer clients:
         // tell bridge it can enter idle mode to reduce MT5 polling load.
+        if (wsFilter) {
+            const hasDefaultClient = Array.from(index.defaultPriceClients || []).some((ws) => wsFilter(ws));
+            if (!hasDefaultClient) return [];
+            return [...index.coreSymbols];
+        }
         if ((index.defaultPriceClients?.size || 0) === 0) return [];
         return [...index.coreSymbols];
     }

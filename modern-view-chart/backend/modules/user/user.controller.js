@@ -35,6 +35,8 @@ export {
 export {
   getMyModuleStatus,
   getMyAiCredits,
+  getMyMt5Consent,
+  saveMyMt5Consent,
   startMyModuleTrial,
   createMyModuleOrder,
   listMyModuleOrders,

@@ -3,6 +3,7 @@ import { binanceSimulator } from "../services/binanceSimulator.js";
 import { collectInterestSymbolsFromIndex } from "./subscriptionIndex.js";
 import { safeSend } from "./wsSend.js";
 import { recordBroadcastLoopDuration } from "../runtime-state.js";
+import { isRecipientForMt5Owner, resolveBridgeOwnerUserId } from "./mt5Scope.js";
 
 function broadcastBinanceState(clients) {
     const payload = JSON.stringify({
@@ -47,27 +48,32 @@ function startBinanceBroadcast({ clients, intervalMs }) {
 }
 
 function startInterestChecker({ clients, subscriptionIndex, bridgeSymbolsRefreshSec }) {
-    let lastInterestHash = null;
+    const lastInterestHashByScope = new Map();
     return setInterval(() => {
         const bridgeSockets = [];
         for (const [ws, meta] of clients.entries()) {
-            if (meta?.isBridgeAuthenticated && ws.readyState === ws.OPEN) bridgeSockets.push(ws);
+            if (meta?.isBridgeAuthenticated && ws.readyState === ws.OPEN) bridgeSockets.push([ws, meta]);
         }
         if (bridgeSockets.length === 0) return;
 
-        const symbols = collectInterestSymbolsFromIndex(subscriptionIndex);
-        const hash = symbols.join("|");
-        if (hash === lastInterestHash) return;
-        lastInterestHash = hash;
+        for (const [bridgeWs, bridgeMeta] of bridgeSockets) {
+            const ownerUserId = resolveBridgeOwnerUserId(bridgeMeta);
+            const scopeKey = ownerUserId || "__global__";
+            const symbols = collectInterestSymbolsFromIndex(subscriptionIndex, (clientWs) => {
+                const clientMeta = clients.get(clientWs);
+                return isRecipientForMt5Owner(clientMeta, ownerUserId);
+            });
+            const hash = symbols.join("|");
+            if (lastInterestHashByScope.get(scopeKey) === hash) continue;
+            lastInterestHashByScope.set(scopeKey, hash);
 
-        const payload = JSON.stringify({
-            topic: "bridge_symbols_interest",
-            symbols,
-            source: "client_interest",
-            updated_at: Date.now(),
-        });
+            const payload = JSON.stringify({
+                topic: "bridge_symbols_interest",
+                symbols,
+                source: "client_interest",
+                updated_at: Date.now(),
+            });
 
-        for (const bridgeWs of bridgeSockets) {
             safeSend(bridgeWs, payload);
         }
     }, Math.max(1, bridgeSymbolsRefreshSec) * 1000);

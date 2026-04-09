@@ -4,7 +4,6 @@ import { startBinanceTickerStream } from "./services/binanceTickerService.js";
 import { emergencyConfig } from "../config/emergency.js";
 import {
     incrementWsDroppedRateLimit,
-    runtimeState,
     setBridgeOnline,
     setWsClients,
 } from "../runtime-state.js";
@@ -14,6 +13,13 @@ import { logInfo, logWarn } from "../logger.js";
 import { BRIDGE_TOPICS, resolveQueryAuthPolicy } from "./config.js";
 import { emitWsError, resolveAuthContext } from "./auth.js";
 import { startPeriodicTasks } from "./loopManager.js";
+import {
+    clearScopedMt5Prices,
+    clearScopedMt5State,
+    clearScopedMt5Symbols,
+    isRecipientForMt5Owner,
+    resolveBridgeOwnerUserId,
+} from "./mt5Scope.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
@@ -88,7 +94,13 @@ export default function initWebSocket(server) {
         addDefaultPriceClient(subscriptionIndex, ws);
         setWsClients(clients.size);
         if (!clients.get(ws)?.isBridgeAuthenticated) {
-            safeSend(ws, JSON.stringify({ topic: "bridgeStatus", online: runtimeState.bridgeOnline }));
+            safeSend(
+                ws,
+                JSON.stringify({
+                    topic: "bridgeStatus",
+                    online: hasBridgeForOwner(clients, clients.get(ws)?.userId || null),
+                })
+            );
         }
 
         ws.on("pong", () => {
@@ -103,7 +115,7 @@ export default function initWebSocket(server) {
                 const parsed = JSON.parse(msg.toString());
                 const topic = parsed.topic || parsed.type || parsed.event || "";
                 if (typeof topic === "string" && BRIDGE_TOPICS.has(topic)) {
-                    if (!meta.isServiceAuth) {
+                    if (!(meta.isServiceAuth || meta.authType === "user")) {
                         emitWsError(ws, { code: "forbidden", detail: "bridge_topic_requires_service_auth" });
                         logWarn("ws.bridge_topic.forbidden", { topic, auth_type: meta.authType, role: meta.role || null });
                         ws.close(1008, "Forbidden");
@@ -148,10 +160,14 @@ export default function initWebSocket(server) {
         ws.on("close", (code, reason) => {
             const closedMeta = clients.get(ws);
             if (closedMeta?.isBridgeAuthenticated) {
+                const ownerUserId = resolveBridgeOwnerUserId(closedMeta);
                 const reasonText = typeof reason === "string" ? reason : Buffer.from(reason || []).toString();
                 logInfo("ws.bridge.disconnected", { code, reason: reasonText || "n/a" });
                 setBridgeOnline(false);
-                broadcastBridgeStatus(false);
+                clearScopedMt5Prices(mt5Prices, ownerUserId);
+                clearScopedMt5State(ownerUserId);
+                clearScopedMt5Symbols(ownerUserId);
+                broadcastBridgeStatus(ownerUserId, false);
             }
             clients.delete(ws);
             removeClientFromIndexes(subscriptionIndex, ws);
@@ -166,12 +182,22 @@ export default function initWebSocket(server) {
     return wss;
 }
 
-function broadcastBridgeStatus(online) {
+function broadcastBridgeStatus(ownerUserId, online) {
     const payload = JSON.stringify({ topic: "bridgeStatus", online });
     for (const [clientWs, meta] of clients.entries()) {
-        if (meta?.isBridgeAuthenticated) continue;
+        if (!isRecipientForMt5Owner(meta, ownerUserId)) continue;
         if (clientWs.readyState === clientWs.OPEN) {
             safeSend(clientWs, payload);
         }
     }
+}
+
+function hasBridgeForOwner(clientsMap, ownerUserId) {
+    for (const [, meta] of clientsMap.entries()) {
+        if (!meta?.isBridgeAuthenticated) continue;
+        if (resolveBridgeOwnerUserId(meta) === (ownerUserId ? String(ownerUserId) : null)) {
+            return true;
+        }
+    }
+    return false;
 }

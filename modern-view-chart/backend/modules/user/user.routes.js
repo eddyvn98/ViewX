@@ -42,6 +42,7 @@ router.route("/module-trial").post(checkLogin, User.startMyModuleTrial);
 router.route("/module-orders").get(checkLogin, User.listMyModuleOrders).post(checkLogin, User.createMyModuleOrder);
 router.route("/module-orders/:orderId/cancel").post(checkLogin, User.cancelMyModuleOrder);
 router.route("/module-ai-credits").get(checkLogin, User.getMyAiCredits);
+router.route("/mt5-consent").get(checkLogin, User.getMyMt5Consent).put(checkLogin, User.saveMyMt5Consent);
 router.route("/module-payment/sepay").post(User.sepayWebhook);
 router.route("/admin/module-orders").get(checkLogin, User.listAdminModuleOrders);
 router.route("/admin/module-orders/stats").get(checkLogin, User.getAdminModuleStats);

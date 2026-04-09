@@ -1,4 +1,5 @@
 import { setBridgeOnline } from "../../runtime-state.js";
+import { isRecipientForMt5Owner, resolveBridgeOwnerUserId } from "../mt5Scope.js";
 
 // Throttle history broadcasts to prevent spam
 let lastHistoryBroadcast = 0;
@@ -8,6 +9,7 @@ const HISTORY_THROTTLE_MS = 5000; // 5 seconds
 export function handleMt5History({ ws, clients }, data) {
     const senderMeta = clients.get(ws);
     if (!senderMeta?.isBridgeAuthenticated) return;
+    const ownerUserId = resolveBridgeOwnerUserId(senderMeta);
 
     setBridgeOnline(true);
 
@@ -27,7 +29,7 @@ export function handleMt5History({ ws, clients }, data) {
 
     for (const [clientWs, meta] of clients.entries()) {
         if (clientWs === ws) continue;
-        if (meta?.isBridgeAuthenticated) continue;
+        if (!isRecipientForMt5Owner(meta, ownerUserId)) continue;
         if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
         }
