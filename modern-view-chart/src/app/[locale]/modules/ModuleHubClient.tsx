@@ -22,7 +22,6 @@ const MODULES: ModuleCard[] = [
     },
     badge: { vi: 'Dành cho MT5', en: 'For MT5' },
   },
-
   {
     key: 'telegram_notify',
     title: 'Telegram Notify',
@@ -110,7 +109,7 @@ export function ModuleHubClient({ locale }: { locale: string }) {
     <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.15),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.15),_transparent_24%),#020617] px-4 py-10 text-white">
       <div className="mx-auto max-w-6xl space-y-8">
         <section className="rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-emerald-300">{isVi ? 'Module hub' : 'Module hub'}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-emerald-300">Module hub</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
             {isVi ? 'Quản lý module đã mua và mở đúng hướng dẫn ngay tại chỗ' : 'Manage purchased modules and open the right guide in place'}
           </h1>
@@ -191,5 +190,3 @@ export function ModuleHubClient({ locale }: { locale: string }) {
     </main>
   );
 }
-
-

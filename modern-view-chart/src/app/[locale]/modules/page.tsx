@@ -8,7 +8,7 @@ type PageProps = {
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Module Hub | vivutrade',
-    description: 'Quản lý module đã mua và đi tới trang hướng dẫn phù hợp.',
+    description: 'Quản lý module đã mua và mở đúng hướng dẫn theo từng module.',
   };
 }
 
