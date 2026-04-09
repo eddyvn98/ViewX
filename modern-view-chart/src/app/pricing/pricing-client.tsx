@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
-import { BellRing, Bot, BriefcaseBusiness, ChartCandlestick, Check, Plus, Shield, ShoppingCart, Sparkles, Zap, Headset } from 'lucide-react';
+import { BellRing, Bot, BriefcaseBusiness, Check, Plus, Shield, ShoppingCart, Sparkles, Zap, Headset } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getClientEntitlements, setClientModulesLocal, type ClientModule } from '@/lib/auth/entitlements';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { ModuleGuideModal } from '@/features/modules/components/ModuleGuideModal';
 
 type ModuleCard = {
   key: ClientModule;
@@ -69,44 +70,38 @@ const MODULES: ModuleCard[] = [
   {
     key: 'your_mt5',
     title: 'Your MT5',
-    description: 'Kết nối trực tiếp MT5 để quản lý chart và thực thi lệnh nhanh.',
-    priceLabel: '10k/tháng',
+    description: 'K?t n?i tr?c ti?p MT5 d? qu?n l� chart v� th?c thi l?nh nhanh.',
+    priceLabel: '10k/th�ng',
     amount: 10000,
     icon: <BriefcaseBusiness className="h-4 w-4" />,
   },
   {
-    key: 'binance_trade',
-    title: 'Binance Demo',
-    description: 'Mô phỏng giao dịch Crypto với dữ liệu thời gian thực.',
-    priceLabel: '10k/tháng',
-    amount: 10000,
-    icon: <ChartCandlestick className="h-4 w-4" />,
-  },
-  {
     key: 'telegram_notify',
     title: 'Telegram Notify',
-    description: 'Nhận cảnh báo tín hiệu và biến động giá qua Telegram.',
-    priceLabel: '10k/tháng',
+    description: 'Nh?n c?nh b�o t�n hi?u v� bi?n d?ng gi� qua Telegram.',
+    priceLabel: '10k/th�ng',
     amount: 10000,
     icon: <BellRing className="h-4 w-4" />,
   },
   {
     key: 'telegram_control',
     title: 'Telegram Control',
-    description: 'Điều khiển bot và thao tác nhanh qua Telegram.',
-    priceLabel: '10k/tháng',
+    description: '�i?u khi?n bot v� thao t�c nhanh qua Telegram.',
+    priceLabel: '10k/th�ng',
     amount: 10000,
     icon: <Bot className="h-4 w-4" />,
   },
   {
     key: 'ai_assistant',
     title: 'AI Assistant',
-    description: 'Trợ lý AI phân tích và gợi ý quyết định giao dịch.',
-    priceLabel: '10k/tháng',
+    description: 'Tr? l� AI ph�n t�ch v� g?i � quy?t d?nh giao d?ch.',
+    priceLabel: '10k/th�ng',
     amount: 10000,
     icon: <Sparkles className="h-4 w-4" />,
   },
 ];
+
+const VISIBLE_MODULE_KEYS = new Set<ClientModule>(MODULES.map((module) => module.key));
 
 const DEFAULT_UNIT_PRICE = 10000;
 
@@ -138,6 +133,7 @@ export default function PricingClient() {
   const [isCancelingOrder, setIsCancelingOrder] = React.useState(false);
   const [showPaidGuide, setShowPaidGuide] = React.useState(false);
   const [showGoogleLogin, setShowGoogleLogin] = React.useState(false);
+  const [activeGuide, setActiveGuide] = React.useState<ClientModule | null>(null);
   const checkoutSectionRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
@@ -155,7 +151,7 @@ export default function PricingClient() {
   React.useEffect(() => {
     const syncEntitlements = () => {
       const entitlements = getClientEntitlements();
-      setSelected(entitlements.modules);
+      setSelected(entitlements.modules.filter((module) => VISIBLE_MODULE_KEYS.has(module)));
       setIsAuthenticated(entitlements.isAuthenticated);
       const raw = String(localStorage.getItem('auth_user') || '').trim();
       if (!raw) {
@@ -240,7 +236,7 @@ export default function PricingClient() {
     setCheckoutOrder(current);
     setCountdownSeconds(Number(current.remainingSeconds || 0));
     if (prevStatus !== 'paid' && current.status === 'paid') {
-      setNotice('Thanh toán thành công. Module đã được kích hoạt.');
+      setNotice('Thanh to�n th�nh c�ng. Module d� du?c k�ch ho?t.');
       setShowPaidGuide(true);
       setSelected([]);
       setClientModulesLocal([]);
@@ -250,7 +246,7 @@ export default function PricingClient() {
       }, 900);
     }
     if (current.status === 'expired') {
-      setNotice('Đơn đã hết hạn sau 15 phút. Vui lòng tạo đơn mới để thanh toán.');
+      setNotice('�on d� h?t h?n sau 15 ph�t. Vui l�ng t?o don m?i d? thanh to�n.');
     }
   }, [checkoutOrder]);
 
@@ -281,18 +277,20 @@ export default function PricingClient() {
   }, [checkoutOrder]);
 
   const createOrder = React.useCallback(async () => {
-    if (selected.length === 0) {
-      setNotice('Chọn ít nhất 1 module trước khi thanh toán.');
+    const orderModules = selected.filter((module) => VISIBLE_MODULE_KEYS.has(module));
+
+    if (orderModules.length === 0) {
+      setNotice('Ch?n �t nh?t 1 module tru?c khi thanh to�n.');
       return;
     }
     if (!isAuthenticated) {
-      setNotice('Vui lòng đăng nhập để thanh toán.');
+      setNotice('Vui l�ng dang nh?p d? thanh to�n.');
       return;
     }
 
     const accessToken = (localStorage.getItem('auth_access_token') || '').trim();
     if (!accessToken) {
-      setNotice('Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.');
+      setNotice('Kh�ng t�m th?y phi�n dang nh?p. Vui l�ng dang nh?p l?i.');
       return;
     }
 
@@ -305,19 +303,19 @@ export default function PricingClient() {
           authorization: `Bearer ${accessToken}`,
         },
         credentials: 'include',
-        body: JSON.stringify({ modules: selected }),
+        body: JSON.stringify({ modules: orderModules }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.order) throw new Error(String(data?.error || 'Không tạo được đơn thanh toán'));
+      if (!res.ok || !data?.order) throw new Error(String(data?.error || 'Kh�ng t?o du?c don thanh to�n'));
       setCheckoutOrder(data.order as CheckoutOrder);
       setCountdownSeconds(Number(data.order?.remainingSeconds || 0));
       setShowPaidGuide(false);
-      const moduleCount = Array.isArray(data.order?.modules) && data.order.modules.length > 0 ? data.order.modules.length : selected.length;
-      setNotice(`Đã tạo đơn ${data.order.orderCode} cho ${moduleCount} module.`);
+      const moduleCount = Array.isArray(data.order?.modules) && data.order.modules.length > 0 ? data.order.modules.length : orderModules.length;
+      setNotice(`�� t?o don ${data.order.orderCode} cho ${moduleCount} module.`);
       setRecentOrders((prev) => [data.order as RecentOrder, ...prev.filter((item) => item._id !== data.order.id)].slice(0, 6));
       window.setTimeout(() => checkoutSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không tạo được đơn thanh toán');
+      setNotice(error instanceof Error ? error.message : 'Kh�ng t?o du?c don thanh to�n');
     } finally {
       setIsCreatingOrder(false);
     }
@@ -335,13 +333,13 @@ export default function PricingClient() {
         credentials: 'include',
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(String(data?.error || 'Không hủy được đơn'));
+      if (!res.ok) throw new Error(String(data?.error || 'Kh�ng h?y du?c don'));
       if (data?.order) setCheckoutOrder(data.order as CheckoutOrder);
       setCountdownSeconds(0);
-      setNotice('Đơn đã được hủy.');
+      setNotice('�on d� du?c h?y.');
       await refreshOrders();
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Không hủy được đơn');
+      setNotice(error instanceof Error ? error.message : 'Kh�ng h?y du?c don');
     } finally {
       setIsCancelingOrder(false);
     }
@@ -358,7 +356,7 @@ export default function PricingClient() {
               href={`/${getLocaleFromPathname()}/modules`}
               className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 transition hover:bg-emerald-400/20"
             >
-              Module của tôi
+              Module c?a t�i
             </a>
             {isAuthenticated ? (
               <button
@@ -366,15 +364,15 @@ export default function PricingClient() {
                 onClick={clearSessionAndRedirect}
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-[#dee3ea] transition hover:bg-white/10"
               >
-                Đăng xuất
+                �ang xu?t
               </button>
             ) : null}
           </div>
           <h1 className="text-[3rem] font-black tracking-tighter leading-[0.95] md:text-7xl">
-            Nâng tầm giao dịch <br /> với <span className="text-[#4edea3]">VivuTrade</span>
+            N�ng t?m giao d?ch <br /> v?i <span className="text-[#4edea3]">VivuTrade</span>
           </h1>
           <p className="mx-auto mt-5 max-w-3xl text-base leading-relaxed text-[#bbcabf] md:text-lg">
-            Thiết kế trải nghiệm giao dịch của riêng bạn. Chọn các module mạnh mẽ để tối ưu hóa chiến lược và lợi nhuận.
+            Thi?t k? tr?i nghi?m giao d?ch c?a ri�ng b?n. Ch?n c�c module m?nh m? d? t?i uu h�a chi?n lu?c v� l?i nhu?n.
           </p>
           {notice ? (
             <div className="mx-auto mt-5 max-w-2xl rounded-xl border border-[#4edea3]/20 bg-[#1b2025]/80 px-4 py-3 text-sm text-[#93f3c8]">
@@ -385,19 +383,19 @@ export default function PricingClient() {
             <div className="mx-auto mt-4 max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-4 text-left md:p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#86948a]">Module của tôi</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#86948a]">Module c?a t�i</p>
                   <p className="mt-1 text-sm text-[#bbcabf]">
-                    Vào hub để mở nhanh module đã mua, xem hướng dẫn và quay lại chart.
+                    V�o hub d? m? nhanh module d� mua, xem hu?ng d?n v� quay l?i chart.
                   </p>
                   <p className="mt-1 text-xs text-[#86948a]">
-                    Tài khoản hiện tại: <span className="font-semibold text-[#dee3ea]">{accountHint}</span>
+                    T�i kho?n hi?n t?i: <span className="font-semibold text-[#dee3ea]">{accountHint}</span>
                   </p>
                 </div>
                 <a
                   href={`/${getLocaleFromPathname()}/modules`}
                   className="inline-flex items-center justify-center rounded-xl bg-[#4edea3] px-4 py-2.5 text-sm font-black text-[#003824] transition hover:shadow-[0_0_20px_rgba(78,222,163,0.24)]"
                 >
-                  Mở module hub
+                  M? module hub
                 </a>
               </div>
             </div>
@@ -408,10 +406,17 @@ export default function PricingClient() {
           {MODULES.map((module) => {
             const isSelected = selected.includes(module.key);
             return (
-              <button
+              <div
                 key={module.key}
-                type="button"
                 onClick={() => toggleModule(module.key)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleModule(module.key);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 className={cn(
                   'group rounded-xl border p-5 text-left transition-all duration-300',
                   'bg-[rgba(27,32,37,0.72)] backdrop-blur-[12px]',
@@ -432,12 +437,24 @@ export default function PricingClient() {
                 <p className="mb-6 text-[14px] leading-relaxed text-[#bbcabf] md:mb-8 md:text-[15px]">{module.description}</p>
                 <div className="flex items-end justify-between">
                   <div>
-                    <span className="text-[1.65rem] font-black text-[#4edea3] md:text-[2rem]">{module.priceLabel.replace('/tháng', '')}</span>
-                    <span className="ml-1 text-sm text-[#bbcabf]">/tháng</span>
+                    <span className="text-[1.65rem] font-black text-[#4edea3] md:text-[2rem]">{module.priceLabel.replace('/th�ng', '')}</span>
+                    <span className="ml-1 text-sm text-[#bbcabf]">/th�ng</span>
                   </div>
-                  <span className="rounded-lg bg-[#4edea3]/10 px-3 py-1.5 text-sm font-bold text-[#4edea3]">Đã sẵn sàng</span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="rounded-lg bg-[#4edea3]/10 px-3 py-1.5 text-sm font-bold text-[#4edea3]">�� s?n s�ng</span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setActiveGuide(module.key);
+                      }}
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-[#dee3ea] transition hover:bg-white/10"
+                    >
+                      Xem gi?i thi?u
+                    </button>
+                  </div>
                 </div>
-              </button>
+              </div>
             );
           })}
 
@@ -445,8 +462,8 @@ export default function PricingClient() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#3c4a42] text-[#86948a]">
               <Plus className="h-4 w-4" />
             </div>
-            <h3 className="text-2xl font-bold text-[#bbcabf]">Thêm module mới</h3>
-            <p className="mt-2 text-sm text-[#86948a]">Sắp mở thêm nhiều tính năng nâng cao.</p>
+            <h3 className="text-2xl font-bold text-[#bbcabf]">Th�m module m?i</h3>
+            <p className="mt-2 text-sm text-[#86948a]">S?p m? th�m nhi?u t�nh nang n�ng cao.</p>
           </div>
         </section>
 
@@ -457,21 +474,21 @@ export default function PricingClient() {
                 <Zap className="h-5 w-5" />
               </div>
               <h3 className="text-lg font-bold">Fast Execution</h3>
-              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">Độ trễ thấp, đảm bảo lệnh của bạn luôn được khớp giá tốt nhất.</p>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">�? tr? th?p, d?m b?o l?nh c?a b?n lu�n du?c kh?p gi� t?t nh?t.</p>
             </div>
             <div>
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#56b4ff]/10 text-[#56b4ff]">
                 <Shield className="h-5 w-5" />
               </div>
               <h3 className="text-lg font-bold">Secure Data</h3>
-              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">Mã hóa chuẩn quân đội, bảo vệ mọi thông tin tài khoản và lịch sử giao dịch.</p>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">M� h�a chu?n qu�n d?i, b?o v? m?i th�ng tin t�i kho?n v� l?ch s? giao d?ch.</p>
             </div>
             <div>
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#f9bd22]/10 text-[#f9bd22]">
                 <Headset className="h-5 w-5" />
               </div>
               <h3 className="text-lg font-bold">24/7 Support</h3>
-              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">Đội ngũ kỹ thuật luôn sẵn sàng hỗ trợ bạn bất kể thời gian thị trường.</p>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">�?i ngu k? thu?t lu�n s?n s�ng h? tr? b?n b?t k? th?i gian th? tru?ng.</p>
             </div>
           </div>
         </section>
@@ -479,37 +496,37 @@ export default function PricingClient() {
         {checkoutOrder ? (
           <section ref={checkoutSectionRef} className="mb-10 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
             <div className="rounded-xl border border-[#4edea3]/20 bg-[#1b2025]/85 p-5">
-              <h2 className="text-xl font-black">Thanh toán đơn hàng</h2>
+              <h2 className="text-xl font-black">Thanh to�n don h�ng</h2>
               <div className="mt-4 space-y-2 text-sm text-[#bbcabf]">
-                <p>Mã đơn: <span className="font-mono font-bold text-[#4edea3]">{checkoutOrder.orderCode}</span></p>
+                <p>M� don: <span className="font-mono font-bold text-[#4edea3]">{checkoutOrder.orderCode}</span></p>
                 <p>Module: <span className="font-semibold text-[#dee3ea]">{moduleListText(checkoutOrder)}</span></p>
-                <p>Số tiền: <span className="font-semibold text-[#dee3ea]">{checkoutOrder.amount} {checkoutOrder.currency}</span></p>
-                <p>Trạng thái: <span className="font-semibold uppercase text-[#dee3ea]">{checkoutOrder.status}</span></p>
-                {checkoutOrder.status === 'pending' ? <p>Thời gian còn lại: <span className="font-semibold text-[#f9bd22]">{formatCountdown(countdownSeconds)}</span></p> : null}
-                <p>Nội dung CK: <span className="font-mono text-[#4edea3]">{checkoutOrder.transferContent}</span></p>
+                <p>S? ti?n: <span className="font-semibold text-[#dee3ea]">{checkoutOrder.amount} {checkoutOrder.currency}</span></p>
+                <p>Tr?ng th�i: <span className="font-semibold uppercase text-[#dee3ea]">{checkoutOrder.status}</span></p>
+                {checkoutOrder.status === 'pending' ? <p>Th?i gian c�n l?i: <span className="font-semibold text-[#f9bd22]">{formatCountdown(countdownSeconds)}</span></p> : null}
+                <p>N?i dung CK: <span className="font-mono text-[#4edea3]">{checkoutOrder.transferContent}</span></p>
               </div>
               {checkoutOrder.status === 'pending' ? (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void refreshOrders()} className="rounded-lg bg-[#30353b] px-3 py-1.5 text-xs font-bold hover:bg-[#3b424a]">Kiểm tra trạng thái</button>
+                  <button type="button" onClick={() => void refreshOrders()} className="rounded-lg bg-[#30353b] px-3 py-1.5 text-xs font-bold hover:bg-[#3b424a]">Ki?m tra tr?ng th�i</button>
                   <button type="button" onClick={() => void cancelOrder()} disabled={isCancelingOrder} className={cn('rounded-lg px-3 py-1.5 text-xs font-bold', isCancelingOrder ? 'bg-[#30353b] text-[#86948a]' : 'bg-red-500/20 text-red-200 hover:bg-red-500/30')}>
-                    {isCancelingOrder ? 'Đang hủy...' : 'Hủy đơn'}
+                    {isCancelingOrder ? '�ang h?y...' : 'H?y don'}
                   </button>
                 </div>
               ) : null}
               {showPaidGuide ? (
                 <div className="mt-4 rounded-lg border border-[#4edea3]/30 bg-[#10b981]/10 p-3 text-sm text-[#d7ffe9]">
-                  Thanh toán đã xác nhận. Hướng dẫn: tải lại trang hoặc vào dashboard, sau đó mở module vừa mua.
+                  Thanh to�n d� x�c nh?n. Hu?ng d?n: t?i l?i trang ho?c v�o dashboard, sau d� m? module v?a mua.
                 </div>
               ) : null}
             </div>
 
             <div className="rounded-xl border border-white/10 bg-[#1b2025]/85 p-5">
-              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-[#86948a]">QR thanh toán</h3>
+              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-[#86948a]">QR thanh to�n</h3>
               {checkoutOrder.qrUrl ? (
-                <img src={checkoutOrder.qrUrl} alt="QR thanh toán" className="mt-4 h-56 w-56 rounded-lg border border-white/10 bg-white p-2" />
+                <img src={checkoutOrder.qrUrl} alt="QR thanh to�n" className="mt-4 h-56 w-56 rounded-lg border border-white/10 bg-white p-2" />
               ) : (
                 <div className="mt-4 rounded-lg border border-dashed border-white/10 px-4 py-10 text-xs text-[#86948a]">
-                  Chưa có QR vì thiếu PAYMENT_BANK_CODE/PAYMENT_BANK_ACCOUNT_NO.
+                  Chua c� QR v� thi?u PAYMENT_BANK_CODE/PAYMENT_BANK_ACCOUNT_NO.
                 </div>
               )}
             </div>
@@ -517,14 +534,14 @@ export default function PricingClient() {
         ) : null}
 
         <section className="rounded-xl border border-white/10 bg-[#171c21] p-5">
-          <h2 className="text-base font-black">Đơn hàng gần đây</h2>
+          <h2 className="text-base font-black">�on h�ng g?n d�y</h2>
           <div className="mt-3 space-y-2">
             {recentOrders.length === 0 ? (
-              <p className="text-sm text-[#86948a]">Chưa có đơn hàng nào.</p>
+              <p className="text-sm text-[#86948a]">Chua c� don h�ng n�o.</p>
             ) : recentOrders.map((order) => (
               <div key={order._id || order.id || order.orderCode} className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2 text-sm">
                 <div>
-                  <p className="font-semibold">{moduleListText(order)} · <span className="font-mono">{order.orderCode}</span></p>
+                  <p className="font-semibold">{moduleListText(order)} � <span className="font-mono">{order.orderCode}</span></p>
                   <p className="text-xs text-[#86948a]">{order.amount} {order.currency}</p>
                 </div>
                 <span className={cn('rounded-md px-2 py-0.5 text-xs font-bold uppercase', order.status === 'paid' ? 'bg-[#10b981]/20 text-[#7ff5c5]' : order.status === 'pending' ? 'bg-[#f9bd22]/20 text-[#f9bd22]' : 'bg-[#30353b] text-[#bbcabf]')}>
@@ -544,7 +561,7 @@ export default function PricingClient() {
               <a href="#" className="transition hover:text-[#4edea3]">Privacy</a>
               <a href="#" className="transition hover:text-[#4edea3]">Terms</a>
             </div>
-            <p>© 2024 VivuTrade. The Sovereign Analyst.</p>
+            <p>� 2024 VivuTrade. The Sovereign Analyst.</p>
           </div>
         </footer>
       </main>
@@ -556,15 +573,15 @@ export default function PricingClient() {
               <ShoppingCart className="h-4 w-4" />
             </div>
             <div>
-              <p className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86948a] md:block">Giỏ hàng của bạn</p>
-              <p className="text-[0.96rem] font-bold leading-tight md:whitespace-nowrap md:text-[1.35rem]">{selected.length > 0 ? `Đã chọn ${selected.length} module` : 'Chưa chọn module'}</p>
+              <p className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86948a] md:block">Gi? h�ng c?a b?n</p>
+              <p className="text-[0.96rem] font-bold leading-tight md:whitespace-nowrap md:text-[1.35rem]">{selected.length > 0 ? `�� ch?n ${selected.length} module` : 'Chua ch?n module'}</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between gap-2 md:justify-end md:gap-4">
             <div className="min-w-0 text-left md:text-right">
-              <p className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86948a] md:block">Tổng thanh toán</p>
-              <p className="whitespace-nowrap text-[1.05rem] font-black leading-none md:text-[1.9rem]">{new Intl.NumberFormat('vi-VN').format(totalAmount)} VNĐ</p>
+              <p className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[#86948a] md:block">T?ng thanh to�n</p>
+              <p className="whitespace-nowrap text-[1.05rem] font-black leading-none md:text-[1.9rem]">{new Intl.NumberFormat('vi-VN').format(totalAmount)} VN�</p>
             </div>
 
             {isAuthenticated ? (
@@ -579,7 +596,7 @@ export default function PricingClient() {
                     : 'cursor-not-allowed bg-[#30353b] text-[#86948a]'
                 )}
               >
-                {isCreatingOrder ? 'Đang tạo đơn...' : 'Thanh toán ngay'}
+                {isCreatingOrder ? '�ang t?o don...' : 'Thanh to�n ngay'}
               </button>
             ) : (
               <div className="relative">
@@ -589,7 +606,7 @@ export default function PricingClient() {
                     onClick={() => setShowGoogleLogin((v) => !v)}
                     className="h-10 min-w-[150px] whitespace-nowrap rounded-lg px-3 text-[13px] font-bold bg-[#4edea3] text-[#003824] transition hover:shadow-[0_0_20px_rgba(78,222,163,0.3)] md:h-12 md:min-w-[250px] md:rounded-xl md:px-5 md:text-base"
                   >
-                    Đăng nhập để thanh toán
+                    �ang nh?p d? thanh to�n
                   </button>
                   {isAuthenticated ? (
                     <button
@@ -597,12 +614,12 @@ export default function PricingClient() {
                       onClick={clearSessionAndRedirect}
                       className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-[#dee3ea] transition hover:bg-white/10"
                     >
-                      Đăng xuất
+                      �ang xu?t
                     </button>
                   ) : null}
                   {isAuthenticated ? (
                     <p className="text-[11px] text-[#86948a] text-right">
-                      Đang dùng: <span className="font-semibold text-[#dee3ea]">{accountHint}</span>
+                      �ang d�ng: <span className="font-semibold text-[#dee3ea]">{accountHint}</span>
                     </p>
                   ) : null}
                 </div>
@@ -616,7 +633,11 @@ export default function PricingClient() {
           </div>
         </div>
       </div>
+
+      <ModuleGuideModal open={Boolean(activeGuide)} locale={getLocaleFromPathname()} module={activeGuide} onClose={() => setActiveGuide(null)} />
     </div>
   );
 }
+
+
 
