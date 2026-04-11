@@ -11,6 +11,12 @@ export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex }, d
     const ownerUserId = resolveBridgeOwnerUserId(senderMeta);
 
     const normalizedSymbol = (data.symbol || "").replace(/[mM]$/, "m");
+    const upperSymbol = String(normalizedSymbol || "").toUpperCase();
+
+    // Reserved VN gold symbols must come from VN_GOLD pipeline, never MT5 ticks.
+    if (upperSymbol === "SJCVN" || upperSymbol === "DOJIVN") {
+        return;
+    }
 
     let openPrice = data.daily_open;
 

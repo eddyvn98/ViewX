@@ -80,6 +80,7 @@
     "react-qr-code": "^2.0.18",
     "react-virtualized-auto-sizer": "^2.0.2",
     "react-window": "^2.2.6",
+    "sharp": "^0.34.5",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "technicalindicators": "^3.1.0",

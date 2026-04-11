@@ -53,6 +53,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
+    const isVietnamGoldSource = String(source || '').toUpperCase() === 'VN_GOLD';
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
 
@@ -92,18 +93,28 @@ export function useChartHistory(props: UseChartHistoryProps) {
             return;
         }
 
+        if (sourceText === 'VN_GOLD') {
+            sendMessage({
+                topic: "get_vn_gold_candles",
+                symbol,
+                interval,
+                count: 300,
+            });
+            return;
+        }
+
         sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
         sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
     }, [symbol, interval, source, sendMessage]);
 
     useEffect(() => {
         if (!isReady || !symbol || !interval || !isConnected) return;
-        if (candlesCount >= MIN_CANDLES_THRESHOLD) return;
+        if (!isVietnamGoldSource && candlesCount >= MIN_CANDLES_THRESHOLD) return;
 
         requestHistory();
-        const timer = setInterval(requestHistory, 2500);
+        const timer = setInterval(requestHistory, isVietnamGoldSource ? 15000 : 2500);
         return () => clearInterval(timer);
-    }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage, requestHistory]);
+    }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage, requestHistory, isVietnamGoldSource]);
 
     const getPersistedViewport = (): ChartInstance['viewport'] | undefined => {
         const state = useMarketStore.getState();
@@ -163,7 +174,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         });
         const isContextChange = key !== lastKeyRef.current;
 
-        if (currentCandles.length < MIN_CANDLES_THRESHOLD && isConnected) {
+        if ((isVietnamGoldSource || currentCandles.length < MIN_CANDLES_THRESHOLD) && isConnected) {
             const now = Date.now();
             if (now - lastFetchRequestTimeRef.current > 2000) {
                 lastFetchRequestTimeRef.current = now;
@@ -267,7 +278,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 lastTailSignatureRef.current = candlesTailSignature;
             });
         }
-    }, [isReady, candlesCount, candlesTailSignature, key, chartType, isConnected, candleUpColor, candleDownColor]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, candlesTailSignature, key, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {

@@ -29,7 +29,7 @@ export function useDrawingCreation(
     currentTool: DrawingTool,
     containerRef: React.RefObject<HTMLDivElement | null>,
     candles: Candle[],
-    context?: { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' }
+    context?: { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' | 'VN_GOLD' }
 ) {
     const draftPrimitiveRef = useRef<ManualLinePrimitive | FibonacciPrimitive | ManualRectanglePrimitive | null>(null);
     const lastSnappedPointRef = useRef<{ time: Time; price: number } | null>(null);

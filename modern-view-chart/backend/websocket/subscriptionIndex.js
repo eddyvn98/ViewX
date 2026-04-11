@@ -1,4 +1,4 @@
-const CORE_SYMBOLS = (process.env.CORE_SYMBOLS || "XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm")
+const CORE_SYMBOLS = (process.env.CORE_SYMBOLS || "XAUUSDm,BTCUSDm,ETHUSDm,EURUSDm,GBPUSDm,SJCVN,DOJIVN")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);

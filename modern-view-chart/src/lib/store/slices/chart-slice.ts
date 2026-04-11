@@ -7,7 +7,7 @@ export interface ChartSlice {
     addChart: (symbol: string, interval: string, source: ChartInstance['source']) => void;
     removeChart: (id: string) => void;
     updateChart: (id: string, patch: Partial<ChartInstance>) => void;
-    setChartSymbol: (id: string, symbol: string) => void;
+    setChartSymbol: (id: string, symbol: string, source?: ChartInstance['source']) => void;
     setChartTimeframe: (id: string, interval: string) => void;
     setActiveChart: (id: string) => void;
     toggleMaximizeChart: (id: string | null) => void;
@@ -99,7 +99,7 @@ export const createChartSlice: StateCreator<
         return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
     }),
 
-    setChartSymbol: (id, symbol) => set((state) => {
+    setChartSymbol: (id, symbol, source) => set((state) => {
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab) return state;
 
@@ -107,8 +107,14 @@ export const createChartSlice: StateCreator<
         if (!sourceChart) return state;
 
         const normSymbol = normalizeSymbol(symbol);
-        const symbolSource = state.tickers[normSymbol]?.source ||
-            (normSymbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
+        const symbolSource =
+            source
+            || state.tickers[normSymbol]?.source
+            || (normSymbol.toUpperCase() === 'SJCVN' || normSymbol.toUpperCase() === 'DOJIVN'
+                ? 'VN_GOLD'
+                : normSymbol.toUpperCase().includes('USDT')
+                    ? 'BINANCE'
+                    : 'MT5');
 
         const newCharts = { ...activeTab.charts };
         let hasChanges = false;

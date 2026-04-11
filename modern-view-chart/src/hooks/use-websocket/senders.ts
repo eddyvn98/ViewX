@@ -128,6 +128,19 @@ export function requestChartBackfill(
                 reason,
             }),
         );
+        return;
+    }
+
+    if (source === 'VN_GOLD') {
+        socket.send(
+            JSON.stringify({
+                topic: 'get_vn_gold_candles',
+                symbol,
+                interval,
+                count,
+                reason,
+            }),
+        );
     }
 }
 

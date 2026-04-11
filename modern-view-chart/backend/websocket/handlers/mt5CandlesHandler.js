@@ -1,5 +1,6 @@
 import { logInfo } from "../../logger.js";
 import { isRecipientForMt5Owner, resolveBridgeOwnerUserId } from "../mt5Scope.js";
+import { candleBuffers } from "./subscribeHandler.js";
 
 export function handleMt5Candles({ ws, clients }, data) {
     const senderMeta = clients.get(ws);
@@ -13,6 +14,14 @@ export function handleMt5Candles({ ws, clients }, data) {
             clientWs.send(payload);
             delivered += 1;
         }
+    }
+    if (Array.isArray(data?.candles)) {
+        const normalizedSymbol = String(data?.symbol || "").trim().toUpperCase();
+        const normalizedInterval = String(data?.interval || "").trim();
+        candleBuffers[`${normalizedSymbol}|${normalizedInterval}`] = data.candles.map((candle) => ({
+            time: candle.time,
+            close: candle.close,
+        }));
     }
     if (Array.isArray(data?.candles)) {
         logInfo("ws.mt5_candles.broadcasted", {

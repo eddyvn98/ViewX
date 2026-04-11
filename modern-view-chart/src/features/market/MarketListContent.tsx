@@ -89,10 +89,10 @@ export function MarketListContent({
     const handledWatchlist = useMemo(() => new Set(watchlist), [watchlist]);
 
     const handleSymbolSelect = useCallback(
-        (symbol: string, source: 'BINANCE' | 'MT5') => {
+        (symbol: string, source: 'BINANCE' | 'MT5' | 'VN_GOLD') => {
             if (activeChartId) {
                 const chart = charts[activeChartId];
-                setChartSymbol(activeChartId, symbol);
+                setChartSymbol(activeChartId, symbol, source);
 
                 if (chart?.group && chart.group !== 'none') {
                     broadcastGroupSymbolChange(chart.group, symbol, source);
@@ -176,7 +176,7 @@ export function MarketListContent({
                                         : "text-muted-foreground/60 hover:text-foreground"
                                 )}
                             >
-                                {tab === 'BINANCE' ? 'CRYPTO' : tab === 'MT5' ? 'FOREX' : 'ALL'}
+                                {tab === 'BINANCE' ? 'CRYPTO' : tab === 'MT5' ? 'FOREX' : tab === 'VN_GOLD' ? 'VN GOLD' : 'ALL'}
                             </button>
                         ))}
                     </div>

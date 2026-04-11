@@ -57,7 +57,10 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         changeValue: Number(item?.changeValue || 0),
                         volume: 0,
                         source: String(item?.source || 'MT5'),
-                        serverTime: item?.time,
+                        bid: item?.bid !== undefined ? Number(item.bid || 0) : undefined,
+                        ask: item?.ask !== undefined ? Number(item.ask || 0) : undefined,
+                        displayName: item?.displayName ? String(item.displayName) : undefined,
+                        serverTime: Number(item?.serverTime || item?.time || 0) || undefined,
                     };
                     usefulUpdate = true;
                 }
@@ -133,7 +136,13 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const c = msg.data as Record<string, unknown>;
             const symbol = String(c.symbol || '');
             const interval = String(c.interval || '');
-            const source = symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5';
+            const source = String(c.source || '').toUpperCase() || (
+                symbol.toUpperCase().includes('USDT')
+                    ? 'BINANCE'
+                    : symbol.toUpperCase() === 'SJCVN' || symbol.toUpperCase() === 'DOJIVN'
+                        ? 'VN_GOLD'
+                        : 'MT5'
+            );
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
 

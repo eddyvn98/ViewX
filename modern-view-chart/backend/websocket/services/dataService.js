@@ -1,12 +1,50 @@
 import fetch from "node-fetch";
 import { getScopedMt5Price } from "../mt5Scope.js";
+import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
 
 const currentCandleCache = {};
 
 export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId = null) {
     const symbolLower = (symbol || "").toLowerCase();
     const scopedMt5Price = getScopedMt5Price(mt5Prices, ownerUserId, symbol);
+    const isVietnamGold = symbolLower === "sjcvn" || symbolLower === "dojivn";
     const isMt5 = symbolLower.endsWith('m') || symbolLower.endsWith('.m') || Boolean(scopedMt5Price);
+
+    if (isVietnamGold) {
+        const quotes = await getVietnamGoldQuotes();
+        const quote = quotes.find((item) => String(item?.symbol || "").toLowerCase() === symbolLower);
+        if (!quote?.price) return null;
+
+        const intervalStr = interval.toString();
+        const secondsMap = { '1': 60, '3': 180, '5': 300, '15': 900, '30': 1800, '60': 3600, '240': 14400, 'D1': 86400 };
+        const secondsPerCandle = secondsMap[intervalStr] || (parseInt(intervalStr.replace(/[mM]/g, ''), 10) * 60) || 900;
+        const nowSeconds = Math.floor((Number(quote.serverTime || Date.now()) > 2000000000 ? Number(quote.serverTime || Date.now()) / 1000 : Number(quote.serverTime || Date.now())));
+        const candleTime = Math.floor(nowSeconds / secondsPerCandle) * secondsPerCandle;
+        const key = `vn_gold|${symbol}|${interval}`;
+        let cached = currentCandleCache[key];
+
+        if (!cached || cached.time !== candleTime) {
+            cached = {
+                time: candleTime,
+                open: quote.price,
+                high: quote.price,
+                low: quote.price,
+                close: quote.price,
+                volume: 0,
+            };
+            currentCandleCache[key] = cached;
+        } else {
+            cached.close = quote.price;
+            if (quote.price > cached.high) cached.high = quote.price;
+            if (quote.price < cached.low) cached.low = quote.price;
+        }
+
+        return {
+            symbol,
+            interval,
+            candle: { ...cached },
+        };
+    }
 
     if (isMt5) {
         const p = scopedMt5Price;
@@ -87,11 +125,15 @@ export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "B
     );
 
     const results = await Promise.all(requests);
+    const vnGoldQuotes = await getVietnamGoldQuotes();
 
-    return results.map((item) => ({
+    return [
+        ...results.map((item) => ({
         symbol: item.symbol,
         price: parseFloat(item.lastPrice),
         change: parseFloat(item.priceChangePercent),
         source: 'BINANCE'
-    }));
+        })),
+        ...vnGoldQuotes,
+    ];
 }

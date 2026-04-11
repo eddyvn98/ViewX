@@ -1,4 +1,4 @@
-import { DEFAULT_BINANCE_SYMBOLS, type DataSource, type SourceTab } from './market-list-constants';
+import { DEFAULT_BINANCE_SYMBOLS, DEFAULT_VN_GOLD_SYMBOLS, type DataSource, type SourceTab } from './market-list-constants';
 import { resolveDataSource } from './market-list-utils';
 
 export interface BuildSymbolListParams {
@@ -46,6 +46,10 @@ export function buildSymbolList({
 
     binanceUniverse.forEach((symbol) => {
         if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
+    });
+
+    DEFAULT_VN_GOLD_SYMBOLS.forEach((symbol) => {
+        if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'VN_GOLD');
     });
 
     let symbols: { symbol: string; source: DataSource }[] = [];

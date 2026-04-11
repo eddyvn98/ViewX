@@ -51,7 +51,12 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
             const current = state.tickers[symbol];
             const incoming = data[symbol];
 
-            if (current?.price !== incoming.price) {
+            if (
+                current?.price !== incoming.price ||
+                current?.bid !== incoming.bid ||
+                current?.ask !== incoming.ask ||
+                current?.displayName !== incoming.displayName
+            ) {
                 newTickers[symbol] = { ...current, ...incoming } as Ticker;
                 hasChange = true;
             }

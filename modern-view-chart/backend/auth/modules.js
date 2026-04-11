@@ -2,8 +2,10 @@ export const ENTITLEMENT_MODULES = new Set([
   "your_mt5",
   "mt5_trade",
   "binance_trade",
+  "vn_gold",
   "telegram_notify",
   "telegram_control",
+  "discord_bot",
   "ai_assistant",
 ]);
 
@@ -36,10 +38,10 @@ export function inferPlanFromModules(modules = []) {
 export function inferModulesFromPlan(plan) {
   const normalized = String(plan || "").trim().toLowerCase();
   if (normalized === "pro_plus" || normalized === "premium" || normalized === "pro+") {
-    return ["your_mt5", "binance_trade", "telegram_notify", "telegram_control", "ai_assistant"];
+    return ["your_mt5", "binance_trade", "vn_gold", "telegram_notify", "telegram_control", "discord_bot", "ai_assistant"];
   }
   if (normalized === "pro" || normalized.startsWith("pro")) {
-    return ["your_mt5", "binance_trade", "telegram_notify", "telegram_control"];
+    return ["your_mt5", "binance_trade", "vn_gold", "telegram_notify", "telegram_control", "discord_bot"];
   }
   return [];
 }

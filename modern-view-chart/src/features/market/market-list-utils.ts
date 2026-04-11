@@ -8,6 +8,7 @@ type BinanceExchangeInfo = { symbols?: BinanceExchangeSymbol[] };
 
 export function resolveDataSource(symbol: string): DataSource {
     const normalized = String(symbol || '').toUpperCase();
+    if (normalized === 'SJCVN' || normalized === 'DOJIVN') return 'VN_GOLD';
     return normalized.includes('USDT') ? 'BINANCE' : 'MT5';
 }
 

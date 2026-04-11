@@ -4,7 +4,10 @@ export interface Ticker {
     change: number;
     changeValue: number;
     volume: number;
-    source?: 'BINANCE' | 'MT5';
+    source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    bid?: number;
+    ask?: number;
+    displayName?: string;
     serverTime?: number; // Server-side timestamp in milliseconds
 }
 
@@ -86,7 +89,7 @@ export interface ChartInstance {
     id: string;
     symbol: string;
     interval: string;
-    source: 'BINANCE' | 'MT5';
+    source: 'BINANCE' | 'MT5' | 'VN_GOLD';
     group?: 'A' | 'B' | 'C' | 'D' | 'none'; // Symbol Linking Group
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
@@ -172,7 +175,7 @@ export interface DrawingConfig {
     points: DrawingPoint[];
     symbol?: string;
     interval?: string;
-    source?: 'BINANCE' | 'MT5';
+    source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
     color: string;
     visible: boolean;
     locked?: boolean;

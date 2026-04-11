@@ -33,7 +33,7 @@ export function useChartDrawings(
         {
             symbol,
             interval,
-            source: source === 'BINANCE' || source === 'MT5' ? source : undefined,
+            source: source === 'BINANCE' || source === 'MT5' || source === 'VN_GOLD' ? source : undefined,
         }
     );
 

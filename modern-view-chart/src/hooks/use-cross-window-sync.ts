@@ -30,14 +30,14 @@ export function useCrossWindowSync() {
 
                     switch (msg.type) {
                         case 'SYMBOL_CHANGE':
-                            setChartSymbol(msg.chartId, msg.symbol);
+                            setChartSymbol(msg.chartId, msg.symbol, msg.source as 'BINANCE' | 'MT5' | 'VN_GOLD');
                             break;
                         case 'GROUP_SYMBOL_CHANGE':
                             const state = useMarketStore.getState();
                             Object.values(state.tabs).forEach(tab => {
                                 Object.values(tab.charts).forEach(chart => {
                                     if (chart.group === msg.group) {
-                                        setChartSymbol(chart.id, msg.symbol);
+                                        setChartSymbol(chart.id, msg.symbol, msg.source as 'BINANCE' | 'MT5' | 'VN_GOLD');
                                     }
                                 });
                             });

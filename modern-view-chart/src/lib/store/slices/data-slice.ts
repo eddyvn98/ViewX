@@ -57,6 +57,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const normSymbol = normalizeSymbol(symbol);
         const key = `${source}:${normSymbol}:${interval}`;
         const current = state.candleData[key] || [];
+        const sourceUpper = String(source || '').toUpperCase();
         const normalized = (Array.isArray(data) ? data : [])
             .map(normalizeCandle)
             .filter((c): c is Candle => c !== null);
@@ -67,6 +68,18 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         if (normalized.length === 0 && current.length > 0) {
             debugLog('[DataSlice][setCandles][skip-empty]', { key, prevCount: current.length });
             return state;
+        }
+
+        // VN_GOLD history can switch data source strategy across releases.
+        // Replace buffer instead of merging to avoid carrying stale/corrupted candles.
+        if (sourceUpper === 'VN_GOLD') {
+            const MAX_CANDLES = 5000;
+            const nextCandles = normalized.length > MAX_CANDLES
+                ? normalized.slice(normalized.length - MAX_CANDLES)
+                : normalized;
+            return {
+                candleData: { ...state.candleData, [key]: nextCandles }
+            };
         }
 
         // Merge incoming history with current buffer so left-side backfill can extend

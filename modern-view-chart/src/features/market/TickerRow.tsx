@@ -10,10 +10,10 @@ export type TickerRowMode = 'discovery' | 'watchlist';
 
 export interface TickerRowProps {
     symbol: string;
-    source: 'BINANCE' | 'MT5';
+    source: 'BINANCE' | 'MT5' | 'VN_GOLD';
     isActive: boolean;
     isWatched: boolean;
-    onSelect: (symbol: string, source: 'BINANCE' | 'MT5') => void;
+    onSelect: (symbol: string, source: 'BINANCE' | 'MT5' | 'VN_GOLD') => void;
     onRemove: (symbol: string) => void;
     onAdd: (symbol: string) => void;
     mode: TickerRowMode;
@@ -43,7 +43,12 @@ export const TickerRow = memo(function TickerRow({
         if (!ticker) return;
 
         const price = ticker.price || 0;
-        const priceStr = price < 1 ? price.toFixed(4) : price.toFixed(price > 1000 ? 1 : 2);
+        const isVietnamGold = source === 'VN_GOLD';
+        const priceStr = isVietnamGold
+            ? new Intl.NumberFormat('vi-VN').format(Math.round(price))
+            : price < 1
+                ? price.toFixed(4)
+                : price.toFixed(price > 1000 ? 1 : 2);
 
         if (priceStr !== lastPriceRef.current && priceRef.current) {
             lastPriceRef.current = priceStr;
@@ -51,21 +56,34 @@ export const TickerRow = memo(function TickerRow({
         }
 
         if (changeRef.current && mode === 'watchlist') {
-            const change = ticker.change || 0;
-            const changeValue = ticker.changeValue || 0;
-            const changeValueStr = (changeValue > 0 ? '+' : '') + changeValue.toFixed(price < 10 ? 4 : 2);
-            const changePercentStr = `(${change > 0 ? '+' : ''}${change.toFixed(2)}%)`;
+            if (isVietnamGold) {
+                const bid = Number(ticker.bid || 0);
+                const ask = Number(ticker.ask || 0);
+                const bidStr = bid > 0 ? new Intl.NumberFormat('vi-VN').format(Math.round(bid)) : '--';
+                const askStr = ask > 0 ? new Intl.NumberFormat('vi-VN').format(Math.round(ask)) : '--';
 
-            changeRef.current.innerHTML = `
-                <span>${changeValueStr}</span>
-                <span class="opacity-60 text-[11px]">${changePercentStr}</span>
-            `;
-            changeRef.current.className = cn(
-                "flex items-center gap-1.5 text-[12px] font-bold justify-end",
-                change >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
-            );
+                changeRef.current.innerHTML = `
+                    <span>Mua ${bidStr}</span>
+                    <span class="opacity-60 text-[11px]">Bán ${askStr}</span>
+                `;
+                changeRef.current.className = "flex items-center gap-1.5 text-[11px] font-bold justify-end text-amber-600 dark:text-amber-400";
+            } else {
+                const change = ticker.change || 0;
+                const changeValue = ticker.changeValue || 0;
+                const changeValueStr = (changeValue > 0 ? '+' : '') + changeValue.toFixed(price < 10 ? 4 : 2);
+                const changePercentStr = `(${change > 0 ? '+' : ''}${change.toFixed(2)}%)`;
+
+                changeRef.current.innerHTML = `
+                    <span>${changeValueStr}</span>
+                    <span class="opacity-60 text-[11px]">${changePercentStr}</span>
+                `;
+                changeRef.current.className = cn(
+                    "flex items-center gap-1.5 text-[12px] font-bold justify-end",
+                    change >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
+                );
+            }
         }
-    }, [symbol, mode]);
+    }, [symbol, mode, source]);
 
     useEffect(() => {
         if (mode !== 'watchlist') return;
@@ -123,6 +141,8 @@ export const TickerRow = memo(function TickerRow({
         setSwipeOffset((prev) => (prev > 28 ? 56 : 0));
         touchRef.current.swiping = false;
     }, [mode, swipeOffset]);
+
+    const displayName = useMarketStore((state) => state.tickers[symbol]?.displayName || symbol);
 
     return (
         <div
@@ -192,9 +212,11 @@ export const TickerRow = memo(function TickerRow({
                                 isActive && mode === 'watchlist' ? "text-foreground dark:text-white" : "text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-white"
                             )}
                         >
-                            {symbol.replace('USDT', '').replace('USDTm', '')}
+                            {displayName.replace('USDT', '').replace('USDTm', '')}
                         </span>
-                        <span className="text-[11px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">{source}</span>
+                        <span className="text-[11px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">
+                            {source === 'VN_GOLD' ? 'VN GOLD' : source}
+                        </span>
                     </div>
                 </div>
 

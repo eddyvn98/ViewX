@@ -118,7 +118,7 @@ function applyPersistedSetupState(
                 next.signalHistoryRange = ui.signalHistoryRange;
             }
             if (typeof ui.marketListSearchQuery === 'string') next.marketListSearchQuery = ui.marketListSearchQuery;
-            if (ui.marketListSourceTab === 'ALL' || ui.marketListSourceTab === 'BINANCE' || ui.marketListSourceTab === 'MT5') {
+            if (ui.marketListSourceTab === 'ALL' || ui.marketListSourceTab === 'BINANCE' || ui.marketListSourceTab === 'MT5' || ui.marketListSourceTab === 'VN_GOLD') {
                 next.marketListSourceTab = ui.marketListSourceTab;
             }
             if (

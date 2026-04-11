@@ -5,7 +5,7 @@ import type { StrategyDirection, StrategyLeg } from '@/features/strategy/types';
 
 export type StrategyPanelView = 'build' | 'list' | 'signals' | 'ai_chat';
 export type SignalHistoryRange = 'day' | 'week' | 'month';
-export type MarketSourceTab = 'ALL' | 'BINANCE' | 'MT5';
+export type MarketSourceTab = 'ALL' | 'BINANCE' | 'MT5' | 'VN_GOLD';
 
 const MT5_TERMS_STORAGE_PREFIX = 'mt5-consent:v1';
 

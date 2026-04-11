@@ -1,4 +1,4 @@
-import userModel from '../../model/user.js';
+import { userModel } from '../../model/user.js';
 import {
   buildTelegramDeepLink,
   buildTelegramStartPayload,
@@ -6,7 +6,10 @@ import {
   hashTelegramPayload,
   sendTelegramMessage,
 } from '../../services/telegram.js';
+import { getModuleAccessSnapshot } from '../../services/moduleCommerce.js';
 import { normalizeTelegramPreferences } from './telegram-preferences.helpers.js';
+
+const TELEGRAM_REQUIRED_MODULES = ['telegram_notify', 'telegram_control'];
 
 function requireAuthedUser(req, res) {
   if (req.auth?.type !== 'user' || !req.auth?.userId) {
@@ -18,18 +21,24 @@ function requireAuthedUser(req, res) {
   return String(req.auth.userId);
 }
 
+function hasTelegramModuleAccess(user) {
+  return TELEGRAM_REQUIRED_MODULES.some((moduleName) => getModuleAccessSnapshot(user, moduleName).canUse);
+}
+
 export const getTelegramStatus = async (req, res) => {
   try {
     const userId = requireAuthedUser(req, res);
     if (!userId) return;
 
     const { botUsername, enabled } = getTelegramConfig();
-    const user = await userModel.findById(userId).select('telegram');
+    const user = await userModel.findById(userId).select('telegram moduleAccess');
     if (!user?._id) return res.status(404).json({ error: 'User not found' });
+    const moduleAccess = hasTelegramModuleAccess(user);
 
     const tg = user.telegram || {};
     return res.status(200).json({
       enabled,
+      module_access: moduleAccess,
       bot_username: botUsername || '',
       linked: Boolean(tg.isActive && tg.chatId),
       chat_id_masked: tg.chatId ? `***${String(tg.chatId).slice(-4)}` : '',
@@ -55,6 +64,12 @@ export const startTelegramLink = async (req, res) => {
     const { botUsername, enabled } = getTelegramConfig();
     if (!enabled || !botUsername) {
       return res.status(400).json({ error: 'Telegram bot is not configured' });
+    }
+
+    const accessUser = await userModel.findById(userId).select('_id moduleAccess');
+    if (!accessUser?._id) return res.status(404).json({ error: 'User not found' });
+    if (!hasTelegramModuleAccess(accessUser)) {
+      return res.status(403).json({ error: 'Telegram module is required', code: 'telegram_module_required' });
     }
 
     const payload = buildTelegramStartPayload();
@@ -95,6 +110,12 @@ export const updateTelegramPreferences = async (req, res) => {
     const userId = requireAuthedUser(req, res);
     if (!userId) return;
 
+    const accessUser = await userModel.findById(userId).select('_id moduleAccess');
+    if (!accessUser?._id) return res.status(404).json({ error: 'User not found' });
+    if (!hasTelegramModuleAccess(accessUser)) {
+      return res.status(403).json({ error: 'Telegram module is required', code: 'telegram_module_required' });
+    }
+
     const preferences = normalizeTelegramPreferences(req.body?.preferences);
     const user = await userModel
       .findByIdAndUpdate(
@@ -119,8 +140,11 @@ export const sendTelegramTest = async (req, res) => {
     const userId = requireAuthedUser(req, res);
     if (!userId) return;
 
-    const user = await userModel.findById(userId).select('username telegram');
+    const user = await userModel.findById(userId).select('username telegram moduleAccess');
     if (!user?._id) return res.status(404).json({ error: 'User not found' });
+    if (!hasTelegramModuleAccess(user)) {
+      return res.status(403).json({ error: 'Telegram module is required', code: 'telegram_module_required' });
+    }
 
     const chatId = String(user.telegram?.chatId || '');
     if (!user.telegram?.isActive || !chatId) {

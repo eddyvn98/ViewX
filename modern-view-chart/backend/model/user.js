@@ -22,6 +22,7 @@ const telegramSchema = new Schema(
     pendingLinkTokenHash: { type: String, default: "" },
     pendingLinkExpiresAt: { type: Date, default: null },
     preferences: { type: telegramPreferencesSchema, default: () => ({}) },
+    botState: { type: Schema.Types.Mixed, default: () => ({}) },
   },
   { _id: false },
 );

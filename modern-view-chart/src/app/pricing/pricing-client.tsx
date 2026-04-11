@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { BellRing, Bot, BriefcaseBusiness, Check, Headset, Plus, Shield, ShoppingCart, Sparkles, Zap } from 'lucide-react';
@@ -76,6 +76,14 @@ const MODULES: ModuleCard[] = [
     icon: <BriefcaseBusiness className="h-4 w-4" />,
   },
   {
+    key: 'vn_gold',
+    title: 'Giá vàng Việt Nam',
+    description: 'Theo dõi nhanh giá mua và giá bán từ SJC, DOJI ngay trong app.',
+    priceLabel: '10k/tháng',
+    amount: 10000,
+    icon: <Sparkles className="h-4 w-4" />,
+  },
+  {
     key: 'telegram_notify',
     title: 'Telegram Notify',
     description: 'Nhận cảnh báo tín hiệu và biến động giá qua Telegram.',
@@ -87,6 +95,14 @@ const MODULES: ModuleCard[] = [
     key: 'telegram_control',
     title: 'Telegram Control',
     description: 'Điều khiển bot và thao tác nhanh qua Telegram.',
+    priceLabel: '10k/tháng',
+    amount: 10000,
+    icon: <Bot className="h-4 w-4" />,
+  },
+  {
+    key: 'discord_bot',
+    title: 'Discord Bot',
+    description: 'Bot Discord tự động hỗ trợ thao tác nhanh và theo dõi tín hiệu.',
     priceLabel: '10k/tháng',
     amount: 10000,
     icon: <Bot className="h-4 w-4" />,
@@ -120,8 +136,25 @@ function formatCountdown(seconds: number) {
   return `${mm}:${String(ss).padStart(2, '0')}`;
 }
 
+function formatOrderStatus(status: string) {
+  switch (String(status || '').trim().toLowerCase()) {
+    case 'paid':
+      return 'Đã thanh toán';
+    case 'pending':
+      return 'Đang chờ thanh toán';
+    case 'expired':
+      return 'Đã hết hạn';
+    case 'cancelled':
+    case 'canceled':
+      return 'Đã hủy';
+    default:
+      return status || 'Không rõ';
+  }
+}
+
 export default function PricingClient() {
   const [selected, setSelected] = React.useState<ClientModule[]>([]);
+  const [ownedModules, setOwnedModules] = React.useState<ClientModule[]>([]);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [accountLabel, setAccountLabel] = React.useState('Guest');
   const [isCreatingOrder, setIsCreatingOrder] = React.useState(false);
@@ -150,7 +183,9 @@ export default function PricingClient() {
   React.useEffect(() => {
     const syncEntitlements = () => {
       const entitlements = getClientEntitlements();
-      setSelected(entitlements.modules.filter((module) => VISIBLE_MODULE_KEYS.has(module)));
+      const owned = entitlements.modules.filter((module) => VISIBLE_MODULE_KEYS.has(module));
+      setOwnedModules(owned);
+      setSelected((current) => current.filter((module) => VISIBLE_MODULE_KEYS.has(module) && !owned.includes(module)));
       setIsAuthenticated(entitlements.isAuthenticated);
       const raw = String(localStorage.getItem('auth_user') || '').trim();
       if (!raw) {
@@ -205,12 +240,13 @@ export default function PricingClient() {
   }, [isAuthenticated]);
 
   const toggleModule = React.useCallback((moduleKey: ClientModule) => {
+    if (ownedModules.includes(moduleKey)) return;
     setSelected((current) => {
       const next = current.includes(moduleKey) ? current.filter((item) => item !== moduleKey) : [...current, moduleKey];
       setClientModulesLocal(next);
       return next;
     });
-  }, []);
+  }, [ownedModules]);
 
   const totalAmount = selected.reduce((sum, moduleKey) => sum + getModuleAmount(moduleKey), 0);
   const accountHint = accountLabel || 'Guest';
@@ -310,7 +346,7 @@ export default function PricingClient() {
       setCountdownSeconds(Number(data.order?.remainingSeconds || 0));
       setShowPaidGuide(false);
       const moduleCount = Array.isArray(data.order?.modules) && data.order.modules.length > 0 ? data.order.modules.length : orderModules.length;
-      setNotice(`Đã tạo đơn ${data.order.orderCode} cho ${moduleCount} module.`);
+      setNotice(`Ãƒâ€žÃ‚ÂÃƒÆ’Ã‚Â£ tÃƒÂ¡Ã‚ÂºÃ‚Â¡o Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ${data.order.orderCode} cho ${moduleCount} module.`);
       setRecentOrders((prev) => [data.order as RecentOrder, ...prev.filter((item) => item._id !== data.order.id)].slice(0, 6));
       window.setTimeout(() => checkoutSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     } catch (error) {
@@ -404,6 +440,7 @@ export default function PricingClient() {
         <section className="mb-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {MODULES.map((module) => {
             const isSelected = selected.includes(module.key);
+            const isOwned = ownedModules.includes(module.key);
             return (
               <div
                 key={module.key}
@@ -415,20 +452,24 @@ export default function PricingClient() {
                   }
                 }}
                 role="button"
-                tabIndex={0}
+                tabIndex={isOwned ? -1 : 0}
+                aria-disabled={isOwned}
                 className={cn(
                   'group rounded-xl border p-5 text-left transition-all duration-300',
                   'bg-[rgba(27,32,37,0.72)] backdrop-blur-[12px]',
+                  isOwned ? 'border-emerald-300/20' : null,
                   isSelected
                     ? 'border-[#4edea3]/40 shadow-[0_0_20px_rgba(78,222,163,0.08)]'
-                    : 'border-white/5 hover:border-[#4edea3]/25 hover:-translate-y-1'
+                    : isOwned
+                      ? ''
+                      : 'border-white/5 hover:border-[#4edea3]/25 hover:-translate-y-1'
                 )}
               >
                 <div className="mb-4 flex items-start justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#30353b] text-[#4edea3] transition-colors group-hover:bg-[#10b981] group-hover:text-[#003824] md:h-14 md:w-14">
                     {module.icon}
                   </div>
-                  <div className={cn('flex h-7 w-7 items-center justify-center rounded-md border-2 transition', isSelected ? 'border-[#4edea3] bg-[#4edea3] text-[#003824]' : 'border-[#86948a] text-transparent')}>
+                  <div className={cn('flex h-7 w-7 items-center justify-center rounded-md border-2 transition', isSelected ? 'border-[#4edea3] bg-[#4edea3] text-[#003824]' : isOwned ? 'border-emerald-300 bg-emerald-300/15 text-emerald-100' : 'border-[#86948a] text-transparent')}>
                     <Check className="h-4 w-4" />
                   </div>
                 </div>
@@ -440,7 +481,14 @@ export default function PricingClient() {
                     <span className="ml-1 text-sm text-[#bbcabf]">/tháng</span>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <span className="rounded-lg bg-[#4edea3]/10 px-3 py-1.5 text-sm font-bold text-[#4edea3]">Đã sẵn sàng</span>
+                    <span className={cn('rounded-lg px-3 py-1.5 text-sm font-bold', isOwned ? 'bg-emerald-300/15 text-emerald-100' : 'bg-[#4edea3]/10 text-[#4edea3]')}>
+                      {isOwned ? 'Đang dùng' : 'Đã sẵn sàng'}
+                    </span>
+                    {isOwned ? (
+                      <span className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-100">
+                        Đã mua
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       onClick={(event) => {
@@ -480,7 +528,7 @@ export default function PricingClient() {
                 <Shield className="h-5 w-5" />
               </div>
               <h3 className="text-lg font-bold">Secure Data</h3>
-              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">Mã hóa chuẩn quân đội, bảo vệ mọi thông tin tài khoản và lịch sử giao dịch.</p>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-[#9fb0a4]">Mã hóa chuẩn, bảo vệ mọi thông tin tài khoản và lịch sử giao dịch.</p>
             </div>
             <div>
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#f9bd22]/10 text-[#f9bd22]">
@@ -500,7 +548,7 @@ export default function PricingClient() {
                 <p>Mã đơn: <span className="font-mono font-bold text-[#4edea3]">{checkoutOrder.orderCode}</span></p>
                 <p>Module: <span className="font-semibold text-[#dee3ea]">{moduleListText(checkoutOrder)}</span></p>
                 <p>Số tiền: <span className="font-semibold text-[#dee3ea]">{checkoutOrder.amount} {checkoutOrder.currency}</span></p>
-                <p>Trạng thái: <span className="font-semibold uppercase text-[#dee3ea]">{checkoutOrder.status}</span></p>
+                <p>Trạng thái: <span className="font-semibold text-[#dee3ea]">{formatOrderStatus(checkoutOrder.status)}</span></p>
                 {checkoutOrder.status === 'pending' ? <p>Thời gian còn lại: <span className="font-semibold text-[#f9bd22]">{formatCountdown(countdownSeconds)}</span></p> : null}
                 <p>Nội dung CK: <span className="font-mono text-[#4edea3]">{checkoutOrder.transferContent}</span></p>
               </div>
@@ -543,8 +591,8 @@ export default function PricingClient() {
                   <p className="font-semibold">{moduleListText(order)} · <span className="font-mono">{order.orderCode}</span></p>
                   <p className="text-xs text-[#86948a]">{order.amount} {order.currency}</p>
                 </div>
-                <span className={cn('rounded-md px-2 py-0.5 text-xs font-bold uppercase', order.status === 'paid' ? 'bg-[#10b981]/20 text-[#7ff5c5]' : order.status === 'pending' ? 'bg-[#f9bd22]/20 text-[#f9bd22]' : 'bg-[#30353b] text-[#bbcabf]')}>
-                  {order.status}
+                <span className={cn('rounded-md px-2 py-0.5 text-xs font-bold', order.status === 'paid' ? 'bg-[#10b981]/20 text-[#7ff5c5]' : order.status === 'pending' ? 'bg-[#f9bd22]/20 text-[#f9bd22]' : 'bg-[#30353b] text-[#bbcabf]')}>
+                  {formatOrderStatus(order.status)}
                 </span>
               </div>
             ))}
@@ -639,3 +687,5 @@ export default function PricingClient() {
     </div>
   );
 }
+
+

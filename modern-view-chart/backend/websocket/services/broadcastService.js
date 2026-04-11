@@ -6,6 +6,12 @@ import { candleBuffers } from "../handlers/subscribeHandler.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol } from "../subscriptionIndex.js";
 import { getScopedMt5Prices, isRecipientForMt5Owner } from "../mt5Scope.js";
+import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
+
+function isVietnamGoldSymbol(symbol) {
+    const upper = String(symbol || "").toUpperCase();
+    return upper === "SJCVN" || upper === "DOJIVN";
+}
 
 export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbolTarget, ownerUserId = null) {
     const normalizedTarget = normalizeSymbol(symbolTarget);
@@ -52,12 +58,19 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
                 }
             }
 
+            const source = String(symbol || "").toUpperCase().includes("USDT")
+                ? "BINANCE"
+                : String(symbol || "").toUpperCase() === "SJCVN" || String(symbol || "").toUpperCase() === "DOJIVN"
+                    ? "VN_GOLD"
+                    : "MT5";
+
             const payload = JSON.stringify({
                 topic: "candleUpdate",
                 data: {
                     ...candle,
                     symbol,
                     interval,
+                    source,
                     rsi: rsiValue,
                     bollinger,
                 },
@@ -73,7 +86,8 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
 export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }) {
     try {
         const allPrices = getBinancePrices();
-        const tickers = allPrices.length > 0 ? allPrices : await fetchPrices();
+        const vnGoldQuotes = await getVietnamGoldQuotes();
+        const tickers = allPrices.length > 0 ? [...allPrices, ...vnGoldQuotes] : await fetchPrices();
         const binanceBySymbol = new Map();
         for (const item of tickers) {
             const symbol = normalizeSymbol(item?.symbol);
@@ -88,7 +102,9 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             const latestBySymbol = new Map(binanceBySymbol);
             for (const item of getScopedMt5Prices(mt5Prices, meta.userId || null)) {
                 const symbol = normalizeSymbol(item?.symbol);
-                if (symbol) latestBySymbol.set(symbol, { ...item, symbol });
+                if (symbol && !isVietnamGoldSymbol(symbol)) {
+                    latestBySymbol.set(symbol, { ...item, symbol });
+                }
             }
 
             const orderedSymbols = Array.isArray(meta.symbols) ? meta.symbols : [];
@@ -113,7 +129,9 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             const latestBySymbol = new Map(binanceBySymbol);
             for (const item of getScopedMt5Prices(mt5Prices, meta.userId || null)) {
                 const symbol = normalizeSymbol(item?.symbol);
-                if (symbol) latestBySymbol.set(symbol, { ...item, symbol });
+                if (symbol && !isVietnamGoldSymbol(symbol)) {
+                    latestBySymbol.set(symbol, { ...item, symbol });
+                }
             }
             const data = coreSymbols.map((s) => latestBySymbol.get(s)).filter(Boolean);
             if (data.length === 0) continue;

@@ -49,8 +49,15 @@ pyinstaller --noconfirm --onefile --noconsole `
     --specpath $resolvedBridgeSource `
     --paths (Join-Path $resolvedBridgeSource "src") `
     --hidden-import MetaTrader5 `
+    --hidden-import numpy `
     --hidden-import websockets `
+    --hidden-import requests `
     --hidden-import charset_normalizer `
+    --collect-all numpy `
+    --collect-all MetaTrader5 `
+    --collect-submodules websockets `
+    --collect-data charset_normalizer `
+    --collect-data certifi `
     (Join-Path $resolvedBridgeSource "main.py")
 
 Write-Host "Done! Executable is at: $resolvedDistPath\mt5_bridge.exe"

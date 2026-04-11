@@ -13,6 +13,7 @@ import { handleAlertTriggered } from "./handlers/alertTriggeredHandler.js";
 import { handleStrategySignal } from "./handlers/strategySignalHandler.js";
 import { handleMt5SymbolsAvailable } from "./handlers/mt5SymbolsHandler.js";
 import { handleVirtualTradeCommand } from "./handlers/virtualTradeHandler.js";
+import { handleVnGoldCandles } from "./handlers/vnGoldCandlesHandler.js";
 import { safeSend } from "./wsSend.js";
 import { logInfo } from "../logger.js";
 import { hasRequiredRole } from "../auth/roles.js";
@@ -157,6 +158,9 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
                     break;
                 case "get_binance_candles":
                     handleBinanceHistory(context, data);
+                    break;
+                case "get_vn_gold_candles":
+                    await handleVnGoldCandles(context, data);
                     break;
                 case "binance_command":
                     if (emergencyConfig.enabled && emergencyConfig.blockTrading && !isReadOnlyBinanceCommand(data.command)) {

@@ -3,15 +3,10 @@ import * as User from "./user.controller.js";
 import checkLogin from "../../middlewares/checkLogin.js";
 import checkAdmin from "../../middlewares/checkAdmin.js";
 import { calcBollingerBands, calcRSI } from "../../services/indicators.js";
+import { getVietnamGoldQuotes, getVietnamGoldSymbols } from "../../services/vnGoldService.js";
+import { getVangTodayCandles, getVangTodayLatestQuotes, getVangTodaySymbols } from "../../services/vangTodayService.js";
 
 const router = new Router();
-const telegramTemporarilyDisabled = (req, res) => {
-  return res.status(503).json({
-    ok: false,
-    error: "Telegram integration is temporarily disabled",
-    code: "telegram_temporarily_disabled",
-  });
-};
 
 //Get all users
 router.route("/").get(checkLogin, User.getListUsers);
@@ -31,11 +26,11 @@ router.route("/state").get(checkLogin, User.getUserSetupState).put(checkLogin, U
 router.route("/state/public").get(User.getPublicUserSetupState).put(User.upsertPublicUserSetupState);
 router.route("/trade-logs/public").post(User.createPublicTradeLog).patch(User.updatePublicTradeExit);
 router.route("/trade-stats/public").get(User.getPublicTradeStats);
-router.route("/telegram/status").get(telegramTemporarilyDisabled);
-router.route("/telegram/link/start").post(telegramTemporarilyDisabled);
-router.route("/telegram/preferences").put(telegramTemporarilyDisabled);
-router.route("/telegram/test").post(telegramTemporarilyDisabled);
-router.route("/telegram/unlink").post(telegramTemporarilyDisabled);
+router.route("/telegram/status").get(checkLogin, User.getTelegramStatus);
+router.route("/telegram/link/start").post(checkLogin, User.startTelegramLink);
+router.route("/telegram/preferences").put(checkLogin, User.updateTelegramPreferences);
+router.route("/telegram/test").post(checkLogin, User.sendTelegramTest);
+router.route("/telegram/unlink").post(checkLogin, User.unlinkTelegram);
 router.route("/modules").get(checkLogin, User.getUserModules).put(checkLogin, User.upsertUserModules);
 router.route("/module-access").get(checkLogin, User.getMyModuleStatus);
 router.route("/module-trial").post(checkLogin, User.startMyModuleTrial);
@@ -104,12 +99,23 @@ router.route("/prices").get(async (req, res) => {
 
     const pricesRaw = await Promise.all(promises);
     const prices = pricesRaw.filter(p => p !== null);
+    const vnGold = await getVietnamGoldQuotes();
 
-    const result = prices.map((r) => ({
+    const result = [
+      ...prices.map((r) => ({
       symbol: r.symbol,
       price: parseFloat(r.lastPrice).toFixed(4),
       change: parseFloat(r.priceChangePercent).toFixed(2),
-    }));
+      })),
+      ...vnGold.map((quote) => ({
+        symbol: quote.symbol,
+        price: String(quote.price || 0),
+        change: "0.00",
+        buy: String(quote.bid || 0),
+        sell: String(quote.ask || 0),
+        source: quote.source,
+      })),
+    ];
 
     res.json(result);
   } catch (err) {
@@ -128,7 +134,8 @@ router.route("/symbols").get(async (req, res) => {
       .map((s) => s.symbol);
 
     const mt5Symbols = ["XAUUSDm", "BTCUSDm", "ETHUSDm", "EURUSDm", "GBPUSDm"];
-    const symbols = [...mt5Symbols, ...binanceSymbols].sort();
+    const vnGoldSymbols = getVietnamGoldSymbols();
+    const symbols = [...mt5Symbols, ...vnGoldSymbols, ...binanceSymbols].sort();
 
     res.json(symbols);
   } catch (err) {
@@ -136,6 +143,72 @@ router.route("/symbols").get(async (req, res) => {
     res
       .status(500)
       .json({ error: "Không thể lấy danh sách symbol từ Binance" });
+  }
+});
+
+router.route("/vangtoday/symbols").get(async (req, res) => {
+  try {
+    const items = await getVangTodaySymbols();
+    return res.json({
+      success: true,
+      count: items.length,
+      symbols: items,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error?.message || "Failed to fetch VangToday symbols",
+    });
+  }
+});
+
+router.route("/vangtoday/prices").get(async (req, res) => {
+  try {
+    const quotes = await getVangTodayLatestQuotes();
+    return res.json({
+      success: true,
+      count: quotes.length,
+      quotes: quotes.map((item) => ({
+        symbol: item.symbol,
+        name: item.name,
+        buy: item.buy,
+        sell: item.sell,
+        currency: item.currency,
+        capturedAt: item.capturedAt,
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error?.message || "Failed to fetch VangToday prices",
+    });
+  }
+});
+
+router.route("/vangtoday/candles").get(async (req, res) => {
+  try {
+    const symbol = String(req.query.symbol || "").trim();
+    const interval = String(req.query.interval || "60").trim();
+    const priceType = String(req.query.priceType || "buy").trim();
+    const count = String(req.query.count || "300");
+    if (!symbol) {
+      return res.status(400).json({ success: false, error: "symbol is required" });
+    }
+
+    const candles = await getVangTodayCandles(symbol, interval, priceType, count);
+    return res.json({
+      success: true,
+      symbol: symbol.toUpperCase(),
+      interval,
+      priceType: priceType.toLowerCase(),
+      count: candles.length,
+      candles,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error?.message || "Failed to fetch VangToday candles",
+    });
   }
 });
 

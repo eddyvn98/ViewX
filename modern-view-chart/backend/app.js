@@ -268,6 +268,9 @@ export function createApp() {
             "/user/trade-logs/public",
             "/user/trade-stats/public",
             "/user/symbols",
+            "/user/vangtoday/symbols",
+            "/user/vangtoday/prices",
+            "/user/vangtoday/candles",
         ]);
         if (publicAuthPaths.has(req.path)) return next();
         return requireAuth(req, res, next);
