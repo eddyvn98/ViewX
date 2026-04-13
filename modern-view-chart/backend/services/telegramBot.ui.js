@@ -1,22 +1,15 @@
-import { editTelegramMessage, sendTelegramMessage } from "./telegram.js";
+﻿import { editTelegramMessage, sendTelegramMessage } from "./telegram.js";
 import { formatOperatorLabel, indicatorNeedsPeriod } from "./telegramBot.indicators.js";
 import { normalizeMaType } from "./telegramBot.indicators.js";
 import { escapeHtml, formatPrice } from "./telegramBot.helpers.js";
 import { getActiveAlerts } from "./telegramBot.state.js";
 import {
   TIMEFRAME_OPTIONS,
-  SYMBOL_LIMIT,
   INDICATOR_TYPES,
   INDICATOR_COMPARE_OPERATORS,
   RSI_PERIOD_OPTIONS,
-  RSI_THRESHOLD_OPTIONS,
-  MA_TYPES,
-  MA_FAST_PERIODS,
-  MA_SLOW_PERIODS,
   WATCHLIST_FALLBACK,
 } from "./telegramBot.constants.js";
-
-// ─── Keyboard builders ───────────────────────────────────────────────────────
 
 export function buildKeyboard(rows) {
   return { inline_keyboard: rows };
@@ -82,8 +75,6 @@ export function timeframeKeyboard(prefix, symbol, backTarget) {
   ]);
 }
 
-// ─── Text builders ───────────────────────────────────────────────────────────
-
 export function formatIndicatorAlertLabel(alert) {
   if (alert.type === "indicator_rule") {
     const leftType = String(alert.leftType || "PRICE").toUpperCase();
@@ -129,7 +120,7 @@ export function buildManagedAlertRows(state, botState) {
   const rows = [];
   for (const alert of getActiveAlerts(state)) {
     const operator = alert.type === "greater" ? ">" : alert.type === "less" ? "<" : "x";
-    rows.push({ id: String(alert.id || ""), source: "price", label: `Gia ${alert.symbol} ${operator} ${formatPrice(alert.price)}` });
+    rows.push({ id: String(alert.id || ""), source: "price", label: `Giá ${alert.symbol} ${operator} ${formatPrice(alert.price)}` });
   }
   const indicatorAlerts = (Array.isArray(botState.indicatorAlerts) ? botState.indicatorAlerts : []).filter((item) => item?.active);
   for (const alert of indicatorAlerts) {
@@ -181,32 +172,69 @@ export function buildTextCommandHelp() {
   return [
     "Bạn có thể tạo alert bằng tin nhắn, không cần bấm nút.",
     "",
-    "Mẫu lệnh nhanh:",
-    "1) Gia theo %: BTCUSDT 5m up 1%",
-    "2) Gia muc cu the: BTCUSDT 1h > 70000",
-    "3) RSI: rsi BTCUSDT 15m 14 < 30",
-    "4) MA cat nhau: ma BTCUSDT 1h EMA20 cross up EMA50",
-    "5) Chỉ báo tổng quát: indicator BTCUSDT 1h EMA20 crosses_above EMA50",
-    "6) Dùng thông số đang bật trên web: cảnh báo khi hma và ema giao cắt nhau",
-    "7) Xem alert: /alerts",
-    "8) Xóa alert: delete alert #2 hoặc delete alert <id>",
+    "Menu / Help / Danh sách:",
+    "- Menu: /menu | menu | /m",
+    "- Help: /help | help | trợ giúp | tro giup | /h | ?",
+    "- List alerts: /alerts | list alerts | danh sách cảnh báo | danh sach canh bao | /la | /ls",
+    "- Delete all: xóa tất cả cảnh báo | xoa tat ca canh bao | delete all alerts | /da | /clr",
     "",
-    "Lenh menu: /menu",
+    "Cảnh báo giá (%):",
+    "- VN có dấu: eth 15m tăng 2%",
+    "- VN không dấu: eth m15 giam 1.5%",
+    "- EN: ETHUSD 15m up 2%",
+    "- Viết tắt: pp ETHUSD h1 down 3%",
+    "",
+    "Cảnh báo giá (mốc giá):",
+    "- VN có dấu: vàng 1h > 2450",
+    "- VN không dấu: vang 1h > 2450",
+    "- EN: gold h1 < 2400",
+    "- Viết tắt: pa BTCUSD m15 >= 70000",
+    "",
+    "RSI:",
+    "- VN có dấu: rsi btc h1 14 > 70",
+    "- VN không dấu: rsi btc h1 14 < 30",
+    "- EN: rsi eth 15m 14 < 30",
+    "- Viết tắt: ra BTCUSD m15 14 < 35",
+    "",
+    "MA cross:",
+    "- VN có dấu: cảnh báo khi ema20 cắt lên ema50 btc khung m15",
+    "- VN không dấu: canh bao khi ema20 cat len ema50 btc khung m15",
+    "- EN: ma xauusd m15 hma20 cross down hma100",
+    "",
+    "Indicator rule (tùy biến):",
+    "- EN: indicator BTCUSD h1 EMA20 crosses_above EMA50",
+    "- VN có dấu: indicator xauusd m15 hma20 > ema50",
+    "- VN không dấu: indicator xauusd m15 hma20 > ema50",
+    "- Viết tắt: ia ETHUSD m15 EMA20 > EMA50",
+    "",
+    "Scanner/Matrix:",
+    "- VN có dấu: cho xem matrix 1",
+    "- VN không dấu: cho xem ma tran 1",
+    "- EN: show scanner 2",
+    "- Viết tắt: /mx | /sc",
+    "",
+    "Xóa 1 alert:",
+    "- xóa alert #2",
+    "- delete alert #2",
+    "- xoa alert #3",
+    "- delete alert <id>",
+    "",
+    "Lệnh đặc biệt theo chart web (active pair):",
+    "- Cảnh báo khi 2 đường này cắt nhau khung m15",
+    "- Canh bao khi 2 duong nay cat nhau khung m15",
   ].join("\n");
 }
 
 export function buildTextAlertsSummary(state, botState) {
   const rows = buildManagedAlertRows(state, botState);
-  if (!rows.length) return "Chua co alert dang bat.\nNhan /help de xem cau truc lenh tao alert bang tin nhan.";
-  const lines = ["Danh sach alert dang bat:"];
+  if (!rows.length) return "Chưa có alert đang bật.\nNhấn /help để xem cấu trúc lệnh tạo alert bằng tin nhắn.";
+  const lines = ["Danh sách alert đang bật:"];
   rows.slice(0, 20).forEach((item, index) => {
     lines.push(`${index + 1}. ${item.label} [id: ${item.id}]`);
   });
-  if (rows.length > 20) lines.push(`... con ${rows.length - 20} alert nua.`);
+  if (rows.length > 20) lines.push(`... còn ${rows.length - 20} alert nữa.`);
   return lines.join("\n");
 }
-
-// ─── Menu sending ─────────────────────────────────────────────────────────────
 
 export async function sendOrEditMenu({ chatId, messageId, text, replyMarkup }) {
   if (messageId) {
@@ -224,3 +252,9 @@ export async function sendMainMenu({ user, state, chatId, messageId }) {
     replyMarkup: menuRootKeyboard(),
   });
 }
+
+export {
+  INDICATOR_TYPES,
+  INDICATOR_COMPARE_OPERATORS,
+  RSI_PERIOD_OPTIONS,
+};

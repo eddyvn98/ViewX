@@ -36,7 +36,7 @@ export async function createAbsolutePriceAlert(userId, symbol, timeframe, operat
   const normalizedTimeframe = normalizeTimeframe(timeframe);
   const normalizedOperator = operator === "<" ? "<" : ">";
   const safeTargetPrice = Number(targetPrice);
-  if (!Number.isFinite(safeTargetPrice) || safeTargetPrice <= 0) throw new Error("Moc gia khong hop le.");
+  if (!Number.isFinite(safeTargetPrice) || safeTargetPrice <= 0) throw new Error("Mốc giá không hợp lệ.");
   await patchUserSetupState(userId, (state) => {
     const currentAlerts = Array.isArray(state.alerts) ? state.alerts : [];
     currentAlerts.push({
@@ -90,6 +90,20 @@ export async function deleteManagedAlert(userId, alertId) {
     return botState;
   });
   return removed;
+}
+
+export async function deleteAllManagedAlerts(userId) {
+  await patchUserSetupState(userId, (state) => {
+    const current = Array.isArray(state.alerts) ? state.alerts : [];
+    state.alerts = current.map((item) => ({ ...item, active: false }));
+    return state;
+  });
+  await updateUserBotState(userId, (botState) => {
+    const current = Array.isArray(botState.indicatorAlerts) ? botState.indicatorAlerts : [];
+    botState.indicatorAlerts = current.map((item) => ({ ...item, active: false }));
+    return botState;
+  });
+  return true;
 }
 
 export function resolveAlertIdFromDeleteIntent(payload, state, botState) {
@@ -193,6 +207,28 @@ function collectIndicatorConfigsFromChart(state, chartId) {
   return (Array.isArray(chartIndicators[chartId]) ? chartIndicators[chartId] : []).filter((item) => item && typeof item === "object");
 }
 
+function getTopTwoIndicatorTypesFromChart(indicators) {
+  const preferred = ["EMA", "HMA", "SMA", "WMA", "RSI", "MACD", "ATR", "ADX", "STOCHASTIC", "BOLLINGERBANDS"];
+  const counts = new Map();
+  for (const item of indicators) {
+    const t = normalizeIndicatorType(item?.type);
+    if (!t || !isIndicatorSupported(t) || t === "PRICE") continue;
+    counts.set(t, (counts.get(t) || 0) + 1);
+  }
+  const ranked = Array.from(counts.entries())
+    .sort((a, b) => {
+      const ai = preferred.indexOf(a[0]);
+      const bi = preferred.indexOf(b[0]);
+      if (ai === -1 && bi === -1) return b[1] - a[1];
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    })
+    .map(([type]) => type);
+  if (ranked.length < 2) return null;
+  return { leftType: ranked[0], rightType: ranked[1] };
+}
+
 function extractPeriodsByTypeFromIndicators(indicators, type) {
   const normalizedType = normalizeIndicatorType(type);
   if (!normalizedType) return [];
@@ -252,4 +288,24 @@ export async function createCrossAlertsFromWebIndicators(userId, state, leftType
   }
   if (createdCount <= 0) throw new Error("Không tạo được alert vì cặp chỉ báo đang trùng hoàn toàn.");
   return { createdCount, symbol: context.symbol, timeframe: context.timeframe, leftPeriods, rightPeriods };
+}
+
+export async function createCrossAlertsFromActiveWebPair(userId, state, requestedTimeframe = "", requestedSymbol = "") {
+  const activeContext = getActiveChartContext(state);
+  if (!activeContext) {
+    throw new Error("Không tìm thấy chart đang mở trên web.");
+  }
+  const indicators = collectIndicatorConfigsFromChart(state, activeContext.chartId);
+  const pair = getTopTwoIndicatorTypesFromChart(indicators);
+  if (!pair) {
+    throw new Error("Không tìm thấy đủ 2 indicator đang bật trên chart web.");
+  }
+  return createCrossAlertsFromWebIndicators(
+    userId,
+    state,
+    pair.leftType,
+    pair.rightType,
+    requestedTimeframe || activeContext.timeframe,
+    requestedSymbol || activeContext.symbol,
+  );
 }

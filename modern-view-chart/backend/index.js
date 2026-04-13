@@ -9,6 +9,7 @@ import { startVietnamGoldCrawler } from "./services/vnGoldCrawlerService.js";
 import { startVangTodayCrawler } from "./services/vangTodayCrawlerService.js";
 import { startModuleBotSync } from "./services/moduleBotSync.js";
 import { startTelegramBotMonitor } from "./services/telegramBot.js";
+import { startTelegramWebhookQueueWorker } from "./services/telegramWebhookQueue.js";
 
 const REQUIRED_ENV = ["PORT", "URL_MONGOOSE", "ACCESS_TOKEN", "MAX_WS_CLIENTS", "WS_MSG_RATE_PER_10S"];
 const REQUIRED_POSITIVE_INT_ENV = ["PORT", "MAX_WS_CLIENTS", "WS_MSG_RATE_PER_10S"];
@@ -49,6 +50,7 @@ const vnGoldCrawler = startVietnamGoldCrawler();
 const vangTodayCrawler = startVangTodayCrawler();
 const moduleBotSync = startModuleBotSync();
 const telegramBotMonitor = startTelegramBotMonitor();
+const telegramWebhookQueue = startTelegramWebhookQueueWorker();
 if (runtimeAlertMonitor?.config) {
     logInfo("ops.alert.monitor_started", runtimeAlertMonitor.config);
 }
@@ -63,5 +65,6 @@ process.on("SIGTERM", () => {
         vangTodayCrawler?.stop?.();
         moduleBotSync?.stop?.();
         telegramBotMonitor?.stop?.();
+        telegramWebhookQueue?.stop?.();
     } catch { }
 });

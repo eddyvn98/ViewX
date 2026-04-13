@@ -8,6 +8,7 @@ export { hasTelegramModuleAccess } from "./telegramBot.access.js";
 export { startTelegramBotMonitor } from "./telegramBot.monitor.js";
 
 import { hasTelegramModuleAccess } from "./telegramBot.access.js";
+import { logError } from "../logger.js";
 
 export async function handleTelegramBotUpdate({ message, callbackQuery }) {
   const chatId = message?.chat?.id
@@ -25,17 +26,17 @@ export async function handleTelegramBotUpdate({ message, callbackQuery }) {
     if (message?.text) {
       await sendTelegramMessage({
         chatId,
-        text: "Tai khoan Telegram nay chua duoc lien ket.\nLien ket tai day: " + linkUrl + "\nSau khi lien ket, quay lai bot va bam /menu.",
+        text: "Tài khoản Telegram này chưa được liên kết.\nLiên kết tại đây: " + linkUrl + "\nSau khi liên kết, quay lại bot và bấm /menu.",
         parseMode: "",
       });
     } else if (callbackQuery?.id) {
-      await answerTelegramCallbackQuery({ callbackQueryId: callbackQuery.id, text: "Lien ket tai khoan tai: " + linkUrl, showAlert: true });
+      await answerTelegramCallbackQuery({ callbackQueryId: callbackQuery.id, text: "Liên kết tài khoản tại: " + linkUrl, showAlert: true });
     }
     return { ok: true, skipped: "not_linked" };
   }
 
   if (!hasTelegramModuleAccess(user)) {
-    await sendTelegramMessage({ chatId, text: "Tai khoan nay chua co module Telegram dang hoat dong tren web.", parseMode: "" });
+    await sendTelegramMessage({ chatId, text: "Tài khoản này chưa có module Telegram đang hoạt động trên web.", parseMode: "" });
     return { ok: true, skipped: "no_module" };
   }
 
@@ -63,10 +64,16 @@ export async function handleTelegramBotUpdate({ message, callbackQuery }) {
     const handled = await handleTextIntent({ user, state: setupState.state, chatId, text });
     if (handled) return { ok: true };
   } catch (error) {
-    await sendTelegramMessage({ chatId, text: "Khong xu ly duoc lenh: " + String(error?.message || "unknown_error"), parseMode: "" });
+    logError("telegram.alert.create_failed", {
+      user_id: String(user._id || ""),
+      chat_id: String(chatId || ""),
+      text,
+      error: error?.message || error,
+    });
+    await sendTelegramMessage({ chatId, text: "Không xử lý được lệnh: " + String(error?.message || "unknown_error"), parseMode: "" });
     return { ok: true, warning: "text_intent_failed" };
   }
 
-  await sendTelegramMessage({ chatId, text: "Chua hieu lenh. Gui /help de xem mau cau lenh hoac /menu de dung giao dien nut.", parseMode: "" });
+  await sendTelegramMessage({ chatId, text: "Chưa hiểu lệnh. Gửi /help để xem mẫu câu lệnh hoặc /menu để dùng giao diện nút.", parseMode: "" });
   return { ok: true };
 }

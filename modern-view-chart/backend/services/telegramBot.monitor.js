@@ -1,12 +1,17 @@
 import { userModel } from "../model/user.js";
 import { sendTelegramMessage } from "./telegram.js";
-import { calculateIndicatorSeries, formatOperatorLabel, indicatorNeedsPeriod, normalizeMaType } from "./telegramBot.indicators.js";
+import { 
+  calculateIndicatorSeries, 
+  formatOperatorLabel, 
+  indicatorNeedsPeriod, 
+  normalizeMaType,
+  calculateMovingAverage 
+} from "./telegramBot.indicators.js";
 import { RSI } from "technicalindicators";
 import { escapeHtml, formatPrice, nowIso } from "./telegramBot.helpers.js";
 import { normalizeBotState, loadUserSetupState, patchUserSetupState, updateUserBotState, getActiveAlerts, getSignals, getScanners } from "./telegramBot.state.js";
 import { hasTelegramModuleAccess } from "./telegramBot.access.js";
 import { fetchCurrentPrice, fetchCandles, renderSignalsText, summarizeScannerSignals, renderScannerMatrixText, sendScannerMatrixSnapshot } from "./telegramBot.context.js";
-import { calculateMovingAverage } from "./telegramBot.indicators.js";
 import { BOT_SCAN_INTERVAL_MS } from "./telegramBot.constants.js";
 
 // ─── Price alerts evaluator ───────────────────────────────────────────────────

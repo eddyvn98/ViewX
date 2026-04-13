@@ -59,7 +59,9 @@ const INDICATOR_ALIAS_MAP = {
 export function stripDiacritics(value) {
   return String(value || "")
     .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
+    .replace(/\p{Diacritic}/gu, "")
+    .replaceAll("đ", "d")
+    .replaceAll("Đ", "D");
 }
 
 export function normalizeIndicatorType(input) {
@@ -126,7 +128,7 @@ function calculateHullMA(values, period) {
   return Array(values.length - hull.length).fill(null).concat(hull);
 }
 
-function calculateMovingAverage(type, values, period) {
+export function calculateMovingAverage(type, values, period) {
   const maType = normalizeMaType(type);
   const safePeriod = Math.max(2, Number(period || 0));
   if (maType === "HMA") return calculateHullMA(values, safePeriod);

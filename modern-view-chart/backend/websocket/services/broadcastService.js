@@ -7,6 +7,16 @@ import { safeSend } from "../wsSend.js";
 import { normalizeSymbol } from "../subscriptionIndex.js";
 import { getScopedMt5Prices, isRecipientForMt5Owner } from "../mt5Scope.js";
 import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
+import { logWarn } from "../../logger.js";
+
+let lastBroadcastWarnAt = 0;
+
+function warnBroadcast(event, fields = {}) {
+    const now = Date.now();
+    if (now - lastBroadcastWarnAt < 60_000) return;
+    lastBroadcastWarnAt = now;
+    logWarn(event, fields);
+}
 
 function isVietnamGoldSymbol(symbol) {
     const upper = String(symbol || "").toUpperCase();
@@ -145,7 +155,7 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             safeSend(ws, payload, { nonCritical: true });
         }
     } catch (err) {
-        console.error("[WS] Error broadcasting prices:", err.message);
+        warnBroadcast("ws.price_broadcast.failed", { error: err?.message || err });
     }
 }
 

@@ -2,12 +2,9 @@ import { logError } from "../../../logger.js";
 import {
   getTelegramConfig,
   getTelegramWebhookInfo,
-  hashTelegramPayload,
-  sendTelegramMessage,
   setTelegramWebhook,
 } from "../../../services/telegram.js";
-import { handleTelegramBotUpdate } from "../../../services/telegramBot.js";
-import { userModel } from "../../../model/user.js";
+import { enqueueTelegramWebhookUpdate } from "../../../services/telegramWebhookQueue.js";
 import { canManageTelegramWebhook, resolveTelegramWebhookUrl } from "../telegram.helpers.js";
 
 export async function telegramWebhook(req, res) {
@@ -23,92 +20,16 @@ export async function telegramWebhook(req, res) {
       }
     }
 
-    const message = req.body?.message;
-    const callbackQuery = req.body?.callback_query;
-    const text = typeof message?.text === "string" ? message.text.trim() : "";
-    const chatId = message?.chat?.id ? String(message.chat.id) : "";
-    const fromUser = message?.from || null;
-
-    if (callbackQuery?.data) {
-      await handleTelegramBotUpdate({ callbackQuery });
-      return res.status(200).json({ ok: true, callback: true });
+    const queued = await enqueueTelegramWebhookUpdate(req.body || {});
+    if (!queued.accepted) {
+      return res.status(200).json({ ok: true, skipped: queued.reason || "not_accepted" });
     }
-
-    if (!text || !chatId) return res.status(200).json({ ok: true, skipped: "no_message" });
-
-    if (!text.startsWith("/start")) {
-      await handleTelegramBotUpdate({ message });
-      return res.status(200).json({ ok: true, message: true });
-    }
-
-    const payload = text.split(/\s+/, 2)[1] || "";
-    if (!payload) {
-      const linkedUser = await userModel.findOne({ "telegram.chatId": chatId }).select("_id telegram");
-      if (linkedUser?._id && linkedUser.telegram?.isActive) {
-        await handleTelegramBotUpdate({ message });
-        return res.status(200).json({ ok: true, menu: true });
-      }
-
-      await sendTelegramMessage({
-        chatId,
-        text: "Hãy mở Telegram từ liên kết trong web để liên kết tài khoản.",
-        parseMode: "",
-      });
-      return res.status(200).json({ ok: true, linked: false, reason: "missing_payload" });
-    }
-
-    const payloadHash = hashTelegramPayload(payload);
-    const now = new Date();
-    const user = await userModel.findOne({
-      "telegram.pendingLinkTokenHash": payloadHash,
-      "telegram.pendingLinkExpiresAt": { $gt: now },
+    return res.status(200).json({
+      ok: true,
+      queued: true,
+      duplicate: Boolean(queued.duplicate),
+      update_id: queued.updateId ?? null,
     });
-
-    if (!user?._id) {
-      await sendTelegramMessage({
-        chatId,
-        text: "Mã liên kết không hợp lệ hoặc đã hết hạn. Hãy tạo lại liên kết từ web.",
-        parseMode: "",
-      });
-      return res.status(200).json({ ok: true, linked: false, reason: "token_invalid_or_expired" });
-    }
-
-    const tgUsername = typeof fromUser?.username === "string" ? fromUser.username : "";
-    const tgFirstName = typeof fromUser?.first_name === "string" ? fromUser.first_name : "";
-    const tgUserId = fromUser?.id ? String(fromUser.id) : "";
-
-    user.telegram = {
-      ...(user.telegram || {}),
-      chatId,
-      telegramUserId: tgUserId,
-      username: tgUsername,
-      firstName: tgFirstName,
-      linkedAt: now,
-      isActive: true,
-      pendingLinkTokenHash: "",
-      pendingLinkExpiresAt: null,
-      preferences: {
-        signals: user.telegram?.preferences?.signals !== false,
-        orderEvents: user.telegram?.preferences?.orderEvents !== false,
-        alertHits: user.telegram?.preferences?.alertHits !== false,
-        system: user.telegram?.preferences?.system === true,
-      },
-    };
-    await user.save();
-
-    await sendTelegramMessage({
-      chatId,
-      text: `Đã liên kết với tài khoản <b>${String(user.username || "user")}</b>. Bạn có thể dùng /menu để mở bot menu.`,
-    });
-
-    await handleTelegramBotUpdate({
-      message: {
-        chat: { id: chatId },
-        text: "/menu",
-      },
-    });
-
-    return res.status(200).json({ ok: true, linked: true, user_id: String(user._id) });
   } catch (error) {
     logError("auth.telegram_webhook.failed", { error: error?.message || error });
     return res.status(500).json({ error: "Internal server error" });

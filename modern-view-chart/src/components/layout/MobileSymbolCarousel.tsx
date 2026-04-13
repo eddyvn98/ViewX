@@ -24,6 +24,14 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         return fallbackChartId || null;
     })();
     const currentSymbol = resolvedActiveChartId ? activeTab?.charts[resolvedActiveChartId]?.symbol : undefined;
+    const fallbackSymbols = React.useMemo(() => {
+        const base = ['BTCUSDT', 'ETHUSDT', 'XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY'];
+        if (currentSymbol && !base.includes(currentSymbol)) {
+            return [currentSymbol, ...base];
+        }
+        return base;
+    }, [currentSymbol]);
+    const symbolPool = watchlist.length > 0 ? watchlist : fallbackSymbols;
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
@@ -34,12 +42,12 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     const dragMovedRef = useRef(false);
     const pressStartRef = useRef({ x: 0, y: 0 });
 
-    const infiniteSymbols = [...watchlist, ...watchlist, ...watchlist];
+    const infiniteSymbols = [...symbolPool, ...symbolPool, ...symbolPool];
 
     // Effect to handle visual updates and infinite loop jumping
     useEffect(() => {
         const container = scrollRef.current;
-        if (!container || watchlist.length === 0) return;
+        if (!container || symbolPool.length === 0) return;
 
         const updateVisuals = () => {
             const center = container.scrollLeft + container.clientWidth / 2;
@@ -48,7 +56,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
             let minDistance = Infinity;
 
             const firstSetItem = items[0] as HTMLElement;
-            const secondSetItem = items[watchlist.length] as HTMLElement;
+            const secondSetItem = items[symbolPool.length] as HTMLElement;
 
             if (firstSetItem && secondSetItem) {
                 const singleSetWidth = secondSetItem.offsetLeft - firstSetItem.offsetLeft;
@@ -87,14 +95,14 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         container.addEventListener('scroll', onScroll);
         updateVisuals();
         return () => container.removeEventListener('scroll', onScroll);
-    }, [centerSymbol, watchlist]);
+    }, [centerSymbol, symbolPool]);
 
     useEffect(() => {
-        if (scrollRef.current && currentSymbol && !initialCentered.current && watchlist.length > 0) {
-            const index = watchlist.indexOf(currentSymbol);
+        if (scrollRef.current && currentSymbol && !initialCentered.current && symbolPool.length > 0) {
+            const index = symbolPool.indexOf(currentSymbol);
             if (index !== -1) {
                 const container = scrollRef.current;
-                const middleIndex = index + watchlist.length;
+                const middleIndex = index + symbolPool.length;
                 setTimeout(() => {
                     const item = container.children[middleIndex] as HTMLElement;
                     if (item) {
@@ -105,7 +113,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                 }, 50);
             }
         }
-    }, [currentSymbol, watchlist]);
+    }, [currentSymbol, symbolPool]);
 
     useEffect(() => {
         return () => {

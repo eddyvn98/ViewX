@@ -10,6 +10,7 @@ export function normalizeBotState(raw) {
     strategySubscriptions: Array.isArray(source.strategySubscriptions) ? source.strategySubscriptions : [],
     scannerSubscriptions: Array.isArray(source.scannerSubscriptions) ? source.scannerSubscriptions : [],
     runtime: source.runtime && typeof source.runtime === "object" ? source.runtime : {},
+    pendingIntent: source.pendingIntent && typeof source.pendingIntent === "object" ? source.pendingIntent : null,
   };
 }
 

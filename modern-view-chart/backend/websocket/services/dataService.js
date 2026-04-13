@@ -1,8 +1,17 @@
 import fetch from "node-fetch";
 import { getScopedMt5Price } from "../mt5Scope.js";
 import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
+import { logWarn } from "../../logger.js";
 
 const currentCandleCache = {};
+let lastBinanceFetchWarnAt = 0;
+
+function warnBinanceFetch(event, fields = {}) {
+    const now = Date.now();
+    if (now - lastBinanceFetchWarnAt < 60_000) return;
+    lastBinanceFetchWarnAt = now;
+    logWarn(event, fields);
+}
 
 export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId = null) {
     const symbolLower = (symbol || "").toLowerCase();
@@ -120,11 +129,34 @@ export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId
 }
 
 export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "XRPUSDT", "SUIUSDT"]) {
-    const requests = symbols.map((symbol) =>
-        fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`).then((r) => r.json())
-    );
+    const requests = symbols.map(async (symbol) => {
+        const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} for ${symbol}`);
+        }
+        return response.json();
+    });
 
-    const results = await Promise.all(requests);
+    const settled = await Promise.allSettled(requests);
+    const results = [];
+    const failedSymbols = [];
+    for (let i = 0; i < settled.length; i += 1) {
+        const item = settled[i];
+        if (item.status === "fulfilled" && item.value?.symbol && item.value?.lastPrice != null) {
+            results.push(item.value);
+            continue;
+        }
+        failedSymbols.push(symbols[i]);
+    }
+
+    if (failedSymbols.length > 0) {
+        warnBinanceFetch("ws.binance_rest_fetch.partial_failure", {
+            failed_symbols: failedSymbols,
+            ok_count: results.length,
+            fail_count: failedSymbols.length,
+        });
+    }
+
     const vnGoldQuotes = await getVietnamGoldQuotes();
 
     return [
