@@ -85,3 +85,15 @@ logs_*.out
 logs_*.err
 tunnel*.txt
 cloudflared.exe
+
+# Agent & Workspace
+.agent/
+.claude/
+AGENTS.md
+CLAUDE.md
+scratch/
+tmp-*
+tmp_*
+*.png
+*.txt
+!tunnel*.txt

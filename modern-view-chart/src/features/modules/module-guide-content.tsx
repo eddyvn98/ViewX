@@ -1,4 +1,4 @@
-﻿import type { ClientModule } from '@/lib/auth/entitlements';
+import type { ClientModule } from '@/lib/auth/entitlements';
 
 type Locale = 'vi' | 'en';
 
@@ -17,6 +17,7 @@ export type ModuleGuideContent = {
   primaryCta: { label: string; href: string; download?: boolean };
   secondaryCta?: { label: string; href: string };
   sections: ModuleGuideSection[];
+  poster?: string;
 };
 
 type LocalizedGuide = Omit<ModuleGuideContent, 'module'>;
@@ -60,6 +61,7 @@ const GUIDES: GuideMap = {
           ],
         },
       ],
+      poster: '/images/modules/mt5_banner.png',
     },
     en: {
       badge: 'Your MT5',
@@ -219,6 +221,7 @@ export function getModuleGuideContent(module: ClientModule, locale: string): Mod
     primaryCta: localized.primaryCta,
     secondaryCta: localized.secondaryCta,
     sections: localized.sections,
+    poster: (localized as any).poster,
   };
 }
 

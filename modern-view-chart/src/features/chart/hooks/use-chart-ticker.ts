@@ -252,13 +252,10 @@ export function useChartTicker({
                 base.open = haOpen; base.close = haClose;
                 base.high = haData.high; base.low = haData.low;
                 seriesRef.current?.update(haData);
-                // Simple Bullish/Bearish Coloring
+                
+                // Keep base state updated with raw values for syncing/legend, 
+                // but do NOT call series update again with raw candle data.
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
-
-                seriesRef.current?.update({
-                    time: updateTime as Time,
-                    open: rOpen, high: rHigh, low: rLow, close: rClose,
-                });
             } else {
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
 

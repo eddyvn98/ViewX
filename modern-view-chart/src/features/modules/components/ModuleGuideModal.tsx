@@ -57,6 +57,16 @@ export function ModuleGuideModal({ open, locale, module, onClose }: ModuleGuideM
             <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-emerald-300">{guide.badge}</p>
             <h1 className="mt-4 max-w-4xl text-3xl font-black tracking-tight text-white md:text-5xl">{guide.title}</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">{guide.summary}</p>
+            
+            {guide.poster ? (
+              <div className="mt-8 overflow-hidden rounded-[24px] border border-white/10 bg-slate-900 shadow-2xl">
+                <img 
+                  src={guide.poster} 
+                  alt={`${guide.badge} preview`} 
+                  className="w-full object-cover aspect-video"
+                />
+              </div>
+            ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
               <a

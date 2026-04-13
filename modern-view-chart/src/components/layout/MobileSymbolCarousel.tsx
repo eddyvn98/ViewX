@@ -31,7 +31,13 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         }
         return base;
     }, [currentSymbol]);
-    const symbolPool = watchlist.length > 0 ? watchlist : fallbackSymbols;
+    const symbolPool = React.useMemo(() => {
+        const base = watchlist.length > 0 ? watchlist : fallbackSymbols;
+        if (currentSymbol && !base.includes(currentSymbol)) {
+            return [currentSymbol, ...base];
+        }
+        return base;
+    }, [watchlist, fallbackSymbols, currentSymbol]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);

@@ -46,7 +46,13 @@ export function MarketListContent({
     const setChartSymbol = useMarketStore((state) => state.setChartSymbol);
     const { broadcastSymbolChange, broadcastGroupSymbolChange } = useCrossWindowSync();
 
-    const activeChartId = activeTab?.activeChartId || null;
+    const activeChartId = useMemo(() => {
+        if (!activeTab) return null;
+        if (activeTab.activeChartId && activeTab.charts[activeTab.activeChartId]) {
+            return activeTab.activeChartId;
+        }
+        return Object.keys(activeTab.charts || {})[0] || null;
+    }, [activeTab]);
     const charts = useMemo(() => activeTab?.charts || {}, [activeTab?.charts]);
     const activeChartSymbol = activeChartId && charts[activeChartId] ? charts[activeChartId].symbol : null;
 
