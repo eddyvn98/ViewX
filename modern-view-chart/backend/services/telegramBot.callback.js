@@ -10,7 +10,8 @@ import {
   symbolKeyboard, timeframeKeyboard, sendOrEditMenu, sendMainMenu,
   buildManageAlertsText, buildManageAlertsKeyboard,
 } from "./telegramBot.ui.js";
-import { createPriceAlert, createIndicatorAlert, deleteManagedAlert, toggleStrategySubscription, toggleScannerSubscription } from "./telegramBot.alerts.js";
+import { deleteManagedAlert, toggleStrategySubscription, toggleScannerSubscription } from "./telegramBot.alerts.js";
+import { executeTelegramAction } from "./telegramBot.actionExecutor.js";
 import {
   INDICATOR_TYPES, INDICATOR_COMPARE_OPERATORS,
   RSI_PERIOD_OPTIONS, RSI_THRESHOLD_OPTIONS,
@@ -117,23 +118,28 @@ export async function handleCallback({ user, state, chatId, messageId, callbackQ
     });
   }
   if (group === "price" && parts[2] === "add") {
-    const symbol = normalizeSymbol(parts[3]);
-    const timeframe = normalizeTimeframe(parts[4]);
-    const direction = parts[5] === "lt" ? "lt" : "gt";
-    const percent = Number(parts[6] || 0.5);
-    try {
-      const created = await createPriceAlert(user._id, symbol, timeframe, direction, percent);
-      await answerTelegramCallbackQuery({ callbackQueryId, text: "Đã tạo alert giá" });
-      return sendOrEditMenu({
-        chatId, messageId,
-        text: ["✅ Đã tạo alert giá", "", `Mã: <b>${escapeHtml(symbol)}</b>`, `Khung thời gian: <b>${escapeHtml(timeframe)}</b>`, `Giá hiện tại: <b>${formatPrice(created.currentPrice)}</b>`, `Mức cảnh báo: <b>${formatPrice(created.targetPrice)}</b>`].join("\n"),
-        replyMarkup: successKeyboard("price"),
-      });
-    } catch (error) {
-      await answerTelegramCallbackQuery({ callbackQueryId, text: error?.message || "Không tạo được alert", showAlert: true });
-      return sendOrEditMenu({ chatId, messageId, text: error?.message || "Không tạo được alert giá.", replyMarkup: backKeyboard("price") });
-    }
+  const symbol = normalizeSymbol(parts[3]);
+  const timeframe = normalizeTimeframe(parts[4]);
+  const direction = parts[5] === "lt" ? "lt" : "gt";
+  const percent = Number(parts[6] || 0.5);
+  try {
+    const created = await executeTelegramAction({
+      userId: user._id,
+      state,
+      botState: normalizeBotState(user.telegram?.botState),
+      intent: { type: "create_price_alert_percent", payload: { symbol, timeframe, direction, percent } },
+    });
+    await answerTelegramCallbackQuery({ callbackQueryId, text: "Đã tạo alert giá" });
+    return sendOrEditMenu({
+      chatId, messageId,
+      text: ["OK Đã tạo alert giá", "", `Mã: <b>${escapeHtml(symbol)}</b>`, `Khung thời gian: <b>${escapeHtml(timeframe)}</b>`, `Giá hiện tại: <b>${formatPrice(created.currentPrice)}</b>`, `Mức cảnh báo: <b>${formatPrice(created.targetPrice)}</b>`].join("\n"),
+      replyMarkup: successKeyboard("price"),
+    });
+  } catch (error) {
+    await answerTelegramCallbackQuery({ callbackQueryId, text: error?.message || "Không tạo được alert", showAlert: true });
+    return sendOrEditMenu({ chatId, messageId, text: error?.message || "Không tạo được alert gia.", replyMarkup: backKeyboard("price") });
   }
+}
 
   // ── Indicator ──────────────────────────────────────────────────────────────
   if (group === "ind" && parts[2] === "sym") {
@@ -261,25 +267,33 @@ export async function handleCallback({ user, state, chatId, messageId, callbackQ
     });
   }
   if (group === "ind" && parts[2] === "add") {
-    const symbol = normalizeSymbol(parts[3]);
-    const timeframe = normalizeTimeframe(parts[4]);
-    const leftType = String(parts[5] || "PRICE").toUpperCase();
-    const leftPeriod = Math.max(0, Number(parts[6] || 0));
-    const operator = String(parts[7] || ">");
-    const rightType = String(parts[8] || "PRICE").toUpperCase();
-    const rightPeriod = Math.max(0, Number(parts[9] || 0));
-    if (leftType === rightType && leftPeriod === rightPeriod) {
-      await answerTelegramCallbackQuery({ callbackQueryId, text: "Hai vế đang giống hệt nhau.", showAlert: true });
-      return sendOrEditMenu({ chatId, messageId, text: "Cấu hình chưa hợp lệ vì hai vế đang giống nhau hoàn toàn. Hãy chọn lại để alert có ý nghĩa.", replyMarkup: callbackKeyboard(`tg:ind:righttype:${symbol}:${timeframe}:${leftType}:${leftPeriod}:${operator}:${rightType}`) });
-    }
-    await createIndicatorAlert(user._id, { type: "indicator_rule", symbol, timeframe, leftType, leftPeriod, operator, rightType, rightPeriod });
+  const symbol = normalizeSymbol(parts[3]);
+  const timeframe = normalizeTimeframe(parts[4]);
+  const leftType = String(parts[5] || "PRICE").toUpperCase();
+  const leftPeriod = Math.max(0, Number(parts[6] || 0));
+  const operator = String(parts[7] || ">");
+  const rightType = String(parts[8] || "PRICE").toUpperCase();
+  const rightPeriod = Math.max(0, Number(parts[9] || 0));
+  try {
+    await executeTelegramAction({
+      userId: user._id,
+      state,
+      botState: normalizeBotState(user.telegram?.botState),
+      intent: { type: "create_indicator_alert", payload: { symbol, timeframe, leftType, leftPeriod, operator, rightType, rightPeriod } },
+    });
     await answerTelegramCallbackQuery({ callbackQueryId, text: "Đã lưu alert chỉ báo" });
     return sendOrEditMenu({
       chatId, messageId,
-      text: `✅ Đã tạo alert chỉ báo\n\n${escapeHtml(symbol)} ${escapeHtml(timeframe)}\nĐiều kiện: <b>${leftPeriod ? `${leftType}${leftPeriod}` : leftType} ${formatOperatorLabel(operator).toLowerCase()} ${rightPeriod ? `${rightType}${rightPeriod}` : rightType}</b>`,
+      text: `Đã tạo alert chỉ báo\n\n${escapeHtml(symbol)} ${escapeHtml(timeframe)}\nĐiều kiện: <b>${leftPeriod ? `${leftType}${leftPeriod}` : leftType} ${formatOperatorLabel(operator).toLowerCase()} ${rightPeriod ? `${rightType}${rightPeriod}` : rightType}</b>`,
       replyMarkup: successKeyboard("indicator"),
     });
+  } catch (error) {
+    const code = String(error?.message || "unknown_error");
+    const message = code === "duplicate_indicator_pair" ? "Hai vế đang giống hệt nhau." : code === "unsupported_indicator_pair" ? "Cặp chỉ báo này chưa được hỗ trợ." : code;
+    await answerTelegramCallbackQuery({ callbackQueryId, text: message, showAlert: true });
+    return sendOrEditMenu({ chatId, messageId, text: message, replyMarkup: callbackKeyboard(`tg:ind:righttype:${symbol}:${timeframe}:${leftType}:${leftPeriod}:${operator}:${rightType}`) });
   }
+}
 
   // ── RSI ────────────────────────────────────────────────────────────────────
   if (group === "rsi" && parts[2] === "sym") {
@@ -332,19 +346,24 @@ export async function handleCallback({ user, state, chatId, messageId, callbackQ
     });
   }
   if (group === "rsi" && parts[2] === "add") {
-    const symbol = normalizeSymbol(parts[3]);
-    const timeframe = normalizeTimeframe(parts[4]);
-    const period = Math.max(2, Number(parts[5] || 14));
-    const condition = parts[6] === "lt" ? "lt" : "gt";
-    const threshold = Number(parts[7] || 70);
-    await createIndicatorAlert(user._id, { type: "rsi", symbol, timeframe, condition, threshold, period });
-    await answerTelegramCallbackQuery({ callbackQueryId, text: "Đã lưu alert RSI" });
-    return sendOrEditMenu({
-      chatId, messageId,
-      text: `✅ Đã tạo alert RSI\n\n${escapeHtml(symbol)} ${escapeHtml(timeframe)}\nĐiều kiện: <b>RSI(${period}) ${condition === "gt" ? ">" : "<"} ${threshold}</b>`,
-      replyMarkup: successKeyboard("rsi"),
-    });
-  }
+  const symbol = normalizeSymbol(parts[3]);
+  const timeframe = normalizeTimeframe(parts[4]);
+  const period = Math.max(2, Number(parts[5] || 14));
+  const condition = parts[6] === "lt" ? "lt" : "gt";
+  const threshold = Number(parts[7] || 70);
+  await executeTelegramAction({
+    userId: user._id,
+    state,
+    botState: normalizeBotState(user.telegram?.botState),
+    intent: { type: "create_rsi_alert", payload: { symbol, timeframe, period, condition, threshold } },
+  });
+  await answerTelegramCallbackQuery({ callbackQueryId, text: "Đã lưu alert RSI" });
+  return sendOrEditMenu({
+    chatId, messageId,
+    text: `Đã tạo alert RSI\n\n${escapeHtml(symbol)} ${escapeHtml(timeframe)}\nĐiều kiện: <b>RSI(${period}) ${condition === "gt" ? ">" : "<"} ${threshold}</b>`,
+    replyMarkup: successKeyboard("rsi"),
+  });
+}
 
   // ── HMA/MA cross ───────────────────────────────────────────────────────────
   if (group === "hma" && parts[2] === "sym") {
@@ -430,25 +449,33 @@ export async function handleCallback({ user, state, chatId, messageId, callbackQ
     });
   }
   if (group === "hma" && parts[2] === "add") {
-    const symbol = normalizeSymbol(parts[3]);
-    const timeframe = normalizeTimeframe(parts[4]);
-    const fastType = normalizeMaType(parts[5]);
-    const fastPeriod = Math.max(2, Number(parts[6] || 9));
-    const slowType = normalizeMaType(parts[7]);
-    const slowPeriod = Math.max(2, Number(parts[8] || 20));
-    const direction = parts[9] === "bear" ? "bear" : "bull";
-    if (fastType === slowType && fastPeriod === slowPeriod) {
-      await answerTelegramCallbackQuery({ callbackQueryId, text: "MA nhanh và MA chậm đang giống hệt nhau.", showAlert: true });
-      return sendOrEditMenu({ chatId, messageId, text: `Cấu hình chưa hợp lệ.\n\nBạn đang chọn cùng một đường MA cho cả nhanh và chậm: <b>${fastType}${fastPeriod}</b>.\nHãy chọn cấu hình khác để tạo alert cắt nhau.`, replyMarkup: callbackKeyboard(`tg:hma:slowperiod:${symbol}:${timeframe}:${fastType}:${fastPeriod}:${slowType}:${slowPeriod}`) });
-    }
-    await createIndicatorAlert(user._id, { type: "ma_cross", symbol, timeframe, fastType, fastPeriod, slowType, slowPeriod, direction });
+  const symbol = normalizeSymbol(parts[3]);
+  const timeframe = normalizeTimeframe(parts[4]);
+  const fastType = normalizeMaType(parts[5]);
+  const fastPeriod = Math.max(2, Number(parts[6] || 9));
+  const slowType = normalizeMaType(parts[7]);
+  const slowPeriod = Math.max(2, Number(parts[8] || 20));
+  const direction = parts[9] === "bear" ? "bear" : "bull";
+  try {
+    await executeTelegramAction({
+      userId: user._id,
+      state,
+      botState: normalizeBotState(user.telegram?.botState),
+      intent: { type: "create_ma_cross_alert", payload: { symbol, timeframe, fastType, fastPeriod, slowType, slowPeriod, direction } },
+    });
     await answerTelegramCallbackQuery({ callbackQueryId, text: "Đã lưu alert MA" });
     return sendOrEditMenu({
       chatId, messageId,
-      text: `✅ Đã tạo alert MA cắt nhau\n\n${escapeHtml(symbol)} ${escapeHtml(timeframe)}\nĐiều kiện: <b>${fastType}${fastPeriod} ${direction === "bull" ? "cắt lên" : "cắt xuống"} ${slowType}${slowPeriod}</b>`,
+      text: `Đã tạo alert MA cắt nhau\n\n${escapeHtml(symbol)} ${escapeHtml(timeframe)}\nĐiều kiện: <b>${fastType}${fastPeriod} ${direction === "bull" ? "cắt lên" : "cắt xuống"} ${slowType}${slowPeriod}</b>`,
       replyMarkup: successKeyboard("hma"),
     });
+  } catch (error) {
+    const code = String(error?.message || "unknown_error");
+    const message = code === "duplicate_ma_pair" ? "MA nhanh và MA chậm đang giống nhau." : code;
+    await answerTelegramCallbackQuery({ callbackQueryId, text: message, showAlert: true });
+    return sendOrEditMenu({ chatId, messageId, text: message, replyMarkup: callbackKeyboard(`tg:hma:slowperiod:${symbol}:${timeframe}:${fastType}:${fastPeriod}:${slowType}:${slowPeriod}`) });
   }
+}
 
   // ── Strategy ───────────────────────────────────────────────────────────────
   if (group === "strat" && parts[2] === "toggle") {

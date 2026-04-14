@@ -1,21 +1,14 @@
 import { sendTelegramMessage } from "./telegram.js";
 import { parseTelegramIntent } from "./telegramIntent.js";
-import { normalizeMaType, isIndicatorSupported, stripDiacritics } from "./telegramBot.indicators.js";
-import { normalizeSymbol, normalizeTimeframe, formatPrice, parseWebDrivenCrossIntent, normalizeRequestedTimeframe } from "./telegramBot.helpers.js";
+import { stripDiacritics } from "./telegramBot.indicators.js";
+import { normalizeSymbol, formatPrice, parseWebDrivenCrossIntent, normalizeRequestedTimeframe } from "./telegramBot.helpers.js";
 import { normalizeBotState, getScanners, getWatchlist, loadUserSetupState } from "./telegramBot.state.js";
 import { collapseSymbolForMatch } from "./telegram-intent/shared.js";
 import { sendMainMenu, buildTextCommandHelp, buildTextAlertsSummary } from "./telegramBot.ui.js";
 import { renderScannerMatrixText, sendScannerMatrixSnapshot } from "./telegramBot.context.js";
-import {
-  createPriceAlert,
-  createAbsolutePriceAlert,
-  createIndicatorAlert,
-  deleteManagedAlert,
-  deleteAllManagedAlerts,
-  resolveAlertIdFromDeleteIntent,
-  createCrossAlertsFromWebIndicators,
-  createCrossAlertsFromActiveWebPair,
-} from "./telegramBot.alerts.js";
+import { createCrossAlertsFromWebIndicators, createCrossAlertsFromActiveWebPair } from "./telegramBot.alerts.js";
+import { executeTelegramAction } from "./telegramBot.actionExecutor.js";
+import { trackTelegramNluEvent } from "./telegramBot.nluLearning.js";
 import { userModel } from "../model/user.js";
 import { logInfo } from "../logger.js";
 
@@ -118,6 +111,190 @@ export function detectActivePairCrossIntent(text) {
   };
 }
 
+function isAffirmative(text) {
+  return /^(?:ok|oke|okey|yes|y|co|dong y|xac nhan|confirm|tao di|lam di|trien khai)$/i.test(stripDiacritics(String(text || "").trim().toLowerCase()));
+}
+
+function isNegative(text) {
+  return /^(?:khong|khong dong y|no|n|cancel|huy|thoi|dung lai)$/i.test(stripDiacritics(String(text || "").trim().toLowerCase()));
+}
+
+function looksLikeFreshRequest(text) {
+  return /(?:alert|canh bao|rsi|ema|hma|indicator|chi bao|xoa|delete|scanner|matrix|menu|help|btc|eth|xau|gold|vang|>|<)/i.test(String(text || ""));
+}
+
+function buildConfirmationPrompt(intent, lang) {
+  const payload = intent?.payload && typeof intent.payload === "object" ? intent.payload : {};
+  if (intent?.type === "create_price_alert_percent") {
+    return t(lang, `Mình hiểu là tạo alert giá cho ${payload.symbol} ${payload.timeframe}, hướng ${payload.direction === "lt" ? "giảm" : "tăng"} ${payload.percent}%.\nTrả lời "có" để tạo, hoặc "không" để hủy.`, `I understand this as a percentage price alert for ${payload.symbol} ${payload.timeframe}, ${payload.direction === "lt" ? "down" : "up"} ${payload.percent}%.\nReply "yes" to create it, or "no" to cancel.`);
+  }
+  if (intent?.type === "create_price_alert_absolute") {
+    return t(lang, `Mình hiểu là tạo alert giá cho ${payload.symbol} ${payload.timeframe} ${payload.operator} ${payload.targetPrice}.\nTrả lời "có" để tạo, hoặc "không" để hủy.`, `I understand this as a price alert for ${payload.symbol} ${payload.timeframe} ${payload.operator} ${payload.targetPrice}.\nReply "yes" to create it, or "no" to cancel.`);
+  }
+  if (intent?.type === "create_rsi_alert") {
+    return t(lang, `Mình hiểu là tạo RSI alert${payload.allSymbols ? " cho watchlist" : ` cho ${payload.symbol}`} ở ${payload.timeframe}: RSI(${payload.period || 14}) ${payload.condition === "lt" ? "<" : ">"} ${payload.threshold}.\nTrả lời "có" để tạo, hoặc "không" để hủy.`, `I understand this as an RSI alert${payload.allSymbols ? " for your watchlist" : ` for ${payload.symbol}`} on ${payload.timeframe}: RSI(${payload.period || 14}) ${payload.condition === "lt" ? "<" : ">"} ${payload.threshold}.\nReply "yes" to create it, or "no" to cancel.`);
+  }
+  if (intent?.type === "create_ma_cross_alert") {
+    return t(lang, `Mình hiểu là tạo MA cross alert cho ${payload.symbol} ${payload.timeframe}: ${String(payload.fastType || "").toUpperCase()}${payload.fastPeriod} ${payload.direction === "bear" ? "cắt xuống" : "cắt lên"} ${String(payload.slowType || "").toUpperCase()}${payload.slowPeriod}.\nTrả lời "có" để tạo, hoặc "không" để hủy.`, `I understand this as an MA cross alert for ${payload.symbol} ${payload.timeframe}: ${String(payload.fastType || "").toUpperCase()}${payload.fastPeriod} ${payload.direction === "bear" ? "crossing below" : "crossing above"} ${String(payload.slowType || "").toUpperCase()}${payload.slowPeriod}.\nReply "yes" to create it, or "no" to cancel.`);
+  }
+  if (intent?.type === "create_indicator_alert") {
+    const leftLabel = Number(payload.leftPeriod || 0) > 0 ? `${String(payload.leftType || "").toUpperCase()}${Number(payload.leftPeriod)}` : String(payload.leftType || "").toUpperCase();
+    const rightLabel = Number(payload.rightPeriod || 0) > 0 ? `${String(payload.rightType || "").toUpperCase()}${Number(payload.rightPeriod)}` : String(payload.rightType || "").toUpperCase();
+    return t(lang, `Mình hiểu là tạo indicator alert cho ${payload.symbol} ${payload.timeframe}: ${leftLabel} ${payload.operator} ${rightLabel}.\nTrả lời "có" để tạo, hoặc "không" để hủy.`, `I understand this as an indicator alert for ${payload.symbol} ${payload.timeframe}: ${leftLabel} ${payload.operator} ${rightLabel}.\nReply "yes" to create it, or "no" to cancel.`);
+  }
+  if (intent?.type === "delete_alert") {
+    return t(lang, "Mình sẽ xóa alert bạn vừa chỉ ra.\nTrả lời \"có\" để xác nhận, hoặc \"không\" để hủy.", "I am about to delete the alert you referenced.\nReply \"yes\" to confirm, or \"no\" to cancel.");
+  }
+  if (intent?.type === "delete_all_alerts") {
+    return t(lang, "Mình sẽ xóa toàn bộ alert đang bật.\nTrả lời \"có\" để xác nhận, hoặc \"không\" để hủy.", "I am about to delete all active alerts.\nReply \"yes\" to confirm, or \"no\" to cancel.");
+  }
+  return t(lang, "Mình đã hiểu lệnh. Trả lời \"có\" để xác nhận, hoặc \"không\" để hủy.", "I understood the request. Reply \"yes\" to confirm, or \"no\" to cancel.");
+}
+
+async function executeIntentAndReply({ user, state, botState, chatId, lang, intent }) {
+  const result = await executeTelegramAction({
+    userId: user._id,
+    state,
+    botState,
+    intent,
+    resolveSymbol: (symbol) => resolveUserSymbol(state, symbol),
+  });
+
+  if (intent.type === "delete_alert") {
+    if (!result.alertId) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Không tìm thấy alert cần xóa. Dùng /alerts để lấy danh sách mới nhất.", "I could not find the alert to delete. Use /alerts to get the latest list."), parseMode: "" });
+      return true;
+    }
+    if (!result.removed) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Không tìm thấy alert theo id/index đã gửi.", "I could not find an alert matching that id/index."), parseMode: "" });
+      return true;
+    }
+    const nextState = await loadUserSetupState(user._id);
+    const nextUser = await userModel.findById(user._id).select("_id username displayName email telegram moduleAccess");
+    const nextBotState = normalizeBotState(nextUser?.telegram?.botState || {});
+    await sendTelegramMessage({ chatId, text: t(lang, `Đã xóa alert ${result.alertId}.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`, `Deleted alert ${result.alertId}.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`), parseMode: "" });
+    return true;
+  }
+
+  if (intent.type === "delete_all_alerts") {
+    const nextState = await loadUserSetupState(user._id);
+    const nextUser = await userModel.findById(user._id).select("_id username displayName email telegram moduleAccess");
+    const nextBotState = normalizeBotState(nextUser?.telegram?.botState || {});
+    await sendTelegramMessage({ chatId, text: t(lang, `Đã xóa tất cả cảnh báo đang hoạt động.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`, `Deleted all active alerts.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`), parseMode: "" });
+    return true;
+  }
+
+  if (intent.type === "create_price_alert_percent") {
+    logAlertCreated(user._id, chatId, "price_percent", {
+      symbol: result.resolvedSymbol,
+      timeframe: result.payload?.timeframe,
+      direction: result.payload?.direction,
+      percent: result.payload?.percent,
+      target_price: result?.targetPrice ?? null,
+    });
+    await sendTelegramMessage({
+      chatId,
+      text: [
+        t(lang, "Đã tạo alert giá (theo %).", "Created a percentage price alert."),
+        t(lang, `Mã: ${result.resolvedSymbol} ${result.payload?.timeframe}`, `Symbol: ${result.resolvedSymbol} ${result.payload?.timeframe}`),
+        t(lang, `Giá hiện tại: ${formatPrice(result.currentPrice)}`, `Current price: ${formatPrice(result.currentPrice)}`),
+        t(lang, `Mức cảnh báo: ${formatPrice(result.targetPrice)}`, `Alert level: ${formatPrice(result.targetPrice)}`),
+      ].join("\n"),
+      parseMode: "",
+    });
+    return true;
+  }
+
+  if (intent.type === "create_price_alert_absolute") {
+    logAlertCreated(user._id, chatId, "price_absolute", {
+      symbol: result.resolvedSymbol,
+      timeframe: result.payload?.timeframe,
+      operator: result.payload?.operator,
+      target_price: result?.targetPrice ?? null,
+    });
+    await sendTelegramMessage({
+      chatId,
+      text: [
+        t(lang, "Đã tạo alert giá (mức cụ thể).", "Created an absolute price alert."),
+        t(lang, `Mã: ${result.resolvedSymbol} ${result.payload?.timeframe}`, `Symbol: ${result.resolvedSymbol} ${result.payload?.timeframe}`),
+        t(lang, `Điều kiện: ${result.payload?.operator} ${formatPrice(result.targetPrice)}`, `Condition: ${result.payload?.operator} ${formatPrice(result.targetPrice)}`),
+        result.currentPrice
+          ? t(lang, `Giá hiện tại: ${formatPrice(result.currentPrice)}`, `Current price: ${formatPrice(result.currentPrice)}`)
+          : t(lang, "Giá hiện tại: không lấy được", "Current price: unavailable"),
+      ].join("\n"),
+      parseMode: "",
+    });
+    return true;
+  }
+
+  if (intent.type === "create_rsi_alert") {
+    if (result.createdCount) {
+      logAlertCreated(user._id, chatId, "rsi_watchlist", {
+        timeframe: result.resolvedTimeframe,
+        threshold: result.threshold,
+        period: result.period,
+        condition: result.condition,
+        created_count: result.createdCount,
+      });
+      await sendTelegramMessage({
+        chatId,
+        text: t(lang, `Đã tạo RSI alert cho ${result.createdCount} symbol trong watchlist (${result.resolvedTimeframe}): RSI(${result.period}) ${result.condition === "lt" ? "<" : ">"} ${result.threshold}`, `Created RSI alerts for ${result.createdCount} symbols in your watchlist (${result.resolvedTimeframe}): RSI(${result.period}) ${result.condition === "lt" ? "<" : ">"} ${result.threshold}`),
+        parseMode: "",
+      });
+      return true;
+    }
+    logAlertCreated(user._id, chatId, "rsi", {
+      symbol: result.resolvedSymbol,
+      timeframe: result.resolvedTimeframe,
+      threshold: result.threshold,
+      period: result.period,
+      condition: result.condition,
+    });
+    await sendTelegramMessage({
+      chatId,
+      text: t(lang, `Đã tạo RSI alert: ${result.resolvedSymbol} ${result.resolvedTimeframe} RSI(${result.period}) ${result.condition === "lt" ? "<" : ">"} ${result.threshold}`, `Created RSI alert: ${result.resolvedSymbol} ${result.resolvedTimeframe} RSI(${result.period}) ${result.condition === "lt" ? "<" : ">"} ${result.threshold}`),
+      parseMode: "",
+    });
+    return true;
+  }
+
+  if (intent.type === "create_ma_cross_alert") {
+    logAlertCreated(user._id, chatId, "ma_cross", {
+      symbol: result.resolvedSymbol,
+      timeframe: result.timeframe,
+      fast_type: result.fastType,
+      fast_period: result.fastPeriod,
+      slow_type: result.slowType,
+      slow_period: result.slowPeriod,
+      direction: result.direction,
+    });
+    await sendTelegramMessage({
+      chatId,
+      text: t(lang, `Đã tạo MA cross alert: ${result.resolvedSymbol} ${result.timeframe} ${result.fastType}${result.fastPeriod} ${result.direction === "bear" ? "cắt xuống" : "cắt lên"} ${result.slowType}${result.slowPeriod}`, `Created MA cross alert: ${result.resolvedSymbol} ${result.timeframe} ${result.fastType}${result.fastPeriod} ${result.direction === "bear" ? "crossing below" : "crossing above"} ${result.slowType}${result.slowPeriod}`),
+      parseMode: "",
+    });
+    return true;
+  }
+
+  if (intent.type === "create_indicator_alert") {
+    logAlertCreated(user._id, chatId, "indicator_rule", {
+      symbol: result.resolvedSymbol,
+      timeframe: result.timeframe,
+      left_type: result.leftType,
+      left_period: result.leftPeriod,
+      operator: result.operator,
+      right_type: result.rightType,
+      right_period: result.rightPeriod,
+    });
+    const leftLabel = result.leftPeriod > 0 ? `${result.leftType}${result.leftPeriod}` : result.leftType;
+    const rightLabel = result.rightPeriod > 0 ? `${result.rightType}${result.rightPeriod}` : result.rightType;
+    await sendTelegramMessage({ chatId, text: t(lang, `Đã tạo indicator alert: ${result.resolvedSymbol} ${result.timeframe} ${leftLabel} ${result.operator} ${rightLabel}`, `Created indicator alert: ${result.resolvedSymbol} ${result.timeframe} ${leftLabel} ${result.operator} ${rightLabel}`), parseMode: "" });
+    return true;
+  }
+
+  return false;
+}
+
 export async function handleTextIntent({ user, state, chatId, text }) {
   const activePairCross = detectActivePairCrossIntent(text);
   if (activePairCross) {
@@ -145,6 +322,40 @@ export async function handleTextIntent({ user, state, chatId, text }) {
   }
 
   const botState = normalizeBotState(user.telegram?.botState);
+  const pendingIntent = botState.pendingIntent && typeof botState.pendingIntent === "object" ? botState.pendingIntent : null;
+  if (pendingIntent?.stage === "confirm_action" && pendingIntent.actionIntent) {
+    const lang = String(pendingIntent._lang || detectReplyLanguage(text, null) || "vi");
+    if (isAffirmative(text)) {
+      await savePendingIntent(user._id, null);
+      try {
+        return await executeIntentAndReply({ user, state, botState, chatId, lang, intent: pendingIntent.actionIntent });
+      } catch (error) {
+        const code = String(error?.message || "unknown_error");
+        const message = code === "duplicate_ma_pair"
+          ? t(lang, "Không tạo được: MA nhanh và MA chậm đang trùng nhau.", "Could not create the alert because the fast and slow moving averages are identical.")
+          : code === "duplicate_indicator_pair"
+            ? t(lang, "Không tạo được: hai vế chỉ báo đang giống nhau.", "Could not create the alert because both indicator sides are identical.")
+            : code === "missing_target_price"
+              ? t(lang, "Bạn cần cung cấp mức giá cảnh báo cụ thể trước khi tạo.", "Please provide a concrete target price before creating this alert.")
+            : code === "unsupported_indicator_pair"
+              ? t(lang, "Bot chưa hỗ trợ cặp chỉ báo này cho cảnh báo hiện tại.", "The bot does not support this indicator pair for the current alert.")
+              : t(lang, `Không xử lý được lệnh: ${code}`, `Could not process the request: ${code}`);
+        await sendTelegramMessage({ chatId, text: message, parseMode: "" });
+        return true;
+      }
+    }
+    if (isNegative(text)) {
+      await savePendingIntent(user._id, null);
+      await sendTelegramMessage({ chatId, text: t(lang, "Đã hủy thao tác trước đó. Bạn cứ nhắn yêu cầu mới tự nhiên nhé.", "Cancelled the previous action. Feel free to send a new request naturally."), parseMode: "" });
+      return true;
+    }
+    if (!looksLikeFreshRequest(text)) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Mình đang chờ bạn xác nhận. Trả lời \"có\" để tiếp tục hoặc \"không\" để hủy.", "I am waiting for your confirmation. Reply \"yes\" to continue or \"no\" to cancel."), parseMode: "" });
+      return true;
+    }
+    await savePendingIntent(user._id, null);
+  }
+
   const intent = await parseTelegramIntent(text, botState.pendingIntent, String(user._id || ""));
   const lang = detectReplyLanguage(text, intent);
 
@@ -157,6 +368,18 @@ export async function handleTextIntent({ user, state, chatId, text }) {
     has_pending: Boolean(botState.pendingIntent),
     summary: summarizeIntent(intent),
   });
+
+  trackTelegramNluEvent({
+    ownerUserId: String(user._id || ""),
+    chatId: String(chatId || ""),
+    text,
+    intent: {
+      ...intent,
+      summary: summarizeIntent(intent),
+    },
+    lang,
+    hasPending: Boolean(botState.pendingIntent),
+  }).catch(() => null);
 
   if (intent.type === "unknown") {
     if (intent.suggestion) {
@@ -212,89 +435,48 @@ export async function handleTextIntent({ user, state, chatId, text }) {
     return true;
   }
 
-  if (intent.type === "delete_alert") {
-    const alertId = resolveAlertIdFromDeleteIntent(intent.payload, state, botState);
-    if (!alertId) {
-      await sendTelegramMessage({ chatId, text: t(lang, "Không tìm thấy alert cần xóa. Dùng /alerts để lấy danh sách mới nhất.", "I could not find the alert to delete. Use /alerts to get the latest list."), parseMode: "" });
-      return true;
-    }
-    const removed = await deleteManagedAlert(user._id, alertId);
-    if (!removed) {
-      await sendTelegramMessage({ chatId, text: t(lang, "Không tìm thấy alert theo id/index đã gửi.", "I could not find an alert matching that id/index."), parseMode: "" });
-      return true;
-    }
-    const nextState = await loadUserSetupState(user._id);
-    const nextUser = await userModel.findById(user._id).select("_id username displayName email telegram moduleAccess");
-    const nextBotState = normalizeBotState(nextUser?.telegram?.botState || {});
-    await sendTelegramMessage({ chatId, text: t(lang, `Đã xóa alert ${alertId}.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`, `Deleted alert ${alertId}.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`), parseMode: "" });
-    return true;
-  }
-
-  if (intent.type === "delete_all_alerts") {
-    await deleteAllManagedAlerts(user._id);
-    const nextState = await loadUserSetupState(user._id);
-    const nextUser = await userModel.findById(user._id).select("_id username displayName email telegram moduleAccess");
-    const nextBotState = normalizeBotState(nextUser?.telegram?.botState || {});
-    await sendTelegramMessage({ chatId, text: t(lang, `Đã xóa tất cả cảnh báo đang hoạt động.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`, `Deleted all active alerts.\n\n${buildTextAlertsSummary(nextState.state, nextBotState)}`), parseMode: "" });
+  if (intent.type === "delete_alert" || intent.type === "delete_all_alerts") {
+    await savePendingIntent(user._id, { stage: "confirm_action", actionIntent: intent, _lang: lang });
+    await sendTelegramMessage({ chatId, text: buildConfirmationPrompt(intent, lang), parseMode: "" });
     return true;
   }
 
   if (intent.type === "create_price_alert_percent") {
-    const { symbol, timeframe, direction, percent } = intent.payload || {};
-    const resolvedSymbol = resolveUserSymbol(state, symbol);
-    const created = await createPriceAlert(user._id, resolvedSymbol, timeframe, direction, percent);
-    logAlertCreated(user._id, chatId, "price_percent", {
-      symbol: resolvedSymbol,
-      timeframe,
-      direction,
-      percent,
-      target_price: created?.targetPrice ?? null,
-    });
-    await sendTelegramMessage({
-      chatId,
-      text: [
-        t(lang, "Đã tạo alert giá (theo %).", "Created a percentage price alert."),
-        t(lang, `Mã: ${resolvedSymbol} ${timeframe}`, `Symbol: ${resolvedSymbol} ${timeframe}`),
-        t(lang, `Giá hiện tại: ${formatPrice(created.currentPrice)}`, `Current price: ${formatPrice(created.currentPrice)}`),
-        t(lang, `Mức cảnh báo: ${formatPrice(created.targetPrice)}`, `Alert level: ${formatPrice(created.targetPrice)}`),
-      ].join("\n"),
-      parseMode: "",
-    });
+    await savePendingIntent(user._id, { stage: "confirm_action", actionIntent: intent, _lang: lang });
+    await sendTelegramMessage({ chatId, text: buildConfirmationPrompt(intent, lang), parseMode: "" });
     return true;
   }
 
   if (intent.type === "create_price_alert_absolute") {
     const { symbol, timeframe, operator, targetPrice } = intent.payload || {};
-    const resolvedSymbol = resolveUserSymbol(state, symbol);
-    const created = await createAbsolutePriceAlert(user._id, resolvedSymbol, timeframe, operator, targetPrice);
-    logAlertCreated(user._id, chatId, "price_absolute", {
-      symbol: resolvedSymbol,
-      timeframe,
-      operator,
-      target_price: created?.targetPrice ?? null,
-    });
-    await sendTelegramMessage({
-      chatId,
-      text: [
-        t(lang, "Đã tạo alert giá (mức cụ thể).", "Created an absolute price alert."),
-        t(lang, `Mã: ${resolvedSymbol} ${timeframe}`, `Symbol: ${resolvedSymbol} ${timeframe}`),
-        t(lang, `Điều kiện: ${operator} ${formatPrice(created.targetPrice)}`, `Condition: ${operator} ${formatPrice(created.targetPrice)}`),
-        created.currentPrice
-          ? t(lang, `Giá hiện tại: ${formatPrice(created.currentPrice)}`, `Current price: ${formatPrice(created.currentPrice)}`)
-          : t(lang, "Giá hiện tại: không lấy được", "Current price: unavailable"),
-      ].join("\n"),
-      parseMode: "",
-    });
+    if (!symbol) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Bạn muốn đặt cảnh báo cho mã nào?", "Which symbol should I create the alert for?"), parseMode: "" });
+      await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_price_alert_absolute" });
+      return true;
+    }
+    if (!timeframe) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Bạn muốn dùng khung thời gian nào? Ví dụ: 5m, 15m, 1h hoặc 4h.", "Which timeframe should I use? For example: 5m, 15m, 1h, or 4h."), parseMode: "" });
+      await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_price_alert_absolute" });
+      return true;
+    }
+    if (!Number.isFinite(Number(targetPrice)) || Number(targetPrice) <= 0) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Bạn muốn cảnh báo ở mức giá bao nhiêu?", "What target price should I use?"), parseMode: "" });
+      await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_price_alert_absolute" });
+      return true;
+    }
+    if (!String(operator || "").trim()) {
+      await sendTelegramMessage({ chatId, text: t(lang, "Bạn muốn điều kiện lớn hơn hay nhỏ hơn mức giá đó? Ví dụ: > 2450 hoặc < 2400.", "Should I alert when price is above or below that level? Example: > 2450 or < 2400."), parseMode: "" });
+      await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_price_alert_absolute" });
+      return true;
+    }
+    await savePendingIntent(user._id, { stage: "confirm_action", actionIntent: intent, _lang: lang });
+    await sendTelegramMessage({ chatId, text: buildConfirmationPrompt(intent, lang), parseMode: "" });
     return true;
   }
 
   if (intent.type === "create_rsi_alert") {
-    const { symbol, timeframe, period, condition, threshold, allSymbols } = intent.payload || {};
-    const periodValue = Math.max(2, Number(period || 14));
-    const thresholdValue = Number(threshold);
-    const conditionValue = condition === "lt" ? "lt" : "gt";
-
-    if (!Number.isFinite(thresholdValue)) {
+    const { symbol, timeframe, threshold } = intent.payload || {};
+    if (!Number.isFinite(Number(threshold))) {
       await sendTelegramMessage({ chatId, text: t(lang, "Bạn cần cho mình biết ngưỡng RSI cụ thể.", "Please tell me the RSI threshold."), parseMode: "" });
       await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_rsi_alert" });
       return true;
@@ -304,171 +486,42 @@ export async function handleTextIntent({ user, state, chatId, text }) {
       await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_rsi_alert" });
       return true;
     }
-
-    const resolvedTimeframe = normalizeTimeframe(timeframe);
-    const watchlist = getWatchlist(state);
-
-    if (allSymbols) {
-      let created = 0;
-      for (const item of watchlist) {
-        await createIndicatorAlert(user._id, {
-          type: "rsi",
-          symbol: normalizeSymbol(item),
-          timeframe: resolvedTimeframe,
-          condition: conditionValue,
-          threshold: thresholdValue,
-          period: periodValue,
-        });
-        created += 1;
-      }
-      logAlertCreated(user._id, chatId, "rsi_watchlist", {
-        timeframe: resolvedTimeframe,
-        threshold: thresholdValue,
-        period: periodValue,
-        condition: conditionValue,
-        created_count: created,
-      });
-      await sendTelegramMessage({
-        chatId,
-        text: t(lang, `Đã tạo RSI alert cho ${created} symbol trong watchlist (${resolvedTimeframe}): RSI(${periodValue}) ${conditionValue === "lt" ? "<" : ">"} ${thresholdValue}`, `Created RSI alerts for ${created} symbols in your watchlist (${resolvedTimeframe}): RSI(${periodValue}) ${conditionValue === "lt" ? "<" : ">"} ${thresholdValue}`),
-        parseMode: "",
-      });
-      return true;
-    }
-
-    if (!symbol) {
+    if (!intent.payload?.allSymbols && !symbol) {
       await sendTelegramMessage({ chatId, text: t(lang, "Bạn muốn tạo RSI alert cho mã nào?", "Which symbol should I use for the RSI alert?"), parseMode: "" });
       await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_rsi_alert" });
       return true;
     }
-
-    const resolvedSymbol = resolveUserSymbol(state, symbol);
-    await createIndicatorAlert(user._id, {
-      type: "rsi",
-      symbol: resolvedSymbol,
-      timeframe: resolvedTimeframe,
-      condition: conditionValue,
-      threshold: thresholdValue,
-      period: periodValue,
-    });
-    logAlertCreated(user._id, chatId, "rsi", {
-      symbol: resolvedSymbol,
-      timeframe: resolvedTimeframe,
-      threshold: thresholdValue,
-      period: periodValue,
-      condition: conditionValue,
-    });
-    await sendTelegramMessage({
-      chatId,
-      text: t(lang, `Đã tạo RSI alert: ${resolvedSymbol} ${resolvedTimeframe} RSI(${periodValue}) ${conditionValue === "lt" ? "<" : ">"} ${thresholdValue}`, `Created RSI alert: ${resolvedSymbol} ${resolvedTimeframe} RSI(${periodValue}) ${conditionValue === "lt" ? "<" : ">"} ${thresholdValue}`),
-      parseMode: "",
-    });
+    await savePendingIntent(user._id, { stage: "confirm_action", actionIntent: intent, _lang: lang });
+    await sendTelegramMessage({ chatId, text: buildConfirmationPrompt(intent, lang), parseMode: "" });
     return true;
   }
 
   if (intent.type === "create_ma_cross_alert") {
-    const { symbol, timeframe, fastType, fastPeriod, slowType, slowPeriod, direction } = intent.payload || {};
+    const { symbol, timeframe, fastType, slowType, fastPeriod, slowPeriod } = intent.payload || {};
     if (!symbol || !timeframe || !fastType || !slowType || !fastPeriod || !slowPeriod) {
       await sendTelegramMessage({ chatId, text: t(lang, "Mình còn thiếu dữ liệu cho MA cross. Ví dụ đầy đủ: EMA20 cắt lên EMA50 trên BTC khung 1h.", "I still need more data for the MA cross alert. Example: EMA20 crossing above EMA50 on BTC 1h."), parseMode: "" });
       await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_ma_cross_alert" });
       return true;
     }
-    if (String(fastType).toUpperCase() === String(slowType).toUpperCase() && Number(fastPeriod) === Number(slowPeriod)) {
-      await sendTelegramMessage({ chatId, text: t(lang, "Không tạo được: MA nhanh và MA chậm đang trùng nhau.", "Could not create the alert because the fast and slow moving averages are identical."), parseMode: "" });
-      return true;
-    }
-    const resolvedSymbol = resolveUserSymbol(state, symbol);
-    await createIndicatorAlert(user._id, {
-      type: "ma_cross",
-      symbol: resolvedSymbol,
-      timeframe: normalizeTimeframe(timeframe),
-      fastType: normalizeMaType(fastType),
-      fastPeriod: Math.max(2, Number(fastPeriod || 9)),
-      slowType: normalizeMaType(slowType),
-      slowPeriod: Math.max(2, Number(slowPeriod || 20)),
-      direction: direction === "bear" ? "bear" : "bull",
-    });
-    logAlertCreated(user._id, chatId, "ma_cross", {
-      symbol: resolvedSymbol,
-      timeframe,
-      fast_type: fastType,
-      fast_period: fastPeriod,
-      slow_type: slowType,
-      slow_period: slowPeriod,
-      direction,
-    });
-    await sendTelegramMessage({
-      chatId,
-      text: t(lang, `Đã tạo MA cross alert: ${resolvedSymbol} ${timeframe} ${String(fastType).toUpperCase()}${fastPeriod} ${direction === "bear" ? "cắt xuống" : "cắt lên"} ${String(slowType).toUpperCase()}${slowPeriod}`, `Created MA cross alert: ${resolvedSymbol} ${timeframe} ${String(fastType).toUpperCase()}${fastPeriod} ${direction === "bear" ? "crossing below" : "crossing above"} ${String(slowType).toUpperCase()}${slowPeriod}`),
-      parseMode: "",
-    });
+    await savePendingIntent(user._id, { stage: "confirm_action", actionIntent: intent, _lang: lang });
+    await sendTelegramMessage({ chatId, text: buildConfirmationPrompt(intent, lang), parseMode: "" });
     return true;
   }
 
   if (intent.type === "create_indicator_alert") {
-    const { symbol, timeframe, leftType, leftPeriod, operator, rightType, rightPeriod } = intent.payload || {};
+    const { symbol, timeframe, leftType, rightType } = intent.payload || {};
     if (!symbol || !timeframe || !leftType || !rightType) {
       await sendTelegramMessage({ chatId, text: t(lang, "Mình còn thiếu dữ liệu cho indicator alert. Ví dụ: EMA20 > EMA50 trên BTC khung 15m.", "I still need more data for the indicator alert. Example: EMA20 > EMA50 on BTC 15m."), parseMode: "" });
       await savePendingIntent(user._id, { ...(intent.payload || {}), intent: "create_indicator_alert" });
       return true;
     }
-    if (!isIndicatorSupported(leftType) || !isIndicatorSupported(rightType)) {
-      await sendTelegramMessage({ chatId, text: t(lang, `Hiện bot chưa hỗ trợ chỉ báo ${leftType}/${rightType} cho cảnh báo này.`, `The bot does not support ${leftType}/${rightType} for this alert yet.`), parseMode: "" });
-      return true;
-    }
-    if (String(leftType).toUpperCase() === String(rightType).toUpperCase() && Number(leftPeriod || 0) === Number(rightPeriod || 0)) {
-      await sendTelegramMessage({ chatId, text: t(lang, "Không tạo được: hai vế chỉ báo đang giống nhau.", "Could not create the alert because both indicator sides are identical."), parseMode: "" });
-      return true;
-    }
-    const resolvedSymbol = resolveUserSymbol(state, symbol);
-    await createIndicatorAlert(user._id, {
-      type: "indicator_rule",
-      symbol: resolvedSymbol,
-      timeframe: normalizeTimeframe(timeframe),
-      leftType: String(leftType).toUpperCase(),
-      leftPeriod: Math.max(0, Number(leftPeriod || 0)),
-      operator: operator || ">",
-      rightType: String(rightType).toUpperCase(),
-      rightPeriod: Math.max(0, Number(rightPeriod || 0)),
-    });
-    logAlertCreated(user._id, chatId, "indicator_rule", {
-      symbol: resolvedSymbol,
-      timeframe,
-      left_type: leftType,
-      left_period: leftPeriod,
-      operator,
-      right_type: rightType,
-      right_period: rightPeriod,
-    });
-    const leftLabel = Number(leftPeriod || 0) > 0 ? `${String(leftType).toUpperCase()}${Number(leftPeriod)}` : String(leftType).toUpperCase();
-    const rightLabel = Number(rightPeriod || 0) > 0 ? `${String(rightType).toUpperCase()}${Number(rightPeriod)}` : String(rightType).toUpperCase();
-    await sendTelegramMessage({ chatId, text: t(lang, `Đã tạo indicator alert: ${resolvedSymbol} ${timeframe} ${leftLabel} ${operator} ${rightLabel}`, `Created indicator alert: ${resolvedSymbol} ${timeframe} ${leftLabel} ${operator} ${rightLabel}`), parseMode: "" });
+    await savePendingIntent(user._id, { stage: "confirm_action", actionIntent: intent, _lang: lang });
+    await sendTelegramMessage({ chatId, text: buildConfirmationPrompt(intent, lang), parseMode: "" });
     return true;
   }
 
   if (intent.type === "create_web_indicator_alert") {
-    const mode = String(intent.payload?.mode || "active_pair");
-    const requestedTimeframe = intent.payload?.timeframe || "";
-    const requestedSymbol = intent.payload?.symbol || "";
-    const result = mode === "web_pair"
-      ? await createCrossAlertsFromActiveWebPair(user._id, state, requestedTimeframe, requestedSymbol)
-      : await createCrossAlertsFromActiveWebPair(user._id, state, requestedTimeframe, requestedSymbol);
-    logAlertCreated(user._id, chatId, "web_indicator", {
-      mode,
-      symbol: result?.symbol || requestedSymbol || "",
-      timeframe: result?.timeframe || requestedTimeframe || "",
-      created_count: result?.createdCount ?? null,
-    });
-    await sendTelegramMessage({
-      chatId,
-      text: [
-        t(lang, "Đã tạo cảnh báo theo indicator đang bật trên web.", "Created alerts from the indicators currently active on the web chart."),
-        t(lang, `Mã/Khung: ${result.symbol} ${result.timeframe}`, `Symbol/Timeframe: ${result.symbol} ${result.timeframe}`),
-        t(lang, `Tổng alert đã tạo: ${result.createdCount}`, `Created alerts: ${result.createdCount}`),
-      ].join("\n"),
-      parseMode: "",
-    });
-    return true;
+    return executeIntentAndReply({ user, state, botState, chatId, lang, intent });
   }
 
   const webCrossIntent = parseWebDrivenCrossIntent(text);

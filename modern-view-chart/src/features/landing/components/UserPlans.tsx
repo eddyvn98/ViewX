@@ -70,50 +70,55 @@ export function UserPlans() {
     ];
 
     return (
-        <section aria-labelledby="user-plans-title" className="space-y-8 border-t border-sky-100 pt-12">
-            <div className="mx-auto max-w-3xl space-y-3 text-center">
-                <h2 id="user-plans-title" className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
+        <section aria-labelledby="user-plans-title" className="space-y-16 border-t border-slate-100 pt-20">
+            <div className="mx-auto max-w-3xl space-y-6 text-center">
+                <h2 id="user-plans-title" className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
                     {t('title')}
                 </h2>
-                <p className="text-slate-600">
+                <p className="text-lg text-slate-600 leading-relaxed">
                     {t('description')}
                 </p>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-8 lg:grid-cols-3">
                 {plans.map((plan) => {
                     const Icon = plan.icon;
+                    const isProPlus = plan.key === 'pro_plus';
                     return (
                         <article
                             key={plan.key}
-                            className={`relative flex h-full flex-col rounded-2xl border ${plan.border} ${plan.bg} p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg`}
+                            className={`relative flex h-full flex-col rounded-[2rem] border border-white bg-white/40 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all hover:-translate-y-2 hover:bg-white/60 hover:shadow-[0_20px_50px_rgba(0,0,0,0.04)]`}
                         >
                             {plan.badge ? (
-                                <p className="absolute -top-3 left-6 rounded-full bg-emerald-600 px-3 py-1 text-xs font-black text-white">
+                                <p className="absolute -top-3 left-8 rounded-full bg-emerald-600 px-4 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20">
                                     {plan.badge}
                                 </p>
                             ) : null}
-                            <div className="mb-5 flex items-center gap-3">
-                                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm">
-                                    <Icon className="h-5 w-5" />
+                            <div className="mb-6 flex items-center gap-4">
+                                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-950 shadow-sm border border-slate-50">
+                                    <Icon className="h-6 w-6" />
                                 </span>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900">{plan.title}</h3>
-                                    <p className="text-xs font-semibold text-slate-500">{plan.subtitle}</p>
+                                    <h3 className="text-2xl font-black text-slate-950">{plan.title}</h3>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{plan.subtitle}</p>
                                 </div>
                             </div>
-                            <p className="mb-5 text-lg font-black text-slate-900">{plan.price}</p>
-                            <ul className="mb-6 flex-1 space-y-2">
+                            <div className="mb-6">
+                                <span className="text-3xl font-black text-slate-950">{plan.price}</span>
+                            </div>
+                            <ul className="mb-10 flex-1 space-y-4">
                                 {plan.bullets.map((item) => (
-                                    <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
-                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                                    <li key={item} className="flex items-start gap-3 text-sm font-medium text-slate-600">
+                                        <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                                            <CheckCircle2 className="h-3 w-3" />
+                                        </div>
                                         {renderBulletText(item)}
                                     </li>
                                 ))}
                             </ul>
                             <Link
                                 href={plan.href as any}
-                                className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition-colors hover:bg-slate-700"
+                                className={`inline-flex w-full items-center justify-center rounded-2xl ${isProPlus ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-slate-950 hover:bg-slate-800 shadow-slate-950/20'} px-6 py-4 text-base font-black text-white shadow-xl transition-all active:scale-95`}
                             >
                                 {plan.cta}
                             </Link>

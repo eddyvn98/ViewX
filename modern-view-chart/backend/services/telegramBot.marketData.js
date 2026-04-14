@@ -11,10 +11,72 @@ export function createTelegramBotMarketData(deps) {
     candleBuffers,
   } = deps;
 
+  function symbolVariants(symbol) {
+    const normalized = normalizeSymbol(symbol);
+    if (!normalized) return [];
+    const variants = new Set([normalized]);
+    if (/M$/i.test(normalized)) {
+      variants.add(`${normalized.slice(0, -1)}m`);
+    }
+    if (/m$/.test(normalized)) {
+      variants.add(`${normalized.slice(0, -1)}M`);
+    }
+    return Array.from(variants);
+  }
+
+  function getScopedMt5PriceByVariants(ownerUserId, symbol) {
+    for (const candidate of symbolVariants(symbol)) {
+      const scoped = getScopedMt5Price(mt5Prices, ownerUserId, candidate);
+      if (scoped?.price) return Number(scoped.price);
+    }
+    return 0;
+  }
+
+  function getLatestBufferedClose(symbol) {
+    const keys = [];
+    for (const candidate of symbolVariants(symbol)) {
+      keys.push(
+        `${candidate}|1m`,
+        `${candidate}|1`,
+        `${candidate}|5m`,
+        `${candidate}|5`,
+        `${candidate}|15m`,
+        `${candidate}|15`,
+        `${candidate}|1h`,
+        `${candidate}|60`,
+        `${candidate}|4h`,
+        `${candidate}|240`,
+        `${String(candidate).toLowerCase()}|1m`,
+        `${String(candidate).toLowerCase()}|1`,
+        `${String(candidate).toLowerCase()}|5m`,
+        `${String(candidate).toLowerCase()}|5`,
+        `${String(candidate).toLowerCase()}|15m`,
+        `${String(candidate).toLowerCase()}|15`,
+        `${String(candidate).toLowerCase()}|1h`,
+        `${String(candidate).toLowerCase()}|60`,
+        `${String(candidate).toLowerCase()}|4h`,
+        `${String(candidate).toLowerCase()}|240`,
+      );
+    }
+    for (const key of keys) {
+      const buffer = Array.isArray(candleBuffers?.[key]) ? candleBuffers[key] : [];
+      if (!buffer.length) continue;
+      const latest = buffer[buffer.length - 1];
+      const close = Number(latest?.close || 0);
+      if (Number.isFinite(close) && close > 0) return close;
+    }
+    return 0;
+  }
+
   async function fetchCurrentPrice(symbol, ownerUserId) {
     const normalizedSymbol = normalizeSymbol(symbol);
-    const scoped = getScopedMt5Price(mt5Prices, ownerUserId, normalizedSymbol);
-    if (scoped?.price) return Number(scoped.price);
+    const scopedPrice = getScopedMt5PriceByVariants(ownerUserId, normalizedSymbol);
+    if (scopedPrice > 0) return scopedPrice;
+
+    // MT5 symbols (for example XAUUSDM) might not have a fresh tick at alert-creation time.
+    // Fallback to latest buffered candle close so Telegram can still show a current reference price.
+    const bufferedClose = getLatestBufferedClose(normalizedSymbol);
+    if (bufferedClose > 0) return bufferedClose;
 
     if (["SJCVN", "DOJIVN"].includes(normalizedSymbol)) {
       const quotes = await getVietnamGoldQuotes();

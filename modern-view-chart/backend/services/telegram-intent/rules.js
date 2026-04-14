@@ -20,7 +20,11 @@ export function parseRuleIntent(text) {
     return { type: "help", payload: {} };
   }
   if (/^(?:\/)?(?:h|\?)$/i.test(trimmed)) return { type: "help", payload: {} };
+  if (/^(?:canh\s*bao|alert)$/i.test(plain)) return { type: "help", payload: {} };
   if (/^(?:\/)?(?:alerts?|list)$/i.test(trimmed) || /^(?:danh\s*sach\s*(?:canh\s*bao|alerts?)|list\s*alerts?)$/i.test(plain)) {
+    return { type: "list_alerts", payload: {} };
+  }
+  if (/^(?:xem|show)\s*(?:tat\s*ca\s*)?(?:canh\s*bao|alerts?)$/i.test(plain)) {
     return { type: "list_alerts", payload: {} };
   }
   if (/^(?:\/)?(?:la|ls)$/i.test(trimmed) || /^(?:xem|show|get)\s*(alerts?|canh bao)$/i.test(plain)) {
@@ -35,7 +39,7 @@ export function parseRuleIntent(text) {
   if (/(bao nhieu|tong|so luong).{0,24}canh bao|canh bao.{0,24}(bao nhieu|hien tai)/i.test(plain)) {
     return { type: "list_alerts", payload: {} };
   }
-  if (/matrix|scanner|ma tran|ma_tran/i.test(plain)) {
+  if (/matrix|scanner|ma tran|ma_tran|bang theo doi|theo doi|watchlist|bang theo doi thi truong|tin hieu|xem tin hieu|signal|signals/i.test(plain)) {
     const idxMatch = plain.match(/(?:\bso\b|\bindex\b|\b#)?\s*(\d{1,3})/i);
     const rawIndex = idxMatch ? Number(idxMatch[1]) : 0;
     return { type: "show_scanner_matrix", payload: { index: Number.isFinite(rawIndex) && rawIndex > 0 ? rawIndex : 0 } };

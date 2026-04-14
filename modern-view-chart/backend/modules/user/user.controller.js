@@ -28,6 +28,12 @@ export {
 } from './telegram.controller.js';
 
 export {
+  listTelegramNluUnknowns,
+  listTelegramNluEvents,
+  labelTelegramNluUnknown,
+} from './telegram-learning.controller.js';
+
+export {
   getUserModules,
   upsertUserModules,
 } from './modules.controller.js';

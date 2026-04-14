@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Terminal, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen } from 'lucide-react';
+import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMarketStore } from '@/lib/store';
 import type { Candle, ChartInstance, Position, RootState } from '@/lib/store';
@@ -17,7 +17,7 @@ interface ChatMessage {
     timestamp: number;
 }
 
-type ChatMode = 'chat' | 'history' | 'logs';
+type ChatMode = 'chat' | 'history';
 type IntentKey = 'entry' | 'exit' | 'strategy' | 'risk' | 'summary' | 'general';
 
 interface PromptPreset {
@@ -94,6 +94,28 @@ function getVisibleUserPrompt(rawPrompt: string) {
     const value = String(rawPrompt || '').trim();
     const match = value.match(/USER_QUESTION:\s*([\s\S]*?)(?:\nCONTEXT_JSON:|$)/i);
     return match?.[1]?.trim() || value;
+}
+
+function sanitizeAssistantResponse(rawResponse: string) {
+    const value = String(rawResponse || '').trim();
+    if (!value) return '';
+    const blockedLinePatterns = [
+        /^\s*(?:[*-]\s+)?`?\s*(persona|scope|constraints?|user\s+language(?:\/style)?|output\s+format|input)\s*:/i,
+        /^\s*(?:[*-]\s+)?`?\s*(user[_\s-]?question|context_json)\s*:/i,
+        /^\s*(?:[*-]\s+)?`?\s*(identity|user\s+request|context\s*\(json\)|instruction)\s*:/i,
+        /^\s*(?:[*-]\s+)?`?\s*is it (within scope|in vietnamese|2-4 sentences|concise)\s*\?/i,
+        /^\s*(?:[*-]\s+)?`?\s*does it reveal (system prompts?|system prompt|context_json)\s*\?/i,
+        /^\s*(you are vivutrade ai assistant|ban la ai trading assistant cua vivutrade)\b/i,
+    ];
+    const lines = value
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line) => !blockedLinePatterns.some((re) => re.test(line)))
+        .filter((line) => !/^\s*(Draft\s*\d+|Thoughts?|Reasoning|Analysis)\s*[:\-]/i.test(line));
+    const joined = lines.join('\n').trim();
+    const quotedAnswers = [...joined.matchAll(/"([^"\n]{20,})"/g)].map((m) => m[1].trim()).filter(Boolean);
+    const bestQuoted = quotedAnswers.length > 0 ? quotedAnswers[quotedAnswers.length - 1] : '';
+    return bestQuoted || joined || value;
 }
 
 function formatTime(ts: number) {
@@ -225,6 +247,7 @@ export function AIChatView() {
     const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
     const [selectedConversationId, setSelectedConversationId] = useState<string>('active');
     const [sessionStartTs, setSessionStartTs] = useState<number>(() => Date.now());
+    const [sessionOnlyMode, setSessionOnlyMode] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const marketData = useMarketStore(useShallow((state: RootState) => {
@@ -316,11 +339,19 @@ export function AIChatView() {
     const strategyById = useMemo(() => Object.fromEntries(strategyData.strategies.map((s) => [s.id, s])), [strategyData.strategies]);
 
     const visibleChatMessages = useMemo(() => {
-        const chat = messages.filter((m) => m.source === 'chat');
-        if (selectedConversationId === 'active') return chat.filter((m) => m.timestamp >= sessionStartTs);
+        const chat = messages
+            .filter((m) => m.source === 'chat')
+            .filter((m) => {
+                const safePrompt = getVisibleUserPrompt(m.prompt).trim();
+                const safeResponse = sanitizeAssistantResponse(m.response).trim();
+                return Boolean(safePrompt || safeResponse);
+            });
+        if (selectedConversationId === 'active') {
+            if (!sessionOnlyMode) return chat;
+            return chat.filter((m) => m.timestamp >= sessionStartTs);
+        }
         return conversations.find((item) => item.id === selectedConversationId)?.items || [];
-    }, [conversations, messages, selectedConversationId, sessionStartTs]);
-
+    }, [conversations, messages, selectedConversationId, sessionOnlyMode, sessionStartTs]);
     const systemLogs = useMemo(() => messages.filter((m) => m.source === 'system').slice().reverse(), [messages]);
 
     const buildLocalContextPack = useCallback((question: string, intent: IntentKey) => {
@@ -372,7 +403,19 @@ export function AIChatView() {
             if (selectedConversationId !== 'active') {
                 setSelectedConversationId('active');
                 setSessionStartTs(Date.now());
+                setSessionOnlyMode(true);
             }
+            const nowTs = Date.now();
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: crypto.randomUUID(),
+                    source: 'chat',
+                    prompt,
+                    response: sanitizeAssistantResponse(String(data?.response || '')),
+                    timestamp: nowTs,
+                },
+            ]);
             await fetchHistory();
         } catch (error) {
             setFriendlyError(toFriendlyError(error instanceof Error ? error.message : 'ai_request_failed'));
@@ -391,6 +434,7 @@ export function AIChatView() {
     const handleNewConversation = useCallback(() => {
         setSelectedConversationId('active');
         setSessionStartTs(Date.now());
+        setSessionOnlyMode(true);
         setInputValue('');
         setFriendlyError(null);
     }, []);
@@ -410,9 +454,6 @@ export function AIChatView() {
                         <div className="flex items-center gap-2">
                             <IconTabButton active={mode === 'history'} title="Lịch sử" onClick={() => setMode('history')}>
                                 <History size={15} />
-                            </IconTabButton>
-                            <IconTabButton active={mode === 'logs'} title="Logs" onClick={() => setMode('logs')}>
-                                <Terminal size={15} />
                             </IconTabButton>
                             <IconTabButton active={mode === 'chat'} title="Cuộc trò chuyện mới" onClick={() => { handleNewConversation(); setMode('chat'); }}>
                                 <SquarePen size={15} />
@@ -437,15 +478,15 @@ export function AIChatView() {
                             <div className="flex flex-col gap-4">
                                 {visibleChatMessages.map((msg) => (
                                     <div key={msg.id} className="flex flex-col gap-3">
-                                        <div className="self-end max-w-[88%] rounded-2xl rounded-tr-sm border border-primary/20 bg-primary/10 p-3 text-[13px] leading-relaxed text-foreground shadow-sm">
+                                        <div className="self-end max-w-[88%] select-text rounded-2xl rounded-tr-sm border border-primary/20 bg-primary/10 p-3 text-[13px] leading-relaxed text-foreground shadow-sm" style={{ userSelect: 'text' }}>
                                             {getVisibleUserPrompt(msg.prompt)}
                                         </div>
-                                        <div className="self-start max-w-[92%] rounded-2xl rounded-tl-sm border border-border bg-card/80 p-4 shadow-lg">
+                                        <div className="self-start max-w-[92%] select-text rounded-2xl rounded-tl-sm border border-border bg-card/80 p-4 shadow-lg">
                                             <div className="mb-2 flex items-center gap-2">
                                                 <span className="text-[11px] font-black uppercase tracking-wider text-primary">Premium AI</span>
                                                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{formatTime(msg.timestamp)}</span>
                                             </div>
-                                            <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{msg.response}</div>
+                                            <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground" style={{ userSelect: 'text' }}>{sanitizeAssistantResponse(msg.response)}</div>
                                         </div>
                                     </div>
                                 ))}
@@ -472,6 +513,7 @@ export function AIChatView() {
                             <button
                                 onClick={() => {
                                     setSelectedConversationId('active');
+                                    setSessionOnlyMode(false);
                                     setMode('chat');
                                 }}
                                 className={cn(

@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { userModel } from "../model/user.js";
 import tradeLogModel from "../model/trade_log.js";
+import aiChatLogModel from "../model/ai_chat_log.js";
 import { getModuleAccessSnapshot } from "../services/moduleCommerce.js";
 import { logWarn } from "../logger.js";
 import { computeTradeStats } from "../modules/user/trade-log.service.js";
@@ -55,6 +56,29 @@ function isSensitiveOutput(text) {
 
 function buildSafePrompt(userPrompt) {
     return `${AI_POLICY}\n\nUser request:\n${String(userPrompt || "").trim()}`;
+}
+
+function sanitizeAssistantOutput(rawText) {
+    const value = String(rawText || "").trim();
+    if (!value) return "";
+    const blockedLinePatterns = [
+        /^\s*(?:[*-]\s+)?`?\s*(persona|scope|constraints?|user\s+language(?:\/style)?|output\s+format|input)\s*:/i,
+        /^\s*(?:[*-]\s+)?`?\s*(user[_\s-]?question|context_json)\s*:/i,
+        /^\s*(?:[*-]\s+)?`?\s*(identity|user\s+request|context\s*\(json\)|instruction)\s*:/i,
+        /^\s*(?:[*-]\s+)?`?\s*is it (within scope|in vietnamese|2-4 sentences|concise)\s*\?/i,
+        /^\s*(?:[*-]\s+)?`?\s*does it reveal (system prompts?|system prompt|context_json)\s*\?/i,
+        /^\s*(you are vivutrade ai assistant|ban la ai trading assistant cua vivutrade)\b/i,
+    ];
+    const cleaned = value
+        .split("\n")
+        .map((line) => line.trimEnd())
+        .filter((line) => !blockedLinePatterns.some((re) => re.test(line)))
+        .join("\n")
+        .trim();
+    const quotedAnswers = [...cleaned.matchAll(/"([^"\n]{20,})"/g)].map((m) => m[1].trim()).filter(Boolean);
+    const bestQuoted = quotedAnswers.length > 0 ? quotedAnswers[quotedAnswers.length - 1] : "";
+    const finalText = bestQuoted || cleaned;
+    return finalText || "Xin chao. Minh la AI Assistant cua Vivutrade, ban can ho tro gi ve chart hoac lenh hien tai?";
 }
 
 function getOutputBlockReason(text) {
@@ -128,12 +152,60 @@ function getHistory(actorKey) {
     return aiHistoryByActor.get(actorKey);
 }
 
+function extractUserIdFromActorKey(actorKey) {
+    if (typeof actorKey !== "string") return null;
+    if (!actorKey.startsWith("user:")) return null;
+    const userId = actorKey.slice("user:".length).trim();
+    return userId || null;
+}
+
+async function loadHistory(actorKey, limit = 50) {
+    try {
+        const rows = await aiChatLogModel
+            .find({ actorKey })
+            .sort({ timestamp: -1 })
+            .limit(limit)
+            .lean();
+        if (Array.isArray(rows) && rows.length > 0) {
+            return rows.map((row) => ({
+                id: String(row.messageId || row._id),
+                source: row.source || "chat",
+                prompt: row.prompt || "",
+                response: row.response || "",
+                timestamp: Number(row.timestamp || Date.now()),
+            })).filter((item) => String(item.prompt || "").trim() || String(item.response || "").trim());
+        }
+    } catch (error) {
+        console.error("[AI History] load failed:", error?.message || error);
+    }
+    return getHistory(actorKey).slice(-limit).reverse().filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
+}
+
 function pushHistory(actorKey, item) {
+    if (!String(item?.prompt || "").trim() && !String(item?.response || "").trim()) {
+        return;
+    }
     const history = getHistory(actorKey);
     history.push(item);
     if (history.length > 300) {
         history.splice(0, history.length - 300);
     }
+    const payload = {
+        actorKey,
+        userId: extractUserIdFromActorKey(actorKey),
+        messageId: String(item?.id || crypto.randomUUID()),
+        source: item?.source === "system" ? "system" : "chat",
+        prompt: String(item?.prompt || ""),
+        response: String(item?.response || ""),
+        timestamp: Number(item?.timestamp || Date.now()),
+    };
+    aiChatLogModel.updateOne(
+        { actorKey: payload.actorKey, messageId: payload.messageId },
+        { $set: payload },
+        { upsert: true },
+    ).catch((error) => {
+        console.error("[AI History] persist failed:", error?.message || error);
+    });
 }
 
 function resolveBillingUserId(req, body = {}, query = {}) {
@@ -179,10 +251,10 @@ async function consumeOneChatCredit(userId) {
 /**
  * Get AI Communication History
  */
-router.get("/history", (req, res) => {
+router.get("/history", async (req, res) => {
     const actorKey = getActorKey(req, req.body, req.query);
-    const history = getHistory(actorKey);
-    return res.json(history.slice(-50).reverse()); // Return last 50, newest first
+    const history = await loadHistory(actorKey, 50);
+    return res.json(history); // newest first
 });
 
 router.post("/context", async (req, res) => {
@@ -358,6 +430,7 @@ router.post("/task", async (req, res) => {
                         user_message: "Noi dung tra ve bi chan de bao ve thong tin he thong. Vui long dat cau hoi trong pham vi su dung nen tang.",
                     });
                 }
+                const safeText = sanitizeAssistantOutput(text);
                 console.log("  [AI API] Success: Response received directly.");
 
                 // Log to actor history
@@ -365,7 +438,7 @@ router.post("/task", async (req, res) => {
                     id: crypto.randomUUID(),
                     source,
                     prompt,
-                    response: text,
+                    response: safeText,
                     timestamp: Date.now()
                 });
                 if (isChatSource) {
@@ -373,9 +446,9 @@ router.post("/task", async (req, res) => {
                     if (!consumed.ok) {
                         return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
                     }
-                    return res.json({ status: "ok", response: text, remainingCredits: consumed.remainingCredits });
+                    return res.json({ status: "ok", response: safeText, remainingCredits: consumed.remainingCredits });
                 }
-                return res.json({ status: "ok", response: text });
+                return res.json({ status: "ok", response: safeText });
             }
         } catch (error) {
             console.error(`  [AI API] Direct API Error: ${error.message}`);
@@ -401,12 +474,13 @@ router.post("/task", async (req, res) => {
             actorResults.delete(taskId);
             taskOwnership.delete(taskId);
 
+            const safeBridgeText = sanitizeAssistantOutput(result.content);
             // Log to actor history
             pushHistory(actorKey, {
                 id: taskId,
                 source,
                 prompt,
-                response: result.content,
+                response: safeBridgeText,
                 timestamp: Date.now()
             });
             if (isSensitiveOutput(result.content)) {
@@ -430,9 +504,9 @@ router.post("/task", async (req, res) => {
                 if (!consumed.ok) {
                     return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
                 }
-                return res.json({ status: "ok", response: result.content, remainingCredits: consumed.remainingCredits });
+                return res.json({ status: "ok", response: safeBridgeText, remainingCredits: consumed.remainingCredits });
             }
-            return res.json({ status: "ok", response: result.content });
+            return res.json({ status: "ok", response: safeBridgeText });
         }
         await new Promise((r) => setTimeout(r, 1000));
     }

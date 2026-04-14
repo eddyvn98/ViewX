@@ -75,35 +75,35 @@ export function Features() {
     ];
 
     return (
-        <section aria-labelledby="features-title" className="space-y-10 py-8">
-            <div className="space-y-4 text-center max-w-2xl mx-auto">
+        <section aria-labelledby="features-title" className="space-y-16 py-12">
+            <div className="space-y-6 text-center max-w-3xl mx-auto">
                 <h2
                     id="features-title"
-                    className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl"
+                    className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl"
                 >
                     Professional Grade Tools
                 </h2>
-                <p className="text-slate-600">
+                <p className="text-lg text-slate-600 leading-relaxed">
                     Everything you need to build, test, and execute strategies autonomously with AI assistance.
                 </p>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                 {featureCards.map((feature, index) => {
                     const Icon = feature.icon;
                     return (
                         <article
                             key={feature.key}
-                            className={`group relative overflow-hidden rounded-2xl border ${feature.border} bg-white/70 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-${feature.color.split('-')[1]}-500/10`}
+                            className="group relative overflow-hidden rounded-[2rem] border border-white bg-white/40 p-8 backdrop-blur-md transition-all duration-300 hover:-translate-y-2 hover:bg-white/60 hover:shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
                             style={{ animationDelay: `${index * 75}ms` }}
                         >
-                            <div className={`mb-4 inline-flex rounded-xl ${feature.bg} p-3 ${feature.color} shadow-inner`}>
+                            <div className={`mb-6 inline-flex rounded-2xl ${feature.bg} p-4 ${feature.color} shadow-inner transition-transform group-hover:scale-110 duration-300`}>
                                 <Icon className="h-6 w-6" />
                             </div>
-                            <h3 className="mb-3 text-lg font-black text-slate-800">{t(`${feature.key}.title` as any)}</h3>
+                            <h3 className="mb-4 text-xl font-black text-slate-950">{t(`${feature.key}.title` as any)}</h3>
                             <p className="text-sm leading-relaxed text-slate-600">
                                 {t(`${feature.key}.desc` as any)}
                             </p>
-                            <div className={`absolute bottom-0 right-0 h-32 w-32 translate-x-12 translate-y-12 rounded-full ${feature.bg} blur-3xl opacity-0 transition-opacity group-hover:opacity-100`} />
+                            <div className={`absolute -bottom-10 -right-10 h-40 w-40 rounded-full ${feature.bg} blur-[60px] opacity-0 transition-opacity group-hover:opacity-40`} />
                         </article>
                     );
                 })}

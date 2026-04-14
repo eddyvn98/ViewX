@@ -17,10 +17,11 @@ export const ALERT_INTENTS = new Set([
 ]);
 
 const SYMBOL_MAP = {
-  VANG: "XAUUSD",
-  GOLD: "XAUUSD",
-  XAU: "XAUUSD",
-  XAUUSD: "XAUUSD",
+  VANG: "XAUUSDM",
+  GOLD: "XAUUSDM",
+  XAU: "XAUUSDM",
+  XAUUSD: "XAUUSDM",
+  XAUUSDM: "XAUUSDM",
   DAU: "WTIUSD",
   OIL: "WTIUSD",
   "CHUNG KHOAN MY": "US30",
@@ -165,9 +166,10 @@ export function detectUserLanguage(value, fallback = "vi") {
 
 export function collapseSymbolForMatch(value) {
   const raw = stripDiacritics(String(value || "").trim().toUpperCase());
-  return raw
+  const compact = raw
     .replace(/[._\s-]+/g, "")
-    .replace(/USDM$/i, "USD")
-    .replace(/USDT$/i, "USD")
-    .replace(/M$/i, "");
+    .replace(/USDT$/i, "USD");
+  // Keep MT5 contracts (USDM) distinct to avoid accidental downgrades.
+  if (/USDM$/i.test(compact)) return compact;
+  return compact.replace(/M$/i, "");
 }

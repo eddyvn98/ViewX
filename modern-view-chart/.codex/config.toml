@@ -1,0 +1,7 @@
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+model = "gpt-5.3-codex"
+model_reasoning_effort = "medium"
+
+# Keep project guidance files discoverable.
+project_doc_fallback_files = ["AGENTS.md", "CLAUDE.md", "README.md"]

@@ -156,10 +156,10 @@ export function createTelegramBotRenderers(deps) {
       return `Scanner: ${escapeHtml(scannerName)}\nStrategy: ${escapeHtml(strategyName)}\n\nChưa có cấu hình symbol/timeframe để hiển thị bảng.`;
     }
 
-    const symbolColWidth = Math.max(7, Math.min(10, Math.max(...symbols.map((s) => s.length), "MÃ GD".length)));
+    const symbolColWidth = Math.max(7, Math.min(10, Math.max(...symbols.map((s) => s.length), "Mã GD".length)));
     const tfColWidth = 8;
     const lines = [];
-    lines.push([padCell("MÃ GD", symbolColWidth), ...timeframes.map((tf) => padCell(tf.toUpperCase(), tfColWidth))].join(" | "));
+    lines.push([padCell("Mã GD", symbolColWidth), ...timeframes.map((tf) => padCell(tf.toUpperCase(), tfColWidth))].join(" | "));
     lines.push("-".repeat(symbolColWidth + (timeframes.length * tfColWidth) + (timeframes.length * 3)));
     for (const symbol of symbols) {
       const row = [padCell(symbol, symbolColWidth)];
@@ -188,7 +188,7 @@ export function createTelegramBotRenderers(deps) {
     const timeframes = Array.from(new Set((Array.isArray(scanner?.timeframes) ? scanner.timeframes : []).map((tf) => normalizeMatrixTimeframe(tf)).filter(Boolean))).slice(0, 8);
     if (!symbols.length || !timeframes.length) return "";
 
-    const headerCells = [`<TD BGCOLOR="#0f172a"><FONT FACE="Arial" POINT-SIZE="13" COLOR="#93c5fd"><B>MÃ GD</B></FONT></TD>`]
+    const headerCells = [`<TD BGCOLOR="#0f172a"><FONT FACE="Arial" POINT-SIZE="13" COLOR="#93c5fd"><B>Mã GD</B></FONT></TD>`]
       .concat(timeframes.map((tf) => `<TD BGCOLOR="#0f172a"><FONT FACE="Arial" POINT-SIZE="13" COLOR="#93c5fd"><B>${escapeDot(tf.toUpperCase())}</B></FONT></TD>`))
       .join("");
 
@@ -259,7 +259,7 @@ export function createTelegramBotRenderers(deps) {
 
     const headY = pad + titleH;
     out += `<rect x="${pad}" y="${headY}" width="${firstColW}" height="${headH}" fill="#0f172a" stroke="#06b6d4" stroke-width="2"/>`;
-    out += `<text x="${pad + firstColW / 2}" y="${headY + 36}" fill="#93c5fd" font-size="18" text-anchor="middle" font-family="DejaVu Sans" font-weight="700">MÃ GD</text>`;
+    out += `<text x="${pad + firstColW / 2}" y="${headY + 36}" fill="#93c5fd" font-size="18" text-anchor="middle" font-family="DejaVu Sans" font-weight="700">Mã GD</text>`;
     for (let i = 0; i < timeframes.length; i += 1) {
       const x = pad + firstColW + i * colW;
       out += `<rect x="${x}" y="${headY}" width="${colW}" height="${headH}" fill="#0f172a" stroke="#06b6d4" stroke-width="2"/>`;

@@ -13,6 +13,7 @@ import { normalizeBotState, loadUserSetupState, patchUserSetupState, updateUserB
 import { hasTelegramModuleAccess } from "./telegramBot.access.js";
 import { fetchCurrentPrice, fetchCandles, renderSignalsText, summarizeScannerSignals, renderScannerMatrixText, sendScannerMatrixSnapshot } from "./telegramBot.context.js";
 import { BOT_SCAN_INTERVAL_MS } from "./telegramBot.constants.js";
+const PRICE_ALERT_MAX_TRIGGERS = Math.max(1, Number.parseInt(process.env.TELEGRAM_PRICE_ALERT_MAX_TRIGGERS || "3", 10) || 3);
 
 // ─── Price alerts evaluator ───────────────────────────────────────────────────
 
@@ -30,17 +31,31 @@ export async function evaluatePriceAlerts(user, state) {
     if (!Number.isFinite(currentPrice) || currentPrice <= 0) { nextAlerts.push(alert); continue; }
 
     const prevPrice = Number(priceMemory[alert.id] || 0);
+    const targetPrice = Number(alert.price || 0);
     let triggered = false;
-    if (alert.type === "greater") triggered = currentPrice >= Number(alert.price || 0);
-    else if (alert.type === "less") triggered = currentPrice <= Number(alert.price || 0);
+    if (alert.type === "greater") triggered = prevPrice > 0 && prevPrice < targetPrice && currentPrice >= targetPrice;
+    else if (alert.type === "less") triggered = prevPrice > 0 && prevPrice > targetPrice && currentPrice <= targetPrice;
     else if (alert.type === "crossing") {
-      triggered = prevPrice > 0 && ((prevPrice < alert.price && currentPrice >= alert.price) || (prevPrice > alert.price && currentPrice <= alert.price));
+      triggered = prevPrice > 0 && ((prevPrice < targetPrice && currentPrice >= targetPrice) || (prevPrice > targetPrice && currentPrice <= targetPrice));
     }
 
     if (triggered) {
       changed = true;
-      await sendTelegramMessage({ chatId: user.telegram.chatId, text: `🔔 <b>Alert giá</b>\n${escapeHtml(alert.symbol)} chạm mức <b>${formatPrice(alert.price)}</b>\nGiá hiện tại: <b>${formatPrice(currentPrice)}</b>` });
-      delete priceMemory[alert.id];
+      const currentTriggerCount = Math.max(0, Number(alert.triggerCount || 0)) + 1;
+      const maxTriggers = Math.max(1, Number(alert.maxTriggers || PRICE_ALERT_MAX_TRIGGERS));
+      const shouldDeactivate = currentTriggerCount >= maxTriggers;
+      await sendTelegramMessage({
+        chatId: user.telegram.chatId,
+        text: `🔔 <b>Alert giá</b>\n${escapeHtml(alert.symbol)} chạm mức <b>${formatPrice(targetPrice)}</b>\nGiá hiện tại: <b>${formatPrice(currentPrice)}</b>\nLần: <b>${currentTriggerCount}/${maxTriggers}</b>${shouldDeactivate ? "\n✅ Đã tự tắt alert này." : ""}`,
+      });
+      nextAlerts.push({
+        ...alert,
+        triggerCount: currentTriggerCount,
+        maxTriggers,
+        active: !shouldDeactivate,
+        lastTriggeredAt: Date.now(),
+      });
+      priceMemory[alert.id] = currentPrice;
       continue;
     }
     priceMemory[alert.id] = currentPrice;
@@ -49,8 +64,8 @@ export async function evaluatePriceAlerts(user, state) {
 
   if (!changed) return { changed: false, state, runtimePatch: { priceMemory } };
   const allAlerts = Array.isArray(state.alerts) ? state.alerts : [];
-  const nextIds = new Set(nextAlerts.map((item) => item.id));
-  const merged = allAlerts.map((item) => (nextIds.has(item.id) ? nextAlerts.find((a) => a.id === item.id) : { ...item, active: false })).filter(Boolean);
+  const nextMap = new Map(nextAlerts.map((item) => [String(item.id || ""), item]));
+  const merged = allAlerts.map((item) => nextMap.get(String(item?.id || "")) || item).filter(Boolean);
   return { changed: true, state: { ...state, alerts: merged }, runtimePatch: { priceMemory } };
 }
 
@@ -216,11 +231,20 @@ async function scanTelegramUser(user) {
 // ─── Monitor loop export ──────────────────────────────────────────────────────
 
 export function startTelegramBotMonitor() {
-  const intervalId = setInterval(() => {
-    userModel.find({ "telegram.isActive": true, "telegram.chatId": { $ne: "" } })
-      .select("_id username displayName email telegram moduleAccess")
-      .then((users) => Promise.allSettled(users.map((user) => scanTelegramUser(user))))
-      .catch(() => null);
+  let tickInProgress = false;
+  const intervalId = setInterval(async () => {
+    if (tickInProgress) return;
+    tickInProgress = true;
+    try {
+      const users = await userModel
+        .find({ "telegram.isActive": true, "telegram.chatId": { $ne: "" } })
+        .select("_id username displayName email telegram moduleAccess");
+      await Promise.allSettled(users.map((user) => scanTelegramUser(user)));
+    } catch {
+      // Keep monitor resilient; errors are handled inside scan flow.
+    } finally {
+      tickInProgress = false;
+    }
   }, BOT_SCAN_INTERVAL_MS);
 
   if (typeof intervalId.unref === "function") intervalId.unref();
