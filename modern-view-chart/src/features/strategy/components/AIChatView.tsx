@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen } from 'lucide-react';
+import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen, Sparkles } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMarketStore } from '@/lib/store';
 import type { Candle, ChartInstance, Position, RootState } from '@/lib/store';
@@ -18,7 +18,7 @@ interface ChatMessage {
 }
 
 type ChatMode = 'chat' | 'history';
-type IntentKey = 'entry' | 'exit' | 'strategy' | 'risk' | 'summary' | 'general';
+type IntentKey = 'entry' | 'exit' | 'strategy' | 'risk' | 'summary' | 'forecast' | 'general';
 
 interface PromptPreset {
     id: string;
@@ -64,7 +64,16 @@ const PRESET_PROMPTS: PromptPreset[] = [
     { id: 'chart-key-levels', group: 'Đọc chart', label: 'Vùng giá quan trọng', prompt: 'Chỉ ra các vùng giá quan trọng nhất trên chart hiện tại để tôi theo dõi.', intent: 'summary', icon: Target },
     { id: 'chart-explain', group: 'Đọc chart', label: 'Giải thích tín hiệu', prompt: 'Giải thích ngắn gọn vì sao chart này đang cho tín hiệu như hiện tại.', intent: 'summary', icon: CircleHelp },
     { id: 'chart-next', group: 'Đọc chart', label: 'Kịch bản tiếp theo', prompt: 'Kịch bản giá có khả năng cao tiếp theo là gì nếu không có dữ liệu mới.', intent: 'summary', icon: ScanSearch },
+    { id: 'chart-next-timesfm', group: 'Forecast', label: 'Du doan gia sap toi', prompt: 'Du doan gia sap toi cho chart dang mo nay.', intent: 'forecast', icon: ScanSearch },
+    { id: 'chart-next-range', group: 'Forecast', label: 'Forecast next range', prompt: 'Du doan vung gia sap toi cua chart hien tai va muc bien dong du kien.', intent: 'forecast', icon: Target },
 ];
+
+const QUICK_ACTION_PROMPTS: PromptPreset[] = [
+    PRESET_PROMPTS.find((item) => item.id === 'chart-next-timesfm'),
+    PRESET_PROMPTS.find((item) => item.id === 'chart-next-range'),
+    PRESET_PROMPTS.find((item) => item.id === 'entry-now'),
+    PRESET_PROMPTS.find((item) => item.id === 'chart-summary'),
+].filter(Boolean) as PromptPreset[];
 
 function toFriendlyError(raw: string) {
     const value = String(raw || '').trim();
@@ -128,6 +137,7 @@ function classifyIntent(question: string): IntentKey {
     if (/(thoat|giu lenh|chot|trailing|dich sl|dong lenh|exit)/.test(value)) return 'exit';
     if (/(strategy|chien luoc|bot|rule|toi uu|setup bot)/.test(value)) return 'strategy';
     if (/(rui ro|risk|drawdown|khoi luong|lot|von|account)/.test(value)) return 'risk';
+    if (/(du doan|forecast|sap toi|next move|next range|next candles|kich ban tiep theo|xu huong)/.test(value)) return 'forecast';
     if (/(tom tat|tong quan|summary|overview)/.test(value)) return 'summary';
     return 'general';
 }
@@ -200,6 +210,7 @@ function buildPrompt(context: unknown, question: string, intent: IntentKey) {
         strategy: 'Tra loi theo: Strategy phu hop | Ly do | Dieu can dieu chinh.',
         risk: 'Tra loi theo: Muc rui ro | Canh bao | Hanh dong de xuat.',
         summary: 'Tra loi theo 3 y ngan gon nhat.',
+        forecast: 'Tra loi theo: Huong chinh | Muc gia du kien | Muc do tin cay.',
         general: 'Tra loi trong 2-4 cau ngan gon, dung trong tam.',
     };
     return [
@@ -375,6 +386,73 @@ export function AIChatView() {
         if (intent === 'summary') return { ...base, chart: { ...chart, recentCandles: recentCandles.slice(-6).map((c) => ({ t: c.time, o: sanitizeNumber(c.open, marketData.activeDigits ?? 2), h: sanitizeNumber(c.high, marketData.activeDigits ?? 2), l: sanitizeNumber(c.low, marketData.activeDigits ?? 2), c: sanitizeNumber(c.close, marketData.activeDigits ?? 2) })) }, latestSignal: summarizeSignal(latestSignal) };
         return { ...base, strategy: summarizeStrategy(activeStrategy), latestSignal: summarizeSignal(latestSignal) };
     }, [activeStrategy, indicatorSnapshot, lastHistoryDeal, latestSignal, liveTerminalPosition, marketData.accounts, marketData.activeChart, marketData.activeDigits, marketData.activeTicker?.change, marketData.activeTicker?.price, openVirtualPositions, recentCandles, relevantVirtualPosition, strategyById, strategyData.strategies]);
+
+    const sendForecast = useCallback(async (question: string) => {
+        const { accessToken, userId, hasAccessToken } = getAuthContext();
+        if (isSending) return;
+        if (!hasAccessToken) {
+            setFriendlyError('Ban can dang nhap de su dung AI.');
+            return;
+        }
+        if (!marketData.activeChart) {
+            setFriendlyError('Khong co chart dang duoc chon de du bao.');
+            return;
+        }
+        if (recentCandles.length < 20) {
+            setFriendlyError('Chart chua du du lieu nen de du bao.');
+            return;
+        }
+
+        setFriendlyError(null);
+        setIsSending(true);
+        try {
+            const payload: {
+                question: string;
+                chart: { chartId: string; symbol: string; timeframe: string; source: string };
+                candles: Candle[];
+                source: 'chat';
+                userId?: string;
+            } = {
+                question,
+                chart: {
+                    chartId: marketData.activeChart.id,
+                    symbol: marketData.activeChart.symbol,
+                    timeframe: marketData.activeChart.interval,
+                    source: marketData.activeChart.source,
+                },
+                candles: recentCandles,
+                source: 'chat',
+            };
+            if (userId) payload.userId = userId;
+
+            const response = await fetch('/api/ai/bridge/forecast', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}) },
+                credentials: 'include',
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data) throw new Error(String(data?.user_message || data?.msg || data?.error || `request_failed_${response.status}`));
+            if (typeof data?.remainingCredits === 'number') setRemainingCredits(data.remainingCredits);
+
+            const nowTs = Date.now();
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: crypto.randomUUID(),
+                    source: 'chat',
+                    prompt: question,
+                    response: sanitizeAssistantResponse(String(data?.response || '')),
+                    timestamp: nowTs,
+                },
+            ]);
+        } catch (error) {
+            setFriendlyError(toFriendlyError(error instanceof Error ? error.message : 'ai_forecast_failed'));
+        } finally {
+            setIsSending(false);
+        }
+    }, [isSending, marketData.activeChart, recentCandles]);
 
     const sendPrompt = useCallback(async (rawQuestion: string) => {
         const question = rawQuestion.trim();
@@ -593,6 +671,28 @@ export function AIChatView() {
                                 {friendlyError}
                             </div>
                         )}
+                        <div className="mb-3 flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+                            {QUICK_ACTION_PROMPTS.map((item) => {
+                                const Icon = item.icon as any;
+                                const isForecastPrimary = item.id === 'chart-next-timesfm';
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => void (item.intent === 'forecast' ? sendForecast(item.prompt) : sendPrompt(item.prompt))}
+                                        disabled={isSending || (item.intent === 'forecast' && !marketData.activeChart)}
+                                        className={cn(
+                                            'flex h-8 w-[164px] shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 text-[10px] font-bold uppercase tracking-wide transition disabled:opacity-40',
+                                            isForecastPrimary
+                                                ? 'border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'
+                                                : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                                        )}
+                                    >
+                                        {isForecastPrimary ? <Sparkles size={12} className="animate-pulse" /> : <Icon size={12} />}
+                                        <span className="truncate">{item.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                         <div className="relative flex items-center gap-2">
                             {isFilteringSuggestions && (
                                 <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-20 overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-2xl backdrop-blur">
@@ -600,23 +700,26 @@ export function AIChatView() {
                                         {filteredPresetItems.length === 0 ? (
                                             <div className="px-3 py-2 text-[11px] text-muted-foreground">Không có gợi ý phù hợp.</div>
                                         ) : (
-                                            filteredPresetItems.map((item) => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => {
-                                                        setInputValue(item.prompt);
-                                                        void sendPrompt(item.prompt);
-                                                    }}
-                                                    disabled={isSending}
-                                                    className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-primary/5 disabled:opacity-60"
-                                                >
-                                                    <item.icon width={13} height={13} className="mt-0.5 shrink-0 text-primary" />
-                                                    <div className="min-w-0">
-                                                        <div className="truncate text-[11px] font-black uppercase tracking-wide text-foreground">{item.label}</div>
-                                                        <div className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{item.prompt}</div>
-                                                    </div>
-                                                </button>
-                                            ))
+                                            filteredPresetItems.map((item) => {
+                                                const Icon = item.icon as any;
+                                                return (
+                                                    <button
+                                                        key={item.id}
+                                                        onClick={() => {
+                                                            setInputValue(item.prompt);
+                                                            void (item.intent === 'forecast' ? sendForecast(item.prompt) : sendPrompt(item.prompt));
+                                                        }}
+                                                        disabled={isSending}
+                                                        className="flex w-full items-start gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-primary/5 disabled:opacity-60"
+                                                    >
+                                                        <Icon size={13} className="mt-0.5 shrink-0 text-primary" />
+                                                        <div className="min-w-0">
+                                                            <div className="truncate text-[11px] font-black uppercase tracking-wide text-foreground">{item.label}</div>
+                                                            <div className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{item.prompt}</div>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </div>
