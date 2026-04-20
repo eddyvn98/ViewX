@@ -25,6 +25,7 @@ export {
   updateTelegramPreferences,
   sendTelegramTest,
   unlinkTelegram,
+  sendTelegramSignal,
 } from './telegram.controller.js';
 
 export {
@@ -56,3 +57,8 @@ export {
   adminExpireMemberModule,
   sepayWebhook,
 } from './module-commerce.controller.js';
+
+export {
+  getUiPreferences,
+  updateUiPreferences,
+} from './ui-preferences.controller.js';

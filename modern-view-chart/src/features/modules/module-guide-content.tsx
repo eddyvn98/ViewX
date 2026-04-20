@@ -131,6 +131,42 @@ const GUIDES: GuideMap = {
       sections: [{ eyebrow: 'What you get', title: 'Familiar local gold sources' }],
     },
   },
+  voice_alerts: {
+    vi: {
+      badge: 'Voice Alerts',
+      title: 'Nhận cảnh báo bằng giọng nói tiếng Việt theo dữ liệu realtime.',
+      summary: 'Phù hợp khi bạn cần theo dõi nhiều chart cùng lúc nhưng vẫn muốn nghe cảnh báo ngay khi giá chạm ngưỡng.',
+      primaryCta: { label: 'Mở chart', href: '/chart' },
+      sections: [
+        {
+          eyebrow: 'Giá trị chính',
+          title: 'Nghe cảnh báo thay vì chỉ nhìn toast',
+          items: [
+            'Đọc cảnh báo tiếng Việt theo dữ liệu runtime (symbol, giá, hướng).',
+            'Có hàng đợi và cooldown để tránh đọc trùng liên tục.',
+            'Fallback từ audio pre-generated sang Web Speech khi cần.',
+          ],
+        },
+      ],
+    },
+    en: {
+      badge: 'Voice Alerts',
+      title: 'Receive Vietnamese voice alerts driven by realtime data.',
+      summary: 'Best when you monitor multiple charts and still need instant spoken triggers.',
+      primaryCta: { label: 'Open chart', href: '/chart' },
+      sections: [
+        {
+          eyebrow: 'Core value',
+          title: 'Hear alerts, not only toast messages',
+          items: [
+            'Speaks runtime alert payloads (symbol, price, direction).',
+            'Queue and cooldown reduce repeated noisy announcements.',
+            'Falls back from pre-generated audio to Web Speech automatically.',
+          ],
+        },
+      ],
+    },
+  },
   telegram_notify: {
     vi: {
       badge: 'Telegram Notify',

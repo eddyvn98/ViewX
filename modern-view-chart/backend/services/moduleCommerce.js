@@ -7,6 +7,7 @@ export const MODULE_CATALOG = {
   your_mt5: { amount: 10000, durationDays: 30, trialDays: 7, label: "Your MT5" },
   binance_trade: { amount: 10000, durationDays: 30, trialDays: 7, label: "Binance Trade" },
   vn_gold: { amount: 10000, durationDays: 30, trialDays: 7, label: "VN Gold" },
+  voice_alerts: { amount: 10000, durationDays: 30, trialDays: 7, label: "Voice Alerts" },
   telegram_notify: { amount: 10000, durationDays: 30, trialDays: 7, label: "Telegram Notify" },
   telegram_control: { amount: 10000, durationDays: 30, trialDays: 7, label: "Telegram Control" },
   discord_bot: { amount: 10000, durationDays: 30, trialDays: 7, label: "Discord Bot" },

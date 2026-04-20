@@ -1,0 +1,12 @@
+tunnel: 214e0dc2-0c10-427a-9060-74fe09b52486
+credentials-file: /etc/cloudflared/creds.json
+ingress:
+  - hostname: posweb.vivutrade.io.vn
+    service: http://host.docker.internal:13002
+  - hostname: vivutrade.io.vn
+    service: http://host.docker.internal:13010
+  - hostname: api.vivutrade.io.vn
+    service: http://host.docker.internal:18092
+  - hostname: pixelpro.vivutrade.io.vn
+    service: http://host.docker.internal:18081
+  - service: http_status:404

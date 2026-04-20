@@ -16,6 +16,7 @@ import { useChartShortcuts } from './hooks/use-chart-shortcuts';
 import { useChartDrawings } from './hooks/use-chart-drawings';
 import { useChartRuntime } from './hooks/use-chart-runtime';
 import { useChartContextActions } from './hooks/use-chart-context-actions';
+import { useForecastRenderer } from './hooks/use-forecast-renderer';
 
 import { CandleCountdown } from './components/CandleCountdown';
 import { ChartOverlay } from './components/ChartOverlay';
@@ -65,6 +66,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef);
     useChartOrders(symbol, seriesRef, filteredOrders);
     useChartDraftOrder(symbol, seriesRef, isReady);
+    useForecastRenderer(priceChartRef.current, chartId, isReady);
 
     useChartIndicators(
         chartId,

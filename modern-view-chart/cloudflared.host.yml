@@ -1,0 +1,12 @@
+tunnel: 214e0dc2-0c10-427a-9060-74fe09b52486
+credentials-file: C:\Users\eddyvn\.cloudflared\214e0dc2-0c10-427a-9060-74fe09b52486.json
+ingress:
+  - hostname: posweb.vivutrade.io.vn
+    service: http://127.0.0.1:13002
+  - hostname: vivutrade.io.vn
+    service: http://127.0.0.1:13010
+  - hostname: api.vivutrade.io.vn
+    service: http://127.0.0.1:18092
+  - hostname: pixelpro.vivutrade.io.vn
+    service: http://127.0.0.1:18081
+  - service: http_status:404

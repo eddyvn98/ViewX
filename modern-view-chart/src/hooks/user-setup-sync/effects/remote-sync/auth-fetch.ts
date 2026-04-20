@@ -4,7 +4,16 @@ import type { RemoteSyncDeps } from './types';
 
 export function createFetchWithAuthRetry(deps: RemoteSyncDeps) {
     return async (url: string, init: RequestInit): Promise<Response> => {
-        let response = await fetch(url, init);
+        // Đính kèm token ngay lần gọi đầu tiên nếu có
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_access_token') : null;
+        const finalInit = { ...init };
+        if (token) {
+            const headers = new Headers(finalInit.headers || {});
+            headers.set('authorization', `Bearer ${token}`);
+            finalInit.headers = headers;
+        }
+
+        let response = await fetch(url, finalInit);
         if (response.status !== 401 || !deps.isAuthenticated) {
             return response;
         }

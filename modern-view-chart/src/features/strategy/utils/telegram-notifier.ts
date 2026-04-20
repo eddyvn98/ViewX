@@ -9,9 +9,13 @@ type TelegramSignalPayload = {
 
 export async function notifyTelegramSignal(payload: TelegramSignalPayload): Promise<void> {
   try {
-    await fetch('/api/telegram/signal', {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_access_token') : null;
+    await fetch('/api/user/telegram/signal', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 
+        'content-type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify(payload),
       keepalive: true,
     });

@@ -6,6 +6,7 @@ import aiChatLogModel from "../model/ai_chat_log.js";
 import { getModuleAccessSnapshot } from "../services/moduleCommerce.js";
 import { logWarn } from "../logger.js";
 import { computeTradeStats } from "../modules/user/trade-log.service.js";
+import { generateForecast } from "../services/forecastService.js";
 
 const router = Router();
 const AI_ENABLED = ((process.env.AI_ENABLED || "0").trim() === "1");
@@ -19,6 +20,27 @@ const AI_POLICY = [
     "Do not provide exploit, intrusion, or data exfiltration instructions.",
     "Keep answers concise and practical.",
 ].join(" ");
+
+const AI_TOOLS = [
+    {
+        function_declarations: [
+            {
+                name: "generate_forecast",
+                description: "Predict future price movement, targets, and confidence levels based on historical candle data. Use this when the user asks about price direction, future scenarios, or next moves.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        symbol: { type: "string", description: "The trading symbol (e.g. XAUUSDm, BTCUSDm)." },
+                        timeframe: { type: "string", description: "The timeframe/interval (e.g. 1m, 5m, 1h)." },
+                        horizon: { type: "number", description: "Number of future candles to predict (optional)." }
+                    },
+                    required: ["symbol", "timeframe"]
+                }
+            }
+        ]
+    }
+];
+
 
 const INPUT_BLOCK_PATTERNS = [
     /\bignore\s+(all|previous|prior)\s+(instructions|rules)\b/i,
@@ -400,7 +422,7 @@ router.post("/task", async (req, res) => {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: safePrompt }] }]
+                        contents: [{ parts: [{ text: safePrompt }] }], tools: AI_TOOLS
                     })
                 }
             );
@@ -412,6 +434,59 @@ router.post("/task", async (req, res) => {
 
             const data = await apiRes.json();
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const content = data.candidates?.[0]?.content;
+            const parts = content?.parts || [];
+
+            if (parts.some(p => p.functionCall)) {
+                const call = parts.find(p => p.functionCall).functionCall;
+                if (call.name === "generate_forecast") {
+                    console.log(`  [AI Tool] Gemini requested forecast for ${call.args.symbol} ${call.args.timeframe}`);
+                    const candles = req.body?.context?.chart?.recentCandles || req.body?.candles || [];
+                    const chart = {
+                        symbol: call.args.symbol,
+                        timeframe: call.args.timeframe,
+                        source: req.body?.context?.chart?.source || "MT5"
+                    };
+                    const lang = req.body?.lang || req.body?.context?.lang || "vi";
+                    const forecastResult = await generateForecast({ chart, candles, horizon: call.args.horizon, question: prompt, lang });
+                    if (forecastResult.ok) {
+                        const secondRes = await fetch(
+                            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${apiKey}`,
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    contents: [
+                                        { role: "user", parts: [{ text: safePrompt }] },
+                                        content,
+                                        {
+                                            role: "function",
+                                            parts: [{
+                                                functionResponse: {
+                                                    name: "generate_forecast",
+                                                    response: { status: "ok", summary: forecastResult.response, details: forecastResult.forecast }
+                                                }
+                                            }]
+                                        }
+                                    ],
+                                    tools: AI_TOOLS
+                                })
+                            }
+                        );
+                        const secondData = await secondRes.json();
+                        const finalText = secondData.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (finalText) {
+                            const safeFinalText = sanitizeAssistantOutput(finalText);
+                            pushHistory(actorKey, { id: crypto.randomUUID(), source, prompt, response: safeFinalText, timestamp: Date.now() });
+                            if (isChatSource) {
+                                const consumed = await consumeOneChatCredit(billingUserId);
+                                return res.json({ status: "ok", response: safeFinalText, remainingCredits: consumed.remainingCredits });
+                            }
+                            return res.json({ status: "ok", response: safeFinalText });
+                        }
+                    }
+                }
+            }
 
             if (text) {
                 if (isSensitiveOutput(text)) {
@@ -514,6 +589,86 @@ router.post("/task", async (req, res) => {
     console.log(`  [AI Bridge] Task Timeout: ${taskId} (${actorKey})`);
     taskOwnership.delete(taskId);
     return res.status(408).json({ status: "error", msg: "Gemini Web Timeout" });
+});
+
+router.post("/forecast", async (req, res) => {
+    const actorKey = getActorKey(req, req.body, req.query);
+    const billingUserId = resolveBillingUserId(req, req.body, req.query);
+    const source = "chat";
+    const question = String(req.body?.question || "").trim();
+    const chart = req.body?.chart && typeof req.body.chart === "object" ? req.body.chart : null;
+    const candles = Array.isArray(req.body?.candles) ? req.body.candles : [];
+    const horizonRaw = Number(req.body?.horizon);
+    const horizon = Number.isFinite(horizonRaw) && horizonRaw > 0 ? horizonRaw : undefined;
+    const lang = req.body?.lang || "vi";
+
+    if (!billingUserId) {
+        return res.status(401).json({ status: "error", msg: "user_auth_required_for_chat_ai" });
+    }
+
+    const quotaCheck = await validateChatQuota(billingUserId);
+    if (!quotaCheck.ok) {
+        return res.status(quotaCheck.code).json({
+            status: "error",
+            msg: quotaCheck.error,
+            remainingCredits: quotaCheck.remainingCredits ?? 0,
+        });
+    }
+
+    if (!chart?.symbol || !chart?.timeframe) {
+        return res.status(400).json({
+            status: "error",
+            msg: "forecast_chart_context_missing",
+            user_message: "Khong xac dinh duoc chart dang duoc chon de du bao.",
+        });
+    }
+
+    if (candles.length < 20) {
+        return res.status(400).json({
+            status: "error",
+            msg: "forecast_candles_missing",
+            user_message: "Can it nhat 20 nen hop le cua chart hien tai de du bao.",
+        });
+    }
+
+    try {
+        const result = await generateForecast({ chart, candles, horizon, question, lang });
+        if (!result.ok) {
+            return res.status(502).json({
+                status: "error",
+                msg: result.code || "forecast_failed",
+                user_message: result.message || "Khong the du bao luc nay. Vui long thu lai sau.",
+            });
+        }
+
+        pushHistory(actorKey, {
+            id: crypto.randomUUID(),
+            source,
+            prompt: question || `Du bao ${chart.symbol} ${chart.timeframe}`,
+            response: result.response,
+            timestamp: Date.now(),
+        });
+
+        const consumed = await consumeOneChatCredit(billingUserId);
+        if (!consumed.ok) {
+            return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
+        }
+
+        return res.json({
+            status: "ok",
+            response: result.response,
+            remainingCredits: consumed.remainingCredits,
+            forecast: result.forecast,
+            engine: result.engine,
+        });
+    } catch (error) {
+        console.error("[Forecast] failed:", error?.message || error);
+        return res.status(500).json({
+            status: "error",
+            msg: "forecast_unexpected_error",
+            user_message: "Khong the du bao luc nay. Vui long thu lai sau.",
+        });
+    }
 });
 
 /**

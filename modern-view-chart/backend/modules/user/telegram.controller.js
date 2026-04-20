@@ -197,3 +197,43 @@ export const unlinkTelegram = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+export const sendTelegramSignal = async (req, res) => {
+  try {
+    const userId = requireAuthedUser(req, res);
+    if (!userId) return;
+
+    const user = await userModel.findById(userId).select('username telegram moduleAccess');
+    if (!user?._id) return res.status(404).json({ error: 'User not found' });
+    if (!hasTelegramModuleAccess(user)) {
+      return res.status(403).json({ error: 'Telegram module is required', code: 'telegram_module_required' });
+    }
+
+    const chatId = String(user.telegram?.chatId || '');
+    if (!user.telegram?.isActive || !chatId) {
+      // Don't error out if not linked, just ignore silently to avoid console noise
+      return res.status(200).json({ ok: false, message: 'Telegram not linked' });
+    }
+
+    const { strategyName, symbol, timeframe, signalType, orderStatus, price } = req.body;
+    
+    // Build message
+    const emoji = signalType === 'BUY' ? '🟢' : signalType === 'SELL' ? '🔴' : '⚪';
+    const text = [
+      `<b>${emoji} ${signalType} SIGNAL - ${strategyName}</b>`,
+      `Symbol: <b>${symbol}</b> ${timeframe ? `(${timeframe})` : ''}`,
+      `Status: <b>${orderStatus || 'N/A'}</b>`,
+      `Price: <b>${price || 'Market'}</b>`,
+      `Time: ${new Date().toISOString()}`,
+    ].join('\n');
+
+    const result = await sendTelegramMessage({ chatId, text });
+
+    if (!result.ok) {
+      return res.status(502).json({ ok: false, error: result.error || 'Failed to send signal' });
+    }
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error('[TelegramSignal] Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};

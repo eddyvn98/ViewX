@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -84,6 +84,10 @@ function toFriendlyError(raw: string, isVi: boolean) {
     if (value.includes('missing_auth_token')) return isVi ? 'Bạn cần đăng nhập để sử dụng AI.' : 'Please sign in to use AI.';
     if (value.includes('ai_assistant_module_required')) return isVi ? 'Tài khoản chưa có quyền dùng AI Assistant.' : 'Your account does not have AI Assistant access.';
     if (value.includes('ai_chat_credits_exhausted')) return isVi ? 'Tài khoản đã hết credits AI.' : 'Your AI credits are exhausted.';
+    
+    // If the error message is descriptive (contains spaces and is not just a code), show it
+    if (value.length > 5 && value.includes(' ')) return value;
+    
     return isVi ? 'Không thể lấy phản hồi AI lúc này. Vui lòng thử lại.' : 'Cannot get AI response right now. Please try again.';
 }
 
@@ -283,6 +287,8 @@ export function AIChatView() {
         };
     }));
 
+    const updateChart = useMarketStore((state) => (state as any).updateChart);
+
     const strategyData = useStrategyStore(useShallow((state) => ({
         strategies: state.strategies,
         signals: state.signals,
@@ -353,7 +359,7 @@ export function AIChatView() {
         const candleMap = marketData.candleData as Record<string, Candle[]>;
         const fallbackKey = `${marketData.activeChart.symbol}:${marketData.activeChart.interval}`;
         const candles = (chartKey ? candleMap[chartKey] : undefined) || candleMap[fallbackKey] || [];
-        return candles.slice(-80);
+        return candles.slice(-512);
     }, [chartKey, marketData.activeChart?.interval, marketData.activeChart?.symbol, marketData.candleData]);
     const indicatorSnapshot = useMemo(() => marketData.activeChart?.id ? (((marketData.chartIndicators as Record<string, Array<Record<string, unknown>>>)[marketData.activeChart.id] || []).slice(0, 8).map((it) => ({ type: it.type || 'unknown', params: it.params || {}, visible: it.visible !== false, pane: it.pane || 'main' }))) : [], [marketData.activeChart?.id, marketData.chartIndicators]);
     const latestSignal = useMemo(() => strategyData.signals.find((s) => s.symbol === marketData.activeChart?.symbol) || strategyData.signals[0] || null, [marketData.activeChart?.symbol, strategyData.signals]);
@@ -465,6 +471,26 @@ export function AIChatView() {
             if (typeof data?.remainingCredits === 'number') setRemainingCredits(data.remainingCredits);
 
             const nowTs = Date.now();
+
+            // Save to store for chart visualization
+            if (marketData.activeChart?.id && data?.result) {
+                const res = data.result;
+                const lastCandle = recentCandles[recentCandles.length - 1];
+                const anchorTs = lastCandle ? lastCandle.time * 1000 : nowTs;
+
+                updateChart(marketData.activeChart.id, {
+                    forecast: {
+                        timestamp: anchorTs,
+                        points: res.forecast || [],
+                        lower_band: res.lower_band || [],
+                        upper_band: res.upper_band || [],
+                        engine: res.engine || 'heuristic',
+                        confidence: res.confidence || 0,
+                        horizon: res.horizon || 0
+                    }
+                });
+            }
+
             setMessages((prev) => [
                 ...prev,
                 {
@@ -480,7 +506,7 @@ export function AIChatView() {
         } finally {
             setIsSending(false);
         }
-    }, [isSending, isVi, marketData.activeChart, recentCandles]);
+    }, [isSending, isVi, marketData.activeChart, recentCandles, updateChart]);
 
     const sendPrompt = useCallback(async (rawQuestion: string) => {
         const question = rawQuestion.trim();
@@ -784,4 +810,3 @@ export function AIChatView() {
         </div>
     );
 }
-

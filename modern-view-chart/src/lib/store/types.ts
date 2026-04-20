@@ -1,3 +1,13 @@
+export interface ForecastData {
+    timestamp: number;
+    points: number[];
+    lower_band: number[];
+    upper_band: number[];
+    engine: 'timesfm' | 'heuristic';
+    confidence: number;
+    horizon: number;
+}
+
 export interface Ticker {
     symbol: string;
     price: number;
@@ -118,6 +128,7 @@ export interface ChartInstance {
         };
         savedAt?: number;
     };
+    forecast?: ForecastData;
 }
 
 export interface ChartTab {

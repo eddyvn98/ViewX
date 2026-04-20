@@ -13,6 +13,7 @@ import { notifyTelegramSignal } from '../../utils/telegram-notifier';
 import type { Candle } from '@/lib/store/types';
 import { getStrategyLeg } from '../../strategy-helpers';
 import { createPositionId } from '../../utils/position-id';
+import { voiceNotifier } from '@/features/notifications/voice';
 
 interface StoreLike {
     virtualPositions: VirtualPosition[];
@@ -222,4 +223,17 @@ export function processStrategySignal(
         matrixScopeKey,
     });
     toast.info(`[${finalSignal.type}] ${strategy.name} on ${symbol}`);
+
+    // Phát giọng nói cho tín hiệu AI
+    const uiState = useMarketStore.getState();
+    voiceNotifier.setEnabled(Boolean(uiState.voiceAlertsEnabled));
+    voiceNotifier.setPreferPreGeneratedAudio(Boolean(uiState.voiceAlertsUsePreGeneratedAudio));
+    voiceNotifier.notify({
+        symbol,
+        price: finalSignal.price || 0,
+        direction: finalSignal.type === 'BUY' || finalSignal.type === 'SELL' 
+            ? (finalSignal.type === 'BUY' ? 'bullish' : 'bearish') 
+            : undefined,
+        message: `Chiến lược ${strategy.name} vừa báo tín hiệu ${finalSignal.type === 'BUY' ? 'Mua' : finalSignal.type === 'SELL' ? 'Bán' : 'Thoát lệnh'} cho ${symbol} tại giá ${finalSignal.price}.`
+    });
 }

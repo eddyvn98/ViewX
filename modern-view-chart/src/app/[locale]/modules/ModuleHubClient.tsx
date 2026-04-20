@@ -41,6 +41,15 @@ const MODULES: ModuleCard[] = [
     badge: { vi: 'Vàng Việt Nam', en: 'Vietnam gold' },
   },
   {
+    key: 'voice_alerts',
+    title: 'Voice Alerts',
+    description: {
+      vi: 'Đọc cảnh báo bằng giọng tiếng Việt theo dữ liệu realtime để không bỏ lỡ điểm kích hoạt quan trọng.',
+      en: 'Read realtime alerts in Vietnamese voice so you do not miss critical trigger points.',
+    },
+    badge: { vi: 'Giọng nói', en: 'Voice' },
+  },
+  {
     key: 'telegram_notify',
     title: 'Telegram Notify',
     description: {
@@ -74,7 +83,7 @@ const MODULES: ModuleCard[] = [
   },
 ];
 
-const SUPPORTED_MODULES: ClientModule[] = ['your_mt5', 'vn_gold', 'telegram_notify', 'telegram_control', 'discord_bot', 'ai_assistant'];
+const SUPPORTED_MODULES: ClientModule[] = ['your_mt5', 'vn_gold', 'voice_alerts', 'telegram_notify', 'telegram_control', 'discord_bot', 'ai_assistant'];
 const EXPIRING_SOON_DAYS = 3;
 
 function getExpiryDate(access: ModuleAccessSnapshot | undefined): Date | null {

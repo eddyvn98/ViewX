@@ -4,7 +4,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+  && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core python3 python-is-python3 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./

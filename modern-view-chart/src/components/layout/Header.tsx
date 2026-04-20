@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import Link from 'next/link';
-import { Bell, BarChart2, Settings, PanelRightClose, LogOut } from 'lucide-react';
+import { Bell, BarChart2, Settings, PanelRightClose, LogOut, Volume2 } from 'lucide-react';
 import { HeartHandshake } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
@@ -12,6 +12,7 @@ import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { TelegramLinkDialog } from './TelegramLinkDialog';
 import { AlertEditDialog } from '@/features/chart/components/AlertEditDialog';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { voiceNotifier } from '@/features/notifications/voice';
 
 type UserSetupSyncStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
@@ -94,8 +95,32 @@ export const Header = memo(function Header() {
     const alerts = useMarketStore((state) => state.alerts);
     const removeAlert = useMarketStore((state) => state.removeAlert);
     const updateAlert = useMarketStore((state) => state.updateAlert);
+    const voiceAlertsEnabled = useMarketStore((state) => state.voiceAlertsEnabled);
+    const setVoiceAlertsEnabled = useMarketStore((state) => state.setVoiceAlertsEnabled);
+    const voiceAlertsUsePreGeneratedAudio = useMarketStore((state) => state.voiceAlertsUsePreGeneratedAudio);
+    const setVoiceAlertsUsePreGeneratedAudio = useMarketStore((state) => state.setVoiceAlertsUsePreGeneratedAudio);
     const { sendMessage } = useWebSocket();
+    const syncUiPreferences = useMarketStore((state) => state.syncUiPreferences);
     const unreadCount = React.useMemo(() => notificationHistory.filter((item) => !item.readAt).length, [notificationHistory]);
+
+    React.useEffect(() => {
+        if (isAuthenticated) {
+            syncUiPreferences();
+        }
+    }, [isAuthenticated, syncUiPreferences]);
+
+    React.useEffect(() => {
+        voiceNotifier.setEnabled(voiceAlertsEnabled);
+        voiceNotifier.setPreferPreGeneratedAudio(voiceAlertsUsePreGeneratedAudio);
+    }, [voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio]);
+
+    const handleTestVoice = React.useCallback(() => {
+        voiceNotifier.notify({
+            symbol: 'VIVUTRADE',
+            price: 8888,
+            message: 'Đây là âm thanh thông báo thử nghiệm từ Vivutrade.'
+        });
+    }, []);
 
     React.useEffect(() => {
         if (typeof window === "undefined") return;
@@ -409,6 +434,52 @@ export const Header = memo(function Header() {
                                         <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
                                             <span className="text-xs text-foreground dark:text-white">Theme Color</span>
                                             <ThemeColorSwitcher />
+                                        </div>
+                                        <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
+                                            <span className="text-xs text-foreground dark:text-white">Voice Alerts</span>
+                                            <button
+                                                onClick={() => setVoiceAlertsEnabled(!voiceAlertsEnabled)}
+                                                className={cn(
+                                                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                                                    voiceAlertsEnabled ? "bg-primary" : "bg-muted"
+                                                )}
+                                                title="Toggle voice alerts"
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                                        voiceAlertsEnabled ? "translate-x-4" : "translate-x-1"
+                                                    )}
+                                                />
+                                            </button>
+                                        </div>
+                                        <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
+                                            <span className="text-xs text-foreground dark:text-white">Pre-generated Audio</span>
+                                            <button
+                                                onClick={() => setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio)}
+                                                className={cn(
+                                                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                                                    voiceAlertsUsePreGeneratedAudio ? "bg-primary" : "bg-muted"
+                                                )}
+                                                title="Toggle pre-generated alert audio"
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                                        voiceAlertsUsePreGeneratedAudio ? "translate-x-4" : "translate-x-1"
+                                                    )}
+                                                />
+                                            </button>
+                                        </div>
+                                        <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
+                                            <span className="text-xs text-foreground dark:text-white">Test Voice Notification</span>
+                                            <button
+                                                onClick={handleTestVoice}
+                                                className="p-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors active:scale-90"
+                                                title="Click to test voice notification"
+                                            >
+                                                <Volume2 size={16} />
+                                            </button>
                                         </div>
                                         <div className="my-1 h-px bg-border dark:bg-white/10" />
                                     <button

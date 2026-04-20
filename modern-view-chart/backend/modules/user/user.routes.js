@@ -8,6 +8,8 @@ import { getVangTodayCandles, getVangTodayLatestQuotes, getVangTodaySymbols } fr
 
 const router = new Router();
 
+router.route("/ui-preferences").get(checkLogin, User.getUiPreferences).post(checkLogin, User.updateUiPreferences);
+
 //Get all users
 router.route("/").get(checkLogin, User.getListUsers);
 
@@ -31,6 +33,7 @@ router.route("/telegram/link/start").post(checkLogin, User.startTelegramLink);
 router.route("/telegram/preferences").put(checkLogin, User.updateTelegramPreferences);
 router.route("/telegram/test").post(checkLogin, User.sendTelegramTest);
 router.route("/telegram/unlink").post(checkLogin, User.unlinkTelegram);
+router.route("/telegram/signal").post(checkLogin, User.sendTelegramSignal);
 router.route("/admin/telegram/nlu/unknowns").get(checkAdmin, User.listTelegramNluUnknowns);
 router.route("/admin/telegram/nlu/events").get(checkAdmin, User.listTelegramNluEvents);
 router.route("/admin/telegram/nlu/label").post(checkAdmin, User.labelTelegramNluUnknown);

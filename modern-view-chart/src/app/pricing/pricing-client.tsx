@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React from 'react';
-import { BellRing, Bot, BriefcaseBusiness, Check, Headset, Plus, Shield, ShoppingCart, Sparkles, Zap } from 'lucide-react';
+import { BellRing, Bot, BriefcaseBusiness, Check, Headset, Plus, Shield, ShoppingCart, Sparkles, Volume2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getClientEntitlements, setClientModulesLocal, type ClientModule } from '@/lib/auth/entitlements';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
@@ -82,6 +82,14 @@ const MODULES: ModuleCard[] = [
     priceLabel: '10k/tháng',
     amount: 10000,
     icon: <Sparkles className="h-4 w-4" />,
+  },
+  {
+    key: 'voice_alerts',
+    title: 'Voice Alerts',
+    description: 'Đọc cảnh báo tiếng Việt theo dữ liệu realtime ngay trên web, có fallback ổn định.',
+    priceLabel: '10k/tháng',
+    amount: 10000,
+    icon: <Volume2 className="h-4 w-4" />,
   },
   {
     key: 'telegram_notify',

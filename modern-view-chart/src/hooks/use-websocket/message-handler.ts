@@ -1,6 +1,7 @@
 import { useMarketStore } from '@/lib/store';
 import { debugLog } from '@/lib/debug';
 import { soundService } from '@/features/strategy/logic/SoundService';
+import { voiceNotifier } from '@/features/notifications/voice';
 import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_BUFFER_MS } from './constants';
 import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
@@ -87,15 +88,6 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 close: c.close ?? c.c ?? c.close_price ?? c.price_close,
                 volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
             }));
-            const sample = normalizedCandles[0];
-            debugLog('[WS][mt5_candles]', {
-                symbol: targetSymbol,
-                interval: targetInterval,
-                count: normalizedCandles.length,
-                source: String(msg.source || 'MT5'),
-                sampleTime: sample?.time,
-                sampleOpen: sample?.open,
-            });
             const source = String(msg.source || 'MT5');
             if (!targetInterval && targetSymbol) {
                 const state = useMarketStore.getState();
@@ -112,19 +104,6 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         }
                     }
                 }
-                if (!targetInterval) {
-                    for (const tab of Object.values(state.tabs)) {
-                        for (const chart of Object.values(tab.charts || {})) {
-                            const chartSymbol = normalizeSymbol(String(chart.symbol || ''));
-                            const chartSource = String(chart.source || '').toUpperCase();
-                            if (chartSymbol === wantedSymbol && chartSource === wantedSource) {
-                                targetInterval = String(chart.interval || '').trim();
-                                break;
-                            }
-                        }
-                        if (targetInterval) break;
-                    }
-                }
             }
 
             if (targetSymbol && targetInterval) {
@@ -137,11 +116,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const symbol = String(c.symbol || '');
             const interval = String(c.interval || '');
             const source = String(c.source || '').toUpperCase() || (
-                symbol.toUpperCase().includes('USDT')
-                    ? 'BINANCE'
-                    : symbol.toUpperCase() === 'SJCVN' || symbol.toUpperCase() === 'DOJIVN'
-                        ? 'VN_GOLD'
-                        : 'MT5'
+                symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5'
             );
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
@@ -174,19 +149,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         return;
                     }
                     if (data?.account) {
-                        deps.setAccount('MT5', {
-                            balance: Number((data.account as Record<string, unknown>).balance) || 0,
-                            equity: Number((data.account as Record<string, unknown>).equity) || 0,
-                            margin: Number((data.account as Record<string, unknown>).margin) || 0,
-                            free_margin: Number((data.account as Record<string, unknown>).free_margin) || 0,
-                            margin_level: Number((data.account as Record<string, unknown>).margin_level) || 0,
-                            profit: Number((data.account as Record<string, unknown>).profit) || 0,
-                            login: (data.account as Record<string, unknown>).login ? String((data.account as Record<string, unknown>).login) : undefined,
-                            server: (data.account as Record<string, unknown>).server ? String((data.account as Record<string, unknown>).server) : undefined,
-                            name: (data.account as Record<string, unknown>).name ? String((data.account as Record<string, unknown>).name) : undefined,
-                            company: (data.account as Record<string, unknown>).company ? String((data.account as Record<string, unknown>).company) : undefined,
-                            currency: (data.account as Record<string, unknown>).currency ? String((data.account as Record<string, unknown>).currency) : undefined,
-                        });
+                        deps.setAccount('MT5', data.account as Record<string, unknown>);
                     }
                     if (data.positions && Array.isArray(data.positions)) {
                         const mappedPositions = data.positions.map((p: Record<string, unknown>) => ({
@@ -231,48 +194,35 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const result = msg.data;
             const setOptimizationResult = useMarketStore.getState().setOptimizationResult;
             if (setOptimizationResult) {
-                setOptimizationResult(result as Parameters<typeof setOptimizationResult>[0]);
+                setOptimizationResult(result as any);
             }
         }
 
         if (msgType === 'binance_positions_update') {
-            if (msg.account) {
-                deps.setAccount('BINANCE_DEMO', msg.account as Record<string, unknown>);
-            }
+            if (msg.account) deps.setAccount('BINANCE_DEMO', msg.account as any);
             if (msg.positions && Array.isArray(msg.positions)) {
-                const mapped = msg.positions.map((p: Record<string, unknown>) => ({ ...p, source: 'BINANCE_DEMO' }));
+                const mapped = msg.positions.map((p: any) => ({ ...p, source: 'BINANCE_DEMO' }));
                 deps.setPositions(mapped);
-            }
-            if (msg.history && Array.isArray(msg.history)) {
-                const mapped = msg.history.map((h: Record<string, unknown>) => ({ ...h, source: 'BINANCE_DEMO' }));
-                deps.appendHistory(mapped, true);
             }
         }
 
         if (msgType === 'binance_order_result') {
-            if (msg.status === 'success') {
-                useMarketStore.getState().addNotification(
-                    `Binance Order Success: ${msg.message || 'Trade executed'}`,
-                    'success',
-                );
-            } else {
-                useMarketStore.getState().addNotification(`Binance Order Failed: ${msg.message}`, 'error');
-            }
+            const status = msg.status === 'success' ? 'success' : 'error';
+            useMarketStore.getState().addNotification(`Binance Order ${msg.status}: ${msg.message || ''}`, status);
         }
 
         if (msgType === 'mt5_history_deals') {
             const dealData = Array.isArray(msg.data) ? msg.data : [];
-            const isChunk = msg.is_chunk !== undefined ? msg.is_chunk : false;
-            const isReset = isChunk === false;
+            const isReset = (msg.is_chunk === false);
             deps.appendHistory(dealData, isReset);
         }
 
         if (msgType === 'mt5_symbol_info') {
-            deps.setSymbolInfo(msg.data as Record<string, unknown>);
+            deps.setSymbolInfo(msg.data as any);
         }
 
         if (msgType === 'mt5_available_symbols') {
-            const symbols = Array.isArray(msg.symbols) ? msg.symbols.map((symbol) => String(symbol)) : [];
+            const symbols = Array.isArray(msg.symbols) ? msg.symbols.map((s) => String(s)) : [];
             deps.setAvailableSymbols(symbols);
         }
 
@@ -280,33 +230,59 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const alert = msg.alert as Record<string, unknown>;
             const message = String(msg.message || '');
             const direction = String(msg.direction || '');
-            const normalizedDirection =
-                direction === 'bullish' || direction === 'bearish'
-                    ? direction
-                    : undefined;
+            console.log('[WS] alert_triggered received:', { alert, message, direction });
+            
+            const normalizedDirection = (direction === 'bullish' || direction === 'bearish') ? direction : undefined;
+            
             useMarketStore.getState().updateAlert(String(alert.id || ''), { active: false, direction: normalizedDirection });
-            useMarketStore.getState().addNotification(
-                message,
-                direction === 'bullish' ? 'success' : 'warning',
-                String(alert.id || ''),
-            );
+            useMarketStore.getState().addNotification(message, direction === 'bullish' ? 'success' : 'warning', String(alert.id || ''));
+            
             soundService.playAlert();
+            
+            const uiState = useMarketStore.getState();
+            if (uiState.voiceAlertsEnabled) {
+                voiceNotifier.setEnabled(true);
+                voiceNotifier.setPreferPreGeneratedAudio(Boolean(uiState.voiceAlertsUsePreGeneratedAudio));
+                voiceNotifier.notify({
+                    symbol: String(alert.symbol || ''),
+                    price: Number(alert.price || 0),
+                    direction: normalizedDirection,
+                    message,
+                });
+            }
         }
 
         if (msgType === 'strategy_alert') {
+            console.log('[WS] strategy_alert received:', msg);
             if (!STRATEGY_ENGINE_ENABLED) {
-                // Strategy engine is intentionally disabled in public endpoint release.
+                console.warn('[WS] strategy_alert ignored: STRATEGY_ENGINE_ENABLED is false');
             } else {
                 const signal = msg.signal as Record<string, unknown>;
                 const direction = String(signal.signal || '') === 'BUY' ? 'bullish' : 'bearish';
+                
+                console.log('[WS] Processing strategy signal:', { symbol: signal.symbol, action: signal.signal });
+                
                 useMarketStore.getState().addNotification(
-                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String((signal.params as Record<string, unknown>)?.reason || '')}`,
+                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String((signal.params as any)?.reason || '')}`,
                     direction === 'bullish' ? 'success' : 'warning',
                 );
+                
                 soundService.playAlert();
+
+                const uiState = useMarketStore.getState();
+                if (uiState.voiceAlertsEnabled) {
+                    voiceNotifier.setEnabled(true);
+                    voiceNotifier.setPreferPreGeneratedAudio(Boolean(uiState.voiceAlertsUsePreGeneratedAudio));
+                    voiceNotifier.notify({
+                        symbol: String(signal.symbol || ''),
+                        price: Number(signal.price || 0),
+                        direction: direction,
+                        message: `Tín hiệu ${String(signal.signal || '') === 'BUY' ? 'Mua' : 'Bán'} ${String(signal.symbol || '')} từ chiến lược.`,
+                    });
+                }
             }
         }
-    } catch {
-        // Ignore malformed WS frames.
+    } catch (err) {
+        console.error('[WS] Error handling message:', err);
     }
 }

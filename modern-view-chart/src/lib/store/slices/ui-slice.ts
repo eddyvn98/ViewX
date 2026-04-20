@@ -8,6 +8,8 @@ export type SignalHistoryRange = 'day' | 'week' | 'month';
 export type MarketSourceTab = 'ALL' | 'BINANCE' | 'MT5' | 'VN_GOLD';
 
 const MT5_TERMS_STORAGE_PREFIX = 'mt5-consent:v1';
+const VOICE_ALERTS_STORAGE_KEY = 'voice-alerts-enabled:v1';
+const VOICE_ALERTS_PREGEN_STORAGE_KEY = 'voice-alerts-pregen:v1';
 
 type Mt5TermsScope = {
     userId?: string | null;
@@ -38,6 +40,20 @@ export function buildMt5TermsStorageKey(scope?: Mt5TermsScope) {
 function readMt5TermsAccepted(scope?: Mt5TermsScope) {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem(buildMt5TermsStorageKey(scope)) === 'true';
+}
+
+function readVoiceAlertsEnabled() {
+    if (typeof window === 'undefined') return true;
+    const raw = localStorage.getItem(VOICE_ALERTS_STORAGE_KEY);
+    if (raw === null) return true;
+    return raw === 'true';
+}
+
+function readVoiceAlertsUsePreGeneratedAudio() {
+    if (typeof window === 'undefined') return false;
+    const raw = localStorage.getItem(VOICE_ALERTS_PREGEN_STORAGE_KEY);
+    if (raw === null) return false;
+    return raw === 'true';
 }
 
 export interface StrategyBuilderDraft {
@@ -87,6 +103,8 @@ export interface UISlice {
     marketListSearchQuery: string;
     marketListSourceTab: MarketSourceTab;
     hasAcceptedMt5Terms: boolean;
+    voiceAlertsEnabled: boolean;
+    voiceAlertsUsePreGeneratedAudio: boolean;
 
     setLeftSidebarOpen: (isOpen: boolean) => void;
     toggleLeftSidebar: () => void;
@@ -117,6 +135,9 @@ export interface UISlice {
     setMarketListSourceTab: (tab: MarketSourceTab) => void;
     setHasAcceptedMt5Terms: (accepted: boolean, storageKey?: string) => void;
     syncHasAcceptedMt5Terms: (storageKey?: string) => void;
+    setVoiceAlertsEnabled: (enabled: boolean) => void;
+    setVoiceAlertsUsePreGeneratedAudio: (enabled: boolean) => void;
+    syncUiPreferences: () => Promise<void>;
 }
 
 export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => ({
@@ -143,6 +164,8 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     marketListSearchQuery: '',
     marketListSourceTab: 'ALL',
     hasAcceptedMt5Terms: readMt5TermsAccepted(),
+    voiceAlertsEnabled: readVoiceAlertsEnabled(),
+    voiceAlertsUsePreGeneratedAudio: readVoiceAlertsUsePreGeneratedAudio(),
 
     setLeftSidebarOpen: (isOpen) => set({ isLeftSidebarOpen: isOpen }),
     toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
@@ -187,13 +210,22 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setRightSidebarTabOrder: (order) => set({ rightSidebarTabOrder: order }),
     setThemeColor: (color) => {
         set({ themeColor: color });
-        // Handle persistent storage and DOM update
         if (typeof window !== 'undefined') {
             localStorage.setItem('theme-color', color);
-            // Remove old theme classes
             document.documentElement.classList.remove('theme-blue', 'theme-green', 'theme-amber', 'theme-red', 'theme-slate');
-            // Add new theme class
             document.documentElement.classList.add(`theme-${color}`);
+
+            const token = localStorage.getItem('auth_access_token');
+            if (token) {
+                fetch('/api/user/ui-preferences', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ themeColor: color })
+                }).catch(() => {});
+            }
         }
     },
     setChartLegendVisible: (visible) => set({ isChartLegendVisible: visible }),
@@ -214,5 +246,82 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
             ? localStorage.getItem(storageKey || buildMt5TermsStorageKey()) === 'true'
             : false;
         set((state) => state.hasAcceptedMt5Terms === accepted ? state : { hasAcceptedMt5Terms: accepted });
+    },
+    setVoiceAlertsEnabled: (enabled) => {
+        set({ voiceAlertsEnabled: enabled });
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(VOICE_ALERTS_STORAGE_KEY, enabled ? 'true' : 'false');
+
+            const token = localStorage.getItem('auth_access_token');
+            if (token) {
+                fetch('/api/user/ui-preferences', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ voiceAlertsEnabled: enabled })
+                }).catch(() => {});
+            }
+        }
+    },
+    setVoiceAlertsUsePreGeneratedAudio: (enabled) => {
+        set({ voiceAlertsUsePreGeneratedAudio: enabled });
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(VOICE_ALERTS_PREGEN_STORAGE_KEY, enabled ? 'true' : 'false');
+
+            const token = localStorage.getItem('auth_access_token');
+            if (token) {
+                fetch('/api/user/ui-preferences', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ voiceAlertsUsePreGeneratedAudio: enabled })
+                }).catch(() => {});
+            }
+        }
+    },
+    syncUiPreferences: async () => {
+        try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('auth_access_token') : null;
+            if (!token) return;
+
+            const response = await fetch('/api/user/ui-preferences', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.uiPreferences) {
+                    const { voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio, themeColor } = data.uiPreferences;
+
+                    set((state) => ({
+                        voiceAlertsEnabled: typeof voiceAlertsEnabled === 'boolean' ? voiceAlertsEnabled : state.voiceAlertsEnabled,
+                        voiceAlertsUsePreGeneratedAudio: typeof voiceAlertsUsePreGeneratedAudio === 'boolean' ? voiceAlertsUsePreGeneratedAudio : state.voiceAlertsUsePreGeneratedAudio,
+                        themeColor: (themeColor && ['blue', 'green', 'amber', 'red', 'slate'].includes(themeColor)) ? themeColor : state.themeColor
+                    }));
+
+                    // Update localStorage and DOM to match server state
+                    if (typeof window !== 'undefined') {
+                        if (typeof voiceAlertsEnabled === 'boolean') {
+                            localStorage.setItem(VOICE_ALERTS_STORAGE_KEY, String(voiceAlertsEnabled));
+                        }
+                        if (typeof voiceAlertsUsePreGeneratedAudio === 'boolean') {
+                            localStorage.setItem(VOICE_ALERTS_PREGEN_STORAGE_KEY, String(voiceAlertsUsePreGeneratedAudio));
+                        }
+                        if (themeColor) {
+                            localStorage.setItem('theme-color', themeColor);
+                            document.documentElement.classList.remove('theme-blue', 'theme-green', 'theme-amber', 'theme-red', 'theme-slate');
+                            document.documentElement.classList.add(`theme-${themeColor}`);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('syncUiPreferences.error', error);
+        }
     },
 });

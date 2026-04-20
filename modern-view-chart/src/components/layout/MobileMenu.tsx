@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
+import { useMarketStore } from '@/lib/store';
 
 interface MobileMenuProps {
     compact?: boolean;
@@ -12,6 +13,10 @@ interface MobileMenuProps {
 
 export function MobileMenu({ compact = false }: MobileMenuProps) {
     const t = useTranslations('MobileMenu');
+    const voiceAlertsEnabled = useMarketStore((state) => state.voiceAlertsEnabled);
+    const setVoiceAlertsEnabled = useMarketStore((state) => state.setVoiceAlertsEnabled);
+    const voiceAlertsUsePreGeneratedAudio = useMarketStore((state) => state.voiceAlertsUsePreGeneratedAudio);
+    const setVoiceAlertsUsePreGeneratedAudio = useMarketStore((state) => state.setVoiceAlertsUsePreGeneratedAudio);
     const [user, setUser] = React.useState({
         name: t('guest'),
         email: 'guest@vivutrade.io.vn',
@@ -106,6 +111,40 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
                 </MenuRow>
                 <MenuRow compact={compact} icon={Palette} label="Theme Color">
                     <ThemeColorSwitcher />
+                </MenuRow>
+                <MenuRow compact={compact} icon={Bell} label="Voice Alerts">
+                    <button
+                        onClick={() => setVoiceAlertsEnabled(!voiceAlertsEnabled)}
+                        className={cn(
+                            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                            voiceAlertsEnabled ? "bg-primary" : "bg-muted"
+                        )}
+                        title="Toggle voice alerts"
+                    >
+                        <span
+                            className={cn(
+                                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                voiceAlertsEnabled ? "translate-x-4" : "translate-x-1"
+                            )}
+                        />
+                    </button>
+                </MenuRow>
+                <MenuRow compact={compact} icon={Monitor} label="Pre-generated Audio">
+                    <button
+                        onClick={() => setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio)}
+                        className={cn(
+                            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                            voiceAlertsUsePreGeneratedAudio ? "bg-primary" : "bg-muted"
+                        )}
+                        title="Toggle pre-generated alert audio"
+                    >
+                        <span
+                            className={cn(
+                                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                voiceAlertsUsePreGeneratedAudio ? "translate-x-4" : "translate-x-1"
+                            )}
+                        />
+                    </button>
                 </MenuRow>
                 <MenuItem compact={compact} icon={Monitor} label={t('displaySettings')} />
 
