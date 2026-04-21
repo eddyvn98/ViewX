@@ -17,7 +17,7 @@ const DEFAULT_CONFIG: VoiceNotifierConfig = {
     lang: 'vi-VN',
     enabled: true,
     cooldownMs: 3000,
-    preferPreGeneratedAudio: false,
+    preferPreGeneratedAudio: true,
     preGeneratedAudioBasePath: '/audio/alerts',
 };
 
@@ -34,6 +34,8 @@ export class VoiceNotifier {
     private speaking = false;
     private audioUrlCache = new Map<string, string | null>();
     private staticAudioMap: Record<string, string> = {};
+    private unlocked = false;
+    private audioContext: AudioContext | null = null;
 
     constructor(config?: Partial<VoiceNotifierConfig>) {
         this.cfg = { ...DEFAULT_CONFIG, ...(config || {}) };
@@ -58,6 +60,92 @@ export class VoiceNotifier {
             this.staticAudioMap[text] = url;
             this.audioUrlCache.set(text, url);
         });
+    }
+
+    private async ensureVoicesLoaded(): Promise<void> {
+        if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+        if (window.speechSynthesis.getVoices().length > 0) return;
+
+        return new Promise((resolve) => {
+            const handler = () => {
+                window.speechSynthesis.removeEventListener('voiceschanged', handler);
+                resolve();
+            };
+            window.speechSynthesis.addEventListener('voiceschanged', handler);
+            // Timeout as fallback
+            setTimeout(resolve, 1000);
+        });
+    }
+
+    /**
+     * Mobile browsers block audio/speech until a user interaction occurs.
+     * Call this inside a click handler to "unlock" audio playback for the session.
+     */
+    /**
+     * Synchronous part of the unlock. 
+     * MUST be called directly in the event handler (before any await).
+     */
+    syncUnlock(): void {
+        if (typeof window === 'undefined') return;
+        console.log('[VoiceNotifier] Sync unlocking audio system...');
+        
+        try {
+            // 1. Kickstart Speech Synthesis synchronously
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                // A single space is often enough to unlock without being heard
+                const utterance = new SpeechSynthesisUtterance(' ');
+                utterance.volume = 0.01; // Tiny volume
+                window.speechSynthesis.speak(utterance);
+                
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+            }
+
+            // 2. Initialize AudioContext if not exists
+            const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+            if (AudioContextClass && !this.audioContext) {
+                this.audioContext = new AudioContextClass();
+                // We can't await resume here, but creating it helps
+            }
+        } catch (err) {
+            console.warn('[VoiceNotifier] Sync unlock failed:', err);
+        }
+    }
+
+    async unlock(): Promise<void> {
+        if (this.unlocked) return;
+        
+        // Ensure sync part is called (even if already called by UI)
+        this.syncUnlock();
+
+        try {
+            // Async part: resume context
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+
+            this.unlocked = true;
+            this.playUnlockBeep();
+            console.log('[VoiceNotifier] Audio system fully unlocked');
+        } catch (err) {
+            console.error('[VoiceNotifier] Async unlock failed:', err);
+        }
+    }
+
+    private playUnlockBeep() {
+        if (!this.audioContext) return;
+        try {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+            gain.gain.setValueAtTime(0.01, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + 0.1);
+            osc.start();
+            osc.stop(this.audioContext.currentTime + 0.1);
+        } catch (e) {}
     }
 
     notify(payload: AlertVoicePayload): void {
@@ -158,9 +246,9 @@ export class VoiceNotifier {
         if (this.audioUrlCache.has(text)) {
             return this.audioUrlCache.get(text) || null;
         }
-        const hash = this.hashText(text);
-        const base = this.cfg.preGeneratedAudioBasePath.replace(/\/+$/, '');
-        const url = `${base}/${hash}.mp3`;
+        
+        // Use our new high-quality AI TTS API
+        const url = `/api/tts?text=${encodeURIComponent(text)}&lang=${this.cfg.lang}`;
         this.audioUrlCache.set(text, url);
         return url;
     }
@@ -198,19 +286,37 @@ export class VoiceNotifier {
         });
     }
 
-    private speakWithWebSpeech(text: string): Promise<void> {
+    private async speakWithWebSpeech(text: string): Promise<void> {
+        await this.ensureVoicesLoaded();
+
         return new Promise((resolve) => {
             try {
+                if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                    return resolve();
+                }
+
                 if (window.speechSynthesis.speaking) {
                     console.log('[VoiceNotifier] speechSynthesis is currently speaking, canceling existing speech...');
                     window.speechSynthesis.cancel();
                 }
 
                 const utterance = new SpeechSynthesisUtterance(this.normalizeSpeechText(text));
-                utterance.lang = this.cfg.lang;
-                utterance.rate = 1;
-                utterance.pitch = 1;
-                utterance.volume = 1;
+                
+                // Try to find a Vietnamese voice specifically
+                const voices = window.speechSynthesis.getVoices();
+                const viVoice = voices.find(v => v.lang.toLowerCase().replace('-', '_').startsWith('vi_') || v.lang.toLowerCase().startsWith('vi-'));
+                
+                if (viVoice) {
+                    utterance.voice = viVoice;
+                    console.log('[VoiceNotifier] Found Vietnamese voice:', viVoice.name, viVoice.lang);
+                } else {
+                    console.warn('[VoiceNotifier] No Vietnamese voice found, using default. Available:', voices.map(v => v.lang));
+                }
+
+                utterance.lang = viVoice ? viVoice.lang : 'vi-VN';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
                 
                 utterance.onstart = () => console.log('[VoiceNotifier] Web Speech started speaking');
                 utterance.onend = () => {
@@ -222,7 +328,14 @@ export class VoiceNotifier {
                     resolve();
                 };
                 
+                // Final kick for Android/Chrome
+                window.speechSynthesis.resume();
                 window.speechSynthesis.speak(utterance);
+
+                // iOS/Android Bug workaround: if speech doesn't start, resume synthesis again
+                if (window.speechSynthesis.paused || !window.speechSynthesis.speaking) {
+                    window.speechSynthesis.resume();
+                }
             } catch (err) {
                 console.error('[VoiceNotifier] speakWithWebSpeech catch error:', err);
                 resolve();

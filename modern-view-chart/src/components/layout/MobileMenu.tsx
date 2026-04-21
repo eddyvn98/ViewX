@@ -1,11 +1,12 @@
 import React from 'react';
-import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight, House, Palette, MoonStar } from 'lucide-react';
+import { Settings, User, LogOut, HelpCircle, FileText, Bell, Monitor, ChevronRight, House, Palette, MoonStar, Volume2 } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
 import { useMarketStore } from '@/lib/store';
+import { voiceNotifier } from '@/features/notifications/voice';
 
 interface MobileMenuProps {
     compact?: boolean;
@@ -23,6 +24,19 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
         balance: 24500.0,
     });
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+    const handleTestVoice = React.useCallback(async () => {
+        console.log('[MobileMenu] handleTestVoice clicked');
+        // Synchronous unlock to preserve user gesture
+        voiceNotifier.syncUnlock();
+        
+        await voiceNotifier.unlock();
+        voiceNotifier.notify({
+            symbol: 'VIVUTRADE',
+            price: 8888,
+            message: 'Đây là âm thanh thông báo thử nghiệm từ Vivutrade.'
+        });
+    }, []);
 
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -114,7 +128,10 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
                 </MenuRow>
                 <MenuRow compact={compact} icon={Bell} label="Voice Alerts">
                     <button
-                        onClick={() => setVoiceAlertsEnabled(!voiceAlertsEnabled)}
+                        onClick={() => {
+                            setVoiceAlertsEnabled(!voiceAlertsEnabled);
+                            void voiceNotifier.unlock();
+                        }}
                         className={cn(
                             "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                             voiceAlertsEnabled ? "bg-primary" : "bg-muted"
@@ -131,7 +148,10 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
                 </MenuRow>
                 <MenuRow compact={compact} icon={Monitor} label="Pre-generated Audio">
                     <button
-                        onClick={() => setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio)}
+                        onClick={() => {
+                            setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio);
+                            void voiceNotifier.unlock();
+                        }}
                         className={cn(
                             "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                             voiceAlertsUsePreGeneratedAudio ? "bg-primary" : "bg-muted"
@@ -144,6 +164,15 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
                                 voiceAlertsUsePreGeneratedAudio ? "translate-x-4" : "translate-x-1"
                             )}
                         />
+                    </button>
+                </MenuRow>
+                <MenuRow compact={compact} icon={Volume2} label="Test Voice Notification">
+                    <button
+                        onClick={handleTestVoice}
+                        className="p-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors active:scale-90 border border-primary/20"
+                        title="Click to test voice notification"
+                    >
+                        <Volume2 size={16} />
                     </button>
                 </MenuRow>
                 <MenuItem compact={compact} icon={Monitor} label={t('displaySettings')} />

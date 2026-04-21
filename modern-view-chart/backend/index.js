@@ -55,7 +55,7 @@ if (runtimeAlertMonitor?.config) {
     logInfo("ops.alert.monitor_started", runtimeAlertMonitor.config);
 }
 
-server.listen(PORT, () => {
+server.listen(PORT, "::", () => {
     logInfo("server.started", { port: PORT });
 });
 

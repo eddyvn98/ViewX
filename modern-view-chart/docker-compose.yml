@@ -48,7 +48,7 @@ services:
     environment:
       PORT: ${PORT:-8091}
       ACCESS_TOKEN: ${ACCESS_TOKEN}
-      URL_MONGOOSE: ${URL_MONGOOSE:-mongodb://viewx-mongo:27017/viewx?directConnection=true}
+      URL_MONGOOSE: ${URL_MONGOOSE:-mongodb://host.docker.internal:27017/viewx?directConnection=true}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       MAX_WS_CLIENTS: ${MAX_WS_CLIENTS:-150}
       WS_MSG_RATE_PER_10S: ${WS_MSG_RATE_PER_10S:-60}
@@ -123,7 +123,7 @@ services:
     container_name: viewx-mongo-staging
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MONGO_HOST_PORT:-27027}:27017"
+      - "127.0.0.1:${MONGO_HOST_PORT:-27017}:27017"
     volumes:
       - viewx_mongo_data:/data/db
     cpus: 1

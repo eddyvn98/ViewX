@@ -4,9 +4,9 @@ ingress:
   - hostname: posweb.vivutrade.io.vn
     service: http://127.0.0.1:13002
   - hostname: vivutrade.io.vn
-    service: http://127.0.0.1:13010
+    service: http://127.0.0.1:13000
   - hostname: api.vivutrade.io.vn
-    service: http://127.0.0.1:18092
+    service: http://127.0.0.1:18091
   - hostname: pixelpro.vivutrade.io.vn
     service: http://127.0.0.1:18081
   - service: http_status:404

@@ -50,9 +50,9 @@ function readVoiceAlertsEnabled() {
 }
 
 function readVoiceAlertsUsePreGeneratedAudio() {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') return true;
     const raw = localStorage.getItem(VOICE_ALERTS_PREGEN_STORAGE_KEY);
-    if (raw === null) return false;
+    if (raw === null) return true;
     return raw === 'true';
 }
 

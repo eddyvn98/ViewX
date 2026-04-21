@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const host = process.env.HOSTNAME || "0.0.0.0";
+const host = process.env.HOSTNAME || "::";
 const publicPort = Number.parseInt(process.env.PORT || "3000", 10);
 const upstreamHost = "127.0.0.1";
 const upstreamPort = Number.parseInt(process.env.INTERNAL_NEXT_PORT || "3100", 10);

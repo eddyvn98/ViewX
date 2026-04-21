@@ -66,9 +66,9 @@ function getMembershipLabel(tier: MembershipTier, locale: string): string {
         return 'FREE';
     }
 
-    if (tier === 'pro') return 'N\u00e2ng cao';
-    if (tier === 'ai') return 'Cao c\u1ea5p';
-    return 'Mi\u1ec5n ph\u00ed';
+    if (tier === 'pro') return 'Nâng cao';
+    if (tier === 'ai') return 'Cao cấp';
+    return 'Miễn phí';
 }
 
 export const Header = memo(function Header() {
@@ -114,7 +114,11 @@ export const Header = memo(function Header() {
         voiceNotifier.setPreferPreGeneratedAudio(voiceAlertsUsePreGeneratedAudio);
     }, [voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio]);
 
-    const handleTestVoice = React.useCallback(() => {
+    const handleTestVoice = React.useCallback(async () => {
+        // Synchronous unlock to preserve user gesture
+        voiceNotifier.syncUnlock();
+        
+        await voiceNotifier.unlock();
         voiceNotifier.notify({
             symbol: 'VIVUTRADE',
             price: 8888,
@@ -438,7 +442,10 @@ export const Header = memo(function Header() {
                                         <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
                                             <span className="text-xs text-foreground dark:text-white">Voice Alerts</span>
                                             <button
-                                                onClick={() => setVoiceAlertsEnabled(!voiceAlertsEnabled)}
+                                                onClick={() => {
+                                                    setVoiceAlertsEnabled(!voiceAlertsEnabled);
+                                                    void voiceNotifier.unlock();
+                                                }}
                                                 className={cn(
                                                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                                                     voiceAlertsEnabled ? "bg-primary" : "bg-muted"
@@ -456,7 +463,10 @@ export const Header = memo(function Header() {
                                         <div className="px-2 py-1.5 flex items-center justify-between rounded hover:bg-secondary/60 dark:hover:bg-white/10">
                                             <span className="text-xs text-foreground dark:text-white">Pre-generated Audio</span>
                                             <button
-                                                onClick={() => setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio)}
+                                                onClick={() => {
+                                                    setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio);
+                                                    void voiceNotifier.unlock();
+                                                }}
                                                 className={cn(
                                                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                                                     voiceAlertsUsePreGeneratedAudio ? "bg-primary" : "bg-muted"

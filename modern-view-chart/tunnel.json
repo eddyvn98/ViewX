@@ -1,0 +1,10 @@
+{
+  "apps": [
+    {
+      "name": "viewx-cloudflared-host",
+      "script": "d:/viewx/ViewX/modern-view-chart/cloudflared.exe",
+      "args": "tunnel run viewx-prod",
+      "interpreter": "none"
+    }
+  ]
+}

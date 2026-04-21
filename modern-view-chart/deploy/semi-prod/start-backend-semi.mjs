@@ -11,7 +11,7 @@ const child = spawn(
       ...process.env,
       NODE_ENV: "production",
       PORT: "18092",
-      URL_MONGOOSE: "mongodb://127.0.0.1:27027/viewx?directConnection=true",
+      URL_MONGOOSE: "mongodb://127.0.0.1:27017/viewx?directConnection=true",
       ALLOWED_ORIGINS: "https://vivutrade.io.vn,https://api.vivutrade.io.vn,http://127.0.0.1:13010,http://localhost:13010",
       TIMESFM_ENABLED: "1",
       TIMESFM_REPO: "google/timesfm-1.0-200m-pytorch",
