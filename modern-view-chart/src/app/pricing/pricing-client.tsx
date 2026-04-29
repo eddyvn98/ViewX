@@ -389,7 +389,7 @@ export default function PricingClient() {
       setCountdownSeconds(Number(data.order?.remainingSeconds || 0));
       setShowPaidGuide(false);
       const moduleCount = Array.isArray(data.order?.modules) && data.order.modules.length > 0 ? data.order.modules.length : orderModules.length;
-      setNotice(`Đã tạo đơn ${data.order.orderCode} cho ${moduleCount} module.`);
+      setNotice(`Ãƒâ€žÃ‚ÂÃƒÆ’Ã‚Â£ tÃƒÂ¡Ã‚ÂºÃ‚Â¡o Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ${data.order.orderCode} cho ${moduleCount} module.`);
       setRecentOrders((prev) => [data.order as RecentOrder, ...prev.filter((item) => item._id !== data.order.id)].slice(0, 6));
       window.setTimeout(() => checkoutSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     } catch (error) {
@@ -424,7 +424,7 @@ export default function PricingClient() {
   }, [checkoutOrder, refreshOrders]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden overflow-y-auto bg-[#0f1419] text-[#dee3ea]">
+    <div className="dark relative min-h-screen overflow-x-hidden overflow-y-auto bg-[#0f1419] text-[#dee3ea]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[320px] bg-[radial-gradient(ellipse_at_center,rgba(78,222,163,0.12),transparent_60%)]" />
 
       <main className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pb-56 pt-14 md:px-6 md:pb-40 md:pt-20">
@@ -584,38 +584,7 @@ export default function PricingClient() {
         </section>
 
         {checkoutOrder ? (
-          <section ref={checkoutSectionRef} className="mb-10 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
-            <div className="rounded-xl border border-white/10 bg-[#1b2025]/85 p-5">
-              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-[#86948a]">QR thanh toán</h3>
-              {checkoutOrder.qrUrl ? (
-                <div className="flex flex-col items-center">
-                  <img src={checkoutOrder.qrUrl} alt="QR thanh toán" className="mt-4 h-56 w-56 rounded-lg border border-white/10 bg-white p-2" />
-                  <div className="mt-4 w-full space-y-2 rounded-lg border border-white/5 bg-white/5 p-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[#86948a]">Ngân hàng:</span>
-                      <span className="font-bold text-[#dee3ea]">Techcombank (TCB)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#86948a]">Số tài khoản:</span>
-                      <span className="font-mono font-bold text-[#4edea3]">9779 6909 49</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#86948a]">Chủ tài khoản:</span>
-                      <span className="font-bold text-[#dee3ea]">HA THANH TU</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-lg border border-dashed border-white/10 px-4 py-10 text-xs text-[#86948a]">
-                  Chưa có QR vì thiếu PAYMENT_BANK_CODE/PAYMENT_BANK_ACCOUNT_NO.
-                </div>
-              )}
-              <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs leading-5 text-emerald-100">
-                Sau khi chuyển khoản, bấm &quot;Kiểm tra trạng thái&quot;. Nếu cần hỗ trợ, liên hệ Telegram/Zalo <b>+84932690949</b>.
-                Hệ thống sẽ tự động cập nhật trạng thái và thông báo ngay tại trang này sau khi xác nhận thanh toán.
-              </div>
-            </div>
-
+          <section ref={checkoutSectionRef} className="mb-10 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
             <div className="rounded-xl border border-[#4edea3]/20 bg-[#1b2025]/85 p-5">
               <h2 className="text-xl font-black">Thanh toán đơn hàng</h2>
               <div className="mt-4 space-y-2 text-sm text-[#bbcabf]">
@@ -639,6 +608,21 @@ export default function PricingClient() {
                   Thanh toán đã xác nhận. Hướng dẫn: tải lại trang hoặc vào dashboard, sau đó mở module vừa mua.
                 </div>
               ) : null}
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-[#1b2025]/85 p-5">
+              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-[#86948a]">QR thanh toán</h3>
+              {checkoutOrder.qrUrl ? (
+                <img src={checkoutOrder.qrUrl} alt="QR thanh toán" className="mt-4 h-56 w-56 rounded-lg border border-white/10 bg-white p-2" />
+              ) : (
+                <div className="mt-4 rounded-lg border border-dashed border-white/10 px-4 py-10 text-xs text-[#86948a]">
+                  Chưa có QR vì thiếu PAYMENT_BANK_CODE/PAYMENT_BANK_ACCOUNT_NO.
+                </div>
+              )}
+              <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs leading-5 text-emerald-100">
+                Sau khi chuyển khoản, bấm &quot;Kiểm tra trạng thái&quot;. Nếu cần hỗ trợ, liên hệ Telegram/Zalo <b>+84932690949</b>.
+                Admin xác nhận thủ công tại <b>/admin</b>, hệ thống sẽ tự hiện trạng thái đơn và thông báo ngay tại trang này.
+              </div>
             </div>
           </section>
         ) : null}

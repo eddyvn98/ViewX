@@ -70,10 +70,8 @@ function normalizeModuleAccess(user) {
     return normalizedAccess.map((item) => {
         const trialEndsAt = toDate(item?.trialEndsAt);
         const activeUntil = toDate(item?.activeUntil);
-        // isActive/isTrial must be derived exclusively from date fields.
-        // Never fall back to raw DB status string — it may be stale or set by old migrations.
-        const isActive = Boolean(activeUntil && activeUntil.getTime() > now);
-        const isTrial = !isActive && Boolean(trialEndsAt && trialEndsAt.getTime() > now);
+        const isActive = activeUntil ? activeUntil.getTime() > now : String(item?.status || "").toLowerCase() === "active";
+        const isTrial = !isActive && trialEndsAt ? trialEndsAt.getTime() > now : String(item?.status || "").toLowerCase() === "trial";
         return {
             ...item,
             module: normalizeModuleKey(item?.module),

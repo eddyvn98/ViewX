@@ -6,8 +6,6 @@
   "HomePage": {
     "title": "A Professional Trading Platform With Built-in AI Intelligence.",
     "description": "Experience zero-lag charts with real-time MT5 data. Generate strategies, leverage AI trade monitoring, evaluate your trades, and build your rules on a platform strictly superior to TradingView.",
-    "featuresTitle": "Professional Grade Tools",
-    "featuresSubtitle": "Everything you need to build, test, and execute strategies autonomously with AI assistance.",
     "openChart": "Launch Chart",
     "features": {
       "chart": {

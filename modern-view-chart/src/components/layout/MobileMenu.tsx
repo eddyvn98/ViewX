@@ -32,7 +32,7 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
         console.log('[MobileMenu] handleTestVoice clicked');
         // Synchronous unlock to preserve user gesture
         voiceNotifier.syncUnlock();
-        
+
         await voiceNotifier.unlock();
         voiceNotifier.notify({
             symbol: 'VIVUTRADE',

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -121,9 +122,6 @@
   --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
   --shadow-ethereal: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
   --shadow-glow: 0 0 15px var(--glow-primary);
-
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
-  --font-montserrat: var(--font-montserrat), sans-serif;
 }
 
 @layer base {
@@ -135,7 +133,7 @@
   html,
   body {
     @apply bg-background text-foreground transition-colors duration-300;
-    font-family: var(--font-montserrat), sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     height: 100%;
     margin: 0;
     padding: 0;

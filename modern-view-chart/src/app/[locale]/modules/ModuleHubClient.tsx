@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -228,8 +228,14 @@ export function ModuleHubClient({ locale }: { locale: string }) {
   }, []);
 
   return (
-    <main className="h-dvh overflow-y-auto bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.15),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.15),_transparent_24%),#020617] px-4 py-10 text-white">
-      <div className="mx-auto max-w-6xl space-y-8">
+    <main className="dark h-dvh overflow-y-auto bg-[#020617] px-4 py-10 text-white selection:bg-emerald-500/30">
+      {/* Decorative gradients */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      <div className="relative mx-auto max-w-6xl space-y-8">
         <section className="rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-emerald-300">Module hub</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">

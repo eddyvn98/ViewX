@@ -13,11 +13,11 @@ const Features = dynamic(() => import('@/features/landing/components/Features').
 export default function LandingPage() {
     const locale = useLocale();
     const navT = useTranslations('Navigation');
-    const t = useTranslations('HomePage');
     const isVi = locale === 'vi';
+    const docsLabel = isVi ? 'Tài liệu' : 'Docs';
 
     return (
-        <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.05),_transparent_40%)] bg-slate-50 text-slate-900">
+        <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.05),_transparent_40%)] bg-slate-50 text-slate-900 [font-family:Outfit,Inter,sans-serif]">
             <header className="fixed top-4 left-1/2 z-50 w-[calc(100%-2.5rem)] max-w-7xl -translate-x-1/2 rounded-2xl border border-white/40 bg-white/60 backdrop-blur-2xl transition-all shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
                 <div className="mx-auto flex items-center justify-between px-6 py-3">
                     <Logo showText size={26} />
@@ -40,15 +40,17 @@ export default function LandingPage() {
                     <div className="relative z-10 grid gap-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div className="space-y-8">
                             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-700 backdrop-blur-md">
-                                {isVi ? 'Giải pháp giao dịch thế hệ mới' : 'Next-gen Trading Experience'}
+                                {isVi ? 'Module-first experience' : 'Module-first experience'}
                                 <Wallet className="h-3.5 w-3.5" />
                             </div>
                             <div className="space-y-6">
                                 <h1 className="max-w-2xl text-5xl font-black tracking-tight text-slate-950 md:text-7xl lg:leading-[1.1]">
-                                    {t('title')}
+                                    {isVi ? 'Chọn module, không chọn gói cũ.' : 'Pick modules, not old bundles.'}
                                 </h1>
                                 <p className="max-w-xl text-lg leading-relaxed text-slate-600 md:text-xl">
-                                    {t('description')}
+                                    {isVi
+                                        ? 'Vivutrade tập trung vào luồng module rõ ràng: Your MT5 để kết nối MT5 local, Binance Demo để test nhanh, và Telegram Notify để theo dõi alert.'
+                                        : 'Vivutrade focuses on a clear module flow: Your MT5 for local MT5 connection, Binance Demo for fast testing, and Telegram Notify for alerts.'}
                                 </p>
                             </div>
                             <div className="flex flex-col gap-4 sm:flex-row">
@@ -121,17 +123,19 @@ export default function LandingPage() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.15),_transparent_50%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.15),_transparent_50%)]" />
                     <div className="relative z-10 mx-auto max-w-4xl space-y-10">
                         <h2 className="text-4xl font-black text-white md:text-6xl lg:leading-tight">
-                            {t('userPlans.title')}
+                            {isVi ? 'Bắt đầu đúng module.' : 'Start with the right module.'}
                         </h2>
                         <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-300 md:text-xl">
-                            {t('userPlans.description')}
+                            {isVi
+                                ? 'Your MT5 là luồng kết nối MT5 local và mở khóa terminal. Chọn module đúng trước, rồi mới vào guide và activation.'
+                                : 'Your MT5 is the local MT5 connection and terminal unlock flow. Pick the right module first, then go to guide and activation.'}
                         </p>
                         <div className="flex flex-col items-center justify-center gap-6 pt-6 sm:flex-row">
                             <Link
                                 href="/pricing"
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-10 py-5 text-lg font-black text-slate-950 transition-all hover:scale-105 hover:bg-sky-50 shadow-xl sm:w-auto"
                             >
-                                {t('userPlans.pro.cta')}
+                                {isVi ? 'Xem bảng giá' : 'View Pricing'}
                                 <ArrowRight className="h-6 w-6" />
                             </Link>
                         </div>
@@ -154,7 +158,9 @@ export default function LandingPage() {
                     <div className="max-w-md space-y-6">
                         <Logo showText size={32} />
                         <p className="text-sm leading-relaxed text-slate-500">
-                            {t('description')}
+                            {isVi
+                                ? 'Vivutrade tập trung vào luồng module rõ ràng: Your MT5, Binance Demo và Telegram Notify.'
+                                : 'Vivutrade focuses on a clear module flow: Your MT5, Binance Demo, and Telegram Notify.'}
                         </p>
                     </div>
                     <div className="flex flex-col gap-6 lg:text-right">

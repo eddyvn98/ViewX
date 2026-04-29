@@ -120,7 +120,7 @@ export const Header = memo(function Header() {
     const handleTestVoice = React.useCallback(async () => {
         // Synchronous unlock to preserve user gesture
         voiceNotifier.syncUnlock();
-        
+
         await voiceNotifier.unlock();
         voiceNotifier.notify({
             symbol: 'VIVUTRADE',
@@ -513,16 +513,16 @@ export const Header = memo(function Header() {
                                             <Bell size={13} />
                                             <span>Hỗ trợ Zalo</span>
                                         </a>
-                                    <button
-                                        onClick={() => {
-                                            setIsAvatarMenuOpen(false);
-                                            setIsTelegramDialogOpen(true);
-                                        }}
-                                        className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
-                                    >
-                                        <Bell size={13} />
-                                        <span>Telegram Alerts</span>
-                                    </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsAvatarMenuOpen(false);
+                                                setIsTelegramDialogOpen(true);
+                                            }}
+                                            className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
+                                        >
+                                            <Bell size={13} />
+                                            <span>Telegram Alerts</span>
+                                        </button>
                                         <button
                                             onClick={() => {
                                                 setIsAvatarMenuOpen(false);
@@ -534,15 +534,15 @@ export const Header = memo(function Header() {
                                             <span>Settings</span>
                                         </button>
                                         <button
-                                        onClick={() => {
-                                            setIsAvatarMenuOpen(false);
-                                            void handleLogout();
-                                        }}
-                                        className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-red-500 hover:bg-red-500/10"
-                                    >
-                                        <LogOut size={13} />
-                                        <span>Logout</span>
-                                    </button>
+                                            onClick={() => {
+                                                setIsAvatarMenuOpen(false);
+                                                void handleLogout();
+                                            }}
+                                            className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-red-500 hover:bg-red-500/10"
+                                        >
+                                            <LogOut size={13} />
+                                            <span>Logout</span>
+                                        </button>
                                     </div>
                                 ) : null}
                             </div>

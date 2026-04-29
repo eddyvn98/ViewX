@@ -1,15 +1,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { 
-    LineChart, 
-    Diamond, 
-    Layers, 
-    Activity, 
-    BrainCircuit, 
-    Database, 
-    Infinity as InfinityIcon, 
-    MonitorSmartphone 
+import {
+    LineChart,
+    Diamond,
+    Layers,
+    Activity,
+    BrainCircuit,
+    Database,
+    Infinity as InfinityIcon,
+    MonitorSmartphone
 } from "lucide-react";
 
 export function Features() {
@@ -81,10 +81,10 @@ export function Features() {
                     id="features-title"
                     className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl"
                 >
-                    {t('featuresTitle' as any)}
+                    Professional Grade Tools
                 </h2>
                 <p className="text-lg text-slate-600 leading-relaxed">
-                    {t('featuresSubtitle' as any)}
+                    Everything you need to build, test, and execute strategies autonomously with AI assistance.
                 </p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

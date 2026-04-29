@@ -38,11 +38,18 @@ export function ModuleGuideModal({ open, locale, module, onClose }: ModuleGuideM
   const guide = getModuleGuideContent(module, locale);
 
   return (
-    <div className="fixed inset-0 z-[240] flex items-center justify-center bg-slate-950/72 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="dark fixed inset-0 z-[240] flex items-center justify-center bg-slate-950/72 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_24%),#020617] shadow-[0_30px_120px_rgba(2,6,23,0.75)]"
+        className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[#020617] shadow-[0_30px_120px_rgba(2,6,23,0.75)]"
         onClick={(event) => event.stopPropagation()}
       >
+        {/* Decorative gradients */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-emerald-500/10 blur-[80px] rounded-full" />
+          <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-blue-500/10 blur-[80px] rounded-full" />
+        </div>
+
+        <div className="relative z-10 flex flex-col overflow-hidden">
         <button
           type="button"
           onClick={onClose}
@@ -93,5 +100,6 @@ export function ModuleGuideModal({ open, locale, module, onClose }: ModuleGuideM
         </div>
       </div>
     </div>
+  </div>
   );
 }

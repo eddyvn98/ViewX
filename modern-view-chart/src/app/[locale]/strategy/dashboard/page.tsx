@@ -79,7 +79,7 @@ export default function StrategyDashboardPage() {
     }, []);
 
     return (
-        <div className="h-screen overflow-y-auto bg-background text-foreground p-4 md:p-8 font-sans selection:bg-primary/30">
+        <div className="dark h-screen overflow-y-auto bg-background text-foreground p-4 md:p-8 font-sans selection:bg-primary/30">
             <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-10">
 
                 {/* HEADER */}
