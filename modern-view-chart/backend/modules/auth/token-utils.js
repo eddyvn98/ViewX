@@ -1,4 +1,4 @@
-﻿export function getGoogleClientId() {
+export function getGoogleClientId() {
     return (process.env.GOOGLE_CLIENT_ID || "").trim();
 }
 
@@ -70,8 +70,10 @@ function normalizeModuleAccess(user) {
     return normalizedAccess.map((item) => {
         const trialEndsAt = toDate(item?.trialEndsAt);
         const activeUntil = toDate(item?.activeUntil);
-        const isActive = activeUntil ? activeUntil.getTime() > now : String(item?.status || "").toLowerCase() === "active";
-        const isTrial = !isActive && trialEndsAt ? trialEndsAt.getTime() > now : String(item?.status || "").toLowerCase() === "trial";
+        // isActive/isTrial must be derived exclusively from date fields.
+        // Never fall back to raw DB status string — it may be stale or set by old migrations.
+        const isActive = Boolean(activeUntil && activeUntil.getTime() > now);
+        const isTrial = !isActive && Boolean(trialEndsAt && trialEndsAt.getTime() > now);
         return {
             ...item,
             module: normalizeModuleKey(item?.module),

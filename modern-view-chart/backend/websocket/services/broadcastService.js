@@ -7,6 +7,7 @@ import { safeSend } from "../wsSend.js";
 import { normalizeSymbol } from "../subscriptionIndex.js";
 import { getScopedMt5Prices, isRecipientForMt5Owner } from "../mt5Scope.js";
 import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
+import { getVangTodayLatestQuotes } from "../../services/vangTodayService.js";
 import { logWarn } from "../../logger.js";
 
 let lastBroadcastWarnAt = 0;
@@ -97,7 +98,22 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
     try {
         const allPrices = getBinancePrices();
         const vnGoldQuotes = await getVietnamGoldQuotes();
-        const tickers = allPrices.length > 0 ? [...allPrices, ...vnGoldQuotes] : await fetchPrices();
+        const vangTodayQuotes = await getVangTodayLatestQuotes();
+        const mappedVangTodayQuotes = vangTodayQuotes.map((item) => ({
+            symbol: item.symbol,
+            price: Number(item.buy) || Number(item.sell) || 0,
+            bid: Number(item.buy) || 0,
+            ask: Number(item.sell) || 0,
+            displayName: item.name,
+            source: "VN_GOLD",
+            serverTime: new Date(item.capturedAt || Date.now()).getTime(),
+            change: 0,
+            changeValue: 0,
+            volume: 0,
+        }));
+        const tickers = allPrices.length > 0
+            ? [...allPrices, ...vnGoldQuotes, ...mappedVangTodayQuotes]
+            : await fetchPrices();
         const binanceBySymbol = new Map();
         for (const item of tickers) {
             const symbol = normalizeSymbol(item?.symbol);

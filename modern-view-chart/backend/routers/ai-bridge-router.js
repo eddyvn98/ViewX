@@ -138,6 +138,7 @@ const pendingTasksByActor = new Map(); // actorKey -> task[]
 const taskResultsByActor = new Map(); // actorKey -> Map(taskId -> {status, content, timestamp})
 const aiHistoryByActor = new Map(); // actorKey -> {id, source, prompt, response, timestamp}[]
 const taskOwnership = new Map(); // taskId -> actorKey
+const recentContextByActor = new Map(); // actorKey -> context
 
 function getActorKey(req, body = {}, query = {}) {
     if (req.auth?.type === "user" && req.auth?.userId) {
@@ -321,6 +322,14 @@ router.post("/context", async (req, res) => {
             generatedAt: new Date().toISOString(),
         };
 
+        // Cache the context for forecast-webhook
+        if (req.body?.candles) {
+            contextPack.recentCandles = req.body.candles;
+        } else if (chart?.recentCandles) {
+            contextPack.recentCandles = chart.recentCandles;
+        }
+        recentContextByActor.set(actorKey, contextPack);
+
         return res.status(200).json({ status: "ok", context: contextPack });
     } catch (error) {
         console.error("[AI Context] build failed:", error);
@@ -409,163 +418,43 @@ router.post("/task", async (req, res) => {
         }
     }
 
-    // 1. Check for official API Key
-    const apiKey = process.env.GEMINI_API_KEY;
-    console.log(`  [AI API] Checking GEMINI_API_KEY: ${apiKey ? "FOUND (Direct Mode)" : "NOT FOUND (Bridge Mode)"}`);
+    // Forward to AI Core Platform
+    try {
+        const historyRows = await loadHistory(actorKey, 10);
+        const chatHistory = historyRows.flatMap(row => [
+            { role: 'user', content: row.prompt },
+            { role: 'model', content: row.response }
+        ]);
 
-    if (apiKey) {
-        console.log("  [AI API] Using direct Gemini API...");
-        try {
-            const apiRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${apiKey}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: safePrompt }] }], tools: AI_TOOLS
-                    })
-                }
-            );
+        const corePayload = {
+            agentId: "viewx-assistant",
+            sessionId: actorKey, // We use actorKey as sessionId
+            message: safePrompt,
+            history: chatHistory
+        };
 
-            if (!apiRes.ok) {
-                const errData = await apiRes.json();
-                throw new Error(errData.error?.message || apiRes.statusText);
-            }
+        const aiCoreRes = await fetch("http://localhost:4000/v1/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(corePayload)
+        });
 
-            const data = await apiRes.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            const content = data.candidates?.[0]?.content;
-            const parts = content?.parts || [];
-
-            if (parts.some(p => p.functionCall)) {
-                const call = parts.find(p => p.functionCall).functionCall;
-                if (call.name === "generate_forecast") {
-                    console.log(`  [AI Tool] Gemini requested forecast for ${call.args.symbol} ${call.args.timeframe}`);
-                    const candles = req.body?.context?.chart?.recentCandles || req.body?.candles || [];
-                    const chart = {
-                        symbol: call.args.symbol,
-                        timeframe: call.args.timeframe,
-                        source: req.body?.context?.chart?.source || "MT5"
-                    };
-                    const lang = req.body?.lang || req.body?.context?.lang || "vi";
-                    const forecastResult = await generateForecast({ chart, candles, horizon: call.args.horizon, question: prompt, lang });
-                    if (forecastResult.ok) {
-                        const secondRes = await fetch(
-                            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${apiKey}`,
-                            {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    contents: [
-                                        { role: "user", parts: [{ text: safePrompt }] },
-                                        content,
-                                        {
-                                            role: "function",
-                                            parts: [{
-                                                functionResponse: {
-                                                    name: "generate_forecast",
-                                                    response: { status: "ok", summary: forecastResult.response, details: forecastResult.forecast }
-                                                }
-                                            }]
-                                        }
-                                    ],
-                                    tools: AI_TOOLS
-                                })
-                            }
-                        );
-                        const secondData = await secondRes.json();
-                        const finalText = secondData.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (finalText) {
-                            const safeFinalText = sanitizeAssistantOutput(finalText);
-                            pushHistory(actorKey, { id: crypto.randomUUID(), source, prompt, response: safeFinalText, timestamp: Date.now() });
-                            if (isChatSource) {
-                                const consumed = await consumeOneChatCredit(billingUserId);
-                                return res.json({ status: "ok", response: safeFinalText, remainingCredits: consumed.remainingCredits });
-                            }
-                            return res.json({ status: "ok", response: safeFinalText });
-                        }
-                    }
-                }
-            }
-
-            if (text) {
-                if (isSensitiveOutput(text)) {
-                    const reason = getOutputBlockReason(text);
-                    logWarn("ai.policy.response_blocked", {
-                        policy_block_reason: reason,
-                        auth_type: req.auth?.type || "unknown",
-                        actor_key: actorKey,
-                        source,
-                        mode: "direct",
-                    });
-                    return res.status(502).json({
-                        status: "error",
-                        msg: "response_blocked_by_policy",
-                        policy_block_reason: reason,
-                        user_message: "Noi dung tra ve bi chan de bao ve thong tin he thong. Vui long dat cau hoi trong pham vi su dung nen tang.",
-                    });
-                }
-                const safeText = sanitizeAssistantOutput(text);
-                console.log("  [AI API] Success: Response received directly.");
-
-                // Log to actor history
-                pushHistory(actorKey, {
-                    id: crypto.randomUUID(),
-                    source,
-                    prompt,
-                    response: safeText,
-                    timestamp: Date.now()
-                });
-                if (isChatSource) {
-                    const consumed = await consumeOneChatCredit(billingUserId);
-                    if (!consumed.ok) {
-                        return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
-                    }
-                    return res.json({ status: "ok", response: safeText, remainingCredits: consumed.remainingCredits });
-                }
-                return res.json({ status: "ok", response: safeText });
-            }
-        } catch (error) {
-            console.error(`  [AI API] Direct API Error: ${error.message}`);
-            return res.status(502).json({ status: "error", msg: `Gemini API Error: ${error.message}` });
+        if (!aiCoreRes.ok) {
+            throw new Error(`AI Core Error: ${aiCoreRes.statusText}`);
         }
-    }
 
-    // 2. Fallback to Bridge logic
-    const taskId = crypto.randomUUID();
-    const task = { task_id: taskId, prompt: safePrompt };
-    const pendingTasks = getPendingQueue(actorKey);
-    const actorResults = getTaskResults(actorKey);
-    taskOwnership.set(taskId, actorKey);
+        const coreData = await aiCoreRes.json() ;
+        let text = coreData.reply;
 
-    pendingTasks.push(task);
-    console.log(`  [AI Bridge] New Task Queued (Bridge Fallback): ${taskId} (${actorKey})`);
-
-    // Wait for result (Polling)
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeout) {
-        if (actorResults.has(taskId)) {
-            const result = actorResults.get(taskId);
-            actorResults.delete(taskId);
-            taskOwnership.delete(taskId);
-
-            const safeBridgeText = sanitizeAssistantOutput(result.content);
-            // Log to actor history
-            pushHistory(actorKey, {
-                id: taskId,
-                source,
-                prompt,
-                response: safeBridgeText,
-                timestamp: Date.now()
-            });
-            if (isSensitiveOutput(result.content)) {
-                const reason = getOutputBlockReason(result.content);
+        if (text) {
+            if (isSensitiveOutput(text)) {
+                const reason = getOutputBlockReason(text);
                 logWarn("ai.policy.response_blocked", {
                     policy_block_reason: reason,
                     auth_type: req.auth?.type || "unknown",
                     actor_key: actorKey,
                     source,
-                    mode: "bridge",
+                    mode: "ai-core",
                 });
                 return res.status(502).json({
                     status: "error",
@@ -574,21 +463,61 @@ router.post("/task", async (req, res) => {
                     user_message: "Noi dung tra ve bi chan de bao ve thong tin he thong. Vui long dat cau hoi trong pham vi su dung nen tang.",
                 });
             }
+            const safeText = sanitizeAssistantOutput(text);
+
+            pushHistory(actorKey, {
+                id: crypto.randomUUID(),
+                source,
+                prompt,
+                response: safeText,
+                timestamp: Date.now()
+            });
             if (isChatSource) {
                 const consumed = await consumeOneChatCredit(billingUserId);
                 if (!consumed.ok) {
                     return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
                 }
-                return res.json({ status: "ok", response: safeBridgeText, remainingCredits: consumed.remainingCredits });
+                return res.json({ status: "ok", response: safeText, remainingCredits: consumed.remainingCredits });
             }
-            return res.json({ status: "ok", response: safeBridgeText });
+            return res.json({ status: "ok", response: safeText });
         }
-        await new Promise((r) => setTimeout(r, 1000));
+    } catch (error) {
+        console.error(`  [AI Core API] Error: ${error.message}`);
+        return res.status(502).json({ status: "error", msg: `AI Core API Error: ${error.message}` });
+    }
+});
+
+router.post("/forecast-webhook", async (req, res) => {
+    const { symbol, timeframe, horizon, sessionId } = req.body;
+    console.log(`[Forecast Webhook] Triggered for ${symbol} ${timeframe} from session ${sessionId}`);
+    
+    // Find context by sessionId (which is actorKey)
+    const context = recentContextByActor.get(sessionId);
+    if (!context || !context.recentCandles) {
+        return res.status(400).json({ ok: false, status: "error", message: "No context or candles found for this session." });
     }
 
-    console.log(`  [AI Bridge] Task Timeout: ${taskId} (${actorKey})`);
-    taskOwnership.delete(taskId);
-    return res.status(408).json({ status: "error", msg: "Gemini Web Timeout" });
+    const chart = { symbol, timeframe, source: context.chart?.source || "MT5" };
+    const lang = context.lang || "vi";
+
+    try {
+        const forecastResult = await generateForecast({ 
+            chart, 
+            candles: context.recentCandles, 
+            horizon, 
+            question: context.question || `Du bao ${symbol} ${timeframe}`, 
+            lang 
+        });
+        
+        if (forecastResult.ok) {
+            return res.json({ status: "ok", summary: forecastResult.response, details: forecastResult.forecast });
+        } else {
+            return res.status(500).json({ status: "error", message: forecastResult.message || "Forecast failed" });
+        }
+    } catch (error) {
+        console.error("[Forecast Webhook] Error:", error);
+        return res.status(500).json({ status: "error", message: error.message });
+    }
 });
 
 router.post("/forecast", async (req, res) => {

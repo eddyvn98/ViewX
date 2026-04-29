@@ -202,65 +202,37 @@ function normalizeAiIntent(rawIntent) {
 export async function parseAiIntent(text, pendingIntent = null) {
   const aiToggle = String(process.env.TELEGRAM_BOT_AI_ENABLED || process.env.AI_ENABLED || "").trim().toLowerCase();
   if (["0", "false", "off", "no"].includes(aiToggle)) return null;
-  const provider = String(process.env.TELEGRAM_AI_PROVIDER || "").trim().toLowerCase() || "gemini";
-  const model = String(process.env.TELEGRAM_AI_MODEL || process.env.GEMINI_MODEL || "gemma-4-26b-a4b-it").trim();
 
-  const prompt = [
-    "You are a Telegram intent parser for trading alerts.",
-    "Return JSON only. No markdown. No extra text.",
-    'Schema: {"intent":"string","payload":{},"suggestion":"string?","missing_fields":["string"]}',
-    "If information is missing, keep the best partial payload, set intent to the target action, include missing_fields, and write a short suggestion question in the user's language.",
-    "Do not invent missing values. Respect the user's language for suggestion.",
-    "Allowed intents: show_menu, help, list_alerts, delete_alert, delete_all_alerts, create_price_alert_percent, create_price_alert_absolute, create_rsi_alert, create_ma_cross_alert, create_indicator_alert, create_web_indicator_alert, show_scanner_matrix, unknown",
-    pendingIntent ? `CONTEXT: ${JSON.stringify(pendingIntent)}` : "",
-    `INPUT: "${text}"`,
-  ].join("\n");
-
-  let res;
-  const useOpenAiCompat = provider === "openai_compat" || provider === "openai" || provider === "gemma";
-  if (useOpenAiCompat) {
-    const apiKey = String(process.env.TELEGRAM_AI_API_KEY || process.env.OPENAI_API_KEY || "").trim();
-    if (!apiKey) return null;
-    const baseUrl = String(process.env.TELEGRAM_AI_BASE_URL || "https://openrouter.ai/api/v1").trim().replace(/\/+$/, "");
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [{ role: "system", content: "Extract Telegram alert intent. Output valid JSON only." }, { role: "user", content: prompt }],
-      }),
-    });
-  } else {
-    const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKey) return null;
-    const runtimeModel = await resolveGeminiRuntimeModel(apiKey, model);
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(runtimeModel)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        }),
-      },
-    );
+  let message = text;
+  if (pendingIntent) {
+    message = `CONTEXT: ${JSON.stringify(pendingIntent)}\nINPUT: "${text}"`;
   }
 
-  if (!res.ok) return null;
-  const data = await res.json().catch(() => null);
-  const textOut = useOpenAiCompat ? data?.choices?.[0]?.message?.content : extractGeminiTextResponse(data);
-  if (!textOut) return null;
-  const jsonText = extractJsonObject(textOut);
-  if (!jsonText) return null;
-  const parsed = JSON.parse(jsonText);
-  const normalized = normalizeAiIntent(parsed);
-  if (normalized.type === "unknown" && !normalized.suggestion) return null;
-  return normalized;
+  try {
+    const res = await fetch("http://localhost:4000/v1/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: "viewx-telegram-parser",
+        sessionId: "telegram-parser-" + Date.now(),
+        message: message,
+      })
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const textOut = data.reply;
+    if (!textOut) return null;
+    
+    const jsonText = extractJsonObject(textOut);
+    if (!jsonText) return null;
+    
+    const parsed = JSON.parse(jsonText);
+    const normalized = normalizeAiIntent(parsed);
+    if (normalized.type === "unknown" && !normalized.suggestion) return null;
+    return normalized;
+  } catch (err) {
+    console.error("[Telegram AI Parser] Error:", err);
+    return null;
+  }
 }

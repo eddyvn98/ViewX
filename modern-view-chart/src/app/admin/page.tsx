@@ -166,6 +166,9 @@ export default function AdminPage() {
             <p className="mt-2 max-w-2xl text-sm text-slate-400">
               Dùng trang này để duyệt nhanh đơn module sau khi bạn test thanh toán. Luồng confirm/reject đang nối thẳng vào API hiện có.
             </p>
+            <p className="mt-2 max-w-2xl text-xs text-emerald-300">
+              User thanh toán ở <b>/pricing</b>, admin vào <b>/admin</b> để xác nhận hoặc từ chối, và user sẽ thấy trạng thái cập nhật ngay ở khung "Thanh toán đơn hàng".
+            </p>
           </div>
           <div className="flex gap-2">
             <button

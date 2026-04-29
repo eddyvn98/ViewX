@@ -13,7 +13,11 @@ module.exports = {
         ALLOWED_ORIGINS: "https://vivutrade.io.vn,https://api.vivutrade.io.vn,http://127.0.0.1:13000,http://localhost:13000",
         TIMESFM_ENABLED: "1",
         TIMESFM_REPO: "google/timesfm-1.0-200m-pytorch",
-        FORECAST_PYTHON_BIN: "D:/viewx/ViewX/modern-view-chart/backend/forecast/.venv/Scripts/python.exe"
+        FORECAST_PYTHON_BIN: "D:/viewx/ViewX/modern-view-chart/backend/forecast/.venv/Scripts/python.exe",
+        PAYMENT_BANK_CODE: "TCB",
+        PAYMENT_BANK_ACCOUNT_NO: "9779690949",
+        PAYMENT_BANK_ACCOUNT_NAME: "HA THANH TU",
+        SEPAY_WEBHOOK_SECRET: "viewx_sepay_2026"
       }
     },
     {

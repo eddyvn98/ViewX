@@ -12,6 +12,9 @@ interface MobileMenuProps {
     compact?: boolean;
 }
 
+const SUPPORT_TELEGRAM_URL = 'https://t.me/htt711';
+const SUPPORT_ZALO_URL = 'https://zalo.me/84932690949';
+
 export function MobileMenu({ compact = false }: MobileMenuProps) {
     const t = useTranslations('MobileMenu');
     const voiceAlertsEnabled = useMarketStore((state) => state.voiceAlertsEnabled);
@@ -180,7 +183,8 @@ export function MobileMenu({ compact = false }: MobileMenuProps) {
                 <div className="h-px bg-border/60 my-3 mx-2" />
 
                 <MenuItem compact={compact} icon={Settings} label={t('appSettings')} />
-                <MenuItem compact={compact} icon={HelpCircle} label={t('helpSupport')} />
+                <MenuItem compact={compact} icon={HelpCircle} label="Hỗ trợ Telegram" onClick={() => { window.open(SUPPORT_TELEGRAM_URL, '_blank', 'noopener,noreferrer'); }} />
+                <MenuItem compact={compact} icon={HelpCircle} label="Hỗ trợ Zalo" onClick={() => { window.open(SUPPORT_ZALO_URL, '_blank', 'noopener,noreferrer'); }} />
                 <MenuItem compact={compact} icon={FileText} label={t('termsOfService')} />
             </div>
 

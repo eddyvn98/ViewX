@@ -6,6 +6,8 @@
   "HomePage": {
     "title": "Nền Tảng Giao Dịch Chuyên Nghiệp Tích Hợp AI Thông Minh.",
     "description": "Trải nghiệm biểu đồ siêu mượt với dữ liệu MT5 realtime. Tạo chiến lược, AI theo dõi lệnh, đánh giá vị thế và xây dựng hệ thống trên một nền tảng ưu việt hơn hẳn TradingView.",
+    "featuresTitle": "Công cụ Giao dịch Chuyên nghiệp",
+    "featuresSubtitle": "Mọi thứ bạn cần để xây dựng, kiểm tra và thực thi chiến lược tự động với sự hỗ trợ của AI.",
     "openChart": "Vào Chart",
     "features": {
       "chart": {

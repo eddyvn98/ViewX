@@ -1,5 +1,6 @@
 import createMiddleware from 'next-intl/middleware';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { routing } from './i18n/routing';
 
 const intlMiddleware = createMiddleware(routing);
@@ -31,6 +32,20 @@ function applySecurityHeaders(response: Response) {
 }
 
 export default function proxy(request: NextRequest) {
+    const pathname = request.nextUrl.pathname;
+    const match = pathname.match(/^\/(vi|en)(\/.*)?$/i);
+    const locale = match?.[1]?.toLowerCase();
+    const localizedPath = match?.[2] || '/';
+    const isBlockedPlanPath =
+        localizedPath === '/plan-updates' ||
+        localizedPath.startsWith('/plan-updates/') ||
+        localizedPath.startsWith('/plan-details/');
+
+    if (locale && isBlockedPlanPath) {
+        const redirectUrl = new URL(`/${locale}/pricing`, request.url);
+        return NextResponse.redirect(redirectUrl);
+    }
+
     const response = intlMiddleware(request);
     return applySecurityHeaders(response);
 }

@@ -9,6 +9,7 @@ export interface BuildSymbolListParams {
     deferredSearch: string;
     sourceTab: SourceTab;
     binanceUniverse: string[];
+    vangTodaySymbols: string[];
     prioritizeWatched: boolean;
     watchlistSearchIncludesDiscovery: boolean;
 }
@@ -21,6 +22,7 @@ export function buildSymbolList({
     deferredSearch,
     sourceTab,
     binanceUniverse,
+    vangTodaySymbols,
     prioritizeWatched,
     watchlistSearchIncludesDiscovery,
 }: BuildSymbolListParams): { symbol: string; source: DataSource }[] {
@@ -50,6 +52,12 @@ export function buildSymbolList({
 
     DEFAULT_VN_GOLD_SYMBOLS.forEach((symbol) => {
         if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'VN_GOLD');
+    });
+
+    vangTodaySymbols.forEach((symbol) => {
+        const normalized = String(symbol || '').trim().toUpperCase();
+        if (!normalized) return;
+        discoveryMap.set(normalized, 'VN_GOLD');
     });
 
     let symbols: { symbol: string; source: DataSource }[] = [];

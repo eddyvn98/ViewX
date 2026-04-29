@@ -51,6 +51,9 @@ const MEMBERSHIP_UI: Record<MembershipTier, MembershipUi> = {
     },
 };
 
+const SUPPORT_TELEGRAM_URL = 'https://t.me/htt711';
+const SUPPORT_ZALO_URL = 'https://zalo.me/84932690949';
+
 function normalizeMembershipTier(rawPlan: unknown): MembershipTier {
     const plan = String(rawPlan || '').trim().toLowerCase();
     if (plan === 'pro') return 'pro';
@@ -492,6 +495,24 @@ export const Header = memo(function Header() {
                                             </button>
                                         </div>
                                         <div className="my-1 h-px bg-border dark:bg-white/10" />
+                                        <a
+                                            href={SUPPORT_TELEGRAM_URL}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
+                                        >
+                                            <Bell size={13} />
+                                            <span>Hỗ trợ Telegram</span>
+                                        </a>
+                                        <a
+                                            href={SUPPORT_ZALO_URL}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="w-full h-8 px-2 rounded text-xs flex items-center gap-2 text-foreground dark:text-white hover:bg-secondary/80 dark:hover:bg-white/10"
+                                        >
+                                            <Bell size={13} />
+                                            <span>Hỗ trợ Zalo</span>
+                                        </a>
                                     <button
                                         onClick={() => {
                                             setIsAvatarMenuOpen(false);

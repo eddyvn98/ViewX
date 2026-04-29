@@ -11,6 +11,7 @@ import { List } from 'react-window';
 
 import { SOURCE_TABS, type SourceTab } from './market-list-constants';
 import { useBinanceUniverse } from './use-binance-universe';
+import { useVangTodaySymbols } from './use-vangtoday-symbols';
 import { buildSymbolList } from './build-symbol-list';
 import { RowData, VirtualRow } from './VirtualRow';
 
@@ -65,6 +66,7 @@ export function MarketListContent({
     const shouldLoadDiscoveryUniverse =
         mode === 'discovery' || (watchlistSearchIncludesDiscovery && mode === 'watchlist' && deferredSearch.trim().length > 0);
     const binanceUniverse = useBinanceUniverse(shouldLoadDiscoveryUniverse);
+    const vangTodaySymbols = useVangTodaySymbols(shouldLoadDiscoveryUniverse);
 
     const symbolList = useMemo(
         () =>
@@ -76,6 +78,7 @@ export function MarketListContent({
                 deferredSearch,
                 sourceTab,
                 binanceUniverse,
+                vangTodaySymbols,
                 prioritizeWatched,
                 watchlistSearchIncludesDiscovery,
             }),
@@ -87,6 +90,7 @@ export function MarketListContent({
             deferredSearch,
             sourceTab,
             binanceUniverse,
+            vangTodaySymbols,
             prioritizeWatched,
             watchlistSearchIncludesDiscovery,
         ],

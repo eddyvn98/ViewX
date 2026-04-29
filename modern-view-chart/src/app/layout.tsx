@@ -1,10 +1,19 @@
 import type { Metadata, Viewport } from 'next';
+import { Montserrat } from 'next/font/google';
 import NextTopLoader from 'nextjs-toploader';
 import React from 'react';
 import { Toaster } from 'sonner';
 import './globals.css';
 import { ThemeProvider } from '@/components/layout/theme-provider';
+import { FloatingSupportButton } from '@/components/layout/FloatingSupportButton';
 import { getSiteUrl } from '@/lib/site-url';
+
+const montserrat = Montserrat({
+  subsets: ['vietnamese', 'latin'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-montserrat',
+  display: 'swap',
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -29,7 +38,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body className="antialiased" suppressHydrationWarning>
+      <body className={`${montserrat.variable} font-sans antialiased`} suppressHydrationWarning>
         <NextTopLoader
           color="#0ea5e9"
           initialPosition={0.08}
@@ -43,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           {children}
+          <FloatingSupportButton />
           <Toaster theme="light" position="top-right" richColors closeButton />
         </ThemeProvider>
       </body>

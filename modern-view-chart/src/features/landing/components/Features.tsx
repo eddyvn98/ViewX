@@ -81,10 +81,10 @@ export function Features() {
                     id="features-title"
                     className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl"
                 >
-                    Professional Grade Tools
+                    {t('featuresTitle' as any)}
                 </h2>
                 <p className="text-lg text-slate-600 leading-relaxed">
-                    Everything you need to build, test, and execute strategies autonomously with AI assistance.
+                    {t('featuresSubtitle' as any)}
                 </p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

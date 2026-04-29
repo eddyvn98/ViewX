@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import { getScopedMt5Price } from "../mt5Scope.js";
 import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
+import { getVangTodayLatestQuotes } from "../../services/vangTodayService.js";
 import { logWarn } from "../../logger.js";
 
 const currentCandleCache = {};
@@ -158,6 +159,7 @@ export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "B
     }
 
     const vnGoldQuotes = await getVietnamGoldQuotes();
+    const vangTodayQuotes = await getVangTodayLatestQuotes();
 
     return [
         ...results.map((item) => ({
@@ -167,5 +169,17 @@ export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "B
         source: 'BINANCE'
         })),
         ...vnGoldQuotes,
+        ...vangTodayQuotes.map((item) => ({
+            symbol: item.symbol,
+            price: Number(item.buy) || Number(item.sell) || 0,
+            bid: Number(item.buy) || 0,
+            ask: Number(item.sell) || 0,
+            displayName: item.name,
+            source: "VN_GOLD",
+            change: 0,
+            changeValue: 0,
+            volume: 0,
+            serverTime: new Date(item.capturedAt || Date.now()).getTime(),
+        })),
     ];
 }

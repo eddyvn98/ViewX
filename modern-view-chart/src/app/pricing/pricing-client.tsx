@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { BellRing, Bot, BriefcaseBusiness, Check, Headset, Plus, Shield, ShoppingCart, Sparkles, Volume2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getClientEntitlements, setClientModulesLocal, type ClientModule } from '@/lib/auth/entitlements';
+import { getClientEntitlements, type ClientModule } from '@/lib/auth/entitlements';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { ModuleGuideModal } from '@/features/modules/components/ModuleGuideModal';
 
@@ -160,6 +160,45 @@ function formatOrderStatus(status: string) {
   }
 }
 
+function readOwnedModulesFromAuthUser(): ClientModule[] {
+  const raw = String(localStorage.getItem('auth_user') || '').trim();
+  if (!raw) return [];
+
+  try {
+    const user = JSON.parse(raw) as {
+      moduleAccess?: Array<{ module?: string; activeUntil?: string | null; trialEndsAt?: string | null; status?: string }>;
+      modules?: string[];
+    };
+    const now = Date.now();
+    const moduleAccess = Array.isArray(user?.moduleAccess) ? user.moduleAccess : [];
+    const hasModuleAccess = moduleAccess.length > 0;
+    const owned = new Set<ClientModule>();
+
+    for (const record of moduleAccess) {
+      const moduleName = String(record?.module || '').trim() as ClientModule;
+      if (!VISIBLE_MODULE_KEYS.has(moduleName)) continue;
+      const activeUntil = Date.parse(String(record?.activeUntil || ''));
+      const trialEndsAt = Date.parse(String(record?.trialEndsAt || ''));
+      const status = String(record?.status || '').trim().toLowerCase();
+      // canUse must be derived from date fields only.
+      // Relying on raw status string causes false-positives from stale/migrated DB records.
+      const canUse = (Number.isFinite(activeUntil) && activeUntil > now)
+        || (Number.isFinite(trialEndsAt) && trialEndsAt > now);
+      if (canUse) owned.add(moduleName);
+    }
+
+    if (owned.size > 0) return Array.from(owned);
+    if (!hasModuleAccess) {
+      for (const moduleName of Array.isArray(user?.modules) ? user.modules : []) {
+        if (VISIBLE_MODULE_KEYS.has(moduleName as ClientModule)) owned.add(moduleName as ClientModule);
+      }
+    }
+    return Array.from(owned);
+  } catch {
+    return [];
+  }
+}
+
 export default function PricingClient() {
   const [selected, setSelected] = React.useState<ClientModule[]>([]);
   const [ownedModules, setOwnedModules] = React.useState<ClientModule[]>([]);
@@ -191,7 +230,7 @@ export default function PricingClient() {
   React.useEffect(() => {
     const syncEntitlements = () => {
       const entitlements = getClientEntitlements();
-      const owned = entitlements.modules.filter((module) => VISIBLE_MODULE_KEYS.has(module));
+      const owned = entitlements.isAuthenticated ? readOwnedModulesFromAuthUser() : [];
       setOwnedModules(owned);
       setSelected((current) => current.filter((module) => VISIBLE_MODULE_KEYS.has(module) && !owned.includes(module)));
       setIsAuthenticated(entitlements.isAuthenticated);
@@ -250,9 +289,7 @@ export default function PricingClient() {
   const toggleModule = React.useCallback((moduleKey: ClientModule) => {
     if (ownedModules.includes(moduleKey)) return;
     setSelected((current) => {
-      const next = current.includes(moduleKey) ? current.filter((item) => item !== moduleKey) : [...current, moduleKey];
-      setClientModulesLocal(next);
-      return next;
+      return current.includes(moduleKey) ? current.filter((item) => item !== moduleKey) : [...current, moduleKey];
     });
   }, [ownedModules]);
 
@@ -282,7 +319,6 @@ export default function PricingClient() {
       setNotice('Thanh toán thành công. Module đã được kích hoạt.');
       setShowPaidGuide(true);
       setSelected([]);
-      setClientModulesLocal([]);
       const locale = getLocaleFromPathname();
       window.setTimeout(() => {
         window.location.href = `/${locale}/modules`;
@@ -310,7 +346,6 @@ export default function PricingClient() {
   React.useEffect(() => {
     if (!checkoutOrder || checkoutOrder.status !== 'paid') return;
     setSelected([]);
-    setClientModulesLocal([]);
   }, [checkoutOrder]);
 
   React.useEffect(() => {
@@ -354,7 +389,7 @@ export default function PricingClient() {
       setCountdownSeconds(Number(data.order?.remainingSeconds || 0));
       setShowPaidGuide(false);
       const moduleCount = Array.isArray(data.order?.modules) && data.order.modules.length > 0 ? data.order.modules.length : orderModules.length;
-      setNotice(`Ãƒâ€žÃ‚ÂÃƒÆ’Ã‚Â£ tÃƒÂ¡Ã‚ÂºÃ‚Â¡o Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ${data.order.orderCode} cho ${moduleCount} module.`);
+      setNotice(`Đã tạo đơn ${data.order.orderCode} cho ${moduleCount} module.`);
       setRecentOrders((prev) => [data.order as RecentOrder, ...prev.filter((item) => item._id !== data.order.id)].slice(0, 6));
       window.setTimeout(() => checkoutSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     } catch (error) {
@@ -549,7 +584,38 @@ export default function PricingClient() {
         </section>
 
         {checkoutOrder ? (
-          <section ref={checkoutSectionRef} className="mb-10 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+          <section ref={checkoutSectionRef} className="mb-10 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
+            <div className="rounded-xl border border-white/10 bg-[#1b2025]/85 p-5">
+              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-[#86948a]">QR thanh toán</h3>
+              {checkoutOrder.qrUrl ? (
+                <div className="flex flex-col items-center">
+                  <img src={checkoutOrder.qrUrl} alt="QR thanh toán" className="mt-4 h-56 w-56 rounded-lg border border-white/10 bg-white p-2" />
+                  <div className="mt-4 w-full space-y-2 rounded-lg border border-white/5 bg-white/5 p-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#86948a]">Ngân hàng:</span>
+                      <span className="font-bold text-[#dee3ea]">Techcombank (TCB)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#86948a]">Số tài khoản:</span>
+                      <span className="font-mono font-bold text-[#4edea3]">9779 6909 49</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#86948a]">Chủ tài khoản:</span>
+                      <span className="font-bold text-[#dee3ea]">HA THANH TU</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-lg border border-dashed border-white/10 px-4 py-10 text-xs text-[#86948a]">
+                  Chưa có QR vì thiếu PAYMENT_BANK_CODE/PAYMENT_BANK_ACCOUNT_NO.
+                </div>
+              )}
+              <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs leading-5 text-emerald-100">
+                Sau khi chuyển khoản, bấm &quot;Kiểm tra trạng thái&quot;. Nếu cần hỗ trợ, liên hệ Telegram/Zalo <b>+84932690949</b>.
+                Hệ thống sẽ tự động cập nhật trạng thái và thông báo ngay tại trang này sau khi xác nhận thanh toán.
+              </div>
+            </div>
+
             <div className="rounded-xl border border-[#4edea3]/20 bg-[#1b2025]/85 p-5">
               <h2 className="text-xl font-black">Thanh toán đơn hàng</h2>
               <div className="mt-4 space-y-2 text-sm text-[#bbcabf]">
@@ -573,17 +639,6 @@ export default function PricingClient() {
                   Thanh toán đã xác nhận. Hướng dẫn: tải lại trang hoặc vào dashboard, sau đó mở module vừa mua.
                 </div>
               ) : null}
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-[#1b2025]/85 p-5">
-              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-[#86948a]">QR thanh toán</h3>
-              {checkoutOrder.qrUrl ? (
-                <img src={checkoutOrder.qrUrl} alt="QR thanh toán" className="mt-4 h-56 w-56 rounded-lg border border-white/10 bg-white p-2" />
-              ) : (
-                <div className="mt-4 rounded-lg border border-dashed border-white/10 px-4 py-10 text-xs text-[#86948a]">
-                  Chưa có QR vì thiếu PAYMENT_BANK_CODE/PAYMENT_BANK_ACCOUNT_NO.
-                </div>
-              )}
             </div>
           </section>
         ) : null}
