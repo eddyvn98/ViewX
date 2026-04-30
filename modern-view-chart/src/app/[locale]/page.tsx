@@ -40,17 +40,17 @@ export default function LandingPage() {
                     <div className="relative z-10 grid gap-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div className="space-y-8">
                             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/50 px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-700 backdrop-blur-md">
-                                {isVi ? 'Module-first experience' : 'Module-first experience'}
-                                <Wallet className="h-3.5 w-3.5" />
+                                {isVi ? 'Hệ sinh thái tiện ích Trading AI' : 'AI Trading Utility Ecosystem'}
+                                <Bot className="h-3.5 w-3.5" />
                             </div>
                             <div className="space-y-6">
                                 <h1 className="max-w-2xl text-5xl font-black tracking-tight text-slate-950 md:text-7xl lg:leading-[1.1]">
-                                    {isVi ? 'Chọn module, không chọn gói cũ.' : 'Pick modules, not old bundles.'}
+                                    {isVi ? 'Nâng cấp giao diện MT5 cũ kỹ bằng sức mạnh AI.' : 'Upgrade Legacy MT5 with the Power of AI.'}
                                 </h1>
                                 <p className="max-w-xl text-lg leading-relaxed text-slate-600 md:text-xl">
                                     {isVi
-                                        ? 'Vivutrade tập trung vào luồng module rõ ràng: Your MT5 để kết nối MT5 local, Binance Demo để test nhanh, và Telegram Notify để theo dõi alert.'
-                                        : 'Vivutrade focuses on a clear module flow: Your MT5 for local MT5 connection, Binance Demo for fast testing, and Telegram Notify for alerts.'}
+                                        ? 'Chọn các tiện ích bạn cần từ hệ sinh thái Vivutrade và bắt đầu sử dụng ngay trên trình duyệt. Kết nối dữ liệu sàn chỉ là một trong nhiều tính năng mạnh mẽ chúng tôi cung cấp.'
+                                        : 'Pick the utilities you need from Vivutrade ecosystem and start trading on your browser. Seamless broker connection is just one of many powerful features we provide.'}
                                 </p>
                             </div>
                             <div className="flex flex-col gap-4 sm:flex-row">
@@ -58,14 +58,14 @@ export default function LandingPage() {
                                     href="/pricing"
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-8 py-4 font-black text-white shadow-2xl shadow-slate-950/20 transition hover:-translate-y-1 hover:shadow-slate-950/40 active:scale-95"
                                 >
-                                    {isVi ? 'Xem module' : 'View modules'}
+                                    {isVi ? 'Sử dụng ngay' : 'Launch Now'}
                                     <ArrowRight className="h-5 w-5" />
                                 </Link>
                                 <Link
                                     href="/modules"
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-8 py-4 font-black text-emerald-800 backdrop-blur-md transition hover:-translate-y-1 hover:bg-emerald-50 shadow-sm"
                                 >
-                                    {isVi ? 'My Hub' : 'My Hub'}
+                                    {isVi ? 'Kho tiện ích' : 'Utility Hub'}
                                 </Link>
                             </div>
                             <div className="grid gap-4 pt-4 sm:grid-cols-3">
@@ -93,9 +93,9 @@ export default function LandingPage() {
                                     </p>
                                     <div className="space-y-4">
                                         {[
-                                            { step: '1', title: isVi ? 'Mua module' : 'Buy module', desc: isVi ? 'Chọn module cần thiết.' : 'Pick target module.' },
-                                            { step: '2', title: isVi ? 'Cài Bridge' : 'Install Bridge', desc: isVi ? 'Cài đặt app trên Windows.' : 'Setup desktop app.' },
-                                            { step: '3', title: isVi ? 'Mở Terminal' : 'Open Terminal', desc: isVi ? 'Bắt đầu sử dụng trên Web.' : 'Start web terminal.' },
+                                            { step: '1', title: isVi ? 'Chọn Tiện ích' : 'Pick Utility', desc: isVi ? 'Kích hoạt công cụ cần thiết.' : 'Enable necessary tools.' },
+                                            { step: '2', title: isVi ? 'Vào Web Terminal' : 'Open Web Terminal', desc: isVi ? 'Trải nghiệm ngay trên web.' : 'Start on your browser.' },
+                                            { step: '3', title: isVi ? 'Sử dụng AI' : 'Use AI Power', desc: isVi ? 'Giao dịch thông minh hơn.' : 'Trade smarter with AI.' },
                                         ].map((item) => (
                                             <div key={item.step} className="group/item relative rounded-2xl border border-white bg-white/40 p-5 transition-all hover:bg-white/80 hover:shadow-md">
                                                 <div className="flex items-center gap-4">
@@ -123,12 +123,12 @@ export default function LandingPage() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.15),_transparent_50%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.15),_transparent_50%)]" />
                     <div className="relative z-10 mx-auto max-w-4xl space-y-10">
                         <h2 className="text-4xl font-black text-white md:text-6xl lg:leading-tight">
-                            {isVi ? 'Bắt đầu đúng module.' : 'Start with the right module.'}
+                            {isVi ? 'Sẵn sàng nâng tầm giao dịch?' : 'Ready to Level Up Your Trading?'}
                         </h2>
                         <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-300 md:text-xl">
                             {isVi
-                                ? 'Your MT5 là luồng kết nối MT5 local và mở khóa terminal. Chọn module đúng trước, rồi mới vào guide và activation.'
-                                : 'Your MT5 is the local MT5 connection and terminal unlock flow. Pick the right module first, then go to guide and activation.'}
+                                ? 'Tham gia cùng cộng đồng trader hiện đại, tận dụng sức mạnh AI để đưa ra những quyết định chính xác và hiệu quả hơn bao giờ hết.'
+                                : 'Join the modern trading community and leverage the power of AI to make more precise and effective decisions than ever before.'}
                         </p>
                         <div className="flex flex-col items-center justify-center gap-6 pt-6 sm:flex-row">
                             <Link
@@ -159,8 +159,8 @@ export default function LandingPage() {
                         <Logo showText size={32} />
                         <p className="text-sm leading-relaxed text-slate-500">
                             {isVi
-                                ? 'Vivutrade tập trung vào luồng module rõ ràng: Your MT5, Binance Demo và Telegram Notify.'
-                                : 'Vivutrade focuses on a clear module flow: Your MT5, Binance Demo, and Telegram Notify.'}
+                                ? 'Hệ sinh thái tiện ích Trading AI, nâng cấp giao diện MT5 cũ kỹ với trải nghiệm web hiện đại và mượt mà.'
+                                : 'AI Trading utility ecosystem, upgrading legacy MT5 with a modern and seamless web experience.'}
                         </p>
                     </div>
                     <div className="flex flex-col gap-6 lg:text-right">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
     LineChart,
     Diamond,
@@ -74,6 +74,9 @@ export function Features() {
         }
     ];
 
+    const locale = useLocale();
+    const isVi = locale === 'vi';
+
     return (
         <section aria-labelledby="features-title" className="space-y-16 py-12">
             <div className="space-y-6 text-center max-w-3xl mx-auto">
@@ -81,10 +84,12 @@ export function Features() {
                     id="features-title"
                     className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl"
                 >
-                    Professional Grade Tools
+                    {isVi ? 'Tiện ích chuyên nghiệp, dễ sử dụng' : 'Professional Utilities, Simplified'}
                 </h2>
                 <p className="text-lg text-slate-600 leading-relaxed">
-                    Everything you need to build, test, and execute strategies autonomously with AI assistance.
+                    {isVi
+                        ? 'Mọi thứ bạn cần để xây dựng và thực thi chiến lược tự động với sự hỗ trợ từ trợ lý AI thông minh.'
+                        : 'Everything you need to build and execute strategies with the power of intelligent AI assistance.'}
                 </p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
