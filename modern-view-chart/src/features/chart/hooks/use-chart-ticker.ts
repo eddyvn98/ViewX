@@ -64,12 +64,21 @@ export function useChartTicker({
     }, [source, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
-        const unit = intv.slice(-1);
-        const val = parseInt(intv);
-        if (unit === 'm') return val * 60;
-        if (unit === 'h' || unit === 'H') return val * 3600;
-        if (unit === 'd' || unit === 'D') return val * 86400;
-        if (!isNaN(Number(intv))) return Number(intv) * 60;
+        const raw = String(intv || '').trim();
+        if (!raw) return 60;
+        if (/^\d+$/.test(raw)) return Number(raw) * 60;
+
+        const m = raw.match(/^(\d+)?\s*([mhdw])$/i);
+        if (!m) return 60;
+
+        const unit = m[2].toLowerCase();
+        const value = m[1] ? Number(m[1]) : 1;
+        if (!Number.isFinite(value) || value <= 0) return 60;
+
+        if (unit === 'm') return value * 60;
+        if (unit === 'h') return value * 3600;
+        if (unit === 'd') return value * 86400;
+        if (unit === 'w') return value * 604800;
         return 60;
     };
 

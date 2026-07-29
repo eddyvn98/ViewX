@@ -80,6 +80,35 @@ function buildSafePrompt(userPrompt) {
     return `${AI_POLICY}\n\nUser request:\n${String(userPrompt || "").trim()}`;
 }
 
+async function getAiCoreReply({ actorKey, prompt, historyLimit = 8 }) {
+    const safePrompt = buildSafePrompt(prompt);
+    const historyRows = await loadHistory(actorKey, historyLimit);
+    const chatHistory = historyRows.flatMap((row) => ([
+        { role: "user", content: row.prompt },
+        { role: "model", content: row.response },
+    ]));
+
+    const corePayload = {
+        agentId: "viewx-assistant",
+        sessionId: actorKey,
+        message: safePrompt,
+        history: chatHistory,
+    };
+
+    const aiCoreRes = await fetch("http://localhost:4000/v1/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corePayload),
+    });
+
+    if (!aiCoreRes.ok) {
+        throw new Error(`AI Core Error: ${aiCoreRes.statusText}`);
+    }
+
+    const coreData = await aiCoreRes.json();
+    return String(coreData?.reply || "").trim();
+}
+
 function sanitizeAssistantOutput(rawText) {
     const value = String(rawText || "").trim();
     if (!value) return "";
@@ -111,6 +140,57 @@ function getOutputBlockReason(text) {
     if (OUTPUT_BLOCK_PATTERNS[3].test(value)) return "runtime_env_reference_in_output";
     if (OUTPUT_BLOCK_PATTERNS[4].test(value)) return "filesystem_path_leak_in_output";
     return "sensitive_output_detected";
+}
+
+function buildForecastTextFromQuestion({ question, chart, forecast, lang = "vi" }) {
+    const q = String(question || "").toLowerCase();
+    const isVi = String(lang || "vi").toLowerCase().startsWith("vi");
+    const asksRange = /(vung gia|vùng giá|range|bien do|biên độ|volatility)/i.test(q);
+    const symbol = String(chart?.symbol || "");
+    const timeframe = String(chart?.timeframe || "");
+    const direction = String(forecast?.direction || "sideways");
+    const current = Number(forecast?.current_price || 0);
+    const target = Number(forecast?.target_price || 0);
+    const delta = Number(forecast?.delta_pct || 0);
+    const low = Number(forecast?.band_low || 0);
+    const high = Number(forecast?.band_high || 0);
+    const confidence = Number(forecast?.confidence || 0);
+    const horizon = Number(forecast?.horizon || 0);
+
+    const directionVi = direction === "bullish" ? "Tăng" : direction === "bearish" ? "Giảm" : "Đi ngang";
+    const directionEn = direction === "bullish" ? "Bullish" : direction === "bearish" ? "Bearish" : "Sideways";
+
+    if (asksRange) {
+        if (isVi) {
+            return [
+                `Dự báo vùng giá kế tiếp ${symbol} (${timeframe}) trong ${horizon} nến:`,
+                `- Vùng kỳ vọng: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+                `- Biên độ dự kiến: ${(high - low).toFixed(3)}`,
+                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`,
+            ].join("\n");
+        }
+        return [
+            `Next range forecast for ${symbol} (${timeframe}) over ${horizon} candles:`,
+            `- Expected range: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+            `- Expected volatility span: ${(high - low).toFixed(3)}`,
+            `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`,
+        ].join("\n");
+    }
+
+    if (isVi) {
+        return [
+            `Dự đoán giá sắp tới ${symbol} (${timeframe}) trong ${horizon} nến:`,
+            `- Giá hiện tại: ${current.toFixed(3)}`,
+            `- Giá mục tiêu: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
+            `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`,
+        ].join("\n");
+    }
+    return [
+        `Next move forecast for ${symbol} (${timeframe}) over ${horizon} candles:`,
+        `- Current price: ${current.toFixed(3)}`,
+        `- Target price: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
+        `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`,
+    ].join("\n");
 }
 
 function aiDisabledResponse(res) {
@@ -402,8 +482,6 @@ router.post("/task", async (req, res) => {
         });
     }
 
-    const safePrompt = buildSafePrompt(prompt);
-
     if (isChatSource) {
         if (!billingUserId) {
             return res.status(401).json({ status: "error", msg: "user_auth_required_for_chat_ai" });
@@ -420,31 +498,7 @@ router.post("/task", async (req, res) => {
 
     // Forward to AI Core Platform
     try {
-        const historyRows = await loadHistory(actorKey, 10);
-        const chatHistory = historyRows.flatMap(row => [
-            { role: 'user', content: row.prompt },
-            { role: 'model', content: row.response }
-        ]);
-
-        const corePayload = {
-            agentId: "viewx-assistant",
-            sessionId: actorKey, // We use actorKey as sessionId
-            message: safePrompt,
-            history: chatHistory
-        };
-
-        const aiCoreRes = await fetch("http://localhost:4000/v1/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(corePayload)
-        });
-
-        if (!aiCoreRes.ok) {
-            throw new Error(`AI Core Error: ${aiCoreRes.statusText}`);
-        }
-
-        const coreData = await aiCoreRes.json() ;
-        let text = coreData.reply;
+        let text = await getAiCoreReply({ actorKey, prompt, historyLimit: 10 });
 
         if (text) {
             if (isSensitiveOutput(text)) {
@@ -570,11 +624,18 @@ router.post("/forecast", async (req, res) => {
             });
         }
 
+        const responseText = buildForecastTextFromQuestion({
+            question,
+            chart,
+            forecast: result.forecast,
+            lang,
+        });
+
         pushHistory(actorKey, {
             id: crypto.randomUUID(),
             source,
             prompt: question || `Du bao ${chart.symbol} ${chart.timeframe}`,
-            response: result.response,
+            response: responseText,
             timestamp: Date.now(),
         });
 
@@ -585,9 +646,10 @@ router.post("/forecast", async (req, res) => {
 
         return res.json({
             status: "ok",
-            response: result.response,
+            response: responseText,
             remainingCredits: consumed.remainingCredits,
             forecast: result.forecast,
+            result: result.forecast,
             engine: result.engine,
         });
     } catch (error) {

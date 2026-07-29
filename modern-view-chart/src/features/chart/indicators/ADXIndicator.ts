@@ -2,6 +2,7 @@ import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateADX } from '../utils/indicator-math';
 import { ADXResult } from '../utils/indicators/adx';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class ADXIndicator {
     private adxSeries: ISeriesApi<"Line"> | null = null;
@@ -117,9 +118,9 @@ export class ADXIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.adxSeries) this.chart.removeSeries(this.adxSeries);
-            if (this.plusSeries) this.chart.removeSeries(this.plusSeries);
-            if (this.minusSeries) this.chart.removeSeries(this.minusSeries);
+            safeRemoveSeries(this.chart, this.adxSeries, 'ADXIndicator');
+            safeRemoveSeries(this.chart, this.plusSeries, 'ADXIndicator');
+            safeRemoveSeries(this.chart, this.minusSeries, 'ADXIndicator');
             this.adxSeries = null;
             this.plusSeries = null;
             this.minusSeries = null;

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Be_Vietnam_Pro, Outfit, Inter } from 'next/font/google';
 import NextTopLoader from 'nextjs-toploader';
 import React from 'react';
 import { Toaster } from 'sonner';
@@ -6,6 +7,24 @@ import './globals.css';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { FloatingSupportButton } from '@/components/layout/FloatingSupportButton';
 import { getSiteUrl } from '@/lib/site-url';
+
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ['vietnamese'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-be-vietnam',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-outfit',
+});
+
+const inter = Inter({
+  subsets: ['vietnamese'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-inter',
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -29,8 +48,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" suppressHydrationWarning>
-      <body className="antialiased" suppressHydrationWarning>
+    <html lang="vi" suppressHydrationWarning className={`${beVietnamPro.variable} ${outfit.variable} ${inter.variable}`}>
+      <body className={`${beVietnamPro.className} antialiased`} suppressHydrationWarning>
         <NextTopLoader
           color="#0ea5e9"
           initialPosition={0.08}

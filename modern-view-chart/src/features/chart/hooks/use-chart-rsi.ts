@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi, LineSeries, LineStyle, Time } from 'lightweight-charts';
 import { Candle } from '@/lib/store';
 import { calculateRSI } from '../utils/indicator-math';
+import { safeRemoveSeries } from '../indicators/utils/safe-remove-series';
 
 export function useChartRSI(
     chartRef: React.RefObject<IChartApi | null>,
@@ -66,7 +67,7 @@ export function useChartRSI(
 
         return () => {
             if (rsiSeriesRef.current) {
-                chart.removeSeries(rsiSeriesRef.current);
+                safeRemoveSeries(chart, rsiSeriesRef.current, 'ChartRSI');
                 rsiSeriesRef.current = null;
             }
         };

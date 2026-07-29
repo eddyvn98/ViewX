@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, CandlestickSeries } from 'lightweight-charts';
 import { debugLog } from '@/lib/debug';
 import { DiamondSeries } from '../logic/diamond-series';
+import { safeRemoveSeries } from '../indicators/utils/safe-remove-series';
 
 interface UseSeriesSwitcherProps {
     chartRef: React.RefObject<IChartApi | null>;
@@ -40,11 +41,7 @@ export function useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColo
         if (!isTypeChange && !latestMismatch) return;
 
         debugLog(`[SeriesSwitcher] Switching to ${needsDiamond ? 'Diamond' : 'Candlestick'} Series`);
-        try {
-            chart.removeSeries(latestSeries);
-        } catch {
-            // Error ignored during chart remount
-        }
+        safeRemoveSeries(chart, latestSeries, 'SeriesSwitcher');
 
         if (needsDiamond) {
             seriesRef.current = chart.addCustomSeries(new DiamondSeries(), {

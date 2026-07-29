@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateBollingerBands } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class BollingerBandsIndicator {
     private middleSeries: ISeriesApi<"Line"> | null = null;
@@ -115,9 +116,9 @@ export class BollingerBandsIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.middleSeries) this.chart.removeSeries(this.middleSeries);
-            if (this.upperSeries) this.chart.removeSeries(this.upperSeries);
-            if (this.lowerSeries) this.chart.removeSeries(this.lowerSeries);
+            safeRemoveSeries(this.chart, this.middleSeries, 'BollingerBandsIndicator');
+            safeRemoveSeries(this.chart, this.upperSeries, 'BollingerBandsIndicator');
+            safeRemoveSeries(this.chart, this.lowerSeries, 'BollingerBandsIndicator');
             this.middleSeries = null;
             this.upperSeries = null;
             this.lowerSeries = null;

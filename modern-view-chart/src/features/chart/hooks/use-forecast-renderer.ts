@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi, LineSeries, AreaSeries } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
-import { ForecastData } from '@/lib/store/types';
+import { safeRemoveSeries } from '@/features/chart/indicators/utils/safe-remove-series';
 
 /**
  * Hook to render AI Price Forecast on a Lightweight Chart instance.
@@ -57,22 +57,14 @@ export function useForecastRenderer(
         if (!priceChart) return;
         
         const cleanup = () => {
-            if (forecastLineRef.current) {
-                priceChart.removeSeries(forecastLineRef.current);
-                forecastLineRef.current = null;
-            }
-            if (upperBandRef.current) {
-                priceChart.removeSeries(upperBandRef.current);
-                upperBandRef.current = null;
-            }
-            if (lowerBandRef.current) {
-                priceChart.removeSeries(lowerBandRef.current);
-                lowerBandRef.current = null;
-            }
-            if (areaBandRef.current) {
-                priceChart.removeSeries(areaBandRef.current);
-                areaBandRef.current = null;
-            }
+            safeRemoveSeries(priceChart, forecastLineRef.current, 'ForecastRenderer');
+            safeRemoveSeries(priceChart, upperBandRef.current, 'ForecastRenderer');
+            safeRemoveSeries(priceChart, lowerBandRef.current, 'ForecastRenderer');
+            safeRemoveSeries(priceChart, areaBandRef.current, 'ForecastRenderer');
+            forecastLineRef.current = null;
+            upperBandRef.current = null;
+            lowerBandRef.current = null;
+            areaBandRef.current = null;
         };
 
         cleanup();
@@ -112,16 +104,6 @@ export function useForecastRenderer(
         const lineData = forecast.points.map((p, i) => ({
             time: (lastTs + (i + 1) * intervalSec) as any,
             value: p,
-        }));
-
-        const areaData = forecast.lower_band.map((p, i) => ({
-            time: (lastTs + (i + 1) * intervalSec) as any,
-            value: forecast.upper_band[i], // For AreaSeries, value is the "top" if we don't have baseValue?
-            // Wait, AreaSeries in Lightweight Charts has a single value. 
-            // To show a band, we usually use two LineSeries with an autoscale or a custom plugin.
-            // But we can use one AreaSeries and set baseValue if it's constant.
-            // Actually, for a variable band, the best way is indeed two LineSeries or a custom series.
-            // However, we can use a clever trick with AreaSeries if we want shading.
         }));
 
         // Reverting to two LineSeries for the band boundaries as it's more reliable for variable bands,

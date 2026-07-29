@@ -8,7 +8,12 @@ const INTERVAL_MAP = {
     '30': '30m',
     '60': '1h',
     '240': '4h',
-    'D1': '1d'
+    'D': '1d',
+    '1D': '1d',
+    'D1': '1d',
+    'W': '1w',
+    '1W': '1w',
+    'W1': '1w'
 };
 
 export async function handleBinanceHistory({ ws }, data) {

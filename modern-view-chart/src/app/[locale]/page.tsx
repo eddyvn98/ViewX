@@ -17,7 +17,7 @@ export default function LandingPage() {
     const docsLabel = isVi ? 'Tài liệu' : 'Docs';
 
     return (
-        <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.05),_transparent_40%)] bg-slate-50 text-slate-900 [font-family:Outfit,Inter,sans-serif]">
+        <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.05),_transparent_40%)] bg-slate-50 text-slate-900 font-outfit">
             <header className="fixed top-4 left-1/2 z-50 w-[calc(100%-2.5rem)] max-w-7xl -translate-x-1/2 rounded-2xl border border-white/40 bg-white/60 backdrop-blur-2xl transition-all shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
                 <div className="mx-auto flex items-center justify-between px-6 py-3">
                     <Logo showText size={26} />
