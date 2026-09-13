@@ -255,7 +255,7 @@ export const createChartSlice: StateCreator<
         return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
     }),
 
-    favoriteTimeframes: ['1', '5', '15', '60', '240', 'D'],
+    favoriteTimeframes: ['1', '5', '15', '60', '240', '1440', '10080', '43200', '525600'],
     favoriteChartTypes: ['candles', 'heikin_ashi', 'smart_candles'],
 
     toggleFavoriteTimeframe: (tf) => set((state) => {

@@ -35,11 +35,12 @@ interface UseChartHistoryProps {
     candleUpColor: string;
     candleDownColor: string;
     contextKey?: string;
+    isAutoScrollEnabledRef?: React.RefObject<boolean>;
     onHistoryLoaded: (lastCandle: Candle) => void;
 }
 
 export function useChartHistory(props: UseChartHistoryProps) {
-    const { chartId, symbol, interval, source, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, candleUpColor, candleDownColor, contextKey, onHistoryLoaded } = props;
+    const { chartId, symbol, interval, source, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, candleUpColor, candleDownColor, contextKey, isAutoScrollEnabledRef, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
@@ -50,6 +51,9 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
     const lastTailSignatureRef = useRef('0');
+    // BUG #3 fix: generation counter to reject stale RAF callbacks on rapid symbol/timeframe switching.
+    // Each context change bumps the generation; RAF callbacks that don't match are discarded.
+    const applyDataGenerationRef = useRef(0);
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
@@ -146,11 +150,19 @@ export function useChartHistory(props: UseChartHistoryProps) {
                         to: persistedRange.to
                     });
                 } else {
-                // Ensure the chart is following the END of the data
+                // Ensure the chart is following the END of the data, but also scroll
+                // to realtime so the chart shows the ACTUAL current bar — not just the
+                // last candle in the pre-loaded history batch.
+                // Without scrollToRealTime(), if there's a gap between the last historical
+                // candle and the current realtime bar (e.g. market moved several bars since
+                // history loaded), the chart is stuck showing the old last historical candle
+                // until the ticker fires. scrollToRealTime() positions the right edge at the
+                // current server time, so the realtime bar fills in naturally when it arrives.
                     chartRef.current?.timeScale().setVisibleLogicalRange({
                         from: candles.length - (window.innerWidth < 768 ? 40 : 80),
                         to: candles.length + 5
                     });
+                    chartRef.current?.timeScale().scrollToRealTime();
                 }
 
                 chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
@@ -190,6 +202,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
                     seriesRef.current?.setData([]);
                     markerSeriesRef.current?.setData([]);
                     updateSyncData([], subSyncRef, timescaleSyncRef);
+                    // BUG #2 fix: Reset price scale immediately when clearing chart on context change.
+                    // Without this, switching from BTC (price ~100k) to EUR (price ~1.05) leaves the
+                    // scale locked at the old range — candles render as stretched lines or are invisible.
+                    chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
                 } catch {
                     // Ignore transient teardown races while the chart is rebuilding.
                 }
@@ -205,6 +221,14 @@ export function useChartHistory(props: UseChartHistoryProps) {
             autoFitProgressRef.current = null;
             clearedForKeyRef.current = null;
             lastTailSignatureRef.current = '0';
+            // BUG #3 fix: Bump generation to invalidate any in-flight RAF for the old context.
+            // This prevents data of symbol A from being applied to the chart now showing symbol B.
+            applyDataGenerationRef.current++;
+            // Reset auto-scroll so the ticker's scrollToRealTime() call works on the new context.
+            // Without this, if the user had manually panned away on the previous timeframe,
+            // isAutoScrollEnabledRef stays false and the chart won't follow the realtime bar
+            // after switching timeframes.
+            if (isAutoScrollEnabledRef) isAutoScrollEnabledRef.current = true;
         }
 
         const isTypeChange = chartType !== lastChartTypeRef.current;
@@ -220,11 +244,22 @@ export function useChartHistory(props: UseChartHistoryProps) {
             const previousChartType = lastChartTypeRef.current;
             const nextChartType = chartType;
             const nextTheme = theme;
+            // BUG #5 fix: Snapshot isInitialMount BEFORE the RAF so we capture the value
+            // at schedule-time. If another context change fires between schedule and execution,
+            // the flag may be reset to `true` for the new context, making us incorrectly
+            // autofit for a stale (already-discarded) context.
+            const wasInitialMount = isInitialMount.current;
+            // BUG #3 fix: Snapshot generation at schedule-time. If a context switch fires
+            // before this RAF executes, the generation is bumped and this callback self-discards.
+            const myGeneration = applyDataGenerationRef.current;
 
             applyDataRafRef.current = requestAnimationFrame(() => {
                 applyDataRafRef.current = null;
 
-                if (lastKeyRef.current !== nextKey) {
+                // BUG #3 fix: Dual guard — key check AND generation check.
+                // Generation is strictly monotonic per context switch, immune to key
+                // collisions (e.g. same symbol different source/interval normalize edge cases).
+                if (lastKeyRef.current !== nextKey || applyDataGenerationRef.current !== myGeneration) {
                     return;
                 }
 
@@ -259,7 +294,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
                     updateSyncData(formatted, subSyncRef, timescaleSyncRef);
 
                     const autoFitState = autoFitProgressRef.current;
-                    const shouldAutoFitOnContextEntry = isContextChange || isInitialMount.current || autoFitState?.key !== nextKey;
+                    // BUG #5 fix: Use snapshotted wasInitialMount (schedule-time value),
+                    // not the live isInitialMount.current (which may have been reset by a
+                    // subsequent context change before this RAF ran).
+                    const shouldAutoFitOnContextEntry = isContextChange || wasInitialMount || autoFitState?.key !== nextKey;
                     const shouldAutoFitWhileLoading =
                         chartStateRef.current !== 'ready' &&
                         (!autoFitState || nextCandles.length - autoFitState.count >= AUTO_FIT_GROWTH_STEP);

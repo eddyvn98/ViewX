@@ -22,6 +22,25 @@ class MT5Service:
     def shutdown(self):
         mt5.shutdown()
 
+    def _ensure_mt5_healthy(self):
+        """Checks if MT5 terminal connection is active. Re-initializes if lost."""
+        err_code, err_desc = mt5.last_error()
+        term_info = mt5.terminal_info()
+        if term_info is None or err_code < 0:
+            print(f"[WARN] MT5 IPC connection unhealthy (error={err_code}: {err_desc}). Re-initializing MT5...")
+            try:
+                mt5.shutdown()
+            except Exception:
+                pass
+            time.sleep(0.5)
+            success = self.initialize()
+            if success:
+                print("[OK] MT5 IPC connection successfully restored.")
+            else:
+                print("[ERROR] MT5 IPC re-initialization failed.")
+            return success
+        return True
+
     def fetch_available_symbols(self):
         symbols = mt5.symbols_get()
         if symbols is None:
@@ -78,7 +97,10 @@ class MT5Service:
             return info.name
 
         requested_key = self._normalize_symbol_key(requested)
-        symbols = mt5.symbols_get() or []
+        symbols = mt5.symbols_get()
+        if symbols is None:
+            self._ensure_mt5_healthy()
+            symbols = mt5.symbols_get() or []
 
         # First pass: exact case-insensitive match.
         for s in symbols:
@@ -99,10 +121,18 @@ class MT5Service:
     def fetch_candles(self, symbol, interval, count=200):
         resolved_symbol = self._resolve_symbol(symbol)
         if not resolved_symbol:
+            self._ensure_mt5_healthy()
+            resolved_symbol = self._resolve_symbol(symbol)
+
+        if not resolved_symbol:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
 
         symbol_info = mt5.symbol_info(resolved_symbol)
+        if symbol_info is None:
+            self._ensure_mt5_healthy()
+            symbol_info = mt5.symbol_info(resolved_symbol)
+
         if symbol_info is None:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
@@ -418,7 +448,7 @@ class MT5Service:
             from_timestamp = int(from_date.timestamp()) if hasattr(from_date, 'timestamp') else int(from_date)
             
         if to_date is None:
-            to_timestamp = int(time.time()) + 86400
+            to_timestamp = int(time.time()) + 300
         else:
             to_timestamp = int(to_date.timestamp()) if hasattr(to_date, 'timestamp') else int(to_date)
             
@@ -441,6 +471,8 @@ class MT5Service:
         if deals is None:
             error_code, error_desc = mt5.last_error()
             print(f"[ERROR] history_deals_get failed: {error_code} - {error_desc}")
+            if error_code < 0 or error_code == -10001:
+                self._ensure_mt5_healthy()
             return []
             
         print(f"[OK] Fetched {len(deals)} history deals from MT5")

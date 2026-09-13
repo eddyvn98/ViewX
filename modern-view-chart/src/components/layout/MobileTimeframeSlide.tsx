@@ -21,8 +21,10 @@ export function MobileTimeframeSlide({ onSelect }: MobileTimeframeSlideProps) {
         { id: '15', label: '15m' },
         { id: '60', label: '1H' },
         { id: '240', label: '4H' },
-        { id: 'D', label: '1D' },
-        { id: 'W', label: '1W' },
+        { id: '1440', label: 'D' },
+        { id: '10080', label: 'W' },
+        { id: '43200', label: 'M' },
+        { id: '525600', label: 'Y' },
     ];
 
     const handleSelect = (id: string) => {

@@ -149,9 +149,39 @@ async function broadcastChartCandles() {
   }
 }
 
+const INTERVAL_MAP = {
+    '1': '1m',
+    '3': '3m',
+    '5': '5m',
+    '10': '10m',
+    '15': '15m',
+    '30': '30m',
+    '60': '1h',
+    '120': '2h',
+    '240': '4h',
+    '1440': '1d',
+    'D': '1d',
+    '1D': '1d',
+    'D1': '1d',
+    '10080': '1w',
+    'W': '1w',
+    '1W': '1w',
+    'W1': '1w',
+    '43200': '1M',
+    'M': '1M',
+    '1M': '1M',
+    'MN1': '1M',
+    '1mo': '1M',
+    '525600': '1M',
+    'Y': '1M',
+    '1Y': '1M',
+    'Y1': '1M',
+};
+
 async function fetchLatestCandle(symbol, interval) {
   try {
-    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=1`;
+    const binanceInterval = INTERVAL_MAP[interval] || INTERVAL_MAP[String(interval).toUpperCase()] || '1m';
+    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=1`;
     const res = await fetch(url);
     const raw = await res.json();
     const [time, open, high, low, close, volume] = raw[0];
