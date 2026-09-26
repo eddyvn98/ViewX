@@ -6,6 +6,7 @@ import { useMarketStore, ChartInstance } from '@/lib/store';
 import { ChartContainer } from '../ChartContainer';
 import { cn } from '@/lib/utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { formatChartTimeframe } from './timeframe-config';
 
 
 interface ChartItemProps {
@@ -110,7 +111,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                             )}>
                                 {chart.symbol}
                             </span>
-                            <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tight">{chart.interval} • {chart.source}</span>
+                            <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tight">{formatChartTimeframe(chart.interval)} • {chart.source}</span>
                         </div>
                         <button
                             onClick={(e) => {

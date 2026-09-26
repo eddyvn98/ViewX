@@ -8,6 +8,7 @@ import {
     ISeriesApi,
     PrimitivePaneViewZOrder,
 } from 'lightweight-charts';
+import { safeChartCoordinate } from './chart-coordinate-utils';
 
 export interface FibonacciExtensionLevel {
     ratio: number;
@@ -69,15 +70,15 @@ class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
             const timeScale = chart.timeScale();
             const levels = this._data!.levels;
 
-            const xStart = timeScale.timeToCoordinate(this._data!.p1Time);
-            const xPeak = timeScale.timeToCoordinate(this._data!.p2Time);
-            const xEnd = timeScale.timeToCoordinate(this._data!.p3Time);
+            const xStart = safeChartCoordinate(() => timeScale.timeToCoordinate(this._data!.p1Time));
+            const xPeak = safeChartCoordinate(() => timeScale.timeToCoordinate(this._data!.p2Time));
+            const xEnd = safeChartCoordinate(() => timeScale.timeToCoordinate(this._data!.p3Time));
 
             const canvasWidth = scope.bitmapSize.width;
             const phyXEnd = xEnd !== null ? xEnd * horizontalPixelRatio : 0;
 
             levels.forEach((level) => {
-                const y = series.priceToCoordinate(level.price);
+                const y = safeChartCoordinate(() => series.priceToCoordinate(level.price));
                 if (y === null) return;
 
                 const phyY = y * verticalPixelRatio;
@@ -121,9 +122,9 @@ class FibonacciExtensionPaneRenderer implements IPrimitivePaneRenderer {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.lineWidth = 1 * verticalPixelRatio;
 
-            const y1 = series.priceToCoordinate(this._data!.p1Price);
-            const y2 = series.priceToCoordinate(this._data!.p2Price);
-            const y3 = series.priceToCoordinate(this._data!.p3Price);
+            const y1 = safeChartCoordinate(() => series.priceToCoordinate(this._data!.p1Price));
+            const y2 = safeChartCoordinate(() => series.priceToCoordinate(this._data!.p2Price));
+            const y3 = safeChartCoordinate(() => series.priceToCoordinate(this._data!.p3Price));
 
             if (y1 !== null && y2 !== null && y3 !== null && xStart !== null && xPeak !== null && xEnd !== null) {
                 const phyXStart = xStart * horizontalPixelRatio;

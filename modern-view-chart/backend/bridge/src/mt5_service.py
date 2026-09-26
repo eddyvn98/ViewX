@@ -96,13 +96,31 @@ class MT5Service:
 
         return None
 
+    def _wait_for_symbol_info(self, resolved_symbol, attempts=3, delay_sec=0.2):
+        """mt5.symbol_info() can transiently return None right after
+        mt5.symbol_select() while the terminal is still adding the symbol to
+        Market Watch. Retry briefly instead of failing the whole request."""
+        symbol_info = mt5.symbol_info(resolved_symbol)
+        attempt_num = 1
+        while symbol_info is None and attempt_num < attempts:
+            error_code, error_desc = mt5.last_error()
+            print(f"[DEBUG] symbol_info('{resolved_symbol}') None on attempt {attempt_num}/{attempts} | last_error: {error_code} - {error_desc}")
+            time.sleep(delay_sec)
+            mt5.symbol_select(resolved_symbol, True)
+            symbol_info = mt5.symbol_info(resolved_symbol)
+            attempt_num += 1
+        if symbol_info is None:
+            error_code, error_desc = mt5.last_error()
+            print(f"[DEBUG] symbol_info('{resolved_symbol}') still None after {attempts} attempts | last_error: {error_code} - {error_desc}")
+        return symbol_info
+
     def fetch_candles(self, symbol, interval, count=200):
         resolved_symbol = self._resolve_symbol(symbol)
         if not resolved_symbol:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
 
-        symbol_info = mt5.symbol_info(resolved_symbol)
+        symbol_info = self._wait_for_symbol_info(resolved_symbol)
         if symbol_info is None:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
@@ -151,7 +169,7 @@ class MT5Service:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []
 
-        symbol_info = mt5.symbol_info(resolved_symbol)
+        symbol_info = self._wait_for_symbol_info(resolved_symbol)
         if symbol_info is None:
             print(f"[ERROR] Symbol not found in MT5: {symbol}")
             return []

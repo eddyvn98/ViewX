@@ -22,7 +22,7 @@ export type ModuleGuideContent = {
 
 type LocalizedGuide = Omit<ModuleGuideContent, 'module'>;
 
-type GuideMap = Record<ClientModule, { vi: LocalizedGuide; en: LocalizedGuide }>;
+type GuideMap = Partial<Record<ClientModule, { vi: LocalizedGuide; en: LocalizedGuide }>>;
 
 function getLocale(locale: string): Locale {
   return locale.toLowerCase().startsWith('vi') ? 'vi' : 'en';
@@ -247,7 +247,8 @@ const GUIDES: GuideMap = {
 
 export function getModuleGuideContent(module: ClientModule, locale: string): ModuleGuideContent {
   const lang = getLocale(locale);
-  const localized = GUIDES[module]?.[lang] || GUIDES[module]?.en;
+  const target = GUIDES[module] || GUIDES.your_mt5!;
+  const localized = target[lang] || target.en;
 
   return {
     module,

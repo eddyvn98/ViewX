@@ -12,6 +12,7 @@ import {
     createFallbackTabs,
     isPlainObject,
     remapRemoteDrawingsToLocalCharts,
+    remapRemoteIndicatorsToLocalCharts,
     sanitizeTabsInput,
 } from './tabs-utils';
 import {
@@ -68,7 +69,22 @@ function applyPersistedSetupState(
         }
 
         if (isPlainObject(persisted.chartIndicators)) {
-            next.chartIndicators = persisted.chartIndicators as RootState['chartIndicators'];
+            if (includeTabs) {
+                next.chartIndicators = persisted.chartIndicators as RootState['chartIndicators'];
+            } else {
+                // Local tabs are being kept as-is (e.g. periodic poll / cross-tab broadcast merge),
+                // so remote chart ids may not match local ones. Remap by (symbol, interval, source)
+                // context the same way chartDrawings does below, instead of blindly overwriting by id
+                // and silently orphaning indicators added on this session (e.g. SuperTrend disappearing).
+                const mapped = remapRemoteIndicatorsToLocalCharts(
+                    persisted.chartIndicators,
+                    persisted.tabs,
+                    next.tabs || prev.tabs,
+                );
+                if (mapped && Object.keys(mapped).length > 0) {
+                    next.chartIndicators = mapped;
+                }
+            }
         }
         if (isPlainObject(persisted.chartDrawings)) {
             if (includeTabs) {

@@ -16,12 +16,12 @@ export function resolveTagAnchorTime(tag: TagData | undefined, liveAnchorTime?: 
     const isPending = original.status === 'pending';
     const isLiveEntry = tag.type === 'entry' && tag.ticket !== 'draft' && !isHistory && !isPending;
 
-    const rawTime =
-        (isLiveEntry ? liveAnchorTime : undefined) ??
+    const originalTime =
         tag.anchorTime ??
         original.time ??
         original.timestamp ??
         original.createdAt;
+    const rawTime = originalTime ?? (isLiveEntry ? liveAnchorTime : undefined);
 
     return toEpochSec(rawTime);
 }

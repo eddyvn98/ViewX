@@ -21,8 +21,12 @@ const childEnv = {
 const child = spawn(process.execPath, [nextCli, "start", "--hostname", upstreamHost, "--port", String(upstreamPort)], {
     cwd: projectRoot,
     env: childEnv,
-    stdio: "inherit",
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
 });
+
+if (child.stdout) child.stdout.pipe(process.stdout);
+if (child.stderr) child.stderr.pipe(process.stderr);
 
 child.on("error", (error) => {
     console.error("[start-next] Failed to start Next.js:", error);

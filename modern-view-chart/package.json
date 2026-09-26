@@ -41,6 +41,10 @@
     "dev:all": "dev.bat",
     "dev:ide": "concurrently -n \"FE,BE,BRIDGE,TUNNEL\" -c \"cyan,magenta,yellow,green\" \"npm run dev\" \"npm run server:dev\" \"python backend/bridge/main.py\" \"python start_mobile_access.py\"",
     "test:e2e": "npx playwright test",
+    "test:unit": "npx --yes tsx --import ./tests/unit.setup.ts --test \"src/**/*.test.ts\"",
+    "test:forecast": "node --test backend/services/forecast-timeframe.test.js && cmd /c backend\\forecast\\.venv-311\\Scripts\\python.exe backend\\forecast\\test_forecast_service.py",
+    "test:chart-timeframes": "node scripts/check-chart-timeframes.mjs",
+    "test:market-symbols": "node scripts/check-mt5-symbol-message.mjs",
     "test:report": "npx playwright show-report",
     "benchmark:exness": "node scripts/benchmark-exness.mjs",
     "test:telegram-intent": "node scratch/test_telegram_intent_io.js",
@@ -48,7 +52,8 @@
     "test:telegram-active-pair": "node scratch/test_active_pair_cross_intent.js",
     "desktop:install": "cd desktop && npm install",
     "desktop:start": "cd desktop && npm start",
-    "desktop:build": "cd desktop && npm run dist"
+    "desktop:build": "cd desktop && npm run dist",
+    "android:build": "powershell -ExecutionPolicy Bypass -File .\\android\\build-apk.ps1"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

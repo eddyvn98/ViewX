@@ -16,19 +16,32 @@ import MetaTrader5 as mt5
 DEFAULT_CORE_SYMBOLS = ["XAUUSDm", "BTCUSDm", "ETHUSDm", "EURUSDm", "GBPUSDm"]
 TIMEFRAME_MAP = {
     "1m": mt5.TIMEFRAME_M1,
+    "3m": mt5.TIMEFRAME_M3,
     "5m": mt5.TIMEFRAME_M5,
+    "10m": mt5.TIMEFRAME_M10,
     "15m": mt5.TIMEFRAME_M15,
     "30m": mt5.TIMEFRAME_M30,
     "1h": mt5.TIMEFRAME_H1,
+    "2h": mt5.TIMEFRAME_H2,
     "4h": mt5.TIMEFRAME_H4,
     "1d": mt5.TIMEFRAME_D1,
+    "1w": mt5.TIMEFRAME_W1,
+    "1M": mt5.TIMEFRAME_MN1,
     "1": mt5.TIMEFRAME_M1,
+    "3": mt5.TIMEFRAME_M3,
     "5": mt5.TIMEFRAME_M5,
+    "10": mt5.TIMEFRAME_M10,
     "15": mt5.TIMEFRAME_M15,
     "30": mt5.TIMEFRAME_M30,
     "60": mt5.TIMEFRAME_H1,
+    "120": mt5.TIMEFRAME_H2,
     "240": mt5.TIMEFRAME_H4,
     "1440": mt5.TIMEFRAME_D1,
+    "10080": mt5.TIMEFRAME_W1,
+    "43200": mt5.TIMEFRAME_MN1,
+    "D": mt5.TIMEFRAME_D1,
+    "W": mt5.TIMEFRAME_W1,
+    "M": mt5.TIMEFRAME_MN1,
 }
 
 

@@ -5,9 +5,14 @@ import Link from 'next/link';
 import { Activity, ArrowLeft } from 'lucide-react';
 import { StrategySignalScanners } from '@/features/strategy/components/StrategySignalScanners';
 import { SignalsView } from '@/features/strategy/components/SignalsView';
+import { StrategyRunnerBootstrap } from '@/features/strategy/components/StrategyRunnerBootstrap';
+import { useWebSocket } from '@/hooks/use-websocket';
+import { useUserSetupSync } from '@/hooks/use-user-setup-sync';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 export default function SignalsMonitorPage() {
+    useWebSocket();
+    useUserSetupSync();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const locale = pathname.split('/').filter(Boolean)[0] || 'en';
@@ -32,6 +37,7 @@ export default function SignalsMonitorPage() {
 
     return (
         <div className="h-screen bg-secondary/20 text-foreground overflow-hidden flex flex-col">
+            <StrategyRunnerBootstrap />
             <header className="h-12 shrink-0 border-b border-border/60 bg-background/80 backdrop-blur px-4 flex items-center justify-between">
                 <div className="inline-flex items-center gap-2">
                     <Activity size={15} className="text-primary" />

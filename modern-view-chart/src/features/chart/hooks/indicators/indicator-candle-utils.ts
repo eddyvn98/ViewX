@@ -14,6 +14,8 @@ export const formatCandles = (candles: Candle[]) =>
 
 export function getIntervalSeconds(interval?: string): number {
     if (!interval) return 60;
+    if (interval === 'D' || interval === '1D') return 86400;
+    if (interval === 'W' || interval === '1W') return 604800;
     const unit = interval.slice(-1);
     const val = parseInt(interval, 10);
     if (unit === 'm') return val * 60;

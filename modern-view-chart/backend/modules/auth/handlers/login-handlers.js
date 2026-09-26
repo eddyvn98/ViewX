@@ -29,7 +29,7 @@ export async function login(req, res) {
 
         const sessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
         const normalizedRole = normalizeUserRole(user.role);
-        const tokens = issueAuthTokens({
+        const tokens = await issueAuthTokens({
             userId: user._id,
             role: normalizedRole,
             sessionVersion,
@@ -107,7 +107,7 @@ export async function googleLogin(req, res) {
 
         const sessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
         const normalizedRole = normalizeUserRole(user.role);
-        const tokens = issueAuthTokens({
+        const tokens = await issueAuthTokens({
             userId: user._id,
             role: normalizedRole,
             sessionVersion,

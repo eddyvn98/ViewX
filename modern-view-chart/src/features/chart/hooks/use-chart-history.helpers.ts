@@ -17,6 +17,8 @@ export type CandleLookup = { key: string; candles: Candle[] };
 export const parseIntervalSeconds = (interval: string): number => {
     const raw = String(interval || '').trim();
     if (!raw) return 60;
+    if (raw === 'D' || raw === '1D') return 86400;
+    if (raw === 'W' || raw === '1W') return 604800;
     if (/^\d+$/.test(raw)) return Number(raw) * 60;
     const m = raw.match(/^(\d+)\s*([mhd])$/i);
     if (!m) return 60;
@@ -33,6 +35,8 @@ export const buildIntervalCandidates = (interval: string | undefined): string[] 
     if (!raw) return [];
 
     const out = new Set<string>([raw]);
+    if (raw === 'D') out.add('1440');
+    if (raw === 'W') out.add('10080');
     const lower = raw.toLowerCase();
     const m = lower.match(/^(\d+)m$/);
     if (m) out.add(m[1]);

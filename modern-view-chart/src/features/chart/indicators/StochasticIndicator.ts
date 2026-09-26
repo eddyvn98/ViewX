@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineData, LineSeries, LineStyle, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateStochastic } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class StochasticIndicator {
     private kSeries: ISeriesApi<"Line"> | null = null;
@@ -133,8 +134,8 @@ export class StochasticIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.kSeries) this.chart.removeSeries(this.kSeries);
-            if (this.dSeries) this.chart.removeSeries(this.dSeries);
+            if (this.kSeries) safeRemoveSeries(this.chart, this.kSeries, 'Stochastic');
+            if (this.dSeries) safeRemoveSeries(this.chart, this.dSeries, 'Stochastic');
             this.kSeries = null;
             this.dSeries = null;
         }

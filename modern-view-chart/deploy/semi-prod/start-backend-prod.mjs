@@ -14,8 +14,8 @@ const child = spawn(
       URL_MONGOOSE: "mongodb://127.0.0.1:27017/viewx?directConnection=true",
       ALLOWED_ORIGINS: "https://vivutrade.io.vn,https://api.vivutrade.io.vn,http://127.0.0.1:3000,http://localhost:3000",
       TIMESFM_ENABLED: "1",
-      TIMESFM_REPO: "google/timesfm-1.0-200m-pytorch",
-      FORECAST_PYTHON_BIN: "D:/viewx/ViewX/modern-view-chart/backend/forecast/.venv/Scripts/python.exe",
+      TIMESFM_REPO: "google/timesfm-2.5-200m-pytorch",
+      FORECAST_PYTHON_BIN: "backend/forecast/.venv-311/Scripts/python.exe",
     },
   },
 );

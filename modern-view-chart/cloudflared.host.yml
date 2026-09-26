@@ -1,5 +1,5 @@
 tunnel: 214e0dc2-0c10-427a-9060-74fe09b52486
-credentials-file: C:\Users\eddyvn\.cloudflared\214e0dc2-0c10-427a-9060-74fe09b52486.json
+credentials-file: C:\Users\hatha\.cloudflared\214e0dc2-0c10-427a-9060-74fe09b52486.json
 ingress:
   - hostname: posweb.vivutrade.io.vn
     service: http://127.0.0.1:13002
@@ -9,4 +9,18 @@ ingress:
     service: http://127.0.0.1:18091
   - hostname: pixelpro.vivutrade.io.vn
     service: http://127.0.0.1:18081
+  - hostname: poswebfree.vivutrade.io.vn
+    service: http://127.0.0.1:4011
+  - hostname: rina.vivutrade.io.vn
+    service: http://127.0.0.1:3012
+  - hostname: kisuhientruong.vivutrade.io.vn
+    service: http://127.0.0.1:3010
+  - hostname: dich.vivutrade.io.vn
+    service: http://127.0.0.1:8000
+  - hostname: hub.vivutrade.io.vn
+    service: http://127.0.0.1:3000
+  - hostname: thuchi.vivutrade.io.vn
+    service: http://127.0.0.1:3006
+  - hostname: trans.vivutrade.io.vn
+    service: http://127.0.0.1:8080
   - service: http_status:404

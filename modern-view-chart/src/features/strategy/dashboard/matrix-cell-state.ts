@@ -19,9 +19,9 @@ interface BuildCellStateInput {
     nowMs?: number;
 }
 
-function matchesCellStrategy(strategy: Strategy, _symbol: string, _timeframe: string): boolean {
-    // In matrix mode, symbol and timeframe are driven by scanner, not by strategy default.
-    return true;
+function matchesCellStrategy(strategy: Strategy, _symbol: string, timeframe: string): boolean {
+    const strategyTimeframe = normalizeDashboardTf(strategy.timeframe);
+    return !strategyTimeframe || strategyTimeframe === timeframe;
 }
 
 function hasMatchingStrategyId(strategyId: string, strategyIds: Set<string>): boolean {

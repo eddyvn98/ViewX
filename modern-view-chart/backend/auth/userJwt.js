@@ -2,8 +2,9 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { normalizeUserRole } from "./roles.js";
 import { userModel } from "../model/user.js";
+import { refreshTokenModel } from "../model/refreshToken.js";
 
-const activeRefreshJtis = new Map();
+const memoryFallbackJtis = new Map();
 let warnedJwtFallback = false;
 
 function getAccessTokenFallbackSecret() {
@@ -32,7 +33,7 @@ function getRefreshSecret() {
 }
 
 function getAccessTtl() {
-    return (process.env.AUTH_ACCESS_TTL || "15m").trim();
+    return (process.env.AUTH_ACCESS_TTL || "1h").trim();
 }
 
 function getRefreshTtl() {
@@ -67,24 +68,7 @@ function toNumericDate(value) {
     return nowEpochSeconds();
 }
 
-function purgeExpiredRefreshJtis() {
-    const now = nowEpochSeconds();
-    for (const [jti, exp] of activeRefreshJtis.entries()) {
-        if (typeof exp !== "number" || exp <= now) activeRefreshJtis.delete(jti);
-    }
-}
-
-function rememberRefreshJti(jti, exp) {
-    purgeExpiredRefreshJtis();
-    activeRefreshJtis.set(jti, toNumericDate(exp));
-}
-
-function revokeRefreshJti(jti) {
-    if (!jti) return;
-    activeRefreshJtis.delete(jti);
-}
-
-export function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
+export async function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
     const { accessSecret, refreshSecret } = requireSecrets();
     const subject = String(userId || "");
     const userRole = normalizeUserRole(role);
@@ -119,14 +103,31 @@ export function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
     );
 
     const decodedRefresh = jwt.decode(refreshToken) || {};
-    rememberRefreshJti(refreshJti, decodedRefresh.exp);
-
     const decodedAccess = jwt.decode(accessToken) || {};
+    const refreshExpiresAtSec = toNumericDate(decodedRefresh.exp);
+    const accessExpiresAtSec = toNumericDate(decodedAccess.exp);
+
+    try {
+        await refreshTokenModel.create({
+            jti: refreshJti,
+            userId,
+            expiresAt: new Date(refreshExpiresAtSec * 1000),
+        });
+    } catch (dbErr) {
+        // In case DB write is temporarily slow or unavailable, keep in-memory fallback
+        memoryFallbackJtis.set(refreshJti, refreshExpiresAtSec);
+        if (dbErr?.name?.includes("Mongo")) {
+            console.warn("[auth] Failed to persist refresh token to MongoDB, using memory fallback:", dbErr.message);
+        } else {
+            throw dbErr;
+        }
+    }
+
     return {
         accessToken,
         refreshToken,
-        accessExpiresAt: toNumericDate(decodedAccess.exp),
-        refreshExpiresAt: toNumericDate(decodedRefresh.exp),
+        accessExpiresAt: accessExpiresAtSec,
+        refreshExpiresAt: refreshExpiresAtSec,
     };
 }
 
@@ -149,7 +150,39 @@ export async function rotateRefreshToken(refreshToken) {
     if (!payload || payload.type !== "refresh" || !payload.jti || !payload.sub) {
         throw new Error("Invalid refresh token");
     }
-    if (!activeRefreshJtis.has(payload.jti)) {
+
+    let tokenDoc = null;
+    try {
+        tokenDoc = await refreshTokenModel.findOne({ jti: payload.jti });
+    } catch (dbErr) {
+        const err = new Error(`Database error verifying refresh token: ${dbErr?.message || dbErr}`);
+        err.isDatabaseError = true;
+        throw err;
+    }
+
+    if (!tokenDoc) {
+        // Check in-memory fallback
+        if (!memoryFallbackJtis.has(payload.jti)) {
+            throw new Error("Refresh token revoked");
+        }
+        memoryFallbackJtis.delete(payload.jti);
+    } else if (tokenDoc.revokedAt) {
+        const now = Date.now();
+        const graceUntil = tokenDoc.gracePeriodUntil ? new Date(tokenDoc.gracePeriodUntil).getTime() : 0;
+        if (now < graceUntil) {
+            // Concurrent tab refresh within grace period: issue a fresh valid token pair for this tab
+            const user = await userModel.findById(payload.sub).select("_id role sessionVersion");
+            if (!user?._id) throw new Error("User not found");
+            const currentSessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
+            const tokenSessionVersion = Number.isFinite(Number(payload.sv)) ? Number(payload.sv) : 1;
+            if (currentSessionVersion !== tokenSessionVersion) throw new Error("Session revoked");
+
+            return issueAuthTokens({
+                userId: user._id,
+                role: normalizeUserRole(user.role),
+                sessionVersion: currentSessionVersion,
+            });
+        }
         throw new Error("Refresh token revoked");
     }
 
@@ -165,7 +198,17 @@ export async function rotateRefreshToken(refreshToken) {
         throw new Error("Session revoked");
     }
 
-    revokeRefreshJti(payload.jti);
+    // Mark previous refresh token as revoked with 30-second grace period for concurrent multi-tab requests
+    if (tokenDoc) {
+        tokenDoc.revokedAt = new Date();
+        tokenDoc.gracePeriodUntil = new Date(Date.now() + 30000);
+        try {
+            await tokenDoc.save();
+        } catch (saveErr) {
+            console.warn("[auth] Failed to mark refresh token revoked:", saveErr?.message);
+        }
+    }
+
     return issueAuthTokens({
         userId: user._id,
         role: normalizeUserRole(user.role),
@@ -173,20 +216,32 @@ export async function rotateRefreshToken(refreshToken) {
     });
 }
 
-export function revokeRefreshToken(refreshToken) {
+export async function revokeRefreshToken(refreshToken) {
     if (!refreshToken) return false;
     const refreshSecret = getRefreshSecret();
     if (!refreshSecret) return false;
     try {
         const payload = jwt.verify(refreshToken, refreshSecret);
-        revokeRefreshJti(payload?.jti);
+        if (payload?.jti) {
+            memoryFallbackJtis.delete(payload.jti);
+            await refreshTokenModel.updateOne(
+                { jti: payload.jti },
+                { $set: { revokedAt: new Date(), gracePeriodUntil: null } }
+            );
+        }
         return true;
     } catch {
         return false;
     }
 }
 
-export function getActiveRefreshTokenCount() {
-    purgeExpiredRefreshJtis();
-    return activeRefreshJtis.size;
+export async function getActiveRefreshTokenCount() {
+    try {
+        return await refreshTokenModel.countDocuments({
+            revokedAt: null,
+            expiresAt: { $gt: new Date() },
+        });
+    } catch {
+        return memoryFallbackJtis.size;
+    }
 }

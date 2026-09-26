@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">vivutrade</string>
+    <string name="network_error_title">Mất kết nối Internet</string>
+    <string name="network_error_message">Không thể kết nối đến máy chủ vivutrade.io.vn.\nVui lòng kiểm tra Wi-Fi / 4G của bạn.</string>
+    <string name="btn_retry">Thử lại</string>
+    <string name="exit_prompt">Nhấn quay lại lần nữa để thoát</string>
+</resources>

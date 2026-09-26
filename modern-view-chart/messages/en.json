@@ -96,13 +96,52 @@
         "b4": "Performance monitoring across market contexts",
         "b5": "Advanced toolkit for teams and power users"
       }
+    },
+    "hero": {
+      "badge": "Module-first platform",
+      "ctaSecondary": "View pricing",
+      "trust": "Trusted by traders running MT5, Binance & Telegram"
+    },
+    "stats": {
+      "latency": { "value": "<50ms", "label": "Chart update latency" },
+      "sources": { "value": "MT5 + Binance", "label": "Live data sources" },
+      "indicators": { "value": "Unlimited", "label": "Indicators & alerts" },
+      "aiMonitor": { "value": "24/7", "label": "AI trade monitoring" }
+    },
+    "featuresSection": {
+      "title": "Professional Grade Tools",
+      "subtitle": "Everything you need to build, test, and execute strategies autonomously with AI assistance."
+    },
+    "pricingTeaser": {
+      "viewAll": "See full pricing"
+    },
+    "finalCta": {
+      "title": "Start With The Right Module.",
+      "desc": "Your MT5 is the local MT5 connection and terminal unlock flow. Pick the right module first, then go to guide and activation.",
+      "cta": "View Pricing"
+    },
+    "footer": {
+      "tagline": "Vivutrade focuses on a clear module flow: Your MT5, Binance Demo, and Telegram Notify.",
+      "productHeading": "Product",
+      "companyHeading": "Company",
+      "legalHeading": "Legal",
+      "copyright": "Vivutrade. Precision trading engineering."
     }
   },
   "Navigation": {
     "chart": "Chart",
     "matrix": "Matrix",
     "dashboard": "Dashboard",
-    "back": "Back"
+    "back": "Back",
+    "home": "Home",
+    "modules": "Module Hub",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "about": "About",
+    "methodology": "Methodology",
+    "contact": "Contact",
+    "terms": "Terms",
+    "privacy": "Privacy"
   },
   "Header": {
     "notifications": {

@@ -7,6 +7,7 @@ const child = spawn(
     cwd: "D:/viewx/ViewX/modern-view-chart",
     shell: true,
     stdio: "inherit",
+    windowsHide: true,
     env: {
       ...process.env,
       NODE_WS_URL: "ws://127.0.0.1:18092",

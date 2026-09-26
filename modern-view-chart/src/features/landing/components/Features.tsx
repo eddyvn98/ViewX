@@ -74,6 +74,8 @@ export function Features() {
         }
     ];
 
+    const sectionT = useTranslations('HomePage.featuresSection');
+
     return (
         <section aria-labelledby="features-title" className="space-y-16 py-12">
             <div className="space-y-6 text-center max-w-3xl mx-auto">
@@ -81,10 +83,10 @@ export function Features() {
                     id="features-title"
                     className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl"
                 >
-                    Professional Grade Tools
+                    {sectionT('title')}
                 </h2>
                 <p className="text-lg text-slate-600 leading-relaxed">
-                    Everything you need to build, test, and execute strategies autonomously with AI assistance.
+                    {sectionT('subtitle')}
                 </p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

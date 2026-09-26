@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import type { Metadata, Viewport } from "next";
 import { getSiteOrigin, getSiteUrl } from "@/lib/site-url";
+import { LastRouteTracker } from "@/components/layout/LastRouteTracker";
 import React from 'react';
 
 const siteOrigin = getSiteOrigin();
@@ -114,6 +115,7 @@ export default async function RootLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
       />
+      <LastRouteTracker />
       {children}
     </NextIntlClientProvider>
   );

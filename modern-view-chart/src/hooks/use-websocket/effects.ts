@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
+import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { wsRuntime } from './runtime';
 import { clearForegroundResyncTimer, clearQueuedSymbolInterest, queueForegroundResync, queueSymbolsInterestSync, requestChartBackfill, sendSymbolsInterestNow, syncForegroundCharts } from './senders';
 import { APP_PING_INTERVAL_MS, APP_PONG_TIMEOUT_MS, RESUME_SOCKET_GRACE_MS, SOCKET_STALE_MS } from './constants';
@@ -209,10 +210,15 @@ export function useSymbolInterestEffect(isConnected: boolean) {
         const unsubscribeTabs = useMarketStore.subscribe((state) => state.tabs, () => {
             queueSymbolsInterestSync();
         });
+        const unsubscribeMatrixScanners = useStrategyStore.subscribe((state) => state.matrixScanners, () => {
+            queueSymbolsInterestSync();
+            queueForegroundResync(() => syncForegroundCharts(true, 'matrix_scanner_changed'));
+        });
 
         wsRuntime.symbolInterestEffectTeardown = () => {
             unsubscribeWatchlist();
             unsubscribeTabs();
+            unsubscribeMatrixScanners();
             clearQueuedSymbolInterest();
         };
         return () => {

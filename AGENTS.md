@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **ViewX** (6905 symbols, 17789 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BE_ViewChart** (4539 symbols, 12315 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -17,7 +17,7 @@ This project is indexed by GitNexus as **ViewX** (6905 symbols, 17789 relationsh
 
 1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
 2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/ViewX/process/{processName}` — trace the full execution flow step by step
+3. `READ gitnexus://repo/BE_ViewChart/process/{processName}` — trace the full execution flow step by step
 4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
@@ -56,10 +56,10 @@ This project is indexed by GitNexus as **ViewX** (6905 symbols, 17789 relationsh
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/ViewX/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/ViewX/clusters` | All functional areas |
-| `gitnexus://repo/ViewX/processes` | All execution flows |
-| `gitnexus://repo/ViewX/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/BE_ViewChart/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/BE_ViewChart/clusters` | All functional areas |
+| `gitnexus://repo/BE_ViewChart/processes` | All execution flows |
+| `gitnexus://repo/BE_ViewChart/process/{name}` | Step-by-step execution trace |
 
 ## Self-Check Before Finishing
 
@@ -97,5 +97,25 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Work in the Services area (252 symbols) | `.claude/skills/generated/services/SKILL.md` |
+| Work in the Components area (164 symbols) | `.claude/skills/generated/components/SKILL.md` |
+| Work in the Indicators area (148 symbols) | `.claude/skills/generated/indicators/SKILL.md` |
+| Work in the Logic area (148 symbols) | `.claude/skills/generated/logic/SKILL.md` |
+| Work in the Auth area (98 symbols) | `.claude/skills/generated/auth/SKILL.md` |
+| Work in the Hooks area (94 symbols) | `.claude/skills/generated/hooks/SKILL.md` |
+| Work in the User area (85 symbols) | `.claude/skills/generated/user/SKILL.md` |
+| Work in the Js area (64 symbols) | `.claude/skills/generated/js/SKILL.md` |
+| Work in the Telegram-intent area (44 symbols) | `.claude/skills/generated/telegram-intent/SKILL.md` |
+| Work in the User-setup-sync area (42 symbols) | `.claude/skills/generated/user-setup-sync/SKILL.md` |
+| Work in the Websocket area (42 symbols) | `.claude/skills/generated/websocket/SKILL.md` |
+| Work in the Handlers area (34 symbols) | `.claude/skills/generated/handlers/SKILL.md` |
+| Work in the Dashboard area (30 symbols) | `.claude/skills/generated/dashboard/SKILL.md` |
+| Work in the Desktop area (28 symbols) | `.claude/skills/generated/desktop/SKILL.md` |
+| Work in the Scripts area (27 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
+| Work in the Server area (26 symbols) | `.claude/skills/generated/server/SKILL.md` |
+| Work in the Use-websocket area (25 symbols) | `.claude/skills/generated/use-websocket/SKILL.md` |
+| Work in the Strategy_engine area (25 symbols) | `.claude/skills/generated/strategy-engine/SKILL.md` |
+| Work in the Drawing area (23 symbols) | `.claude/skills/generated/drawing/SKILL.md` |
+| Work in the Backtest area (22 symbols) | `.claude/skills/generated/backtest/SKILL.md` |
 
 <!-- gitnexus:end -->

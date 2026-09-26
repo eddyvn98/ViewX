@@ -1,2 +1,3 @@
-import './runner-flow.position-and-exit.test';
-import './runner-flow.matrix-guards.test';
+// The individual runner-flow test files are discovered directly by the
+// unit-test glob. Keeping this module empty prevents duplicate execution.
+export {};

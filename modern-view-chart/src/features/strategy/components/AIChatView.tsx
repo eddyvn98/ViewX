@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen, Sparkles } from 'lucide-react';
+import { BrainCircuit, ChevronDown, Compass, History, Loader2, MessageSquare, Plus, Send, ShieldCheck, Target, TrendingUp, Wallet, CircleHelp, Scale, ListChecks, ScanSearch, BadgeAlert, SquarePen, Sparkles, Trash2, type LucideIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMarketStore } from '@/lib/store';
 import type { Candle, ChartInstance, Position, RootState } from '@/lib/store';
@@ -13,6 +13,7 @@ import type { Strategy, StrategySignal, VirtualPosition } from '../types';
 
 interface ChatMessage {
     id: string;
+    conversationId?: string | null;
     source: 'chat' | 'system';
     prompt: string;
     response: string;
@@ -28,7 +29,7 @@ interface PromptPreset {
     label: string;
     prompt: string;
     intent: IntentKey;
-    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+    icon: LucideIcon;
 }
 
 interface ConversationGroup {
@@ -41,6 +42,21 @@ interface ConversationGroup {
 
 const AI_ENABLED = true;
 const CONVERSATION_GAP_MS = 30 * 60 * 1000;
+const STORAGE_KEY_CONV_ID = 'ai_chat_active_conv_id';
+const STORAGE_KEY_SESSION_TS = 'ai_chat_session_start_ts';
+
+function getStoredConversationId(): string {
+    if (typeof window === 'undefined') return 'active';
+    const saved = localStorage.getItem(STORAGE_KEY_CONV_ID);
+    return saved && saved.trim() ? saved.trim() : 'active';
+}
+
+function getStoredSessionTs(): number {
+    if (typeof window === 'undefined') return Date.now();
+    const saved = localStorage.getItem(STORAGE_KEY_SESSION_TS);
+    const num = Number(saved);
+    return Number.isFinite(num) && num > 0 ? num : Date.now();
+}
 const PRESET_PROMPTS: PromptPreset[] = [
     { id: 'entry-now', group: 'Vào lệnh', label: 'Có nên vào lệnh', prompt: 'Phân tích nhanh chart hiện tại và cho biết có nên vào lệnh ngay bây giờ không.', intent: 'entry', icon: TrendingUp },
     { id: 'entry-side', group: 'Vào lệnh', label: 'Nghiêng Long hay Short', prompt: 'Ngay lúc này chart đang nghiêng về Long hay Short? Trả lời thật ngắn gọn và nêu lý do chính.', intent: 'entry', icon: Scale },
@@ -68,11 +84,12 @@ const PRESET_PROMPTS: PromptPreset[] = [
     { id: 'chart-next', group: 'Đọc chart', label: 'Kịch bản tiếp theo', prompt: 'Kịch bản giá có khả năng cao tiếp theo là gì nếu không có dữ liệu mới.', intent: 'summary', icon: ScanSearch },
     { id: 'chart-next-timesfm', group: 'Forecast', label: 'Dự đoán giá sắp tới', prompt: 'Dự đoán giá sắp tới cho chart đang mở này.', intent: 'forecast', icon: ScanSearch },
     { id: 'chart-next-range', group: 'Forecast', label: 'Dự báo vùng giá kế tiếp', prompt: 'Dự đoán vùng giá sắp tới của chart hiện tại và mức biến động dự kiến.', intent: 'forecast', icon: Target },
+    { id: 'chart-next-prob', group: 'Forecast', label: 'Xác suất vào lệnh (%)', prompt: 'Đánh giá chi tiết xác suất xu hướng và phân tích tỷ lệ % có nên vào lệnh ngay lúc này không.', intent: 'forecast', icon: Sparkles },
 ];
 
 const QUICK_ACTION_PROMPTS: PromptPreset[] = [
     PRESET_PROMPTS.find((item) => item.id === 'chart-next-timesfm'),
-    PRESET_PROMPTS.find((item) => item.id === 'chart-next-range'),
+    PRESET_PROMPTS.find((item) => item.id === 'chart-next-prob'),
     PRESET_PROMPTS.find((item) => item.id === 'entry-now'),
     PRESET_PROMPTS.find((item) => item.id === 'chart-summary'),
 ].filter(Boolean) as PromptPreset[];
@@ -81,7 +98,9 @@ function toFriendlyError(raw: string, isVi: boolean) {
     const value = String(raw || '').trim();
     if (!value) return isVi ? 'Không thể gửi yêu cầu lúc này.' : 'Cannot send request right now.';
     if (value.startsWith('Yeu cau ') || value.startsWith('Noi dung ')) return value;
-    if (value.includes('missing_auth_token')) return isVi ? 'Bạn cần đăng nhập để sử dụng AI.' : 'Please sign in to use AI.';
+    if (value.includes('missing_auth_token') || value.includes('user_auth_required_for_chat_ai')) {
+        return isVi ? 'Bạn cần đăng nhập để sử dụng AI.' : 'Please sign in to use AI.';
+    }
     if (value.includes('ai_assistant_module_required')) return isVi ? 'Tài khoản chưa có quyền dùng AI Assistant.' : 'Your account does not have AI Assistant access.';
     if (value.includes('ai_chat_credits_exhausted')) return isVi ? 'Tài khoản đã hết credits AI.' : 'Your AI credits are exhausted.';
     
@@ -128,9 +147,7 @@ function sanitizeAssistantResponse(rawResponse: string) {
         .filter((line) => !blockedLinePatterns.some((re) => re.test(line)))
         .filter((line) => !/^\s*(Draft\s*\d+|Thoughts?|Reasoning|Analysis)\s*[:\-]/i.test(line));
     const joined = lines.join('\n').trim();
-    const quotedAnswers = [...joined.matchAll(/"([^"\n]{20,})"/g)].map((m) => m[1].trim()).filter(Boolean);
-    const bestQuoted = quotedAnswers.length > 0 ? quotedAnswers[quotedAnswers.length - 1] : '';
-    return bestQuoted || joined || value;
+    return joined || value;
 }
 
 function formatTime(ts: number) {
@@ -149,18 +166,60 @@ function classifyIntent(question: string): IntentKey {
 }
 
 function buildConversationGroups(messages: ChatMessage[]): ConversationGroup[] {
-    const sorted = [...messages].filter((m) => m.source === 'chat').sort((a, b) => a.timestamp - b.timestamp);
-    const groups: ConversationGroup[] = [];
-    for (const item of sorted) {
-        const current = groups[groups.length - 1];
+    const chatMessages = messages
+        .filter((m) => m.source === 'chat')
+        .filter((m) => {
+            const safePrompt = getVisibleUserPrompt(m.prompt).trim();
+            const safeResponse = sanitizeAssistantResponse(m.response).trim();
+            return Boolean(safePrompt || safeResponse);
+        })
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+    const groupsMap = new Map<string, ConversationGroup>();
+    const legacyItems: ChatMessage[] = [];
+
+    for (const item of chatMessages) {
+        if (item.conversationId) {
+            const convId = item.conversationId;
+            if (!groupsMap.has(convId)) {
+                groupsMap.set(convId, {
+                    id: convId,
+                    title: getVisibleUserPrompt(item.prompt).slice(0, 48) || 'Cuộc trò chuyện mới',
+                    startedAt: item.timestamp,
+                    endedAt: item.timestamp,
+                    items: [item],
+                });
+            } else {
+                const grp = groupsMap.get(convId)!;
+                grp.items.push(item);
+                grp.endedAt = Math.max(grp.endedAt, item.timestamp);
+            }
+        } else {
+            legacyItems.push(item);
+        }
+    }
+
+    // Cluster legacy items by time gap
+    const legacyGroups: ConversationGroup[] = [];
+    for (const item of legacyItems) {
+        const current = legacyGroups[legacyGroups.length - 1];
         if (!current || item.timestamp - current.endedAt > CONVERSATION_GAP_MS) {
-            groups.push({ id: `conv-${item.timestamp}-${item.id}`, title: getVisibleUserPrompt(item.prompt).slice(0, 48) || 'Cuộc trò chuyện mới', startedAt: item.timestamp, endedAt: item.timestamp, items: [item] });
+            legacyGroups.push({
+                id: `conv-${item.timestamp}-${item.id}`,
+                title: getVisibleUserPrompt(item.prompt).slice(0, 48) || 'Cuộc trò chuyện mới',
+                startedAt: item.timestamp,
+                endedAt: item.timestamp,
+                items: [item],
+            });
         } else {
             current.items.push(item);
             current.endedAt = item.timestamp;
         }
     }
-    return groups.reverse();
+
+    const allGroups = [...groupsMap.values(), ...legacyGroups];
+    allGroups.sort((a, b) => b.endedAt - a.endedAt);
+    return allGroups;
 }
 
 function sanitizeNumber(value: unknown, digits = 2) {
@@ -265,29 +324,42 @@ export function AIChatView() {
     const [isLoading, setIsLoading] = useState(true);
     const [friendlyError, setFriendlyError] = useState<string | null>(null);
     const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
-    const [selectedConversationId, setSelectedConversationId] = useState<string>('active');
-    const [sessionStartTs, setSessionStartTs] = useState<number>(() => Date.now());
-    const [sessionOnlyMode, setSessionOnlyMode] = useState(false);
+    const [selectedConversationId, setSelectedConversationId] = useState<string>(getStoredConversationId);
+    const [sessionStartTs, setSessionStartTs] = useState<number>(getStoredSessionTs);
+    const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const isAtBottomRef = useRef(true);
+    const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+    const prevMessagesLengthRef = useRef(0);
+    const prevConversationIdRef = useRef(selectedConversationId);
+    const prevModeRef = useRef(mode);
 
     const marketData = useMarketStore(useShallow((state: RootState) => {
         const tab = state.tabs[state.activeTabId];
         const chartId = tab?.activeChartId;
         const chart = chartId ? tab?.charts?.[chartId] || null : null;
         const symbol = chart?.symbol || '';
+        const rawStore = state as unknown as {
+            candleData?: Record<string, Candle[]>;
+            chartIndicators?: Record<string, Array<Record<string, unknown>>>;
+            positions?: Position[];
+            history?: Array<Record<string, unknown>>;
+            accounts?: Record<string, Record<string, unknown>>;
+            updateChart?: (id: string, updates: Record<string, unknown>) => void;
+        };
         return {
             activeChart: chart as ChartInstance | null,
             activeTicker: symbol ? state.tickers[symbol] : undefined,
             activeDigits: symbol ? state.symbolInfo[symbol]?.digits : undefined,
-            candleData: (state as any).candleData || {},
-            chartIndicators: (state as any).chartIndicators || {},
-            positions: ((state as any).positions || []) as Position[],
-            historyDeals: ((state as any).history || []) as Array<Record<string, unknown>>,
-            accounts: ((state as any).accounts || {}) as Record<string, Record<string, unknown>>,
+            candleData: rawStore.candleData || {},
+            chartIndicators: rawStore.chartIndicators || {},
+            positions: rawStore.positions || [],
+            historyDeals: rawStore.history || [],
+            accounts: rawStore.accounts || {},
         };
     }));
 
-    const updateChart = useMarketStore((state) => (state as any).updateChart);
+    const updateChart = useMarketStore((state) => (state as unknown as { updateChart: (id: string, updates: Record<string, unknown>) => void }).updateChart);
 
     const strategyData = useStrategyStore(useShallow((state) => ({
         strategies: state.strategies,
@@ -298,7 +370,7 @@ export function AIChatView() {
     const fetchHistory = useCallback(async () => {
         const { accessToken, hasAccessToken } = getAuthContext();
         if (!hasAccessToken || !AI_ENABLED) {
-            setMessages([]);
+            setMessages((prev) => (prev.length === 0 ? prev : []));
             setIsLoading(false);
             return;
         }
@@ -306,10 +378,44 @@ export function AIChatView() {
             const response = await fetch('/api/ai/bridge/history', { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {}, credentials: 'include' });
             if (!response.ok) throw new Error(`history_failed_${response.status}`);
             const data = await response.json() as ChatMessage[];
-            setMessages([...data].sort((a, b) => a.timestamp - b.timestamp));
+            const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp);
+            setMessages((prev) => {
+                if (prev.length === sorted.length) {
+                    const isIdentical = prev.every((item, idx) =>
+                        item.id === sorted[idx]?.id &&
+                        item.response === sorted[idx]?.response &&
+                        item.timestamp === sorted[idx]?.timestamp
+                    );
+                    if (isIdentical) return prev;
+                }
+                return sorted;
+            });
         } finally {
             setIsLoading(false);
         }
+    }, []);
+
+    const scrollToBottom = useCallback((smooth = true) => {
+        if (!scrollRef.current) return;
+        if (smooth) {
+            scrollRef.current.scrollTo({
+                top: scrollRef.current.scrollHeight,
+                behavior: 'smooth',
+            });
+        } else {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+        isAtBottomRef.current = true;
+        setIsUserScrolledUp(false);
+    }, []);
+
+    const handleScroll = useCallback(() => {
+        if (!scrollRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const atBottom = distanceFromBottom < 80;
+        isAtBottomRef.current = atBottom;
+        setIsUserScrolledUp(!atBottom && scrollHeight > clientHeight + 100);
     }, []);
 
     const fetchCredits = useCallback(async () => {
@@ -332,8 +438,25 @@ export function AIChatView() {
     }, [fetchCredits, fetchHistory]);
 
     useEffect(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [messages, selectedConversationId, mode]);
+        const convChanged = prevConversationIdRef.current !== selectedConversationId;
+        const modeChanged = prevModeRef.current !== mode;
+        const countIncreased = messages.length > prevMessagesLengthRef.current;
+
+        prevConversationIdRef.current = selectedConversationId;
+        prevModeRef.current = mode;
+        prevMessagesLengthRef.current = messages.length;
+
+        // Reset scroll to bottom when switching conversation or entering chat mode
+        if (convChanged || modeChanged) {
+            scrollToBottom(false);
+            return;
+        }
+
+        // Only auto-scroll when new messages arrive IF user was already at the bottom
+        if (countIncreased && isAtBottomRef.current) {
+            scrollToBottom(true);
+        }
+    }, [messages, selectedConversationId, mode, scrollToBottom]);
 
     const conversations = useMemo(() => buildConversationGroups(messages), [messages]);
     const normalizedInput = inputValue.trim().toLowerCase();
@@ -371,6 +494,7 @@ export function AIChatView() {
     const quickActionLabel = useCallback((id: string, fallback: string) => {
         if (id === 'chart-next-timesfm') return isVi ? 'Dự đoán giá sắp tới' : 'Forecast Next Move';
         if (id === 'chart-next-range') return isVi ? 'Dự báo vùng giá kế tiếp' : 'Forecast Next Range';
+        if (id === 'chart-next-prob') return isVi ? 'Xác suất vào lệnh (%)' : 'Entry Probability (%)';
         if (id === 'entry-now') return isVi ? 'Có nên vào lệnh' : 'Should I Enter Now';
         if (id === 'chart-summary') return isVi ? 'Tóm tắt chart' : 'Chart Summary';
         return fallback;
@@ -378,6 +502,7 @@ export function AIChatView() {
     const quickActionPrompt = useCallback((id: string, fallback: string) => {
         if (id === 'chart-next-timesfm') return isVi ? 'Dự đoán giá sắp tới cho chart đang mở.' : 'Forecast the next move for the current chart.';
         if (id === 'chart-next-range') return isVi ? 'Dự báo vùng giá kế tiếp và biên độ dự kiến của chart hiện tại.' : 'Forecast the next price range and expected volatility for the current chart.';
+        if (id === 'chart-next-prob') return isVi ? 'Đánh giá chi tiết xác suất xu hướng và phân tích tỷ lệ % có nên vào lệnh ngay lúc này không.' : 'Analyze detailed trend probabilities and assess percentage likelihood to enter a trade right now.';
         if (id === 'entry-now') return isVi ? 'Phân tích nhanh chart hiện tại và cho biết có nên vào lệnh ngay bây giờ không.' : 'Quickly analyze the current chart and tell me whether I should enter now.';
         if (id === 'chart-summary') return isVi ? 'Tóm tắt nhanh chart đang xem trong 3 ý ngắn gọn.' : 'Summarize the current chart in 3 concise points.';
         return fallback;
@@ -391,12 +516,29 @@ export function AIChatView() {
                 const safeResponse = sanitizeAssistantResponse(m.response).trim();
                 return Boolean(safePrompt || safeResponse);
             });
-        if (selectedConversationId === 'active') {
-            if (!sessionOnlyMode) return chat;
-            return chat.filter((m) => m.timestamp >= sessionStartTs);
+
+        // 1. If selectedConversationId matches explicit conversationId
+        const byConvId = chat.filter((m) => m.conversationId && m.conversationId === selectedConversationId);
+        if (byConvId.length > 0) return byConvId;
+
+        // 2. If it's a new conversation created with 'conv_' that has no messages yet
+        if (selectedConversationId.startsWith('conv_')) {
+            return [];
         }
-        return conversations.find((item) => item.id === selectedConversationId)?.items || [];
-    }, [conversations, messages, selectedConversationId, sessionOnlyMode, sessionStartTs]);
+
+        // 3. If it's a conversation group from buildConversationGroups (legacy conv-timestamp-id)
+        const group = conversations.find((item) => item.id === selectedConversationId);
+        if (group) return group.items;
+
+        // 4. Fallback for 'active': if sessionStartTs was saved, filter >= sessionStartTs
+        if (selectedConversationId === 'active') {
+            const recent = chat.filter((m) => m.timestamp >= sessionStartTs);
+            if (recent.length > 0) return recent;
+            return [];
+        }
+
+        return [];
+    }, [conversations, messages, selectedConversationId, sessionStartTs]);
     const systemLogs = useMemo(() => messages.filter((m) => m.source === 'system').slice().reverse(), [messages]);
 
     const buildLocalContextPack = useCallback((question: string, intent: IntentKey) => {
@@ -439,12 +581,30 @@ export function AIChatView() {
 
         setFriendlyError(null);
         setIsSending(true);
+        setPendingPrompt(question);
+        setMode('chat');
+        setTimeout(() => scrollToBottom(true), 50);
+
+        let currentConvId = selectedConversationId;
+        if (!currentConvId || currentConvId === 'active' || !currentConvId.startsWith('conv_')) {
+            currentConvId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            setSelectedConversationId(currentConvId);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_KEY_CONV_ID, currentConvId);
+            }
+        }
+
+        const clientMsgId = crypto.randomUUID();
+        const nowTs = Date.now();
+
         try {
             const payload: {
                 question: string;
                 chart: { chartId: string; symbol: string; timeframe: string; source: string };
                 candles: Candle[];
                 source: 'chat';
+                conversationId: string;
+                messageId: string;
                 userId?: string;
             } = {
                 question,
@@ -456,6 +616,8 @@ export function AIChatView() {
                 },
                 candles: recentCandles,
                 source: 'chat',
+                conversationId: currentConvId,
+                messageId: clientMsgId,
             };
             if (userId) payload.userId = userId;
 
@@ -469,8 +631,6 @@ export function AIChatView() {
             const data = await response.json().catch(() => null);
             if (!response.ok || !data) throw new Error(String(data?.user_message || data?.msg || data?.error || `request_failed_${response.status}`));
             if (typeof data?.remainingCredits === 'number') setRemainingCredits(data.remainingCredits);
-
-            const nowTs = Date.now();
 
             // Save to store for chart visualization
             if (marketData.activeChart?.id && data?.result) {
@@ -491,22 +651,29 @@ export function AIChatView() {
                 });
             }
 
+            const savedId = String(data?.id || clientMsgId);
+            const safeResponse = sanitizeAssistantResponse(String(data?.response || ''));
+
             setMessages((prev) => [
-                ...prev,
+                ...prev.filter((m) => m.id !== savedId),
                 {
-                    id: crypto.randomUUID(),
+                    id: savedId,
+                    conversationId: currentConvId,
                     source: 'chat',
                     prompt: question,
-                    response: sanitizeAssistantResponse(String(data?.response || '')),
+                    response: safeResponse,
                     timestamp: nowTs,
                 },
             ]);
+            setPendingPrompt(null);
+            setTimeout(() => scrollToBottom(true), 60);
         } catch (error) {
+            setPendingPrompt(null);
             setFriendlyError(toFriendlyError(error instanceof Error ? error.message : 'ai_forecast_failed', isVi));
         } finally {
             setIsSending(false);
         }
-    }, [isSending, isVi, marketData.activeChart, recentCandles, updateChart]);
+    }, [isSending, isVi, marketData.activeChart, recentCandles, scrollToBottom, selectedConversationId, updateChart]);
 
     const sendPrompt = useCallback(async (rawQuestion: string) => {
         const question = rawQuestion.trim();
@@ -518,11 +685,39 @@ export function AIChatView() {
         }
         setFriendlyError(null);
         setIsSending(true);
+        setPendingPrompt(question);
+        setMode('chat');
+        setTimeout(() => scrollToBottom(true), 50);
+
+        let currentConvId = selectedConversationId;
+        if (!currentConvId || currentConvId === 'active' || !currentConvId.startsWith('conv_')) {
+            currentConvId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            setSelectedConversationId(currentConvId);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_KEY_CONV_ID, currentConvId);
+            }
+        }
+
+        const clientMsgId = crypto.randomUUID();
+        const nowTs = Date.now();
+
         try {
             const intent = classifyIntent(question);
             const prompt = buildPrompt(buildLocalContextPack(question, intent), question, intent);
-            const payload: { prompt: string; source: 'chat'; userId?: string } = { prompt, source: 'chat' };
+            const payload: {
+                prompt: string;
+                source: 'chat';
+                conversationId: string;
+                messageId: string;
+                userId?: string;
+            } = {
+                prompt,
+                source: 'chat',
+                conversationId: currentConvId,
+                messageId: clientMsgId,
+            };
             if (userId) payload.userId = userId;
+
             const response = await fetch('/api/ai/bridge/task', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json', ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}) },
@@ -532,44 +727,99 @@ export function AIChatView() {
             const data = await response.json().catch(() => null);
             if (!response.ok || !data) throw new Error(String(data?.user_message || data?.msg || data?.error || `request_failed_${response.status}`));
             if (typeof data?.remainingCredits === 'number') setRemainingCredits(data.remainingCredits);
-            if (selectedConversationId !== 'active') {
-                setSelectedConversationId('active');
-                setSessionStartTs(Date.now());
-                setSessionOnlyMode(true);
-            }
-            const nowTs = Date.now();
+
+            const savedId = String(data?.id || clientMsgId);
+            const safeResponse = sanitizeAssistantResponse(String(data?.response || ''));
+
             setMessages((prev) => [
-                ...prev,
+                ...prev.filter((m) => m.id !== savedId),
                 {
-                    id: crypto.randomUUID(),
+                    id: savedId,
+                    conversationId: currentConvId,
                     source: 'chat',
                     prompt,
-                    response: sanitizeAssistantResponse(String(data?.response || '')),
+                    response: safeResponse,
                     timestamp: nowTs,
                 },
             ]);
-            await fetchHistory();
+            setPendingPrompt(null);
+            setTimeout(() => scrollToBottom(true), 60);
         } catch (error) {
+            setPendingPrompt(null);
             setFriendlyError(toFriendlyError(error instanceof Error ? error.message : 'ai_request_failed', isVi));
         } finally {
             setIsSending(false);
         }
-    }, [buildLocalContextPack, fetchHistory, isSending, isVi, selectedConversationId]);
+    }, [buildLocalContextPack, isSending, isVi, scrollToBottom, selectedConversationId]);
 
     const handleSend = useCallback(async () => {
         const question = inputValue.trim();
-        if (!question) return;
+        if (!question || isSending) return;
         setInputValue('');
         await sendPrompt(question);
-    }, [inputValue, sendPrompt]);
+    }, [inputValue, isSending, sendPrompt]);
 
     const handleNewConversation = useCallback(() => {
-        setSelectedConversationId('active');
-        setSessionStartTs(Date.now());
-        setSessionOnlyMode(true);
+        const newId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        setSelectedConversationId(newId);
+        const now = Date.now();
+        setSessionStartTs(now);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY_CONV_ID, newId);
+            localStorage.setItem(STORAGE_KEY_SESSION_TS, String(now));
+        }
+        setPendingPrompt(null);
         setInputValue('');
         setFriendlyError(null);
+        setMode('chat');
     }, []);
+
+    const handleSelectConversation = useCallback((convId: string) => {
+        setSelectedConversationId(convId);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY_CONV_ID, convId);
+        }
+        setPendingPrompt(null);
+        setFriendlyError(null);
+        setMode('chat');
+    }, []);
+
+    const handleDeleteConversation = useCallback(async (convId: string, e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        const { accessToken, hasAccessToken } = getAuthContext();
+        if (!hasAccessToken) return;
+        try {
+            await fetch(`/api/ai/bridge/history?conversationId=${encodeURIComponent(convId)}`, {
+                method: 'DELETE',
+                headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            setMessages((prev) => prev.filter((m) => m.conversationId !== convId && !convId.includes(String(m.timestamp))));
+            if (selectedConversationId === convId) {
+                handleNewConversation();
+            }
+        } catch (err) {
+            console.error('Delete conversation failed:', err);
+        }
+    }, [handleNewConversation, selectedConversationId]);
+
+    const handleClearAllHistory = useCallback(async () => {
+        const confirmMsg = isVi ? 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?' : 'Are you sure you want to clear all chat history?';
+        if (!window.confirm(confirmMsg)) return;
+        const { accessToken, hasAccessToken } = getAuthContext();
+        if (!hasAccessToken) return;
+        try {
+            await fetch('/api/ai/bridge/history', {
+                method: 'DELETE',
+                headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            setMessages([]);
+            handleNewConversation();
+        } catch (err) {
+            console.error('Clear all history failed:', err);
+        }
+    }, [handleNewConversation, isVi]);
 
     return (
         <div className="flex h-full min-h-0 overflow-hidden rounded-lg border border-border bg-secondary/20">
@@ -583,24 +833,33 @@ export function AIChatView() {
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <IconTabButton active={mode === 'chat'} title={isVi ? 'Đoạn chat' : 'Chat'} onClick={() => setMode('chat')}>
+                                <MessageSquare size={15} />
+                            </IconTabButton>
                             <IconTabButton active={mode === 'history'} title={isVi ? 'Lịch sử' : 'History'} onClick={() => setMode('history')}>
                                 <History size={15} />
                             </IconTabButton>
-                            <IconTabButton active={mode === 'chat'} title={isVi ? 'Cuộc trò chuyện mới' : 'New chat'} onClick={() => { handleNewConversation(); setMode('chat'); }}>
-                                <SquarePen size={15} />
-                            </IconTabButton>
+                            <button
+                                onClick={handleNewConversation}
+                                title={isVi ? 'Cuộc trò chuyện mới' : 'New chat'}
+                                className="flex h-9 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 text-xs font-bold text-primary transition hover:bg-primary/20 active:scale-95"
+                            >
+                                <SquarePen size={14} />
+                                <span className="hidden sm:inline">{isVi ? 'Mới' : 'New'}</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <div className="relative flex-1 min-h-0 flex flex-col">
+                    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                     {isLoading ? (
                         <div className="flex h-full items-center justify-center">
                             <Loader2 size={24} className="animate-spin text-primary" />
                         </div>
                     ) : mode === 'chat' ? (
-                        visibleChatMessages.length === 0 ? (
+                        visibleChatMessages.length === 0 && !pendingPrompt ? (
                             <div className="flex h-full flex-col items-center justify-center gap-3 text-center opacity-60">
                                 <div className="max-w-[320px] text-[12px] leading-relaxed text-muted-foreground">
                                     {isVi
@@ -624,6 +883,27 @@ export function AIChatView() {
                                         </div>
                                     </div>
                                 ))}
+
+                                {pendingPrompt && (
+                                    <div className="flex flex-col gap-3">
+                                        <div className="self-end max-w-[88%] select-text rounded-2xl rounded-tr-sm border border-primary/20 bg-primary/10 p-3 text-[13px] leading-relaxed text-foreground shadow-sm" style={{ userSelect: 'text' }}>
+                                            {getVisibleUserPrompt(pendingPrompt)}
+                                        </div>
+                                        <div className="self-start max-w-[92%] rounded-2xl rounded-tl-sm border border-primary/30 bg-card/90 p-4 shadow-lg">
+                                            <div className="mb-2 flex items-center gap-2">
+                                                <span className="text-[11px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                                                    <Loader2 size={12} className="animate-spin text-primary" />
+                                                    Premium AI
+                                                </span>
+                                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{isVi ? 'Đang phân tích...' : 'Analyzing...'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[13px] text-muted-foreground italic">
+                                                <Sparkles size={14} className="text-primary animate-pulse" />
+                                                <span>{isVi ? 'AI đang đọc dữ liệu nến và chỉ báo chart...' : 'AI is reading candle data and indicators...'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )
                     ) : mode === 'history' ? (
@@ -631,70 +911,63 @@ export function AIChatView() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <div className="text-[11px] font-black uppercase tracking-[0.24em] text-muted-foreground">{isVi ? 'Lịch sử' : 'History'}</div>
-                                    <div className="mt-1 text-sm font-bold text-foreground">{isVi ? 'Chọn lại cuộc trò chuyện gần đây' : 'Reopen recent conversations'}</div>
+                                    <div className="mt-1 text-sm font-bold text-foreground">{isVi ? 'Các cuộc trò chuyện gần đây' : 'Recent conversations'}</div>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        handleNewConversation();
-                                        setMode('chat');
-                                    }}
-                                    className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-primary transition hover:bg-primary/15"
-                                >
-                                    <Plus size={13} />
-                                    {isVi ? 'Mới' : 'New'}
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {conversations.length > 0 && (
+                                        <button
+                                            onClick={() => void handleClearAllHistory()}
+                                            className="flex items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-[11px] font-bold text-destructive transition hover:bg-destructive/20"
+                                            title={isVi ? 'Xóa toàn bộ lịch sử' : 'Clear all history'}
+                                        >
+                                            <Trash2 size={12} />
+                                            <span>{isVi ? 'Xóa hết' : 'Clear all'}</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleNewConversation}
+                                        className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-primary transition hover:bg-primary/15"
+                                    >
+                                        <Plus size={13} />
+                                        <span>{isVi ? 'Mới' : 'New'}</span>
+                                    </button>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => {
-                                    setSelectedConversationId('active');
-                                    setSessionOnlyMode(false);
-                                    setMode('chat');
-                                }}
-                                className={cn(
-                                    'rounded-2xl border p-4 text-left transition',
-                                    selectedConversationId === 'active'
-                                        ? 'border-primary/40 bg-primary/10'
-                                        : 'border-border/60 bg-card/60 hover:border-primary/20'
-                                )}
-                            >
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="text-[11px] font-black uppercase tracking-wide text-foreground">{isVi ? 'Cuộc trò chuyện hiện tại' : 'Current conversation'}</div>
-                                    <SquarePen size={14} className="text-primary" />
-                                </div>
-                                <div className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
-                                    {isVi ? 'Tiếp tục hỏi thêm trên phiên hiện tại hoặc bắt đầu lại từ đầu.' : 'Continue this session or start over from scratch.'}
-                                </div>
-                            </button>
                             {conversations.length === 0 ? (
                                 <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-card/40 p-6 text-center text-[12px] text-muted-foreground">
                                     {isVi ? 'Chưa có lịch sử hội thoại để hiển thị.' : 'No chat history to display yet.'}
                                 </div>
                             ) : (
                                 conversations.map((item) => (
-                                    <button
+                                    <div
                                         key={item.id}
-                                        onClick={() => {
-                                            setSelectedConversationId(item.id);
-                                            setMode('chat');
-                                        }}
+                                        onClick={() => handleSelectConversation(item.id)}
                                         className={cn(
-                                            'rounded-2xl border p-4 text-left transition',
+                                            'group flex items-center justify-between rounded-2xl border p-4 text-left cursor-pointer transition',
                                             selectedConversationId === item.id
                                                 ? 'border-primary/40 bg-primary/10'
-                                                : 'border-border/60 bg-card/60 hover:border-primary/20'
+                                                : 'border-border/60 bg-card/60 hover:border-primary/20 hover:bg-card/80'
                                         )}
                                     >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <div className="line-clamp-2 text-[13px] font-bold leading-relaxed text-foreground">{item.title}</div>
-                                                <div className="mt-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{formatTime(item.startedAt)}</div>
+                                        <div className="min-w-0 flex-1 pr-3">
+                                            <div className="line-clamp-2 text-[13px] font-bold leading-relaxed text-foreground">{item.title}</div>
+                                            <div className="mt-2 flex items-center gap-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                                <span>{formatTime(item.startedAt)}</span>
+                                                <span>•</span>
+                                                <span>{item.items.length} {isVi ? 'tin nhắn' : 'messages'}</span>
                                             </div>
-                                            <History size={14} className="mt-0.5 text-primary/80" />
                                         </div>
-                                        <div className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
-                                            {item.items.length} {isVi ? 'tin nhắn' : 'messages'}
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => void handleDeleteConversation(item.id, e)}
+                                                title={isVi ? 'Xóa cuộc trò chuyện' : 'Delete conversation'}
+                                                className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/15 hover:text-destructive"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
                                         </div>
-                                    </button>
+                                    </div>
                                 ))
                             )}
                         </div>
@@ -720,6 +993,18 @@ export function AIChatView() {
                             ))}
                         </div>
                     )}
+                    </div>
+
+                    {mode === 'chat' && isUserScrolledUp && (
+                        <button
+                            type="button"
+                            onClick={() => scrollToBottom(true)}
+                            className="absolute bottom-3 right-5 z-20 flex items-center gap-1.5 rounded-full border border-primary/40 bg-card/95 px-3 py-1.5 text-[11px] font-bold text-primary shadow-lg backdrop-blur-md transition hover:bg-card hover:scale-105 active:scale-95"
+                        >
+                            <ChevronDown size={14} className="animate-bounce" />
+                            <span>{isVi ? 'Xuống tin mới' : 'Latest messages'}</span>
+                        </button>
+                    )}
                 </div>
 
                 {mode === 'chat' && (
@@ -731,8 +1016,9 @@ export function AIChatView() {
                         )}
                         <div className="mb-3 flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
                             {QUICK_ACTION_PROMPTS.map((item) => {
-                                const Icon = item.icon as any;
+                                const Icon = item.icon;
                                 const isForecastPrimary = item.id === 'chart-next-timesfm';
+                                const isProbPrimary = item.id === 'chart-next-prob';
                                 return (
                                     <button
                                         key={item.id}
@@ -745,10 +1031,18 @@ export function AIChatView() {
                                             'flex h-8 w-[164px] shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 text-[10px] font-bold uppercase tracking-wide transition disabled:opacity-40',
                                             isForecastPrimary
                                                 ? 'border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'
+                                                : isProbPrimary
+                                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                                                 : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground'
                                         )}
                                     >
-                                        {isForecastPrimary ? <Sparkles size={12} className="animate-pulse" /> : <Icon size={12} />}
+                                        {isForecastPrimary ? (
+                                            <Sparkles size={12} className="animate-pulse" />
+                                        ) : isProbPrimary ? (
+                                            <Target size={12} className="text-emerald-400" />
+                                        ) : (
+                                            <Icon size={12} />
+                                        )}
                                         <span className="truncate">{quickActionLabel(item.id, item.label)}</span>
                                     </button>
                                 );
@@ -762,13 +1056,13 @@ export function AIChatView() {
                                             <div className="px-3 py-2 text-[11px] text-muted-foreground">{isVi ? 'Không có gợi ý phù hợp.' : 'No matching suggestions.'}</div>
                                         ) : (
                                             filteredPresetItems.map((item) => {
-                                                const Icon = item.icon as any;
+                                                const Icon = item.icon;
                                                 return (
                                                     <button
                                                         key={item.id}
                                                         onClick={() => {
                                                             const promptText = quickActionPrompt(item.id, item.prompt);
-                                                            setInputValue(promptText);
+                                                            setInputValue('');
                                                             void (item.intent === 'forecast' ? sendForecast(promptText) : sendPrompt(promptText));
                                                         }}
                                                         disabled={isSending}
@@ -791,9 +1085,12 @@ export function AIChatView() {
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter') void handleSend();
+                                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                        e.preventDefault();
+                                        void handleSend();
+                                    }
                                 }}
-                                placeholder={isVi ? 'Hỏi về chart, lệnh đang mở, chiến lược, SL/TP...' : 'Ask about chart, open trades, strategy, SL/TP...'}
+                                placeholder={isSending ? (isVi ? 'AI đang trả lời...' : 'AI is replying...') : (isVi ? 'Hỏi về chart, lệnh đang mở, chiến lược, SL/TP...' : 'Ask about chart, open trades, strategy, SL/TP...')}
                                 className="w-full rounded-full border border-border bg-secondary px-5 py-3 pr-12 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:border-blue-500/50 focus:outline-none"
                             />
                             <button

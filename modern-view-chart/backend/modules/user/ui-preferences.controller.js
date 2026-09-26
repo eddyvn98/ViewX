@@ -1,12 +1,17 @@
 import Users from "../../model/user.js";
 
+export function resolveAuthenticatedUserId(auth) {
+    const value = auth?.userId ?? auth?.id;
+    return typeof value === "string" ? value.trim() : "";
+}
+
 /**
  * Update UI preferences for the authenticated user
  * POST /api/user/ui-preferences
  */
 export const updateUiPreferences = async (req, res) => {
     try {
-        const userId = req.auth?.id;
+        const userId = resolveAuthenticatedUserId(req.auth);
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
@@ -54,7 +59,7 @@ export const updateUiPreferences = async (req, res) => {
  */
 export const getUiPreferences = async (req, res) => {
     try {
-        const userId = req.auth?.id;
+        const userId = resolveAuthenticatedUserId(req.auth);
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }

@@ -20,7 +20,10 @@ export function createFetchWithAuthRetry(deps: RemoteSyncDeps) {
 
         const refreshedToken = await refreshStoredAccessToken();
         if (!refreshedToken) {
-            clearLocalAuthState();
+            const remainingToken = typeof window !== 'undefined' ? localStorage.getItem('auth_access_token') : null;
+            if (!remainingToken) {
+                clearLocalAuthState();
+            }
             return response;
         }
 

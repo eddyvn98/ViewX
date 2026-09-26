@@ -182,16 +182,27 @@ function extractUserIdFromActorKey(actorKey) {
     return userId || null;
 }
 
-async function loadHistory(actorKey, limit = 50) {
+function getCleanQuestion(rawPrompt) {
+    const value = String(rawPrompt || "").trim();
+    const match = value.match(/USER_QUESTION:\s*([\s\S]*?)(?:\nCONTEXT_JSON:|$)/i);
+    return match?.[1]?.trim() || value;
+}
+
+async function loadHistory(actorKey, limit = 50, conversationId = null) {
     try {
+        const filter = { actorKey };
+        if (conversationId) {
+            filter.conversationId = conversationId;
+        }
         const rows = await aiChatLogModel
-            .find({ actorKey })
+            .find(filter)
             .sort({ timestamp: -1 })
             .limit(limit)
             .lean();
         if (Array.isArray(rows) && rows.length > 0) {
             return rows.map((row) => ({
                 id: String(row.messageId || row._id),
+                conversationId: row.conversationId || null,
                 source: row.source || "chat",
                 prompt: row.prompt || "",
                 response: row.response || "",
@@ -201,7 +212,11 @@ async function loadHistory(actorKey, limit = 50) {
     } catch (error) {
         console.error("[AI History] load failed:", error?.message || error);
     }
-    return getHistory(actorKey).slice(-limit).reverse().filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
+    const memHistory = getHistory(actorKey);
+    const filteredMem = conversationId
+        ? memHistory.filter((item) => item?.conversationId === conversationId)
+        : memHistory;
+    return filteredMem.slice(-limit).reverse().filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
 }
 
 function pushHistory(actorKey, item) {
@@ -216,6 +231,7 @@ function pushHistory(actorKey, item) {
     const payload = {
         actorKey,
         userId: extractUserIdFromActorKey(actorKey),
+        conversationId: item?.conversationId || null,
         messageId: String(item?.id || crypto.randomUUID()),
         source: item?.source === "system" ? "system" : "chat",
         prompt: String(item?.prompt || ""),
@@ -276,8 +292,44 @@ async function consumeOneChatCredit(userId) {
  */
 router.get("/history", async (req, res) => {
     const actorKey = getActorKey(req, req.body, req.query);
-    const history = await loadHistory(actorKey, 50);
+    const conversationId = typeof req.query?.conversationId === "string" ? req.query.conversationId.trim() : null;
+    const limitRaw = Number(req.query?.limit);
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 200) : 100;
+    const history = await loadHistory(actorKey, limit, conversationId);
     return res.json(history); // newest first
+});
+
+/**
+ * Delete AI History (all or specific conversation)
+ */
+router.delete("/history", async (req, res) => {
+    try {
+        const actorKey = getActorKey(req, req.body, req.query);
+        const conversationId = typeof req.query?.conversationId === "string" ? req.query.conversationId.trim() : null;
+        
+        const filter = { actorKey };
+        if (conversationId) {
+            filter.conversationId = conversationId;
+        }
+
+        await aiChatLogModel.deleteMany(filter);
+
+        if (aiHistoryByActor.has(actorKey)) {
+            if (conversationId) {
+                const remaining = (aiHistoryByActor.get(actorKey) || []).filter(
+                    (item) => item?.conversationId !== conversationId
+                );
+                aiHistoryByActor.set(actorKey, remaining);
+            } else {
+                aiHistoryByActor.set(actorKey, []);
+            }
+        }
+
+        return res.json({ status: "ok", deleted: true, conversationId });
+    } catch (error) {
+        console.error("[AI History] delete failed:", error?.message || error);
+        return res.status(500).json({ status: "error", msg: "delete_failed" });
+    }
 });
 
 router.post("/context", async (req, res) => {
@@ -381,7 +433,9 @@ router.post("/result", (req, res) => {
  * Generic task creation endpoint (used by the app/bot)
  */
 router.post("/task", async (req, res) => {
-    const { prompt, timeout = 120000, source = "system" } = req.body;
+    const { prompt, timeout = 120000, source = "system", conversationId: rawConvId, messageId: rawMsgId } = req.body;
+    const conversationId = typeof rawConvId === "string" ? rawConvId.trim() : null;
+    const clientMessageId = typeof rawMsgId === "string" ? rawMsgId.trim() : null;
     const actorKey = getActorKey(req, req.body, req.query);
     const isChatSource = String(source || "").trim().toLowerCase() === "chat";
     const billingUserId = resolveBillingUserId(req, req.body, req.query);
@@ -420,15 +474,17 @@ router.post("/task", async (req, res) => {
 
     // Forward to AI Core Platform
     try {
-        const historyRows = await loadHistory(actorKey, 10);
-        const chatHistory = historyRows.flatMap(row => [
-            { role: 'user', content: row.prompt },
+        const historyRows = conversationId
+            ? await loadHistory(actorKey, 10, conversationId)
+            : [];
+        const chatHistory = historyRows.slice().reverse().flatMap(row => [
+            { role: 'user', content: getCleanQuestion(row.prompt) },
             { role: 'model', content: row.response }
         ]);
 
         const corePayload = {
             agentId: "viewx-assistant",
-            sessionId: actorKey, // We use actorKey as sessionId
+            sessionId: conversationId ? `${actorKey}:${conversationId}` : actorKey,
             message: safePrompt,
             history: chatHistory
         };
@@ -436,7 +492,8 @@ router.post("/task", async (req, res) => {
         const aiCoreRes = await fetch("http://localhost:4000/v1/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(corePayload)
+            body: JSON.stringify(corePayload),
+            signal: AbortSignal.timeout(Math.max(5000, Number(timeout) || 120000))
         });
 
         if (!aiCoreRes.ok) {
@@ -464,9 +521,11 @@ router.post("/task", async (req, res) => {
                 });
             }
             const safeText = sanitizeAssistantOutput(text);
+            const savedMessageId = clientMessageId || crypto.randomUUID();
 
             pushHistory(actorKey, {
-                id: crypto.randomUUID(),
+                id: savedMessageId,
+                conversationId,
                 source,
                 prompt,
                 response: safeText,
@@ -477,9 +536,9 @@ router.post("/task", async (req, res) => {
                 if (!consumed.ok) {
                     return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
                 }
-                return res.json({ status: "ok", response: safeText, remainingCredits: consumed.remainingCredits });
+                return res.json({ status: "ok", id: savedMessageId, conversationId, response: safeText, remainingCredits: consumed.remainingCredits });
             }
-            return res.json({ status: "ok", response: safeText });
+            return res.json({ status: "ok", id: savedMessageId, conversationId, response: safeText });
         }
     } catch (error) {
         console.error(`  [AI Core API] Error: ${error.message}`);
@@ -525,6 +584,8 @@ router.post("/forecast", async (req, res) => {
     const billingUserId = resolveBillingUserId(req, req.body, req.query);
     const source = "chat";
     const question = String(req.body?.question || "").trim();
+    const conversationId = typeof req.body?.conversationId === "string" ? req.body.conversationId.trim() : null;
+    const clientMessageId = typeof req.body?.messageId === "string" ? req.body.messageId.trim() : null;
     const chart = req.body?.chart && typeof req.body.chart === "object" ? req.body.chart : null;
     const candles = Array.isArray(req.body?.candles) ? req.body.candles : [];
     const horizonRaw = Number(req.body?.horizon);
@@ -570,8 +631,10 @@ router.post("/forecast", async (req, res) => {
             });
         }
 
+        const savedMessageId = clientMessageId || crypto.randomUUID();
         pushHistory(actorKey, {
-            id: crypto.randomUUID(),
+            id: savedMessageId,
+            conversationId,
             source,
             prompt: question || `Du bao ${chart.symbol} ${chart.timeframe}`,
             response: result.response,
@@ -585,9 +648,12 @@ router.post("/forecast", async (req, res) => {
 
         return res.json({
             status: "ok",
+            id: savedMessageId,
+            conversationId,
             response: result.response,
             remainingCredits: consumed.remainingCredits,
             forecast: result.forecast,
+            probabilities: result.probabilities || result.forecast?.probabilities || null,
             engine: result.engine,
         });
     } catch (error) {

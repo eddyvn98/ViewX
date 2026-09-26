@@ -5,6 +5,8 @@ import { WS_URL_FROM_ENV } from './constants';
 export function parseIntervalSeconds(interval: string): number {
     const text = String(interval || '').trim();
     if (!text) return 60;
+    if (text === 'D' || text === '1D') return 86400;
+    if (text === 'W' || text === '1W') return 604800;
     if (/^\d+$/.test(text)) return Number(text) * 60;
 
     const m = text.match(/^(\d+)\s*([mhd])$/i);
@@ -122,7 +124,9 @@ export async function fetchWsTicketFromApi(): Promise<string> {
             if (response.status === 401) {
                 const refreshedToken = await refreshStoredAccessToken();
                 if (!refreshedToken) {
-                    clearStoredAuthSession();
+                    if (!readStoredAccessToken()) {
+                        clearStoredAuthSession();
+                    }
                     return '';
                 }
 

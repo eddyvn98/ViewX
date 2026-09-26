@@ -25,6 +25,7 @@ const eslintConfig = defineConfig([
     "terminal_log*.txt",
     // Local agent/cache folders:
     ".agent/**",
+    "backend/forecast/.venv-311/**",
     // Ad-hoc test scripts outside official tests/:
     "test_*.js",
     "test_*.ts",

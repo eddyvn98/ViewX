@@ -1,4 +1,7 @@
 import { useMarketStore } from '@/lib/store';
+import { useStrategyStore } from '@/features/strategy/store/strategy-store';
+import { buildMatrixRunnerConfigs } from '@/features/strategy/dashboard/matrix-cell-state';
+import type { MatrixScannerConfig } from '@/features/strategy/dashboard/matrix-types';
 import { BACKFILL_THROTTLE_MS, FOREGROUND_RESYNC_DEBOUNCE_MS, SYMBOL_INTEREST_DEBOUNCE_MS } from './constants';
 import { wsRuntime } from './runtime';
 import { parseIntervalSeconds } from './socket-config';
@@ -57,6 +60,10 @@ type BackfillOptions = {
     anchorTimeSec?: number;
     direction?: 'older' | 'latest';
 };
+
+export function getMatrixCandleRequests(scanners: MatrixScannerConfig[]) {
+    return buildMatrixRunnerConfigs(scanners).map(({ source, symbol, interval }) => ({ source, symbol, interval }));
+}
 
 export function requestChartBackfill(
     sourceRaw: string,
@@ -177,5 +184,13 @@ export function syncForegroundCharts(force: boolean, reason: string) {
                 requestChartBackfill(source, symbol, interval, reason);
             }
         });
+    });
+
+    // Scanner cells do not need to be open as chart tabs, so request their
+    // candles explicitly. Without this, the runner has no candleData to
+    // evaluate and every matrix cell remains in the no-trade state.
+    const scanners = useStrategyStore.getState().matrixScanners || [];
+    getMatrixCandleRequests(scanners).forEach(({ source, symbol, interval }) => {
+        requestChartBackfill(source, symbol, interval, reason);
     });
 }

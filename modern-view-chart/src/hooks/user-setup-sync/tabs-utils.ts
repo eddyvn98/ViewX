@@ -157,6 +157,41 @@ export function remapRemoteDrawingsToLocalCharts(
     return next;
 }
 
+export function remapRemoteIndicatorsToLocalCharts(
+    remoteIndicatorsInput: unknown,
+    persistedTabsInput: unknown,
+    localTabs: RootState['tabs'],
+): RootState['chartIndicators'] | null {
+    if (!isPlainObject(remoteIndicatorsInput)) return null;
+
+    const remoteIndicators = remoteIndicatorsInput as Record<string, unknown>;
+    const localIdsByContext = mapLocalChartIdsByContext(localTabs);
+    const remoteContextByChartId = resolveRemoteChartContextById(persistedTabsInput);
+    const next: RootState['chartIndicators'] = {};
+
+    for (const [remoteChartId, rawItems] of Object.entries(remoteIndicators)) {
+        if (!Array.isArray(rawItems)) continue;
+        const remoteChartContext = remoteContextByChartId.get(remoteChartId);
+        const targetChartIds = new Set<string>();
+
+        if (localTabs[remoteChartId]) targetChartIds.add(remoteChartId);
+        if (remoteChartContext) {
+            const contextKey = buildChartContextKey(remoteChartContext);
+            for (const localChartId of localIdsByContext.get(contextKey) || []) {
+                targetChartIds.add(localChartId);
+            }
+        }
+
+        if (targetChartIds.size === 0) continue;
+
+        for (const localChartId of targetChartIds) {
+            next[localChartId] = rawItems as RootState['chartIndicators'][string];
+        }
+    }
+
+    return next;
+}
+
 export function createFallbackTabs(): RootState['tabs'] {
     return {
         'default-tab': {

@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildMatrixCellState, buildMatrixRunnerConfigs } from './matrix-cell-state';
+import { getMatrixCandleRequests } from '@/hooks/use-websocket/senders';
 import type { Strategy, StrategySignal } from '../types';
 import type { MatrixScannerConfig } from './matrix-types';
 import { baseStrategy, cfg, makeCandles } from './matrix-cell-state.test.helpers';
@@ -91,5 +92,17 @@ describe('matrix-cell-state - scanner and scope', () => {
         const configs = buildMatrixRunnerConfigs(scanners);
         assert.equal(configs.length, 2);
         assert.ok(configs.every((row) => row.scannerId === 'scanner-1' && row.strategyId === 's1'));
+    });
+
+    it('requests candles for every active scanner cell, even when it is not an open chart', () => {
+        const requests = getMatrixCandleRequests([
+            { id: 'scanner-1', name: 'Scanner 1', strategyId: 's1', active: true, symbols: ['XAUUSDm'], timeframes: ['1h', '4h', '1d'], symbolSortMode: 'added', signalTtlMultiplier: 2, signalTtlFloorSec: 60 },
+        ]);
+
+        assert.deepEqual(requests, [
+            { source: 'MT5', symbol: 'XAUUSDm', interval: '60' },
+            { source: 'MT5', symbol: 'XAUUSDm', interval: '240' },
+            { source: 'MT5', symbol: 'XAUUSDm', interval: '1440' },
+        ]);
     });
 });

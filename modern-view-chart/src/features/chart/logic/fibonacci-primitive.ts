@@ -8,6 +8,7 @@ import {
     ISeriesApi,
     PrimitivePaneViewZOrder,
 } from 'lightweight-charts';
+import { safeChartCoordinate } from './chart-coordinate-utils';
 
 export interface FibonacciLevel {
     ratio: number;
@@ -70,8 +71,8 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
             const timeScale = chart.timeScale();
             const levels = this._data!.levels;
 
-            const xStart = timeScale.timeToCoordinate(this._data!.startTime);
-            const xEnd = timeScale.timeToCoordinate(this._data!.endTime);
+            const xStart = safeChartCoordinate(() => timeScale.timeToCoordinate(this._data!.startTime));
+            const xEnd = safeChartCoordinate(() => timeScale.timeToCoordinate(this._data!.endTime));
 
             const canvasWidth = scope.bitmapSize.width;
 
@@ -87,7 +88,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
             const bgOpacity = this._data?.backgroundOpacity ?? 0.15;
 
             levels.forEach((level, index) => {
-                const y = series.priceToCoordinate(level.price);
+                const y = safeChartCoordinate(() => series.priceToCoordinate(level.price));
                 if (y === null) return;
 
                 const phyY = y * verticalPixelRatio;
@@ -131,7 +132,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                         (prevLevel.ratio >= 0.382 && prevLevel.ratio <= 0.618);
 
                     if (isGoldenZone) {
-                        const yPrev = series.priceToCoordinate(prevLevel.price);
+                            const yPrev = safeChartCoordinate(() => series.priceToCoordinate(prevLevel.price));
                         if (yPrev !== null) {
                             const phyYPrev = yPrev * verticalPixelRatio;
                             ctx.globalAlpha = bgOpacity;
@@ -151,8 +152,8 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
                 const p1Price = levels.find(l => l.ratio === 0)?.price ?? levels[0].price;
                 const p2Price = levels.find(l => l.ratio === 1)?.price ?? levels[levels.length - 1].price;
 
-                const y1 = series.priceToCoordinate(p1Price);
-                const y2 = series.priceToCoordinate(p2Price);
+                const y1 = safeChartCoordinate(() => series.priceToCoordinate(p1Price));
+                const y2 = safeChartCoordinate(() => series.priceToCoordinate(p2Price));
 
                 if (xStart !== null && y1 !== null && xEnd !== null && y2 !== null) {
                     const midX = ((xStart + xEnd) / 2) * horizontalPixelRatio;

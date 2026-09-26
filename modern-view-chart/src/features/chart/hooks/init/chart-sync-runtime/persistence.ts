@@ -18,6 +18,15 @@ export type ViewportPersistence = {
     flushPendingViewportPersist: () => void;
 };
 
+function readVisibleRange(getRange: (() => PersistedRange | null) | undefined): PersistedRange | null {
+    try {
+        return sanitizeRange(getRange?.() ?? null);
+    } catch {
+        // A timeframe switch can briefly leave Lightweight Charts without a scale range.
+        return null;
+    }
+}
+
 export function createViewportPersistence({
     priceChart,
     subchartChart,
@@ -31,7 +40,9 @@ export function createViewportPersistence({
     let hasPendingViewportPersist = false;
 
     const persistViewport = () => {
-        const logicalRange = sanitizeRange(priceChart.timeScale().getVisibleLogicalRange() as PersistedRange | null);
+        const logicalRange = readVisibleRange(
+            () => priceChart.timeScale().getVisibleLogicalRange() as PersistedRange | null,
+        );
         const mainPriceScale = priceChart.priceScale('right') as {
             getVisibleRange?: () => PersistedRange | null;
             setVisibleRange?: (range: PersistedRange) => void;
@@ -40,8 +51,8 @@ export function createViewportPersistence({
             getVisibleRange?: () => PersistedRange | null;
             setVisibleRange?: (range: PersistedRange) => void;
         };
-        const mainPriceRange = sanitizeRange(mainPriceScale.getVisibleRange?.() ?? null);
-        const subPriceRange = sanitizeRange(subPriceScale.getVisibleRange?.() ?? null);
+        const mainPriceRange = readVisibleRange(mainPriceScale.getVisibleRange);
+        const subPriceRange = readVisibleRange(subPriceScale.getVisibleRange);
 
         const nextViewport: NonNullable<ChartInstance['viewport']> = {
             contextKey: currentContextKeyRef.current,

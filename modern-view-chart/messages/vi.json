@@ -96,13 +96,52 @@
         "b4": "Theo dõi hiệu suất chiến lược theo ngữ cảnh thị trường",
         "b5": "Bộ công cụ nâng cao cho team và power user"
       }
+    },
+    "hero": {
+      "badge": "Nền tảng module-first",
+      "ctaSecondary": "Xem bảng giá",
+      "trust": "Được tin dùng bởi trader dùng MT5, Binance & Telegram"
+    },
+    "stats": {
+      "latency": { "value": "<50ms", "label": "Độ trễ cập nhật biểu đồ" },
+      "sources": { "value": "MT5 + Binance", "label": "Nguồn dữ liệu trực tiếp" },
+      "indicators": { "value": "Không giới hạn", "label": "Chỉ báo & cảnh báo" },
+      "aiMonitor": { "value": "24/7", "label": "AI theo dõi lệnh" }
+    },
+    "featuresSection": {
+      "title": "Bộ Công Cụ Đẳng Cấp Chuyên Nghiệp",
+      "subtitle": "Mọi thứ bạn cần để xây dựng, kiểm thử và thực thi chiến lược một cách tự động cùng AI."
+    },
+    "pricingTeaser": {
+      "viewAll": "Xem toàn bộ bảng giá"
+    },
+    "finalCta": {
+      "title": "Bắt Đầu Đúng Module.",
+      "desc": "Your MT5 là luồng kết nối MT5 local và mở khóa terminal. Chọn module đúng trước, rồi mới vào guide và activation.",
+      "cta": "Xem bảng giá"
+    },
+    "footer": {
+      "tagline": "Vivutrade tập trung vào luồng module rõ ràng: Your MT5, Binance Demo và Telegram Notify.",
+      "productHeading": "Sản phẩm",
+      "companyHeading": "Công ty",
+      "legalHeading": "Pháp lý",
+      "copyright": "Vivutrade. Kỹ thuật giao dịch chính xác."
     }
   },
   "Navigation": {
     "chart": "Chart",
     "matrix": "Matrix",
     "dashboard": "Dashboard",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "home": "Trang chủ",
+    "modules": "Module Hub",
+    "pricing": "Bảng giá",
+    "faq": "Câu hỏi thường gặp",
+    "about": "Giới thiệu",
+    "methodology": "Phương pháp",
+    "contact": "Liên hệ",
+    "terms": "Điều khoản",
+    "privacy": "Bảo mật"
   },
   "Header": {
     "notifications": {

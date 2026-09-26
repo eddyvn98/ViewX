@@ -28,14 +28,17 @@ export async function refresh(req, res) {
         });
     } catch (error) {
         logError("auth.refresh.failed", { error: error?.message || error });
+        if (error?.isDatabaseError || error?.name?.includes("Mongo")) {
+            return res.status(503).json({ error: "Service temporarily unavailable, please retry" });
+        }
         clearRefreshCookie(res);
-        return res.status(401).json({ error: "Invalid refresh token" });
+        return res.status(401).json({ error: error?.message || "Invalid refresh token" });
     }
 }
 
 export async function logout(req, res) {
     const refreshToken = getRefreshTokenFromRequest(req);
-    revokeRefreshToken(refreshToken);
+    await revokeRefreshToken(refreshToken);
     clearRefreshCookie(res);
     return res.status(200).json({ message: "Logged out" });
 }

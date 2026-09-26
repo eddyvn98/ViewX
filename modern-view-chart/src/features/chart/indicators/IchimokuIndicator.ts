@@ -2,6 +2,7 @@ import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateIchimoku } from '../utils/indicator-math';
 import { IchimokuResult } from '../utils/indicators/ichimoku';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 export class IchimokuIndicator {
     private tenkanSeries: ISeriesApi<"Line"> | null = null;
@@ -109,11 +110,11 @@ export class IchimokuIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.tenkanSeries) this.chart.removeSeries(this.tenkanSeries);
-            if (this.kijunSeries) this.chart.removeSeries(this.kijunSeries);
-            if (this.spanASeries) this.chart.removeSeries(this.spanASeries);
-            if (this.spanBSeries) this.chart.removeSeries(this.spanBSeries);
-            if (this.chikouSeries) this.chart.removeSeries(this.chikouSeries);
+            if (this.tenkanSeries) safeRemoveSeries(this.chart, this.tenkanSeries, 'Ichimoku');
+            if (this.kijunSeries) safeRemoveSeries(this.chart, this.kijunSeries, 'Ichimoku');
+            if (this.spanASeries) safeRemoveSeries(this.chart, this.spanASeries, 'Ichimoku');
+            if (this.spanBSeries) safeRemoveSeries(this.chart, this.spanBSeries, 'Ichimoku');
+            if (this.chikouSeries) safeRemoveSeries(this.chart, this.chikouSeries, 'Ichimoku');
             this.tenkanSeries = null;
             this.kijunSeries = null;
             this.spanASeries = null;

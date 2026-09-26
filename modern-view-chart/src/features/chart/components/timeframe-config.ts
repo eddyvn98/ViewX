@@ -12,3 +12,16 @@ export const TIMEFRAME_CONFIG = [
     { id: '10080', label: '1W', title: '1 tuần', category: 'NGÀY' },
     { id: '43200', label: '1M', title: '1 tháng', category: 'NGÀY' },
 ];
+
+/** Converts stored/API timeframe IDs to the compact label shown beside a symbol. */
+export function formatChartTimeframe(interval: string | undefined): string {
+    const raw = String(interval || '').trim();
+    const canonical = raw === 'D' ? '1440' : raw === 'W' ? '10080' : raw;
+    const config = TIMEFRAME_CONFIG.find((item) => item.id === canonical);
+    if (!config) return raw;
+
+    const label = config.label;
+    if (canonical === '1440') return 'D';
+    if (canonical === '10080') return 'W';
+    return label.toUpperCase();
+}

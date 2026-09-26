@@ -12,7 +12,7 @@ function maybeConfigureMongoDns(mongoUri) {
     const uri = String(mongoUri || "").trim().toLowerCase();
     if (!uri.startsWith("mongodb+srv://")) return;
 
-    const configured = (process.env.MONGODB_DNS_SERVERS || "1.1.1.1,8.8.8.8")
+    const configured = (process.env.MONGODB_DNS_SERVERS || "")
         .split(",")
         .map((entry) => entry.trim())
         .filter(Boolean);

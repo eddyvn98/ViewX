@@ -6,6 +6,7 @@ import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_B
 import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { getAvailableMt5Symbol } from './symbol-message-utils';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -222,7 +223,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_available_symbols') {
-            const symbols = Array.isArray(msg.symbols) ? msg.symbols.map((s) => String(s)) : [];
+            const symbols = Array.isArray(msg.symbols)
+                ? msg.symbols.map(getAvailableMt5Symbol).filter(Boolean)
+                : [];
             deps.setAvailableSymbols(symbols);
         }
 
