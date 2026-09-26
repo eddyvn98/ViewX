@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **ViewX** (7080 symbols, 18111 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BE_ViewChart** (5366 symbols, 14237 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -97,25 +97,5 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Services area (252 symbols) | `.claude/skills/generated/services/SKILL.md` |
-| Work in the Components area (164 symbols) | `.claude/skills/generated/components/SKILL.md` |
-| Work in the Indicators area (148 symbols) | `.claude/skills/generated/indicators/SKILL.md` |
-| Work in the Logic area (148 symbols) | `.claude/skills/generated/logic/SKILL.md` |
-| Work in the Auth area (98 symbols) | `.claude/skills/generated/auth/SKILL.md` |
-| Work in the Hooks area (94 symbols) | `.claude/skills/generated/hooks/SKILL.md` |
-| Work in the User area (85 symbols) | `.claude/skills/generated/user/SKILL.md` |
-| Work in the Js area (64 symbols) | `.claude/skills/generated/js/SKILL.md` |
-| Work in the Telegram-intent area (44 symbols) | `.claude/skills/generated/telegram-intent/SKILL.md` |
-| Work in the User-setup-sync area (42 symbols) | `.claude/skills/generated/user-setup-sync/SKILL.md` |
-| Work in the Websocket area (42 symbols) | `.claude/skills/generated/websocket/SKILL.md` |
-| Work in the Handlers area (34 symbols) | `.claude/skills/generated/handlers/SKILL.md` |
-| Work in the Dashboard area (30 symbols) | `.claude/skills/generated/dashboard/SKILL.md` |
-| Work in the Desktop area (28 symbols) | `.claude/skills/generated/desktop/SKILL.md` |
-| Work in the Scripts area (27 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
-| Work in the Server area (26 symbols) | `.claude/skills/generated/server/SKILL.md` |
-| Work in the Use-websocket area (25 symbols) | `.claude/skills/generated/use-websocket/SKILL.md` |
-| Work in the Strategy_engine area (25 symbols) | `.claude/skills/generated/strategy-engine/SKILL.md` |
-| Work in the Drawing area (23 symbols) | `.claude/skills/generated/drawing/SKILL.md` |
-| Work in the Backtest area (22 symbols) | `.claude/skills/generated/backtest/SKILL.md` |
 
 <!-- gitnexus:end -->
