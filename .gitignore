@@ -1,2 +1,5 @@
 /node_module
 .gitnexus
+
+# Android debug APK build output copied here by build-apk.ps1
+*.apk
