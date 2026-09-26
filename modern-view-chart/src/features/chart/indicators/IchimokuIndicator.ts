@@ -110,11 +110,11 @@ export class IchimokuIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.tenkanSeries) safeRemoveSeries(this.chart, this.tenkanSeries, 'Ichimoku');
-            if (this.kijunSeries) safeRemoveSeries(this.chart, this.kijunSeries, 'Ichimoku');
-            if (this.spanASeries) safeRemoveSeries(this.chart, this.spanASeries, 'Ichimoku');
-            if (this.spanBSeries) safeRemoveSeries(this.chart, this.spanBSeries, 'Ichimoku');
-            if (this.chikouSeries) safeRemoveSeries(this.chart, this.chikouSeries, 'Ichimoku');
+            safeRemoveSeries(this.chart, this.tenkanSeries, 'IchimokuIndicator');
+            safeRemoveSeries(this.chart, this.kijunSeries, 'IchimokuIndicator');
+            safeRemoveSeries(this.chart, this.spanASeries, 'IchimokuIndicator');
+            safeRemoveSeries(this.chart, this.spanBSeries, 'IchimokuIndicator');
+            safeRemoveSeries(this.chart, this.chikouSeries, 'IchimokuIndicator');
             this.tenkanSeries = null;
             this.kijunSeries = null;
             this.spanASeries = null;

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { parseIntervalSeconds } from './use-chart-history.helpers';
-import { safeRemoveSeries } from '../indicators/utils/safe-remove-series';
+import { safeRemoveSeries } from '@/features/chart/indicators/utils/safe-remove-series';
 
 /**
  * Hook to render AI Price Forecast on a Lightweight Chart instance.
@@ -18,6 +18,7 @@ export function useForecastRenderer(
     const forecastLineRef = useRef<ISeriesApi<'Line'> | null>(null);
     const upperBandRef = useRef<ISeriesApi<'Line'> | null>(null);
     const lowerBandRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const areaBandRef = useRef<ISeriesApi<'Area'> | null>(null);
 
     // Select forecast data for this chart
     const forecast = useMarketStore((state) => {
@@ -38,20 +39,16 @@ export function useForecastRenderer(
     // Clean up series when symbol or interval changes
     useEffect(() => {
         if (!priceChart) return;
-        
+
         const cleanup = () => {
-            if (forecastLineRef.current) {
-                safeRemoveSeries(priceChart, forecastLineRef.current, 'ForecastRenderer');
-                forecastLineRef.current = null;
-            }
-            if (upperBandRef.current) {
-                safeRemoveSeries(priceChart, upperBandRef.current, 'ForecastRenderer');
-                upperBandRef.current = null;
-            }
-            if (lowerBandRef.current) {
-                safeRemoveSeries(priceChart, lowerBandRef.current, 'ForecastRenderer');
-                lowerBandRef.current = null;
-            }
+            safeRemoveSeries(priceChart, forecastLineRef.current, 'ForecastRenderer');
+            safeRemoveSeries(priceChart, upperBandRef.current, 'ForecastRenderer');
+            safeRemoveSeries(priceChart, lowerBandRef.current, 'ForecastRenderer');
+            safeRemoveSeries(priceChart, areaBandRef.current, 'ForecastRenderer');
+            forecastLineRef.current = null;
+            upperBandRef.current = null;
+            lowerBandRef.current = null;
+            areaBandRef.current = null;
         };
 
         cleanup();
@@ -72,10 +69,22 @@ export function useForecastRenderer(
             });
         }
 
+        if (!areaBandRef.current) {
+            areaBandRef.current = priceChart.addSeries(AreaSeries, {
+                topColor: 'rgba(59, 130, 246, 0.2)',
+                bottomColor: 'rgba(59, 130, 246, 0.05)',
+                lineColor: 'rgba(59, 130, 246, 0.3)',
+                lineWidth: 1,
+                lastValueVisible: false,
+                priceLineVisible: false,
+                crosshairMarkerVisible: false,
+            });
+        }
+
         // Calculate timestamps for the forecast points
         const intervalSec = parseIntervalSeconds(interval);
         const lastTs = forecast.timestamp / 1000; // Store uses ms, chart uses seconds
-        
+
         const lineData = forecast.points.map((p, i) => ({
             time: (lastTs + (i + 1) * intervalSec) as Time,
             value: p,

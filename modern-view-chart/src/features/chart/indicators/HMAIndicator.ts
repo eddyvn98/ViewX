@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, LineSeries, Time } from 'lightweight-charts';
 import { IndicatorConfig, Candle } from '@/lib/store/types';
 import { calculateHullMA } from '../utils/indicator-math';
+import { safeRemoveSeries } from './utils/safe-remove-series';
 
 type IndicatorPoint = { time: Time; value: number; color: string };
 type SegmentMeta = {
@@ -179,16 +180,12 @@ export class HMAIndicator {
     private removeLastSegment() {
         const segment = this.segments.pop();
         if (!segment) return;
-        try {
-            this.chart.removeSeries(segment.series);
-        } catch { }
+        safeRemoveSeries(this.chart, segment.series, 'HMAIndicator');
     }
 
     private clearSegments() {
         this.segments.forEach(segment => {
-            try {
-                this.chart.removeSeries(segment.series);
-            } catch { }
+            safeRemoveSeries(this.chart, segment.series, 'HMAIndicator');
         });
         this.segments = [];
     }

@@ -5,17 +5,25 @@ import { WS_URL_FROM_ENV } from './constants';
 export function parseIntervalSeconds(interval: string): number {
     const text = String(interval || '').trim();
     if (!text) return 60;
-    if (text === 'D' || text === '1D') return 86400;
-    if (text === 'W' || text === '1W') return 604800;
+    const upper = text.toUpperCase();
+
+    if (upper === 'D' || upper === '1D') return 86400;
+    if (upper === 'W' || upper === '1W') return 604800;
+    if (upper === 'M' || upper === '1M' || upper === '1MO') return 2592000;
+    if (upper === 'Y' || upper === '1Y') return 31536000;
+
     if (/^\d+$/.test(text)) return Number(text) * 60;
 
-    const m = text.match(/^(\d+)\s*([mhd])$/i);
+    const m = text.match(/^(\d+)\s*([a-z]+)$/i);
     if (!m) return 60;
     const value = Number(m[1]);
     const unit = m[2].toLowerCase();
     if (unit === 'm') return value * 60;
     if (unit === 'h') return value * 3600;
     if (unit === 'd') return value * 86400;
+    if (unit === 'w') return value * 604800;
+    if (unit === 'mo' || unit === 'mn') return value * 2592000;
+    if (unit === 'y') return value * 31536000;
     return 60;
 }
 

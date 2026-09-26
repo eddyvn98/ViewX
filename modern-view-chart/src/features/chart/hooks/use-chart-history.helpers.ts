@@ -17,16 +17,25 @@ export type CandleLookup = { key: string; candles: Candle[] };
 export const parseIntervalSeconds = (interval: string): number => {
     const raw = String(interval || '').trim();
     if (!raw) return 60;
-    if (raw === 'D' || raw === '1D') return 86400;
-    if (raw === 'W' || raw === '1W') return 604800;
+    const upper = raw.toUpperCase();
+
+    if (upper === 'D' || upper === '1D') return 86400;
+    if (upper === 'W' || upper === '1W') return 604800;
+    if (upper === 'M' || upper === '1M' || upper === '1MO') return 2592000;
+    if (upper === 'Y' || upper === '1Y') return 31536000;
+
     if (/^\d+$/.test(raw)) return Number(raw) * 60;
-    const m = raw.match(/^(\d+)\s*([mhd])$/i);
+
+    const m = raw.match(/^(\d+)\s*([a-z]+)$/i);
     if (!m) return 60;
     const value = Number(m[1]);
     const unit = m[2].toLowerCase();
     if (unit === 'm') return value * 60;
     if (unit === 'h') return value * 3600;
     if (unit === 'd') return value * 86400;
+    if (unit === 'w') return value * 604800;
+    if (unit === 'mo' || unit === 'mn') return value * 2592000;
+    if (unit === 'y') return value * 31536000;
     return 60;
 };
 
@@ -35,8 +44,38 @@ export const buildIntervalCandidates = (interval: string | undefined): string[] 
     if (!raw) return [];
 
     const out = new Set<string>([raw]);
-    if (raw === 'D') out.add('1440');
-    if (raw === 'W') out.add('10080');
+    const upper = raw.toUpperCase();
+
+    if (upper === '1440' || upper === '1D' || upper === 'D') {
+        out.add('1440');
+        out.add('1440m');
+        out.add('1D');
+        out.add('D');
+        out.add('1d');
+        out.add('d1');
+    } else if (upper === '10080' || upper === '1W' || upper === 'W') {
+        out.add('10080');
+        out.add('10080m');
+        out.add('1W');
+        out.add('W');
+        out.add('1w');
+        out.add('w1');
+    } else if (upper === '43200' || upper === '1M' || upper === 'M' || upper === '1MO') {
+        out.add('43200');
+        out.add('43200m');
+        out.add('1M');
+        out.add('M');
+        out.add('1mo');
+        out.add('mn1');
+    } else if (upper === '525600' || upper === '1Y' || upper === 'Y') {
+        out.add('525600');
+        out.add('525600m');
+        out.add('1Y');
+        out.add('Y');
+        out.add('1y');
+        out.add('y1');
+    }
+
     const lower = raw.toLowerCase();
     const m = lower.match(/^(\d+)m$/);
     if (m) out.add(m[1]);

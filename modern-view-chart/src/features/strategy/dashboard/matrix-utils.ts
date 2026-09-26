@@ -2,13 +2,14 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import { normalizeTF } from '../utils/time-utils';
 import type { MatrixScannerConfig, MatrixSortMode } from './matrix-types';
 
-const TIMEFRAME_RE = /^(\d+)(m|h|d|w|mo)$/i;
+const TIMEFRAME_RE = /^(\d+)(m|h|d|w|mo|y)$/i;
 
 export function normalizeDashboardTf(tf: string | undefined): string {
     const norm = normalizeTF(tf || '');
     if (!norm) return '';
     if (norm === '1w') return '1w';
     if (norm === '1mo' || norm === '1m0') return '1mo';
+    if (norm === '1y') return '1y';
     return norm;
 }
 
@@ -29,6 +30,7 @@ export function timeframeToSeconds(tf: string | undefined): number {
     if (unit === 'd') return value * 86400;
     if (unit === 'w') return value * 7 * 86400;
     if (unit === 'mo') return value * 30 * 86400;
+    if (unit === 'y') return value * 365 * 86400;
     return 0;
 }
 
@@ -70,6 +72,8 @@ export function timeframeToChartInterval(tf: string): string {
     if (w) return String(Number(w[1]) * 10080);
     const mo = norm.match(/^(\d+)mo$/i);
     if (mo) return String(Number(mo[1]) * 43200);
+    const y = norm.match(/^(\d+)y$/i);
+    if (y) return String(Number(y[1]) * 525600);
     return norm;
 }
 

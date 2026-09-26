@@ -37,6 +37,12 @@ export function useChartTicker({
     const lastBackfillRequestAtRef = useRef<Record<string, number>>({});
     const activeContextKeyRef = useRef(contextKey);
 
+    // BUG #4 fix: Keep always-current refs for interval and source so the tick handler
+    // (which lives inside a long-lived subscription closure) never reads stale values
+    // when the user switches symbol or timeframe faster than React can re-run the effect.
+    const intervalRef = useRef(interval);
+    const sourceRef = useRef(source);
+
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${source}:${normSymbol}`;
 
@@ -64,12 +70,21 @@ export function useChartTicker({
     }, [source, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
-        const unit = intv.slice(-1);
-        const val = parseInt(intv);
-        if (unit === 'm') return val * 60;
-        if (unit === 'h' || unit === 'H') return val * 3600;
-        if (unit === 'd' || unit === 'D') return val * 86400;
-        if (!isNaN(Number(intv))) return Number(intv) * 60;
+        const raw = String(intv || '').trim();
+        if (!raw) return 60;
+        if (/^\d+$/.test(raw)) return Number(raw) * 60;
+
+        const m = raw.match(/^(\d+)?\s*([mhdw])$/i);
+        if (!m) return 60;
+
+        const unit = m[2].toLowerCase();
+        const value = m[1] ? Number(m[1]) : 1;
+        if (!Number.isFinite(value) || value <= 0) return 60;
+
+        if (unit === 'm') return value * 60;
+        if (unit === 'h') return value * 3600;
+        if (unit === 'd') return value * 86400;
+        if (unit === 'w') return value * 604800;
         return 60;
     };
 
@@ -82,6 +97,14 @@ export function useChartTicker({
         const RIGHT_EDGE_TOLERANCE_BARS = 1.5;
         return range.to >= (dataCount - 1 - RIGHT_EDGE_TOLERANCE_BARS);
     }, [chartRef, seriesRef]);
+
+    // BUG #4 fix: Keep interval/source refs always in sync with latest prop values.
+    // These are read inside the subscription closure to avoid stale interval captures.
+    // Run on every render (no deps array) so ref is ALWAYS current.
+    useEffect(() => {
+        intervalRef.current = interval;
+        sourceRef.current = source;
+    });
 
     // Reset local state when context changes
     useEffect(() => {
@@ -114,7 +137,8 @@ export function useChartTicker({
             const now = Date.now();
             if (!force && now - lastStoreSync < 250) return;
             lastStoreSync = now;
-            updateLastCandle(source!, symbol!, interval!, {
+            // BUG #4 fix: use sourceRef.current to get the always-current source value
+            updateLastCandle(sourceRef.current ?? source!, symbol!, intervalRef.current ?? interval!, {
                 time: toSec(candle.time),
                 open: candle.rawOpen ?? candle.open,
                 high: candle.rawHigh ?? candle.high,
@@ -143,7 +167,13 @@ export function useChartTicker({
             }
             if (!base) return;
 
-            const intervalSec = getIntervalSeconds(interval || '1');
+            // BUG #4 fix: Read interval from the always-current ref instead of the
+            // closure-captured value. If the user switches timeframe faster than React
+            // re-runs this effect, the closure would carry the OLD interval, making
+            // intervalSec wrong and nextBarTime incorrect — causing candles to be appended
+            // at stale timestamps (the "stretched/wrong candle" visual artifact).
+            const currentInterval = intervalRef.current || interval || '1';
+            const intervalSec = getIntervalSeconds(currentInterval);
             const lastCandleTime = toSec(base.time);
             if (isNaN(lastCandleTime)) return;
 
@@ -252,8 +282,8 @@ export function useChartTicker({
                 base.open = haOpen; base.close = haClose;
                 base.high = haData.high; base.low = haData.low;
                 seriesRef.current?.update(haData);
-                
-                // Keep base state updated with raw values for syncing/legend, 
+
+                // Keep base state updated with raw values for syncing/legend,
                 // but do NOT call series update again with raw candle data.
                 base.open = rOpen; base.high = rHigh; base.low = rLow; base.close = rClose;
             } else {

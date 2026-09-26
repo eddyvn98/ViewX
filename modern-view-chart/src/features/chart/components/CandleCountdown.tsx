@@ -82,11 +82,14 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
             const now = Math.floor(Date.now() / 1000);
             let timeframeSeconds = 60;
             if (interval) {
-                if (interval === '1D' || interval === 'D') timeframeSeconds = 86400;
-                else if (interval === '1W' || interval === 'W') timeframeSeconds = 604800;
-                else if (interval === '1M' || interval === 'M') timeframeSeconds = 2592000;
+                if (interval === '1D' || interval === 'D' || interval === '1440') timeframeSeconds = 86400;
+                else if (interval === '1W' || interval === 'W' || interval === '10080') timeframeSeconds = 604800;
+                else if (interval === '1M' || interval === 'M' || interval === '43200') timeframeSeconds = 2592000;
+                else if (interval === '1Y' || interval === 'Y' || interval === '525600') timeframeSeconds = 31536000;
                 else if (interval.endsWith('h') || interval.endsWith('H')) timeframeSeconds = parseInt(interval) * 3600;
                 else if (interval.endsWith('d') || interval.endsWith('D')) timeframeSeconds = parseInt(interval) * 86400;
+                else if (interval.endsWith('w') || interval.endsWith('W')) timeframeSeconds = parseInt(interval) * 604800;
+                else if (interval.endsWith('y') || interval.endsWith('Y')) timeframeSeconds = parseInt(interval) * 31536000;
                 else {
                     const parsed = parseInt(interval);
                     if (!isNaN(parsed)) timeframeSeconds = parsed * 60;

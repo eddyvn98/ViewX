@@ -14,15 +14,21 @@ export const formatCandles = (candles: Candle[]) =>
 
 export function getIntervalSeconds(interval?: string): number {
     if (!interval) return 60;
-    if (interval === 'D' || interval === '1D') return 86400;
-    if (interval === 'W' || interval === '1W') return 604800;
-    const unit = interval.slice(-1);
-    const val = parseInt(interval, 10);
+    const raw = String(interval).trim();
+    if (!raw) return 60;
+    if (/^\d+$/.test(raw)) return Number(raw) * 60;
+
+    const m = raw.match(/^(\d+)?\s*([mhdw])$/i);
+    if (!m) return 60;
+
+    const unit = m[2].toLowerCase();
+    const val = m[1] ? Number(m[1]) : 1;
+    if (!Number.isFinite(val) || val <= 0) return 60;
+
     if (unit === 'm') return val * 60;
-    if (unit === 'h' || unit === 'H') return val * 3600;
-    if (unit === 'd' || unit === 'D') return val * 86400;
-    if (unit === 'w' || unit === 'W') return val * 604800;
-    if (!isNaN(Number(interval))) return Number(interval) * 60;
+    if (unit === 'h') return val * 3600;
+    if (unit === 'd') return val * 86400;
+    if (unit === 'w') return val * 604800;
     return 60;
 }
 

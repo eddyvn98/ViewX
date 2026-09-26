@@ -118,9 +118,9 @@ export class ADXIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.adxSeries) safeRemoveSeries(this.chart, this.adxSeries, 'ADX');
-            if (this.plusSeries) safeRemoveSeries(this.chart, this.plusSeries, 'ADX');
-            if (this.minusSeries) safeRemoveSeries(this.chart, this.minusSeries, 'ADX');
+            safeRemoveSeries(this.chart, this.adxSeries, 'ADXIndicator');
+            safeRemoveSeries(this.chart, this.plusSeries, 'ADXIndicator');
+            safeRemoveSeries(this.chart, this.minusSeries, 'ADXIndicator');
             this.adxSeries = null;
             this.plusSeries = null;
             this.minusSeries = null;

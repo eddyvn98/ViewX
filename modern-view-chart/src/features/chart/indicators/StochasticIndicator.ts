@@ -134,8 +134,8 @@ export class StochasticIndicator {
 
     destroy() {
         if (this.chart) {
-            if (this.kSeries) safeRemoveSeries(this.chart, this.kSeries, 'Stochastic');
-            if (this.dSeries) safeRemoveSeries(this.chart, this.dSeries, 'Stochastic');
+            safeRemoveSeries(this.chart, this.kSeries, 'StochasticIndicator');
+            safeRemoveSeries(this.chart, this.dSeries, 'StochasticIndicator');
             this.kSeries = null;
             this.dSeries = null;
         }

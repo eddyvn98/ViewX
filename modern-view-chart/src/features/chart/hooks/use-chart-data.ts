@@ -34,6 +34,7 @@ export function useChartData(
         chartRef, subchartRef, seriesRef, markerSeriesRef,
         subSyncRef, timescaleSyncRef,
         isReady,
+        isAutoScrollEnabledRef,
         theme,
         candleUpColor,
         candleDownColor,

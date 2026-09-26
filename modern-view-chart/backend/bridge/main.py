@@ -40,7 +40,11 @@ TIMEFRAME_MAP = {
     "10080": mt5.TIMEFRAME_W1,
     "43200": mt5.TIMEFRAME_MN1,
     "D": mt5.TIMEFRAME_D1,
+    "1D": mt5.TIMEFRAME_D1,
+    "D1": mt5.TIMEFRAME_D1,
     "W": mt5.TIMEFRAME_W1,
+    "1W": mt5.TIMEFRAME_W1,
+    "W1": mt5.TIMEFRAME_W1,
     "M": mt5.TIMEFRAME_MN1,
 }
 

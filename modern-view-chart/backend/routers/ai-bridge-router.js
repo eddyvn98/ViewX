@@ -80,6 +80,35 @@ function buildSafePrompt(userPrompt) {
     return `${AI_POLICY}\n\nUser request:\n${String(userPrompt || "").trim()}`;
 }
 
+async function getAiCoreReply({ actorKey, prompt, historyLimit = 8 }) {
+    const safePrompt = buildSafePrompt(prompt);
+    const historyRows = await loadHistory(actorKey, historyLimit);
+    const chatHistory = historyRows.flatMap((row) => ([
+        { role: "user", content: row.prompt },
+        { role: "model", content: row.response },
+    ]));
+
+    const corePayload = {
+        agentId: "viewx-assistant",
+        sessionId: actorKey,
+        message: safePrompt,
+        history: chatHistory,
+    };
+
+    const aiCoreRes = await fetch("http://localhost:4000/v1/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corePayload),
+    });
+
+    if (!aiCoreRes.ok) {
+        throw new Error(`AI Core Error: ${aiCoreRes.statusText}`);
+    }
+
+    const coreData = await aiCoreRes.json();
+    return String(coreData?.reply || "").trim();
+}
+
 function sanitizeAssistantOutput(rawText) {
     const value = String(rawText || "").trim();
     if (!value) return "";
@@ -111,6 +140,57 @@ function getOutputBlockReason(text) {
     if (OUTPUT_BLOCK_PATTERNS[3].test(value)) return "runtime_env_reference_in_output";
     if (OUTPUT_BLOCK_PATTERNS[4].test(value)) return "filesystem_path_leak_in_output";
     return "sensitive_output_detected";
+}
+
+function buildForecastTextFromQuestion({ question, chart, forecast, lang = "vi" }) {
+    const q = String(question || "").toLowerCase();
+    const isVi = String(lang || "vi").toLowerCase().startsWith("vi");
+    const asksRange = /(vung gia|vùng giá|range|bien do|biên độ|volatility)/i.test(q);
+    const symbol = String(chart?.symbol || "");
+    const timeframe = String(chart?.timeframe || "");
+    const direction = String(forecast?.direction || "sideways");
+    const current = Number(forecast?.current_price || 0);
+    const target = Number(forecast?.target_price || 0);
+    const delta = Number(forecast?.delta_pct || 0);
+    const low = Number(forecast?.band_low || 0);
+    const high = Number(forecast?.band_high || 0);
+    const confidence = Number(forecast?.confidence || 0);
+    const horizon = Number(forecast?.horizon || 0);
+
+    const directionVi = direction === "bullish" ? "Tăng" : direction === "bearish" ? "Giảm" : "Đi ngang";
+    const directionEn = direction === "bullish" ? "Bullish" : direction === "bearish" ? "Bearish" : "Sideways";
+
+    if (asksRange) {
+        if (isVi) {
+            return [
+                `Dự báo vùng giá kế tiếp ${symbol} (${timeframe}) trong ${horizon} nến:`,
+                `- Vùng kỳ vọng: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+                `- Biên độ dự kiến: ${(high - low).toFixed(3)}`,
+                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`,
+            ].join("\n");
+        }
+        return [
+            `Next range forecast for ${symbol} (${timeframe}) over ${horizon} candles:`,
+            `- Expected range: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+            `- Expected volatility span: ${(high - low).toFixed(3)}`,
+            `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`,
+        ].join("\n");
+    }
+
+    if (isVi) {
+        return [
+            `Dự đoán giá sắp tới ${symbol} (${timeframe}) trong ${horizon} nến:`,
+            `- Giá hiện tại: ${current.toFixed(3)}`,
+            `- Giá mục tiêu: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
+            `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`,
+        ].join("\n");
+    }
+    return [
+        `Next move forecast for ${symbol} (${timeframe}) over ${horizon} candles:`,
+        `- Current price: ${current.toFixed(3)}`,
+        `- Target price: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
+        `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`,
+    ].join("\n");
 }
 
 function aiDisabledResponse(res) {
@@ -182,27 +262,16 @@ function extractUserIdFromActorKey(actorKey) {
     return userId || null;
 }
 
-function getCleanQuestion(rawPrompt) {
-    const value = String(rawPrompt || "").trim();
-    const match = value.match(/USER_QUESTION:\s*([\s\S]*?)(?:\nCONTEXT_JSON:|$)/i);
-    return match?.[1]?.trim() || value;
-}
-
-async function loadHistory(actorKey, limit = 50, conversationId = null) {
+async function loadHistory(actorKey, limit = 50) {
     try {
-        const filter = { actorKey };
-        if (conversationId) {
-            filter.conversationId = conversationId;
-        }
         const rows = await aiChatLogModel
-            .find(filter)
+            .find({ actorKey })
             .sort({ timestamp: -1 })
             .limit(limit)
             .lean();
         if (Array.isArray(rows) && rows.length > 0) {
             return rows.map((row) => ({
                 id: String(row.messageId || row._id),
-                conversationId: row.conversationId || null,
                 source: row.source || "chat",
                 prompt: row.prompt || "",
                 response: row.response || "",
@@ -212,11 +281,7 @@ async function loadHistory(actorKey, limit = 50, conversationId = null) {
     } catch (error) {
         console.error("[AI History] load failed:", error?.message || error);
     }
-    const memHistory = getHistory(actorKey);
-    const filteredMem = conversationId
-        ? memHistory.filter((item) => item?.conversationId === conversationId)
-        : memHistory;
-    return filteredMem.slice(-limit).reverse().filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
+    return getHistory(actorKey).slice(-limit).reverse().filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
 }
 
 function pushHistory(actorKey, item) {
@@ -231,7 +296,6 @@ function pushHistory(actorKey, item) {
     const payload = {
         actorKey,
         userId: extractUserIdFromActorKey(actorKey),
-        conversationId: item?.conversationId || null,
         messageId: String(item?.id || crypto.randomUUID()),
         source: item?.source === "system" ? "system" : "chat",
         prompt: String(item?.prompt || ""),
@@ -292,44 +356,8 @@ async function consumeOneChatCredit(userId) {
  */
 router.get("/history", async (req, res) => {
     const actorKey = getActorKey(req, req.body, req.query);
-    const conversationId = typeof req.query?.conversationId === "string" ? req.query.conversationId.trim() : null;
-    const limitRaw = Number(req.query?.limit);
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 200) : 100;
-    const history = await loadHistory(actorKey, limit, conversationId);
+    const history = await loadHistory(actorKey, 50);
     return res.json(history); // newest first
-});
-
-/**
- * Delete AI History (all or specific conversation)
- */
-router.delete("/history", async (req, res) => {
-    try {
-        const actorKey = getActorKey(req, req.body, req.query);
-        const conversationId = typeof req.query?.conversationId === "string" ? req.query.conversationId.trim() : null;
-        
-        const filter = { actorKey };
-        if (conversationId) {
-            filter.conversationId = conversationId;
-        }
-
-        await aiChatLogModel.deleteMany(filter);
-
-        if (aiHistoryByActor.has(actorKey)) {
-            if (conversationId) {
-                const remaining = (aiHistoryByActor.get(actorKey) || []).filter(
-                    (item) => item?.conversationId !== conversationId
-                );
-                aiHistoryByActor.set(actorKey, remaining);
-            } else {
-                aiHistoryByActor.set(actorKey, []);
-            }
-        }
-
-        return res.json({ status: "ok", deleted: true, conversationId });
-    } catch (error) {
-        console.error("[AI History] delete failed:", error?.message || error);
-        return res.status(500).json({ status: "error", msg: "delete_failed" });
-    }
 });
 
 router.post("/context", async (req, res) => {
@@ -433,9 +461,7 @@ router.post("/result", (req, res) => {
  * Generic task creation endpoint (used by the app/bot)
  */
 router.post("/task", async (req, res) => {
-    const { prompt, timeout = 120000, source = "system", conversationId: rawConvId, messageId: rawMsgId } = req.body;
-    const conversationId = typeof rawConvId === "string" ? rawConvId.trim() : null;
-    const clientMessageId = typeof rawMsgId === "string" ? rawMsgId.trim() : null;
+    const { prompt, timeout = 120000, source = "system" } = req.body;
     const actorKey = getActorKey(req, req.body, req.query);
     const isChatSource = String(source || "").trim().toLowerCase() === "chat";
     const billingUserId = resolveBillingUserId(req, req.body, req.query);
@@ -456,8 +482,6 @@ router.post("/task", async (req, res) => {
         });
     }
 
-    const safePrompt = buildSafePrompt(prompt);
-
     if (isChatSource) {
         if (!billingUserId) {
             return res.status(401).json({ status: "error", msg: "user_auth_required_for_chat_ai" });
@@ -474,34 +498,7 @@ router.post("/task", async (req, res) => {
 
     // Forward to AI Core Platform
     try {
-        const historyRows = conversationId
-            ? await loadHistory(actorKey, 10, conversationId)
-            : [];
-        const chatHistory = historyRows.slice().reverse().flatMap(row => [
-            { role: 'user', content: getCleanQuestion(row.prompt) },
-            { role: 'model', content: row.response }
-        ]);
-
-        const corePayload = {
-            agentId: "viewx-assistant",
-            sessionId: conversationId ? `${actorKey}:${conversationId}` : actorKey,
-            message: safePrompt,
-            history: chatHistory
-        };
-
-        const aiCoreRes = await fetch("http://localhost:4000/v1/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(corePayload),
-            signal: AbortSignal.timeout(Math.max(5000, Number(timeout) || 120000))
-        });
-
-        if (!aiCoreRes.ok) {
-            throw new Error(`AI Core Error: ${aiCoreRes.statusText}`);
-        }
-
-        const coreData = await aiCoreRes.json() ;
-        let text = coreData.reply;
+        let text = await getAiCoreReply({ actorKey, prompt, historyLimit: 10 });
 
         if (text) {
             if (isSensitiveOutput(text)) {
@@ -521,11 +518,9 @@ router.post("/task", async (req, res) => {
                 });
             }
             const safeText = sanitizeAssistantOutput(text);
-            const savedMessageId = clientMessageId || crypto.randomUUID();
 
             pushHistory(actorKey, {
-                id: savedMessageId,
-                conversationId,
+                id: crypto.randomUUID(),
                 source,
                 prompt,
                 response: safeText,
@@ -536,9 +531,9 @@ router.post("/task", async (req, res) => {
                 if (!consumed.ok) {
                     return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
                 }
-                return res.json({ status: "ok", id: savedMessageId, conversationId, response: safeText, remainingCredits: consumed.remainingCredits });
+                return res.json({ status: "ok", response: safeText, remainingCredits: consumed.remainingCredits });
             }
-            return res.json({ status: "ok", id: savedMessageId, conversationId, response: safeText });
+            return res.json({ status: "ok", response: safeText });
         }
     } catch (error) {
         console.error(`  [AI Core API] Error: ${error.message}`);
@@ -584,8 +579,6 @@ router.post("/forecast", async (req, res) => {
     const billingUserId = resolveBillingUserId(req, req.body, req.query);
     const source = "chat";
     const question = String(req.body?.question || "").trim();
-    const conversationId = typeof req.body?.conversationId === "string" ? req.body.conversationId.trim() : null;
-    const clientMessageId = typeof req.body?.messageId === "string" ? req.body.messageId.trim() : null;
     const chart = req.body?.chart && typeof req.body.chart === "object" ? req.body.chart : null;
     const candles = Array.isArray(req.body?.candles) ? req.body.candles : [];
     const horizonRaw = Number(req.body?.horizon);
@@ -631,13 +624,18 @@ router.post("/forecast", async (req, res) => {
             });
         }
 
-        const savedMessageId = clientMessageId || crypto.randomUUID();
+        const responseText = buildForecastTextFromQuestion({
+            question,
+            chart,
+            forecast: result.forecast,
+            lang,
+        });
+
         pushHistory(actorKey, {
-            id: savedMessageId,
-            conversationId,
+            id: crypto.randomUUID(),
             source,
             prompt: question || `Du bao ${chart.symbol} ${chart.timeframe}`,
-            response: result.response,
+            response: responseText,
             timestamp: Date.now(),
         });
 
@@ -648,12 +646,10 @@ router.post("/forecast", async (req, res) => {
 
         return res.json({
             status: "ok",
-            id: savedMessageId,
-            conversationId,
-            response: result.response,
+            response: responseText,
             remainingCredits: consumed.remainingCredits,
             forecast: result.forecast,
-            probabilities: result.probabilities || result.forecast?.probabilities || null,
+            result: result.forecast,
             engine: result.engine,
         });
     } catch (error) {
