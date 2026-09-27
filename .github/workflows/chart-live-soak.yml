@@ -1,0 +1,92 @@
+name: Chart Live Soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      ws_url:
+        description: Live WebSocket URL (wss://...)
+        required: true
+        type: string
+      api_url:
+        description: Live API base URL (https://...)
+        required: true
+        type: string
+      clients:
+        description: Concurrent WebSocket clients
+        required: false
+        default: '50'
+        type: string
+      duration_sec:
+        description: Soak duration in seconds
+        required: false
+        default: '900'
+        type: string
+      ramp_sec:
+        description: Client ramp duration in seconds
+        required: false
+        default: '60'
+        type: string
+  schedule:
+    - cron: '30 18 * * 0'
+
+concurrency:
+  group: chart-live-soak
+  cancel-in-progress: false
+
+jobs:
+  live-soak:
+    if: ${{ github.event_name == 'workflow_dispatch' || (vars.VIEWX_SOAK_WS_URL != '' && vars.VIEWX_SOAK_API_URL != '') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: modern-view-chart
+    env:
+      SOAK_WS_URL: ${{ github.event.inputs.ws_url || vars.VIEWX_SOAK_WS_URL }}
+      SOAK_API_URL: ${{ github.event.inputs.api_url || vars.VIEWX_SOAK_API_URL }}
+      SOAK_CLIENTS: ${{ github.event.inputs.clients || '50' }}
+      SOAK_DURATION_SEC: ${{ github.event.inputs.duration_sec || '900' }}
+      SOAK_RAMP_SEC: ${{ github.event.inputs.ramp_sec || '60' }}
+      ACCESS_TOKEN: ${{ secrets.VIEWX_SOAK_ACCESS_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: modern-view-chart/package-lock.json
+
+      - name: Repair lockfile metadata
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate target
+        run: |
+          test -n "$SOAK_WS_URL"
+          test -n "$SOAK_API_URL"
+
+      - name: Run live WebSocket soak
+        run: |
+          mkdir -p logs
+          npm run soak:ws -- \
+            --ws-url "$SOAK_WS_URL" \
+            --api-url "$SOAK_API_URL" \
+            --clients "$SOAK_CLIENTS" \
+            --duration-sec "$SOAK_DURATION_SEC" \
+            --ramp-sec "$SOAK_RAMP_SEC" \
+            --output logs/chart-live-soak.json
+
+      - name: Upload soak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart-live-soak-report
+          path: modern-view-chart/logs/chart-live-soak.json
+          if-no-files-found: warn
+          retention-days: 30
