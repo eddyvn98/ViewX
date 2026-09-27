@@ -297,6 +297,26 @@ test.describe('chart interaction stability', () => {
     });
 
     test('repeated chart churn releases temporary resources', async ({ page }, testInfo) => {
+        // Warm up lazy UI/series/primitives once. Leak detection should measure
+        // continued growth across repeated churn, not legitimate one-time mounts.
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.setChartSymbol('BTCUSDm', 'MT5');
+            window.__VIEWX_E2E__?.setChartTimeframe('5');
+            window.__VIEWX_E2E__?.addIndicator('RSI');
+            window.__VIEWX_E2E__?.addIndicator('MACD');
+            window.__VIEWX_E2E__?.addDrawingFixture();
+        });
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().count ?? -1)
+        ).toBe(1);
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.clearIndicators();
+            window.__VIEWX_E2E__?.clearDrawings();
+            window.__VIEWX_E2E__?.setChartSymbol('XAUUSDm', 'MT5');
+            window.__VIEWX_E2E__?.setChartTimeframe('1');
+        });
+        await page.waitForTimeout(400);
+
         const before = await readChartPerfSnapshot(page);
 
         for (let round = 0; round < 6; round += 1) {
@@ -345,8 +365,8 @@ test.describe('chart interaction stability', () => {
         expect(finalState.chart).toMatchObject({ symbol: 'XAUUSDm', interval: '1', source: 'MT5' });
         expect(finalState.indicators?.configured ?? []).toEqual([]);
         expect(finalState.drawings).toMatchObject({ count: 0, isDrawing: false, tempPoints: 0 });
-        expect(after.canvasCount).toBeLessThanOrEqual(before.canvasCount + 4);
-        expect(after.domCount).toBeLessThanOrEqual(before.domCount + 200);
+        expect(after.canvasCount).toBeLessThanOrEqual(before.canvasCount + 2);
+        expect(after.domCount).toBeLessThanOrEqual(before.domCount + 80);
 
         await attachDiagnostics(page, testInfo);
     });
