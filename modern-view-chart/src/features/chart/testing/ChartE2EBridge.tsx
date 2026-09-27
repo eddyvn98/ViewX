@@ -10,8 +10,8 @@ import {
 } from './chart-perf-counters';
 
 type IndicatorState = {
-    configured: Array<{ id: string; type: string; visible: boolean }>;
-    runtime: Array<{ id: string; type: string }>;
+    configured: Array<{ id: string; type: string; visible: boolean; params: Record<string, unknown> }>;
+    runtime: Array<{ id: string; type: string; params?: Record<string, unknown> }>;
 };
 
 type DrawingState = {
@@ -34,6 +34,7 @@ type E2EBridge = {
     addDrawingFixture: () => void;
     addIndicator: (type: string, pane?: IndicatorConfig['pane']) => void;
     clearIndicators: () => void;
+    updateFirstIndicatorParams: (params: Record<string, unknown>) => void;
     getIndicatorState: () => IndicatorState;
     startDrawing: (tool: DrawingTool) => void;
     clearDrawings: () => void;
@@ -274,13 +275,23 @@ export function ChartE2EBridge() {
                 const ids = (state.chartIndicators[chart.id] || []).map((indicator) => indicator.id);
                 ids.forEach((id) => useMarketStore.getState().removeIndicator(chart.id, id));
             },
+            updateFirstIndicatorParams: (params) => {
+                const chart = activeChart();
+                if (!chart) return;
+                const state = useMarketStore.getState();
+                const indicator = (state.chartIndicators[chart.id] || [])[0];
+                if (!indicator) return;
+                state.updateIndicator(chart.id, indicator.id, {
+                    params: { ...indicator.params, ...params },
+                });
+            },
             getIndicatorState: () => {
                 const chart = activeChart();
                 if (!chart) return { configured: [], runtime: [] };
                 const state = useMarketStore.getState();
                 return {
-                    configured: (state.chartIndicators[chart.id] || []).map(({ id, type, visible }) => ({ id, type, visible })),
-                    runtime: (state.chartIndicatorRuntime[chart.id] || []).map(({ id, type }) => ({ id, type })),
+                    configured: (state.chartIndicators[chart.id] || []).map(({ id, type, visible, params }) => ({ id, type, visible, params })),
+                    runtime: (state.chartIndicatorRuntime[chart.id] || []).map(({ id, type, params }) => ({ id, type, params })),
                 };
             },
             startDrawing: (tool) => {
