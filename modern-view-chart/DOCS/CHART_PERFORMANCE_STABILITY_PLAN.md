@@ -1,6 +1,6 @@
 # Chart Performance & Interaction Stability Plan
 
-Status: IN PROGRESS  
+Status: VALIDATION  
 Owner area: `modern-view-chart`  
 Tracking branch: `feat/chart-performance-torture`
 
@@ -170,38 +170,43 @@ These are engineering targets, not immediate GitHub-runner hard gates:
 - [x] Inspect existing chart architecture and Playwright/CI setup.
 - [x] Identify initial likely hotspots.
 - [x] Create this tracking document.
-- [ ] Capture first deterministic stress baseline.
+- [x] Capture first deterministic stress baseline.
 
 ### Phase 1 - testability + first gate
-- [ ] Add stable chart/timeframe/indicator test hooks.
-- [ ] Add E2E-only deterministic chart data bridge.
-- [ ] Add performance probe helper.
-- [ ] Add rapid symbol/timeframe stress test.
-- [ ] Add pan/zoom pointer stress test.
-- [ ] Wire Chromium stress tests into GitHub Actions.
-- [ ] Upload Playwright artifacts.
+- [x] Add stable chart/timeframe/indicator test hooks.
+- [x] Add E2E-only deterministic chart data bridge.
+- [x] Add performance probe helper.
+- [x] Add rapid symbol/timeframe stress test.
+- [x] Add pan/zoom pointer stress test.
+- [x] Wire Chromium stress tests into GitHub Actions.
+- [x] Upload Playwright artifacts.
 
 ### Phase 2 - indicator/drawing stress
-- [ ] Indicator add/remove/parameter torture.
-- [ ] Drawing create/move/delete torture.
-- [ ] Mixed chaos scenario.
-- [ ] Track series/drawing/indicator counts.
+- [x] Indicator add/remove churn and stale-worker-result protection.
+- [ ] Indicator parameter-change torture.
+- [x] Drawing create/move/resize/delete torture.
+- [x] Mixed chaos scenario.
+- [x] Track drawing/indicator state and bounded chart resources.
 
 ### Phase 3 - hotspot fixes
-- [ ] Benchmark and reduce MutationObserver subtree work.
-- [ ] Coalesce realtime tick RAF scheduling.
-- [ ] Verify `setData()` count during context churn and reduce redundant full redraws.
-- [ ] Verify worker cancellation/version behavior under add/remove churn.
-- [ ] Profile crosshair/drawing pointer paths.
+- [x] Benchmark and reduce MutationObserver subtree work.
+- [x] Coalesce realtime tick RAF scheduling.
+- [x] Verify `setData()` count during context churn and reduce redundant full redraws.
+- [x] Verify worker cancellation/version behavior under add/remove churn.
+- [x] Stress crosshair/drawing pointer paths in Chromium.
 
 ### Phase 4 - regression budgets
-- [ ] Establish repeatable baselines from CI/local runs.
-- [ ] Add memory/long-task/frame-gap regression thresholds.
-- [ ] Keep historical performance JSON artifacts for comparison.
+- [x] Establish deterministic CI baseline runs.
+- [x] Add memory/long-task/frame-gap regression thresholds.
+- [x] Attach performance metrics and budget summaries to Playwright artifacts.
 
 ### Phase 5 - live soak
-- [ ] Add optional MT5/Binance/WebSocket live soak job.
-- [ ] Run longer symbol/timeframe/tick churn outside the deterministic PR gate.
+- [x] Add optional/scheduled WebSocket live soak workflow with JSON artifacts.
+- [ ] Run authenticated live soak against the deployed API/WS endpoint and archive a passing report.
+
+## Current validation status
+
+Deterministic chart hardening is implemented and CI-gated. The remaining completion item is an authenticated live soak against the deployed backend/WebSocket endpoint; this intentionally stays outside the deterministic PR gate because it depends on live credentials and service availability.
 
 ## Definition of done
 
