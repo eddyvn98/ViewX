@@ -31,6 +31,7 @@ type E2EBridge = {
     getLastCandle: () => Candle | null;
     getPerfCounters: () => ChartPerfCounters;
     resetPerfCounters: () => void;
+    addDrawingFixture: () => void;
     addIndicator: (type: string, pane?: IndicatorConfig['pane']) => void;
     clearIndicators: () => void;
     getIndicatorState: () => IndicatorState;
@@ -89,6 +90,14 @@ function activeChart() {
     const tab = state.tabs[state.activeTabId];
     if (!tab?.activeChartId) return null;
     return tab.charts[tab.activeChartId] || null;
+}
+
+function activeCandles(): Candle[] {
+    const chart = activeChart();
+    if (!chart) return [];
+    const key = `${chart.source}:${chart.symbol}:${chart.interval}`.toLowerCase();
+    return Object.entries(useMarketStore.getState().candleData)
+        .find(([candidate]) => candidate.toLowerCase() === key)?.[1] || [];
 }
 
 function indicatorDefaults(type: string, pane?: IndicatorConfig['pane']): Omit<IndicatorConfig, 'id'> {
@@ -205,8 +214,7 @@ export function ChartE2EBridge() {
                 const chart = activeChart();
                 if (!chart) return;
                 const state = useMarketStore.getState();
-                const candles = Object.entries(state.candleData)
-                    .find(([key]) => key.toLowerCase() === `${chart.source}:${chart.symbol}:${chart.interval}`.toLowerCase())?.[1] || [];
+                const candles = activeCandles();
                 const last = candles[candles.length - 1];
                 const start = Number(last?.close ?? basePrice(chart.symbol));
                 const lastTime = Number(last?.time ?? Math.floor(Date.now() / 1000));
@@ -224,13 +232,33 @@ export function ChartE2EBridge() {
             getLastCandle: () => {
                 const chart = activeChart();
                 if (!chart) return null;
-                const state = useMarketStore.getState();
-                const candles = Object.entries(state.candleData)
-                    .find(([key]) => key.toLowerCase() === `${chart.source}:${chart.symbol}:${chart.interval}`.toLowerCase())?.[1] || [];
+                const candles = activeCandles();
                 return candles.length ? { ...candles[candles.length - 1] } : null;
             },
             getPerfCounters: getChartPerfCounters,
             resetPerfCounters: resetChartPerfCounters,
+            addDrawingFixture: () => {
+                const chart = activeChart();
+                const candles = activeCandles();
+                if (!chart || candles.length < 2) return;
+                const first = candles[Math.max(0, candles.length - 20)];
+                const second = candles[candles.length - 5] || candles[candles.length - 1];
+                useMarketStore.getState().addDrawing(chart.id, {
+                    type: 'trend-line',
+                    points: [
+                        { time: Number(first.time), price: Number(first.close) },
+                        { time: Number(second.time), price: Number(second.close) },
+                    ],
+                    symbol: chart.symbol,
+                    interval: chart.interval,
+                    source: chart.source,
+                    color: '#2962FF',
+                    visible: true,
+                    lineWidth: 1,
+                    lineStyle: 'dashed',
+                    params: {},
+                });
+            },
             addIndicator: (type, pane) => {
                 const chart = activeChart();
                 if (!chart) return;
