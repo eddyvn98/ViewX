@@ -13,6 +13,22 @@ export type BrowserErrorSnapshot = {
     consoleErrors: string[];
 };
 
+type BrowserPerfProbeState = {
+    longTasks: number[];
+    frameGaps: number[];
+    lastFrame: number;
+};
+
+type WindowWithPerfProbe = Window & {
+    __VIEWX_PERF__?: BrowserPerfProbeState;
+};
+
+type PerformanceWithMemory = Performance & {
+    memory?: {
+        usedJSHeapSize?: number;
+    };
+};
+
 const browserErrors = new WeakMap<Page, BrowserErrorSnapshot>();
 
 export async function installChartPerfProbe(page: Page) {
@@ -32,7 +48,7 @@ export async function installChartPerfProbe(page: Page) {
             frameGaps: [] as number[],
             lastFrame: 0,
         };
-        (window as any).__VIEWX_PERF__ = state;
+        (window as WindowWithPerfProbe).__VIEWX_PERF__ = state;
 
         if ('PerformanceObserver' in window) {
             try {
@@ -68,8 +84,8 @@ export function readBrowserErrors(page: Page): BrowserErrorSnapshot {
 
 export async function readChartPerfSnapshot(page: Page): Promise<ChartPerfSnapshot> {
     return page.evaluate(() => {
-        const perf = (window as any).__VIEWX_PERF__ || { longTasks: [], frameGaps: [] };
-        const memory = (performance as any).memory;
+        const perf = (window as WindowWithPerfProbe).__VIEWX_PERF__ || { longTasks: [], frameGaps: [], lastFrame: 0 };
+        const memory = (performance as PerformanceWithMemory).memory;
         return {
             longTasks: [...perf.longTasks],
             frameGaps: [...perf.frameGaps],
