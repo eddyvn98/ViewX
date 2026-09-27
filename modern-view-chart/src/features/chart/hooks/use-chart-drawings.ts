@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { Candle } from '@/lib/store/types';
@@ -72,12 +72,15 @@ export function useChartDrawings(
     const dragStartRef = useRef(handleDragStart);
     const dragMoveRef = useRef(handleDragMove);
     const dragEndRef = useRef(handleDragEnd);
-    creationClickRef.current = handleCreationClick;
-    editorClickRef.current = handleEditorClick;
-    dragStartRef.current = handleDragStart;
-    dragMoveRef.current = handleDragMove;
-    dragEndRef.current = handleDragEnd;
     const suppressEditorClickRef = useRef(false);
+
+    useLayoutEffect(() => {
+        creationClickRef.current = handleCreationClick;
+        editorClickRef.current = handleEditorClick;
+        dragStartRef.current = handleDragStart;
+        dragMoveRef.current = handleDragMove;
+        dragEndRef.current = handleDragEnd;
+    }, [handleCreationClick, handleEditorClick, handleDragStart, handleDragMove, handleDragEnd]);
 
     const handleClick = useCallback((param: MouseEventParams) => {
         if (!param.point || !series) return;
