@@ -3,3 +3,11 @@
 
 # Android debug APK build output copied here by build-apk.ps1
 *.apk
+
+
+# Local secrets / environment files
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.docker.example
