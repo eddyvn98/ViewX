@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { Candle } from '@/lib/store/types';
@@ -22,6 +22,14 @@ export function useChartDrawings(
     const { primitivesRef } = useDrawingPrimitives(chartId, chart, series, isReady);
 
     // 2. Creation Layer (Drafting new drawings)
+    // Keep context identity stable so temp-point renders do not tear down and
+    // re-subscribe the chart click listener between two fast drawing clicks.
+    const drawingContext = useMemo(() => ({
+        symbol,
+        interval,
+        source: source === 'BINANCE' || source === 'MT5' || source === 'VN_GOLD' ? source : undefined,
+    }), [symbol, interval, source]);
+
     const { handleCreationClick } = useDrawingCreation(
         chartId,
         chart,
@@ -30,11 +38,7 @@ export function useChartDrawings(
         currentDrawingTool,
         containerRef,
         candles, // Pass candles for snapping
-        {
-            symbol,
-            interval,
-            source: source === 'BINANCE' || source === 'MT5' || source === 'VN_GOLD' ? source : undefined,
-        }
+        drawingContext
     );
 
     // 3. Editor Layer (Select, Drag, Delete)
