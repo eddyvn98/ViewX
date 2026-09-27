@@ -66,7 +66,9 @@ export function useUserSetupSync() {
 
     useEffect(() => setupAuthSyncEffect({ setAuthToken, setAuthResolved }), []);
 
-    useEffect(() => setupRemoteSyncEffect({
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') return;
+        return setupRemoteSyncEffect({
         apiUrl,
         clientId,
         isAuthenticated,
@@ -88,5 +90,6 @@ export function useUserSetupSync() {
         lastAcceptedClientUpdatedAtRef,
         themeRef,
         setThemeRef,
-    }), [apiUrl, clientId, isAuthenticated, tabSyncSourceId]);
+        });
+    }, [apiUrl, clientId, isAuthenticated, tabSyncSourceId]);
 }
