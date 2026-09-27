@@ -9,7 +9,17 @@ import { useDrawingCreation } from './drawing/use-drawing-creation';
 import { useDrawingEditor } from './drawing/use-drawing-editor';
 
 export function useChartDrawings(
-    chartId: string, chart: IChartApi | null, series: ISeriesApi<'Candlestick'> | null, isReady: boolean, containerRef: React.RefObject<HTMLDivElement | null>, symbol: string | undefined, interval: string | undefined, source: string | undefined, candles: Candle[]) {
+    chartId: string,
+    chart: IChartApi | null,
+    series: ISeriesApi<'Candlestick'> | null,
+    isReady: boolean,
+    eventContainerRef: React.RefObject<HTMLDivElement | null>,
+    coordinateContainerRef: React.RefObject<HTMLDivElement | null>,
+    symbol: string | undefined,
+    interval: string | undefined,
+    source: string | undefined,
+    candles: Candle[]
+) {
     const {
         currentDrawingTool,
         isDrawing
@@ -40,7 +50,7 @@ export function useChartDrawings(
         series,
         isReady,
         currentDrawingTool,
-        containerRef,
+        coordinateContainerRef,
         candles, // Pass candles for snapping
         drawingContext
     );
@@ -51,7 +61,7 @@ export function useChartDrawings(
         handleDragStart,
         handleDragMove,
         handleDragEnd
-    } = useDrawingEditor(chartId, chart, series, containerRef, isDrawing, primitivesRef, candles);
+    } = useDrawingEditor(chartId, chart, series, coordinateContainerRef, isDrawing, primitivesRef, candles);
 
     // 4. Main Event Handlers (Aggregate logic)
     // Keep one chart click subscription alive. Routing through React state caused a
@@ -92,13 +102,21 @@ export function useChartDrawings(
 
     // 6. Subscribe Drag Events to Container
     useEffect(() => {
-        if (!chart || !containerRef.current) return;
-        const container = containerRef.current;
+        if (!chart || !eventContainerRef.current || !coordinateContainerRef.current) return;
+        const eventContainer = eventContainerRef.current;
+        const coordinateContainer = coordinateContainerRef.current;
 
         const handlePointerDown = (e: PointerEvent) => {
             if (e.button !== 0) return;
 
-            const rect = container.getBoundingClientRect();
+            const rect = coordinateContainer.getBoundingClientRect();
+            if (
+                e.clientX < rect.left ||
+                e.clientX > rect.right ||
+                e.clientY < rect.top ||
+                e.clientY > rect.bottom
+            ) return;
+
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
@@ -118,7 +136,7 @@ export function useChartDrawings(
         };
 
         const handlePointerMove = (e: PointerEvent) => {
-            const rect = container.getBoundingClientRect();
+            const rect = coordinateContainer.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
@@ -139,13 +157,13 @@ export function useChartDrawings(
         // Capture phase is intentional: Lightweight Charts / attached primitives
         // may stop pointer propagation once a draft exists. Capture guarantees the
         // second fast placement click is observed by the drawing engine.
-        container.addEventListener('pointerdown', handlePointerDown, true);
+        eventContainer.addEventListener('pointerdown', handlePointerDown, true);
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
         window.addEventListener('pointercancel', handlePointerUp);
 
         return () => {
-            container.removeEventListener('pointerdown', handlePointerDown, true);
+            eventContainer.removeEventListener('pointerdown', handlePointerDown, true);
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
             window.removeEventListener('pointercancel', handlePointerUp);
@@ -153,5 +171,5 @@ export function useChartDrawings(
     // Keep native pointer listeners mounted across drawing-state transitions.
     // Handler refs above are refreshed every render, so rapid tool changes cannot
     // create an unsubscribe/re-subscribe gap that drops the next pointerdown.
-    }, [chart, containerRef]);
+    }, [chart, eventContainerRef, coordinateContainerRef]);
 }
