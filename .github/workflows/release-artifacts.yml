@@ -1,0 +1,125 @@
+name: Release Artifacts Gate
+
+on:
+  pull_request:
+    paths:
+      - 'modern-view-chart/android/**'
+      - 'modern-view-chart/desktop/**'
+      - 'modern-view-chart/backend/bridge/**'
+      - 'modern-view-chart/package.json'
+      - '.github/workflows/release-artifacts.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modern-view-chart/android/**'
+      - 'modern-view-chart/desktop/**'
+      - 'modern-view-chart/backend/bridge/**'
+      - 'modern-view-chart/package.json'
+      - '.github/workflows/release-artifacts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-artifacts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-apk:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: modern-view-chart/android
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Build installable APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Prepare APK artifact
+        run: |
+          mkdir -p artifact
+          cp app/build/outputs/apk/debug/app-debug.apk artifact/vivutrade-android.apk
+          cd artifact
+          sha256sum vivutrade-android.apk > SHA256SUMS.txt
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vivutrade-android-apk
+          path: |
+            modern-view-chart/android/artifact/vivutrade-android.apk
+            modern-view-chart/android/artifact/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  windows-desktop:
+    name: Windows EXE
+    runs-on: windows-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: modern-view-chart/desktop
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: modern-view-chart/desktop/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'
+
+      - name: Install desktop dependencies
+        run: npm ci
+
+      - name: Build native Windows installer
+        shell: powershell
+        run: npm run dist
+
+      - name: Generate checksums
+        shell: powershell
+        run: |
+          $output = Join-Path $env:GITHUB_WORKSPACE 'modern-view-chart/public/downloads/desktop-native'
+          $files = Get-ChildItem -Path $output -Filter '*.exe' -File
+          if (-not $files) { throw "No Windows installer EXE was produced." }
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)"
+          }
+          $lines | Set-Content -Path (Join-Path $output 'SHA256SUMS.txt') -Encoding ascii
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vivutrade-windows-exe
+          path: |
+            modern-view-chart/public/downloads/desktop-native/*.exe
+            modern-view-chart/public/downloads/desktop-native/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

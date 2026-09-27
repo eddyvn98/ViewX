@@ -5,11 +5,13 @@ on:
     inputs:
       ws_url:
         description: Live WebSocket URL (wss://...)
-        required: true
+        required: false
+        default: 'wss://api.vivutrade.io.vn'
         type: string
       api_url:
         description: Live API base URL (https://...)
-        required: true
+        required: false
+        default: 'https://api.vivutrade.io.vn'
         type: string
       clients:
         description: Concurrent WebSocket clients
@@ -26,6 +28,15 @@ on:
         required: false
         default: '60'
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/chart-live-soak.yml'
+      - 'modern-view-chart/backend/**'
+      - 'modern-view-chart/scripts/server/ws-soak-test.mjs'
+      - 'modern-view-chart/src/hooks/use-websocket/**'
+      - 'modern-view-chart/src/lib/store/slices/data-slice.ts'
   schedule:
     - cron: '30 18 * * 0'
 
@@ -33,17 +44,19 @@ concurrency:
   group: chart-live-soak
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   live-soak:
-    if: ${{ github.event_name == 'workflow_dispatch' || (vars.VIEWX_SOAK_WS_URL != '' && vars.VIEWX_SOAK_API_URL != '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     defaults:
       run:
         working-directory: modern-view-chart
     env:
-      SOAK_WS_URL: ${{ github.event.inputs.ws_url || vars.VIEWX_SOAK_WS_URL }}
-      SOAK_API_URL: ${{ github.event.inputs.api_url || vars.VIEWX_SOAK_API_URL }}
+      SOAK_WS_URL: ${{ github.event.inputs.ws_url || vars.VIEWX_SOAK_WS_URL || 'wss://api.vivutrade.io.vn' }}
+      SOAK_API_URL: ${{ github.event.inputs.api_url || vars.VIEWX_SOAK_API_URL || 'https://api.vivutrade.io.vn' }}
       SOAK_CLIENTS: ${{ github.event.inputs.clients || '50' }}
       SOAK_DURATION_SEC: ${{ github.event.inputs.duration_sec || '900' }}
       SOAK_RAMP_SEC: ${{ github.event.inputs.ramp_sec || '60' }}
@@ -60,18 +73,26 @@ jobs:
           cache: npm
           cache-dependency-path: modern-view-chart/package-lock.json
 
-      - name: Repair lockfile metadata
-        run: npm install --package-lock-only --ignore-scripts
+      - name: Use short gate on push
+        if: github.event_name == 'push'
+        run: |
+          echo "SOAK_CLIENTS=20" >> "$GITHUB_ENV"
+          echo "SOAK_DURATION_SEC=120" >> "$GITHUB_ENV"
+          echo "SOAK_RAMP_SEC=20" >> "$GITHUB_ENV"
+
+      - name: Validate live target and authentication
+        run: |
+          test -n "$SOAK_WS_URL"
+          test -n "$SOAK_API_URL"
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "::error::VIEWX_SOAK_ACCESS_TOKEN is required for authenticated live soak."
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate target
-        run: |
-          test -n "$SOAK_WS_URL"
-          test -n "$SOAK_API_URL"
-
-      - name: Run live WebSocket soak
+      - name: Run authenticated live WebSocket soak
         run: |
           mkdir -p logs
           npm run soak:ws -- \

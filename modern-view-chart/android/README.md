@@ -1,39 +1,53 @@
 # vivutrade Android App
 
-Ứng dụng Android gốc (Native WebView) cho nền tảng giao dịch tài chính **vivutrade.io.vn**.
+Ứng dụng Android native WebView cho nền tảng **https://vivutrade.io.vn**.
 
-## Đặc điểm nổi bật
-- **Canvas Hardware Acceleration**: Tối ưu hóa card đồ họa phần cứng cho biểu đồ nến (Lightweight Charts) đạt 60fps mượt mà.
-- **Trải nghiệm Native**:
-  - Thanh trạng thái và thanh điều hướng đồng bộ màu tối `#0b0e14`.
-  - Phím Back xử lý thông minh: lùi lại trang trước hoặc nhấn 2 lần để thoát (tránh mất phiên giao dịch).
-  - Tự động nhận diện mất mạng và cung cấp màn hình báo lỗi kèm nút "Thử lại".
-  - Giữ màn hình luôn sáng (`FLAG_KEEP_SCREEN_ON`) khi đang theo dõi biểu đồ.
-  - Hỗ trợ tải file / ảnh chụp màn hình biểu đồ (`WebChromeClient`).
-  - Hỗ trợ đầy đủ Google OAuth / Supabase login.
-  - Tự động chuyển các link bên ngoài (Telegram, WhatsApp, tel, mailto) sang ứng dụng Android tương ứng.
-- **Dung lượng siêu nhẹ**: Chỉ ~3.5 MB.
+## Runtime
 
-## Cài đặt và Sử dụng
+- Target production: `https://vivutrade.io.vn`
+- Package: `vn.io.vivutrade`
+- Min SDK: 26
+- Target / compile SDK: 35
+- Java: 17
+- Production WebView disables remote debugging, cleartext HTTP, and mixed HTTP content.
 
-### 1. File APK đã build sẵn
-- File APK nằm trực tiếp tại:
-  - `d:\TradingWeb\BE_ViewChart\vivutrade.apk`
-  - `d:\TradingWeb\BE_ViewChart\modern-view-chart\android\vivutrade.apk`
+## Build local
 
-### 2. Cài đặt lên điện thoại
-- **Cách 1**: Chép file `vivutrade.apk` vào điện thoại Android qua Zalo / Google Drive / cáp USB và bấm cài đặt.
-- **Cách 2** (qua cáp USB bật USB Debugging):
-  ```powershell
-  adb install -r D:\TradingWeb\BE_ViewChart\vivutrade.apk
-  ```
+Từ thư mục `modern-view-chart` trên Windows:
 
-### 3. Build lại APK khi cần
-Từ thư mục `modern-view-chart`, bạn chỉ cần chạy:
 ```powershell
 npm run android:build
 ```
+
 Hoặc:
+
 ```powershell
 .\android\build-apk.ps1
 ```
+
+Script tự tìm `JAVA_HOME`, Android SDK và Gradle từ môi trường; không còn phụ thuộc đường dẫn của một máy cụ thể.
+
+Nếu dùng macOS/Linux, vào `modern-view-chart/android` và chạy Gradle trực tiếp:
+
+```bash
+gradle :app:assembleDebug --no-daemon
+```
+
+## CI artifact
+
+Workflow `.github/workflows/release-artifacts.yml` build một APK cài được trên GitHub Actions và upload:
+
+- `vivutrade-android.apk`
+- `SHA256SUMS.txt`
+
+Đây là artifact QA/sideload được ký bằng debug key của runner. Nếu phát hành Play Store hoặc cần cơ chế update ổn định lâu dài, phải cấu hình release keystore cố định qua GitHub Secrets và build `assembleRelease`.
+
+## Cài đặt
+
+Qua ADB:
+
+```bash
+adb install -r vivutrade-android.apk
+```
+
+Hoặc chép APK sang điện thoại và cài trực tiếp sau khi cho phép cài ứng dụng từ nguồn tương ứng.
