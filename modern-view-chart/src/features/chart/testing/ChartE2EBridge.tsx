@@ -37,6 +37,9 @@ type E2EBridge = {
     getIndicatorState: () => IndicatorState;
     startDrawing: (tool: DrawingTool) => void;
     clearDrawings: () => void;
+    moveFirstDrawing: (timeDelta?: number, priceDelta?: number) => void;
+    resizeFirstDrawing: (timeDelta?: number, priceDelta?: number) => void;
+    deleteFirstDrawing: () => void;
     getDrawingState: () => DrawingState;
 };
 
@@ -286,6 +289,40 @@ export function ChartE2EBridge() {
             clearDrawings: () => {
                 const chart = activeChart();
                 if (chart) useMarketStore.getState().clearDrawings(chart.id);
+            },
+            moveFirstDrawing: (timeDelta = 60, priceDelta = 1) => {
+                const chart = activeChart();
+                if (!chart) return;
+                const state = useMarketStore.getState();
+                const drawing = (state.chartDrawings[chart.id] || [])[0];
+                if (!drawing) return;
+                state.updateDrawing(chart.id, drawing.id, {
+                    points: drawing.points.map((point) => ({
+                        time: Number(point.time) + timeDelta,
+                        price: Number(point.price) + priceDelta,
+                    })),
+                });
+            },
+            resizeFirstDrawing: (timeDelta = 60, priceDelta = 1) => {
+                const chart = activeChart();
+                if (!chart) return;
+                const state = useMarketStore.getState();
+                const drawing = (state.chartDrawings[chart.id] || [])[0];
+                if (!drawing || drawing.points.length === 0) return;
+                const points = drawing.points.map((point) => ({ ...point }));
+                const lastIndex = points.length - 1;
+                points[lastIndex] = {
+                    time: Number(points[lastIndex].time) + timeDelta,
+                    price: Number(points[lastIndex].price) + priceDelta,
+                };
+                state.updateDrawing(chart.id, drawing.id, { points });
+            },
+            deleteFirstDrawing: () => {
+                const chart = activeChart();
+                if (!chart) return;
+                const state = useMarketStore.getState();
+                const drawing = (state.chartDrawings[chart.id] || [])[0];
+                if (drawing) state.removeDrawing(chart.id, drawing.id);
             },
             getDrawingState: () => {
                 const chart = activeChart();
