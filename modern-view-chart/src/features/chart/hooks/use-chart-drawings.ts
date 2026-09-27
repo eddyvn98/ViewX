@@ -65,11 +65,10 @@ export function useChartDrawings(
     const handleClick = useCallback((param: MouseEventParams) => {
         if (!param.point || !series) return;
 
-        if (useMarketStore.getState().isDrawing) {
-            creationClickRef.current(param);
-        } else {
-            editorClickRef.current(param);
-        }
+        // Drawing placement is handled by native pointerdown below for lower
+        // latency and to avoid losing clicks while chart primitives change.
+        if (useMarketStore.getState().isDrawing) return;
+        editorClickRef.current(param);
     }, [series]);
 
     // 5. Subscribe Click Events to Chart
@@ -96,6 +95,10 @@ export function useChartDrawings(
                 sourceEvent: e
             } as unknown) as MouseEventParams;
 
+            if (useMarketStore.getState().isDrawing) {
+                creationClickRef.current(param);
+                return;
+            }
             handleDragStart(param);
         };
 
