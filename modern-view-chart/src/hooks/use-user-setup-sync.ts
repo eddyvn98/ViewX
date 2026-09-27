@@ -12,7 +12,9 @@ import { setupRemoteSyncEffect } from '@/hooks/user-setup-sync/effects/remote-sy
 export function useUserSetupSync() {
     const { theme, setTheme } = useTheme();
     const [authToken, setAuthToken] = useState<string>(() => readStoredAccessToken());
-    const [authResolved, setAuthResolved] = useState<boolean>(() => typeof window === 'undefined');
+    const [authResolved, setAuthResolved] = useState<boolean>(
+        () => typeof window === 'undefined' || process.env.NEXT_PUBLIC_E2E === '1'
+    );
     const clientId = useMemo(() => (typeof window === 'undefined' ? 'public' : getOrCreateClientId()), []);
     const fallbackTabId = useId();
     const tabSyncSourceId = useMemo(
@@ -64,9 +66,14 @@ export function useUserSetupSync() {
         lastLocalMutationAtRef,
     }), [tabSyncSourceId]);
 
-    useEffect(() => setupAuthSyncEffect({ setAuthToken, setAuthResolved }), []);
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') return;
+        return setupAuthSyncEffect({ setAuthToken, setAuthResolved });
+    }, []);
 
-    useEffect(() => setupRemoteSyncEffect({
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') return;
+        return setupRemoteSyncEffect({
         apiUrl,
         clientId,
         isAuthenticated,
@@ -88,5 +95,6 @@ export function useUserSetupSync() {
         lastAcceptedClientUpdatedAtRef,
         themeRef,
         setThemeRef,
-    }), [apiUrl, clientId, isAuthenticated, tabSyncSourceId]);
+        });
+    }, [apiUrl, clientId, isAuthenticated, tabSyncSourceId]);
 }

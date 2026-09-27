@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { Candle } from '@/lib/store/types';
@@ -9,7 +9,17 @@ import { useDrawingCreation } from './drawing/use-drawing-creation';
 import { useDrawingEditor } from './drawing/use-drawing-editor';
 
 export function useChartDrawings(
-    chartId: string, chart: IChartApi | null, series: ISeriesApi<'Candlestick'> | null, isReady: boolean, containerRef: React.RefObject<HTMLDivElement | null>, symbol: string | undefined, interval: string | undefined, source: string | undefined, candles: Candle[]) {
+    chartId: string,
+    chart: IChartApi | null,
+    series: ISeriesApi<'Candlestick'> | null,
+    isReady: boolean,
+    eventContainerRef: React.RefObject<HTMLDivElement | null>,
+    coordinateContainerRef: React.RefObject<HTMLDivElement | null>,
+    symbol: string | undefined,
+    interval: string | undefined,
+    source: string | undefined,
+    candles: Candle[]
+) {
     const {
         currentDrawingTool,
         isDrawing
@@ -22,19 +32,27 @@ export function useChartDrawings(
     const { primitivesRef } = useDrawingPrimitives(chartId, chart, series, isReady);
 
     // 2. Creation Layer (Drafting new drawings)
+    // Keep context identity stable so temp-point renders do not tear down and
+    // re-subscribe the chart click listener between two fast drawing clicks.
+    const drawingContext = useMemo<{
+        symbol?: string;
+        interval?: string;
+        source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    }>(() => ({
+        symbol,
+        interval,
+        source: source === 'BINANCE' || source === 'MT5' || source === 'VN_GOLD' ? source : undefined,
+    }), [symbol, interval, source]);
+
     const { handleCreationClick } = useDrawingCreation(
         chartId,
         chart,
         series,
         isReady,
         currentDrawingTool,
-        containerRef,
+        coordinateContainerRef,
         candles, // Pass candles for snapping
-        {
-            symbol,
-            interval,
-            source: source === 'BINANCE' || source === 'MT5' || source === 'VN_GOLD' ? source : undefined,
-        }
+        drawingContext
     );
 
     // 3. Editor Layer (Select, Drag, Delete)
@@ -43,18 +61,40 @@ export function useChartDrawings(
         handleDragStart,
         handleDragMove,
         handleDragEnd
-    } = useDrawingEditor(chartId, chart, series, containerRef, isDrawing, primitivesRef, candles);
+    } = useDrawingEditor(chartId, chart, series, coordinateContainerRef, isDrawing, primitivesRef, candles);
 
     // 4. Main Event Handlers (Aggregate logic)
+    // Keep one chart click subscription alive. Routing through React state caused a
+    // brief unsubscribe/subscribe window whenever drawing state changed, which can
+    // drop very fast consecutive clicks.
+    const creationClickRef = useRef(handleCreationClick);
+    const editorClickRef = useRef(handleEditorClick);
+    const dragStartRef = useRef(handleDragStart);
+    const dragMoveRef = useRef(handleDragMove);
+    const dragEndRef = useRef(handleDragEnd);
+    const suppressEditorClickRef = useRef(false);
+
+    useLayoutEffect(() => {
+        creationClickRef.current = handleCreationClick;
+        editorClickRef.current = handleEditorClick;
+        dragStartRef.current = handleDragStart;
+        dragMoveRef.current = handleDragMove;
+        dragEndRef.current = handleDragEnd;
+    }, [handleCreationClick, handleEditorClick, handleDragStart, handleDragMove, handleDragEnd]);
+
     const handleClick = useCallback((param: MouseEventParams) => {
         if (!param.point || !series) return;
 
-        if (isDrawing) {
-            handleCreationClick(param);
-        } else {
-            handleEditorClick(param);
+        // Native pointerdown owns drawing placement. The Lightweight Charts click
+        // generated from the same pointer gesture arrives afterwards; suppress it
+        // so the newly-created primitive is not immediately routed into editing.
+        if (suppressEditorClickRef.current) {
+            suppressEditorClickRef.current = false;
+            return;
         }
-    }, [isDrawing, handleCreationClick, handleEditorClick, series]);
+        if (useMarketStore.getState().isDrawing) return;
+        editorClickRef.current(param);
+    }, [series]);
 
     // 5. Subscribe Click Events to Chart
     useEffect(() => {
@@ -65,11 +105,21 @@ export function useChartDrawings(
 
     // 6. Subscribe Drag Events to Container
     useEffect(() => {
-        if (!chart || !containerRef.current) return;
-        const container = containerRef.current;
+        if (!chart || !eventContainerRef.current || !coordinateContainerRef.current) return;
+        const eventContainer = eventContainerRef.current;
+        const coordinateContainer = coordinateContainerRef.current;
 
         const handlePointerDown = (e: PointerEvent) => {
-            const rect = container.getBoundingClientRect();
+            if (e.button !== 0) return;
+
+            const rect = coordinateContainer.getBoundingClientRect();
+            if (
+                e.clientX < rect.left ||
+                e.clientX > rect.right ||
+                e.clientY < rect.top ||
+                e.clientY > rect.bottom
+            ) return;
+
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
@@ -80,11 +130,16 @@ export function useChartDrawings(
                 sourceEvent: e
             } as unknown) as MouseEventParams;
 
-            handleDragStart(param);
+            if (useMarketStore.getState().isDrawing) {
+                suppressEditorClickRef.current = true;
+                creationClickRef.current(param);
+                return;
+            }
+            dragStartRef.current(param);
         };
 
         const handlePointerMove = (e: PointerEvent) => {
-            const rect = container.getBoundingClientRect();
+            const rect = coordinateContainer.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
@@ -95,23 +150,29 @@ export function useChartDrawings(
                 sourceEvent: e
             } as unknown) as MouseEventParams;
 
-            handleDragMove(param);
+            dragMoveRef.current(param);
         };
 
         const handlePointerUp = () => {
-            handleDragEnd();
+            dragEndRef.current();
         };
 
-        container.addEventListener('pointerdown', handlePointerDown);
+        // Capture phase is intentional: Lightweight Charts / attached primitives
+        // may stop pointer propagation once a draft exists. Capture guarantees the
+        // second fast placement click is observed by the drawing engine.
+        eventContainer.addEventListener('pointerdown', handlePointerDown, true);
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
         window.addEventListener('pointercancel', handlePointerUp);
 
         return () => {
-            container.removeEventListener('pointerdown', handlePointerDown);
+            eventContainer.removeEventListener('pointerdown', handlePointerDown, true);
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
             window.removeEventListener('pointercancel', handlePointerUp);
         };
-    }, [chart, containerRef, handleDragStart, handleDragMove, handleDragEnd]);
+    // Keep native pointer listeners mounted across drawing-state transitions.
+    // Handler refs above are refreshed every render, so rapid tool changes cannot
+    // create an unsubscribe/re-subscribe gap that drops the next pointerdown.
+    }, [chart, eventContainerRef, coordinateContainerRef]);
 }

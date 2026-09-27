@@ -5,6 +5,7 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export interface DataSlice {
     candleData: Record<string, Candle[]>;
+    candleHistoryRevision: Record<string, number>;
     isCrosshairSyncEnabled: boolean;
     setCrosshairSync: (enabled: boolean) => void;
     syncCrosshair: (point: unknown) => void;
@@ -48,6 +49,7 @@ const normalizeCandle = (candle: Candle): Candle | null => {
 
 export const createDataSlice: StateCreator<DataSlice> = (set) => ({
     candleData: {},
+    candleHistoryRevision: {},
     isCrosshairSyncEnabled: true,
 
     setCrosshairSync: (enabled) => set({ isCrosshairSyncEnabled: enabled }),
@@ -78,7 +80,11 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
                 ? normalized.slice(normalized.length - MAX_CANDLES)
                 : normalized;
             return {
-                candleData: { ...state.candleData, [key]: nextCandles }
+                candleData: { ...state.candleData, [key]: nextCandles },
+                candleHistoryRevision: {
+                    ...state.candleHistoryRevision,
+                    [key]: (state.candleHistoryRevision[key] || 0) + 1,
+                },
             };
         }
 
@@ -102,7 +108,11 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const nextCandles = merged.length > MAX_CANDLES ? merged.slice(merged.length - MAX_CANDLES) : merged;
 
         return {
-            candleData: { ...state.candleData, [key]: nextCandles }
+            candleData: { ...state.candleData, [key]: nextCandles },
+            candleHistoryRevision: {
+                ...state.candleHistoryRevision,
+                [key]: (state.candleHistoryRevision[key] || 0) + 1,
+            },
         };
     }),
 

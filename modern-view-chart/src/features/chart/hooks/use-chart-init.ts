@@ -122,16 +122,10 @@ export function useChartInit(
         const timescaleContainer = timescaleContainerRef.current;
         const applyTouchAction = (container: HTMLDivElement | null) => {
             if (!container) return;
+            // A touch-action:none ancestor is sufficient for the chart gesture region.
+            // Avoid observing every descendant attribute mutation and rescanning the
+            // entire Lightweight Charts DOM on canvas/style updates.
             container.style.touchAction = 'none';
-            Array.from(container.querySelectorAll<HTMLElement>('*')).forEach((el) => {
-                el.style.touchAction = 'none';
-            });
-        };
-        const createTouchObserver = (container: HTMLDivElement | null) => {
-            if (!container) return null;
-            const observer = new MutationObserver(() => applyTouchAction(container));
-            observer.observe(container, { childList: true, subtree: true, attributes: true });
-            return observer;
         };
 
         const priceChart = createChart(
@@ -167,9 +161,6 @@ export function useChartInit(
         applyTouchAction(priceContainer);
         applyTouchAction(subchartContainer);
         applyTouchAction(timescaleContainer);
-        const priceTouchObserver = createTouchObserver(priceContainer);
-        const subchartTouchObserver = createTouchObserver(subchartContainer);
-        const timescaleTouchObserver = createTouchObserver(timescaleContainer);
 
         const candleSeries = priceChart.addSeries(CandlestickSeries, {
             upColor: candleUpColor,
@@ -278,9 +269,6 @@ export function useChartInit(
             window.removeEventListener('resize', runtime.syncChartSizes);
             window.visualViewport?.removeEventListener('resize', runtime.syncChartSizes);
             runtime.cleanup();
-            priceTouchObserver?.disconnect();
-            subchartTouchObserver?.disconnect();
-            timescaleTouchObserver?.disconnect();
             if (priceLineEl?.parentNode) priceLineEl.parentNode.removeChild(priceLineEl);
             if (subLineEl?.parentNode) subLineEl.parentNode.removeChild(subLineEl);
             if (footLineEl?.parentNode) footLineEl.parentNode.removeChild(footLineEl);
@@ -300,7 +288,7 @@ export function useChartInit(
     // The chart DOM instance must NOT be destroyed/recreated on every symbol or timeframe
     // switch. currentContextKeyRef is kept in sync via the lightweight effect above (line 50-52).
     // Only chart-level concerns (theme, timezone, chartId, container) should trigger a chart rebuild.
-    }, [chartId, timezone, theme, themeColor, candleUpColor, candleDownColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [chartId, timezone, theme, themeColor, candleUpColor, candleDownColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();

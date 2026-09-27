@@ -15,6 +15,7 @@ import {
     updateSyncData,
 } from './use-chart-history.helpers';
 import type { Candle } from '@/lib/store/types';
+import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
 
@@ -50,7 +51,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const applyDataRafRef = useRef<number | null>(null);
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
-    const lastTailSignatureRef = useRef('0');
+    const lastHistoryRevisionRef = useRef(-1);
     // BUG #3 fix: generation counter to reject stale RAF callbacks on rapid symbol/timeframe switching.
     // Each context change bumps the generation; RAF callbacks that don't match are discarded.
     const applyDataGenerationRef = useRef(0);
@@ -63,21 +64,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
-    const candlesTailSignature = useMarketStore((state) => {
-        const candles = resolveCandles(state, source, normSymbol, intervalCandidates).candles;
-        if (candles.length === 0) return '0';
-        const first = candles[0];
-        const last = candles[candles.length - 1];
-        return [
-            candles.length,
-            first?.time ?? '',
-            last?.time ?? '',
-            last?.open ?? '',
-            last?.high ?? '',
-            last?.low ?? '',
-            last?.close ?? '',
-        ].join('|');
-    });
+    const historyRevision = useMarketStore((state) => state.candleHistoryRevision[key] || 0);
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
@@ -199,6 +186,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
             if (clearedForKeyRef.current !== key) {
                 clearedForKeyRef.current = key;
                 try {
+                    bumpChartPerfCounter('historySetDataBatches');
                     seriesRef.current?.setData([]);
                     markerSeriesRef.current?.setData([]);
                     updateSyncData([], subSyncRef, timescaleSyncRef);
@@ -220,7 +208,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
             lastDataLength.current = 0;
             autoFitProgressRef.current = null;
             clearedForKeyRef.current = null;
-            lastTailSignatureRef.current = '0';
+            lastHistoryRevisionRef.current = -1;
             // BUG #3 fix: Bump generation to invalidate any in-flight RAF for the old context.
             // This prevents data of symbol A from being applied to the chart now showing symbol B.
             applyDataGenerationRef.current++;
@@ -232,8 +220,8 @@ export function useChartHistory(props: UseChartHistoryProps) {
         }
 
         const isTypeChange = chartType !== lastChartTypeRef.current;
-        const hasTailChange = candlesTailSignature !== lastTailSignatureRef.current;
-        if (isContextChange || currentCandles.length !== lastDataLength.current || isTypeChange || hasTailChange) {
+        const hasStructuralHistoryChange = historyRevision !== lastHistoryRevisionRef.current;
+        if (isContextChange || isTypeChange || hasStructuralHistoryChange) {
             if (applyDataRafRef.current !== null) {
                 cancelAnimationFrame(applyDataRafRef.current);
                 applyDataRafRef.current = null;
@@ -272,6 +260,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 });
 
                 if (seriesRef.current) {
+                    bumpChartPerfCounter('historySetDataBatches');
                     seriesRef.current.setData(formatted);
                     markerSeriesRef.current?.setData(formatted);
                     const first = formatted[0];
@@ -313,10 +302,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 }
 
                 lastDataLength.current = nextCandles.length;
-                lastTailSignatureRef.current = candlesTailSignature;
+                lastHistoryRevisionRef.current = historyRevision;
             });
         }
-    }, [isReady, candlesCount, candlesTailSignature, key, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, historyRevision, key, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {

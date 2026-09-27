@@ -4,6 +4,7 @@ import { useMarketStore } from '@/lib/store';
 import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { Candle } from '@/lib/store/types';
+import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
 
 type RealtimeCandle = Candle & {
     rawOpen?: number;
@@ -147,7 +148,7 @@ export function useChartTicker({
             });
         };
 
-        const handleTick = (price: number, serverTimeMs?: number) => {
+        const handleTick = (price: number, serverTimeMs?: number, frameHigh = price, frameLow = price) => {
             if (!price) return;
             if (activeContextKeyRef.current !== effectContextKey) return;
 
@@ -212,9 +213,9 @@ export function useChartTicker({
                 const newCandle = {
                     time: nextBarTime,
                     open: isHA ? haOpen : base.close,
-                    high: price, low: price, close: price,
+                    high: Math.max(price, frameHigh), low: Math.min(price, frameLow), close: price,
                     rawOpen: base.rawClose || base.close,
-                    rawHigh: price, rawLow: price, rawClose: price,
+                    rawHigh: Math.max(price, frameHigh), rawLow: Math.min(price, frameLow), rawClose: price,
                     ha_open: isHA ? haOpen : undefined,
                 };
 
@@ -222,6 +223,7 @@ export function useChartTicker({
                 lastSeriesUpdateTimeRef.current = nextBarTime;
 
                 if (isHA) {
+                    bumpChartPerfCounter('realtimeSeriesUpdates');
                     seriesRef.current?.update({
                         time: nextBarTime as Time,
                         open: haOpen, high: Math.max(price, haOpen),
@@ -235,11 +237,13 @@ export function useChartTicker({
                         low: newCandle.low,
                         close: newCandle.close,
                     };
+                    bumpChartPerfCounter('realtimeSeriesUpdates');
                     if (isSmart) {
-                        seriesRef.current?.update({
+                        const smartCandle = {
                             ...seriesNewCandle,
                             candleColor: seriesNewCandle.close >= seriesNewCandle.open ? candleUpColor : candleDownColor,
-                        } as any);
+                        };
+                        seriesRef.current?.update(smartCandle);
                     } else {
                         seriesRef.current?.update(seriesNewCandle);
                     }
@@ -263,8 +267,8 @@ export function useChartTicker({
             lastSeriesUpdateTimeRef.current = updateTime;
 
             const rOpen = base.rawOpen ?? base.open;
-            const rHigh = Math.max(base.rawHigh ?? base.high, price);
-            const rLow = Math.min(base.rawLow ?? base.low, price);
+            const rHigh = Math.max(base.rawHigh ?? base.high, frameHigh, price);
+            const rLow = Math.min(base.rawLow ?? base.low, frameLow, price);
             const rClose = price;
 
             base.rawHigh = rHigh;
@@ -281,6 +285,7 @@ export function useChartTicker({
                 };
                 base.open = haOpen; base.close = haClose;
                 base.high = haData.high; base.low = haData.low;
+                bumpChartPerfCounter('realtimeSeriesUpdates');
                 seriesRef.current?.update(haData);
 
                 // Keep base state updated with raw values for syncing/legend,
@@ -294,15 +299,17 @@ export function useChartTicker({
                     open: base.open, high: base.high, low: base.low, close: base.close,
                 };
 
+                bumpChartPerfCounter('realtimeSeriesUpdates');
                 if (isSmart) {
-                    seriesRef.current?.update({
+                    const smartUpdate = {
                         time: updateTime as Time,
                         open: updateData.open,
                         high: updateData.high,
                         low: updateData.low,
                         close: updateData.close,
                         candleColor: updateData.close >= updateData.open ? candleUpColor : candleDownColor,
-                    } as any);
+                    };
+                    seriesRef.current?.update(smartUpdate);
                 } else {
                     seriesRef.current?.update({
                         time: updateTime as Time,
@@ -317,19 +324,59 @@ export function useChartTicker({
             syncToStore(base);
         };
 
+        let tickRafId: number | null = null;
+        type TickEnvelope = { price: number; high: number; low: number; serverTime: number };
+        const pendingByBar = new Map<number, TickEnvelope>();
+
         const unsub = useMarketStore.subscribe(
             (state) => state.tickers[tickerKey] || state.tickers[normSymbol],
             (ticker) => {
                 if (!ticker) return;
+                bumpChartPerfCounter('tickerMessages');
+
+                const price = Number(ticker.price);
+                const serverTime = ticker.serverTime ?? Date.now();
+                const intervalSec = getIntervalSeconds(intervalRef.current || interval || '1');
+                const barKey = Math.floor(serverTime / 1000 / Math.max(1, intervalSec)) * intervalSec;
+                const current = pendingByBar.get(barKey);
+                pendingByBar.set(barKey, current
+                    ? {
+                        price,
+                        high: Math.max(current.high, price),
+                        low: Math.min(current.low, price),
+                        serverTime,
+                    }
+                    : { price, high: price, low: price, serverTime });
+
+                // Coalesce bursty ticker updates into one visual frame while retaining
+                // the high/low envelope. If ticks cross a bar boundary inside one frame,
+                // process at most one aggregate update per affected bar.
+                if (tickRafId !== null) return;
                 const scheduledContextKey = effectContextKey;
-                requestAnimationFrame(() => {
-                    if (activeContextKeyRef.current !== scheduledContextKey) return;
-                    handleTick(Number(ticker.price), ticker.serverTime);
+                tickRafId = requestAnimationFrame(() => {
+                    tickRafId = null;
+                    bumpChartPerfCounter('tickerFrames');
+                    if (activeContextKeyRef.current !== scheduledContextKey) {
+                        pendingByBar.clear();
+                        return;
+                    }
+
+                    const envelopes = Array.from(pendingByBar.entries())
+                        .sort((a, b) => a[0] - b[0])
+                        .map(([, value]) => value);
+                    pendingByBar.clear();
+                    envelopes.forEach((nextTick) => {
+                        handleTick(nextTick.price, nextTick.serverTime, nextTick.high, nextTick.low);
+                    });
                 });
             }
         );
 
-        return () => unsub();
+        return () => {
+            unsub();
+            pendingByBar.clear();
+            if (tickRafId !== null) cancelAnimationFrame(tickRafId);
+        };
     }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;

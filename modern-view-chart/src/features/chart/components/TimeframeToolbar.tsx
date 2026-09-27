@@ -39,6 +39,8 @@ export function TimeframeToolbar() {
                     <button
                         key={tf.id}
                         onClick={() => activeChartId && setChartTimeframe(activeChartId, tf.id)}
+                        data-testid={`timeframe-${tf.id}`}
+                        aria-pressed={currentInterval === tf.id}
                         className={cn(
                             "px-1.5 py-0.5 rounded text-[11px] font-bold transition-all",
                             currentInterval === tf.id

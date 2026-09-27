@@ -11,6 +11,7 @@ import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import React from "react";
 import dynamic from "next/dynamic";
+import { ChartE2EBridge } from "@/features/chart/testing/ChartE2EBridge";
 import {
   DESKTOP_SCALE_BASE_HEIGHT,
   DESKTOP_SCALE_BASE_WIDTH,
@@ -211,6 +212,7 @@ export default function Home() {
         isScaledDesktopMode && "chart-scaled-desktop-shell"
       )}
     >
+      <ChartE2EBridge />
       {strategyEnabled && <StrategyRunnerBootstrap />}
       <NotificationManager />
       <div className={cn("flex flex-1 min-h-0 overflow-hidden", isScaledDesktopMode && "chart-scaled-desktop-viewport")}>

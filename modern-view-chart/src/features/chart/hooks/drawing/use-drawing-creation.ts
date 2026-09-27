@@ -160,20 +160,57 @@ export function useDrawingCreation(
     }, [chart, series, currentTool, tempPoints, themeColor, candles, snapToCandle, containerRef]);
 
     // Click Handler (Placement)
+    // Resolve the click coordinates synchronously instead of depending on the
+    // preview RAF. Fast users can move and click before the next animation frame.
     const handleCreationClick = useCallback((param: MouseEventParams) => {
-        void param; // Still use lastSnappedPointRef for precision/snapping
-        if (currentTool === 'none' || !lastSnappedPointRef.current) return;
+        const activeTool = useMarketStore.getState().currentDrawingTool;
+        if (activeTool === 'none' || !series) return;
 
-        const { time, price } = lastSnappedPointRef.current;
-        addDrawingPoint({ time: toSec(time), price });
+        let point = lastSnappedPointRef.current;
+        if (param.point) {
+            const timeScale = chart?.timeScale();
+            let time = param.time ?? timeScale?.coordinateToTime(param.point.x) ?? null;
 
-        // Check if finished
-        const pointsNeeded = (currentTool === 'horizontal-line' || currentTool === 'vertical-line' || currentTool === 'crosshair') ? 1 : 2;
-        // tempPoints is BEFORE this click, so +1
-        if (tempPoints.length + 1 >= pointsNeeded) {
+            // Lightweight Charts can return null around transformed/blank edge
+            // coordinates even though the pointer is still inside the chart surface.
+            // Fall back to the nearest logical candle so a fast edge click is not lost.
+            if (!time && timeScale && candles.length > 0) {
+                const logical = timeScale.coordinateToLogical(param.point.x);
+                if (logical !== null && Number.isFinite(logical)) {
+                    const index = Math.max(0, Math.min(candles.length - 1, Math.round(logical)));
+                    time = toSec(candles[index].time) as Time;
+                }
+            }
+
+            let rawPrice = series.coordinateToPrice(param.point.y);
+            if (rawPrice === null && containerRef.current) {
+                const clampedY = Math.max(0, Math.min(containerRef.current.clientHeight - 1, param.point.y));
+                rawPrice = series.coordinateToPrice(clampedY);
+            }
+
+            if (time && rawPrice !== null) {
+                let price = rawPrice as number;
+                if (snapToCandle) {
+                    const snap = findSnapPoint(param.point.y, time, candles, series, 20);
+                    if (snap) price = snap.price;
+                }
+                point = { time, price };
+                lastSnappedPointRef.current = point;
+            }
+        }
+
+        if (!point) return;
+        addDrawingPoint({ time: toSec(point.time), price: point.price });
+
+        // Read the synchronous Zustand state after the point was added.
+        // A second click can arrive before React re-renders this hook, so relying
+        // on the captured tempPoints array can miss the completion threshold.
+        const pointsNeeded = (activeTool === 'horizontal-line' || activeTool === 'vertical-line' || activeTool === 'crosshair') ? 1 : 2;
+        const currentPointCount = useMarketStore.getState().tempPoints.length;
+        if (currentPointCount >= pointsNeeded) {
             finishDrawing(chartId, context);
         }
-    }, [currentTool, addDrawingPoint, tempPoints, finishDrawing, chartId, context]);
+    }, [series, chart, containerRef, snapToCandle, candles, addDrawingPoint, finishDrawing, chartId, context]);
 
     return { handleCreationClick };
 }

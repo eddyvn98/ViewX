@@ -8,6 +8,7 @@ import { DEFAULT_CHART_INDICATORS } from './indicators/default-indicators';
 import { formatCandles, buildLiveCandle } from './indicators/indicator-candle-utils';
 import { createIndicatorInstance } from './indicators/sync-indicator-series';
 import { IndicatorCache } from '../logic/indicator-calculations';
+import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
 
 const EMPTY_INDICATORS: IndicatorConfig[] = [];
 type BatchResult = { id: string; values: unknown };
@@ -71,6 +72,10 @@ export function useChartIndicators(
     const getCandles = useCallback(() => (key ? (useMarketStore.getState().candleData[key] || []) : []), [key]);
 
     useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') {
+            defaultsAppliedRef.current = true;
+            return;
+        }
         if (!symbol || defaultsAppliedRef.current || indicators.length > 0) return;
         addIndicators(chartId, DEFAULT_CHART_INDICATORS);
         defaultsAppliedRef.current = true;
@@ -114,10 +119,11 @@ export function useChartIndicators(
                 : Number(lastBar.time)) || 0;
             const isNewBar = lastTime !== lastBarTimeRef.current;
             const hasLengthChanged = candles.length !== lastCandlesLengthRef.current;
+            const hadNoStableCandles = stableCandlesRef.current.length === 0;
 
             // Rebuild stable candles whenever dataset length changes (e.g. left-side backfill)
             // or when a new realtime bar starts.
-            if (isNewBar || hasLengthChanged || stableCandlesRef.current.length === 0) {
+            if (isNewBar || hasLengthChanged || hadNoStableCandles) {
                 lastBarTimeRef.current = lastTime;
                 lastCandlesLengthRef.current = candles.length;
                 stableCandlesRef.current = formatCandles(candles);
@@ -134,32 +140,34 @@ export function useChartIndicators(
             });
 
             const visibleIndicators = indicators.filter(i => i.visible);
-            // Force full indicator recomputation when history was prepended/appended.
-            const needsUpdate = isNewBar || hasLengthChanged || stableCandlesRef.current.length === candles.length;
+            // Full worker recomputation is only needed when the candle set structurally
+            // changes. Same-bar realtime ticks are handled by updateLastPoint below.
+            const needsFullRecompute = isNewBar || hasLengthChanged || hadNoStableCandles;
             const indicatorsToCalculate: IndicatorConfig[] = [];
 
             visibleIndicators.forEach(config => {
                 let instance: IndicatorInstance | null = instancesRef.current[config.id] ?? null;
+                let isNewInstance = false;
                 if (!instance) {
-                        instance = createIndicatorInstance(config, {
-                            priceChart: priceChartRef.current!,
-                            subchartChart: subchartChartRef.current!,
-                            series: seriesRef.current!,
-                            markerSeries: markerSeriesRef.current!,
-                        }) as IndicatorInstance | null;
+                    instance = createIndicatorInstance(config, {
+                        priceChart: priceChartRef.current!,
+                        subchartChart: subchartChartRef.current!,
+                        series: seriesRef.current!,
+                        markerSeries: markerSeriesRef.current!,
+                    }) as IndicatorInstance | null;
                     if (instance) {
                         instancesRef.current[config.id] = instance;
-                        instance._lastConfigJson = JSON.stringify(config);
+                        isNewInstance = true;
                     }
                 }
 
                 if (instance) {
                     const configJson = JSON.stringify(config);
                     const configChanged = instance._lastConfigJson !== configJson;
-                    if (needsUpdate || configChanged) {
+                    if (needsFullRecompute || isNewInstance || configChanged) {
                         indicatorsToCalculate.push(config);
-                        instance._lastConfigJson = configJson;
                     }
+                    instance._lastConfigJson = configJson;
                 }
             });
 
@@ -174,15 +182,24 @@ export function useChartIndicators(
                 const runBatch = async (configs: IndicatorConfig[], inputCandles: Candle[]) => {
                     if (configs.length === 0) return;
                     try {
+                        bumpChartPerfCounter('indicatorWorkerBatches');
+                        bumpChartPerfCounter('indicatorConfigsCalculated', configs.length);
                         const results = await chartWorkerClient.calculateBatch(configs, inputCandles);
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
                         if (!Array.isArray(results)) return;
                         const typedResults = results as BatchResult[];
                         const resultsMap = new Map(typedResults.map((result) => [result.id, result.values]));
                         configs.forEach(config => {
+                            const latestConfig = useMarketStore.getState().chartIndicators[chartId]?.find(
+                                (candidate) => candidate.id === config.id
+                            );
+                            // A parameter/style/visibility edit may happen while the worker batch is in flight.
+                            // Ignore that stale result unless the indicator still matches the exact config
+                            // that produced it; the latest config will trigger its own recalculation.
+                            if (!latestConfig || JSON.stringify(latestConfig) !== JSON.stringify(config)) return;
                             const instance = instancesRef.current[config.id];
                             const values = resultsMap.get(config.id);
-                            if (instance) instance.update(inputCandles, config, values);
+                            if (instance) instance.update(inputCandles, latestConfig, values);
                             runtimeByIdRef.current[config.id] = {
                                 type: config.type,
                                 id: config.id,
@@ -192,7 +209,7 @@ export function useChartIndicators(
                                 results: (values as IndicatorCache['results']) ?? (config.type === 'MACD'
                                     ? { macd: [], signal: [], histogram: [] }
                                     : []),
-                                params: config.params
+                                params: latestConfig.params
                             };
                         });
                     } catch {
