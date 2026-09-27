@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { IChartApi, ISeriesApi, MouseEventParams } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { Candle } from '@/lib/store/types';
@@ -54,15 +54,23 @@ export function useChartDrawings(
     } = useDrawingEditor(chartId, chart, series, containerRef, isDrawing, primitivesRef, candles);
 
     // 4. Main Event Handlers (Aggregate logic)
+    // Keep one chart click subscription alive. Routing through React state caused a
+    // brief unsubscribe/subscribe window whenever drawing state changed, which can
+    // drop very fast consecutive clicks.
+    const creationClickRef = useRef(handleCreationClick);
+    const editorClickRef = useRef(handleEditorClick);
+    creationClickRef.current = handleCreationClick;
+    editorClickRef.current = handleEditorClick;
+
     const handleClick = useCallback((param: MouseEventParams) => {
         if (!param.point || !series) return;
 
-        if (isDrawing) {
-            handleCreationClick(param);
+        if (useMarketStore.getState().isDrawing) {
+            creationClickRef.current(param);
         } else {
-            handleEditorClick(param);
+            editorClickRef.current(param);
         }
-    }, [isDrawing, handleCreationClick, handleEditorClick, series]);
+    }, [series]);
 
     // 5. Subscribe Click Events to Chart
     useEffect(() => {
