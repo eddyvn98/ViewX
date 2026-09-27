@@ -160,12 +160,29 @@ export function useDrawingCreation(
     }, [chart, series, currentTool, tempPoints, themeColor, candles, snapToCandle, containerRef]);
 
     // Click Handler (Placement)
+    // Resolve the click coordinates synchronously instead of depending on the
+    // preview RAF. Fast users can move and click before the next animation frame.
     const handleCreationClick = useCallback((param: MouseEventParams) => {
-        void param; // Still use lastSnappedPointRef for precision/snapping
-        if (currentTool === 'none' || !lastSnappedPointRef.current) return;
+        if (currentTool === 'none' || !series) return;
 
-        const { time, price } = lastSnappedPointRef.current;
-        addDrawingPoint({ time: toSec(time), price });
+        let point = lastSnappedPointRef.current;
+        if (param.point) {
+            const time = param.time ?? chart?.timeScale().coordinateToTime(param.point.x) ?? null;
+            const rawPrice = series.coordinateToPrice(param.point.y);
+
+            if (time && rawPrice !== null) {
+                let price = rawPrice as number;
+                if (snapToCandle) {
+                    const snap = findSnapPoint(param.point.y, time, candles, series, 20);
+                    if (snap) price = snap.price;
+                }
+                point = { time, price };
+                lastSnappedPointRef.current = point;
+            }
+        }
+
+        if (!point) return;
+        addDrawingPoint({ time: toSec(point.time), price: point.price });
 
         // Check if finished
         const pointsNeeded = (currentTool === 'horizontal-line' || currentTool === 'vertical-line' || currentTool === 'crosshair') ? 1 : 2;
@@ -173,7 +190,7 @@ export function useDrawingCreation(
         if (tempPoints.length + 1 >= pointsNeeded) {
             finishDrawing(chartId, context);
         }
-    }, [currentTool, addDrawingPoint, tempPoints, finishDrawing, chartId, context]);
+    }, [currentTool, series, chart, snapToCandle, candles, addDrawingPoint, tempPoints, finishDrawing, chartId, context]);
 
     return { handleCreationClick };
 }
