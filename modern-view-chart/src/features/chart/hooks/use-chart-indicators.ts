@@ -190,9 +190,16 @@ export function useChartIndicators(
                         const typedResults = results as BatchResult[];
                         const resultsMap = new Map(typedResults.map((result) => [result.id, result.values]));
                         configs.forEach(config => {
+                            const latestConfig = useMarketStore.getState().chartIndicators[chartId]?.find(
+                                (candidate) => candidate.id === config.id
+                            );
+                            // A parameter/style/visibility edit may happen while the worker batch is in flight.
+                            // Ignore that stale result unless the indicator still matches the exact config
+                            // that produced it; the latest config will trigger its own recalculation.
+                            if (!latestConfig || JSON.stringify(latestConfig) !== JSON.stringify(config)) return;
                             const instance = instancesRef.current[config.id];
                             const values = resultsMap.get(config.id);
-                            if (instance) instance.update(inputCandles, config, values);
+                            if (instance) instance.update(inputCandles, latestConfig, values);
                             runtimeByIdRef.current[config.id] = {
                                 type: config.type,
                                 id: config.id,
@@ -202,7 +209,7 @@ export function useChartIndicators(
                                 results: (values as IndicatorCache['results']) ?? (config.type === 'MACD'
                                     ? { macd: [], signal: [], histogram: [] }
                                     : []),
-                                params: config.params
+                                params: latestConfig.params
                             };
                         });
                     } catch {
