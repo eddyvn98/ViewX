@@ -183,6 +183,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     return (
         <div
             className="w-full h-full relative flex flex-col bg-theme-pattern"
+            data-testid={`chart-container-${chartId}`}
+            data-symbol={symbol || ''}
+            data-interval={interval || ''}
+            data-source={source || ''}
             onContextMenu={handleContextMenu}
         >
             <ChartOverlay
