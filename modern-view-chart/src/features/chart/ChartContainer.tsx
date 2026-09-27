@@ -121,7 +121,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         priceChartRef,
         subchartChartRef,
         timescaleChartRef,
-        mainContainerRef,
+        priceContainerRef,
         subchartContainerRef,
         timescaleContainerRef,
         isAutoScrollEnabledRef,
