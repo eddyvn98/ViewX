@@ -24,7 +24,11 @@ export function useChartDrawings(
     // 2. Creation Layer (Drafting new drawings)
     // Keep context identity stable so temp-point renders do not tear down and
     // re-subscribe the chart click listener between two fast drawing clicks.
-    const drawingContext = useMemo(() => ({
+    const drawingContext = useMemo<{
+        symbol?: string;
+        interval?: string;
+        source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    }>(() => ({
         symbol,
         interval,
         source: source === 'BINANCE' || source === 'MT5' || source === 'VN_GOLD' ? source : undefined,
