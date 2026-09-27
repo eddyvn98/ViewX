@@ -79,3 +79,25 @@ export async function readChartPerfSnapshot(page: Page): Promise<ChartPerfSnapsh
         };
     });
 }
+
+
+export type ChartPerfBudgetSummary = {
+    maxLongTaskMs: number;
+    p95FrameGapMs: number;
+    maxFrameGapMs: number;
+};
+
+function percentile(values: number[], p: number): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * p) - 1));
+    return sorted[index];
+}
+
+export function summarizeChartPerf(snapshot: ChartPerfSnapshot): ChartPerfBudgetSummary {
+    return {
+        maxLongTaskMs: snapshot.longTasks.length ? Math.max(...snapshot.longTasks) : 0,
+        p95FrameGapMs: percentile(snapshot.frameGaps, 0.95),
+        maxFrameGapMs: snapshot.frameGaps.length ? Math.max(...snapshot.frameGaps) : 0,
+    };
+}
