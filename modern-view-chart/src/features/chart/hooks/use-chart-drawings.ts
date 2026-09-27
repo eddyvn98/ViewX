@@ -61,12 +61,18 @@ export function useChartDrawings(
     const editorClickRef = useRef(handleEditorClick);
     creationClickRef.current = handleCreationClick;
     editorClickRef.current = handleEditorClick;
+    const suppressEditorClickRef = useRef(false);
 
     const handleClick = useCallback((param: MouseEventParams) => {
         if (!param.point || !series) return;
 
-        // Drawing placement is handled by native pointerdown below for lower
-        // latency and to avoid losing clicks while chart primitives change.
+        // Native pointerdown owns drawing placement. The Lightweight Charts click
+        // generated from the same pointer gesture arrives afterwards; suppress it
+        // so the newly-created primitive is not immediately routed into editing.
+        if (suppressEditorClickRef.current) {
+            suppressEditorClickRef.current = false;
+            return;
+        }
         if (useMarketStore.getState().isDrawing) return;
         editorClickRef.current(param);
     }, [series]);
@@ -84,6 +90,8 @@ export function useChartDrawings(
         const container = containerRef.current;
 
         const handlePointerDown = (e: PointerEvent) => {
+            if (e.button !== 0) return;
+
             const rect = container.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -96,6 +104,7 @@ export function useChartDrawings(
             } as unknown) as MouseEventParams;
 
             if (useMarketStore.getState().isDrawing) {
+                suppressEditorClickRef.current = true;
                 creationClickRef.current(param);
                 return;
             }
@@ -121,13 +130,16 @@ export function useChartDrawings(
             handleDragEnd();
         };
 
-        container.addEventListener('pointerdown', handlePointerDown);
+        // Capture phase is intentional: Lightweight Charts / attached primitives
+        // may stop pointer propagation once a draft exists. Capture guarantees the
+        // second fast placement click is observed by the drawing engine.
+        container.addEventListener('pointerdown', handlePointerDown, true);
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
         window.addEventListener('pointercancel', handlePointerUp);
 
         return () => {
-            container.removeEventListener('pointerdown', handlePointerDown);
+            container.removeEventListener('pointerdown', handlePointerDown, true);
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
             window.removeEventListener('pointercancel', handlePointerUp);
