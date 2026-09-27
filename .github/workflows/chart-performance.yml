@@ -14,7 +14,7 @@ on:
       - '.github/workflows/chart-performance.yml'
 
 concurrency:
-  group: chart-performance-${{ github.ref }}
+  group: chart-performance-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
