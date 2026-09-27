@@ -168,8 +168,25 @@ export function useDrawingCreation(
 
         let point = lastSnappedPointRef.current;
         if (param.point) {
-            const time = param.time ?? chart?.timeScale().coordinateToTime(param.point.x) ?? null;
-            const rawPrice = series.coordinateToPrice(param.point.y);
+            const timeScale = chart?.timeScale();
+            let time = param.time ?? timeScale?.coordinateToTime(param.point.x) ?? null;
+
+            // Lightweight Charts can return null around transformed/blank edge
+            // coordinates even though the pointer is still inside the chart surface.
+            // Fall back to the nearest logical candle so a fast edge click is not lost.
+            if (!time && timeScale && candles.length > 0) {
+                const logical = timeScale.coordinateToLogical(param.point.x);
+                if (logical !== null && Number.isFinite(logical)) {
+                    const index = Math.max(0, Math.min(candles.length - 1, Math.round(logical)));
+                    time = toSec(candles[index].time) as Time;
+                }
+            }
+
+            let rawPrice = series.coordinateToPrice(param.point.y);
+            if (rawPrice === null && containerRef.current) {
+                const clampedY = Math.max(0, Math.min(containerRef.current.clientHeight - 1, param.point.y));
+                rawPrice = series.coordinateToPrice(clampedY);
+            }
 
             if (time && rawPrice !== null) {
                 let price = rawPrice as number;
@@ -193,7 +210,7 @@ export function useDrawingCreation(
         if (currentPointCount >= pointsNeeded) {
             finishDrawing(chartId, context);
         }
-    }, [series, chart, snapToCandle, candles, addDrawingPoint, finishDrawing, chartId, context]);
+    }, [series, chart, containerRef, snapToCandle, candles, addDrawingPoint, finishDrawing, chartId, context]);
 
     return { handleCreationClick };
 }
