@@ -118,10 +118,11 @@ export function useChartIndicators(
                 : Number(lastBar.time)) || 0;
             const isNewBar = lastTime !== lastBarTimeRef.current;
             const hasLengthChanged = candles.length !== lastCandlesLengthRef.current;
+            const hadNoStableCandles = stableCandlesRef.current.length === 0;
 
             // Rebuild stable candles whenever dataset length changes (e.g. left-side backfill)
             // or when a new realtime bar starts.
-            if (isNewBar || hasLengthChanged || stableCandlesRef.current.length === 0) {
+            if (isNewBar || hasLengthChanged || hadNoStableCandles) {
                 lastBarTimeRef.current = lastTime;
                 lastCandlesLengthRef.current = candles.length;
                 stableCandlesRef.current = formatCandles(candles);
@@ -138,32 +139,34 @@ export function useChartIndicators(
             });
 
             const visibleIndicators = indicators.filter(i => i.visible);
-            // Force full indicator recomputation when history was prepended/appended.
-            const needsUpdate = isNewBar || hasLengthChanged || stableCandlesRef.current.length === candles.length;
+            // Full worker recomputation is only needed when the candle set structurally
+            // changes. Same-bar realtime ticks are handled by updateLastPoint below.
+            const needsFullRecompute = isNewBar || hasLengthChanged || hadNoStableCandles;
             const indicatorsToCalculate: IndicatorConfig[] = [];
 
             visibleIndicators.forEach(config => {
                 let instance: IndicatorInstance | null = instancesRef.current[config.id] ?? null;
+                let isNewInstance = false;
                 if (!instance) {
-                        instance = createIndicatorInstance(config, {
-                            priceChart: priceChartRef.current!,
-                            subchartChart: subchartChartRef.current!,
-                            series: seriesRef.current!,
-                            markerSeries: markerSeriesRef.current!,
-                        }) as IndicatorInstance | null;
+                    instance = createIndicatorInstance(config, {
+                        priceChart: priceChartRef.current!,
+                        subchartChart: subchartChartRef.current!,
+                        series: seriesRef.current!,
+                        markerSeries: markerSeriesRef.current!,
+                    }) as IndicatorInstance | null;
                     if (instance) {
                         instancesRef.current[config.id] = instance;
-                        instance._lastConfigJson = JSON.stringify(config);
+                        isNewInstance = true;
                     }
                 }
 
                 if (instance) {
                     const configJson = JSON.stringify(config);
                     const configChanged = instance._lastConfigJson !== configJson;
-                    if (needsUpdate || configChanged) {
+                    if (needsFullRecompute || isNewInstance || configChanged) {
                         indicatorsToCalculate.push(config);
-                        instance._lastConfigJson = configJson;
                     }
+                    instance._lastConfigJson = configJson;
                 }
             });
 
