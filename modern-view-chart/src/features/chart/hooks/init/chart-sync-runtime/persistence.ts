@@ -45,13 +45,15 @@ export function createViewportPersistence({
         );
         const mainPriceScale = priceChart.priceScale('right') as {
             getVisibleRange?: () => PersistedRange | null;
-            setVisibleRange?: (range: PersistedRange) => void;
+            options?: () => { autoScale?: boolean };
         };
         const subPriceScale = subchartChart.priceScale('right') as {
             getVisibleRange?: () => PersistedRange | null;
             setVisibleRange?: (range: PersistedRange) => void;
         };
-        const mainPriceRange = readVisibleRange(mainPriceScale.getVisibleRange);
+        const mainPriceRange = mainPriceScale.options?.().autoScale === false
+            ? readVisibleRange(mainPriceScale.getVisibleRange)
+            : null;
         const subPriceRange = readVisibleRange(subPriceScale.getVisibleRange);
 
         const nextViewport: NonNullable<ChartInstance['viewport']> = {
