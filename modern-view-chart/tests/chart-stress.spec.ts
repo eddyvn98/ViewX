@@ -25,36 +25,21 @@ async function attachDiagnostics(page: Page, testInfo: TestInfo) {
 }
 
 async function chartPoint(page: Page, xRatio: number, yRatio: number) {
-    const canvases = page.getByTestId('chart-price-e2e-chart').locator('canvas');
-    const box = await canvases.evaluateAll((elements) => {
-        const visible = elements
-            .map((element) => {
-                const rect = element.getBoundingClientRect();
-                return {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                    area: rect.width * rect.height,
-                };
-            })
-            .filter((rect) => rect.width > 0 && rect.height > 0)
-            .sort((a, b) => b.area - a.area);
-        return visible[0] ?? null;
-    });
+    const chartSurface = page.getByTestId('chart-price-e2e-chart');
+    const box = await chartSurface.boundingBox();
     const viewport = page.viewportSize();
     expect(box).not.toBeNull();
     expect(viewport).not.toBeNull();
-    if (!box || !viewport) throw new Error('Visible chart canvas is unavailable');
+    if (!box || !viewport) throw new Error('Visible chart surface is unavailable');
 
-    // Lightweight Charts adds extra canvases for price scales and primitives.
-    // Their DOM order changes as drawings are attached, so canvas.first() is
-    // not a stable interaction target. Use the largest visible plot canvas.
-    const left = Math.max(0, box.x) + 8;
-    const right = Math.min(viewport.width, box.x + box.width) - 8;
-    const top = Math.max(0, box.y) + 8;
-    const bottom = Math.min(viewport.height, box.y + box.height) - 8;
-    if (right <= left || bottom <= top) throw new Error('Chart canvas is outside the viewport');
+    // Interact with the stable price-container surface, not Lightweight Charts'
+    // internal canvases. The library can add/reorder/transform canvases for scales
+    // and primitives, so their DOM geometry is not a stable user interaction area.
+    const left = Math.max(0, box.x) + 16;
+    const right = Math.min(viewport.width, box.x + box.width) - 80;
+    const top = Math.max(0, box.y) + 16;
+    const bottom = Math.min(viewport.height, box.y + box.height) - 16;
+    if (right <= left || bottom <= top) throw new Error('Chart surface is outside the viewport');
 
     return {
         x: left + (right - left) * xRatio,
