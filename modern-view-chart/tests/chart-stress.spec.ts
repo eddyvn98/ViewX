@@ -3,14 +3,20 @@ import {
     installChartPerfProbe,
     readBrowserErrors,
     readChartPerfSnapshot,
+    summarizeChartPerf,
 } from './helpers/chart-performance';
 
 async function attachDiagnostics(page: Page, testInfo: TestInfo) {
     const metrics = await readChartPerfSnapshot(page);
+    const summary = summarizeChartPerf(metrics);
     const errors = readBrowserErrors(page);
 
     await testInfo.attach('performance-metrics.json', {
         body: Buffer.from(JSON.stringify(metrics, null, 2)),
+        contentType: 'application/json',
+    });
+    await testInfo.attach('performance-budget-summary.json', {
+        body: Buffer.from(JSON.stringify(summary, null, 2)),
         contentType: 'application/json',
     });
     await testInfo.attach('browser-errors.json', {
@@ -21,7 +27,8 @@ async function attachDiagnostics(page: Page, testInfo: TestInfo) {
     expect(errors.pageErrors).toEqual([]);
     expect(errors.consoleErrors).toEqual([]);
     expect(metrics.canvasCount).toBeGreaterThan(0);
-    expect(metrics.longTasks.filter((duration) => duration > 1000)).toHaveLength(0);
+    expect(summary.maxLongTaskMs).toBeLessThanOrEqual(1000);
+    expect(summary.maxFrameGapMs).toBeLessThanOrEqual(1500);
 }
 
 async function chartPoint(page: Page, xRatio: number, yRatio: number) {
@@ -296,6 +303,40 @@ test.describe('chart interaction stability', () => {
         await attachDiagnostics(page, testInfo);
     });
 
+    test('drawing move resize delete churn keeps state bounded', async ({ page }, testInfo) => {
+        await page.evaluate(() => window.__VIEWX_E2E__?.clearDrawings());
+        await page.evaluate(() => window.__VIEWX_E2E__?.addDrawingFixture());
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().count ?? -1)
+        ).toBe(1);
+
+        for (let index = 0; index < 80; index += 1) {
+            await page.evaluate((step) => {
+                window.__VIEWX_E2E__?.moveFirstDrawing(step % 2 === 0 ? 60 : -60, step % 2 === 0 ? 0.5 : -0.5);
+                window.__VIEWX_E2E__?.resizeFirstDrawing(30, step % 2 === 0 ? 0.25 : -0.25);
+            }, index);
+        }
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().count ?? -1)
+        ).toBe(1);
+
+        await page.evaluate(() => window.__VIEWX_E2E__?.deleteFirstDrawing());
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().count ?? -1)
+        ).toBe(0);
+
+        const finalState = await page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState());
+        expect(finalState).toMatchObject({
+            count: 0,
+            isDrawing: false,
+            tempPoints: 0,
+        });
+
+        await attachDiagnostics(page, testInfo);
+    });
+
     test('repeated chart churn releases temporary resources', async ({ page }, testInfo) => {
         // Warm up lazy UI/series/primitives once. Leak detection should measure
         // continued growth across repeated churn, not legitimate one-time mounts.
@@ -367,6 +408,10 @@ test.describe('chart interaction stability', () => {
         expect(finalState.drawings).toMatchObject({ count: 0, isDrawing: false, tempPoints: 0 });
         expect(after.canvasCount).toBeLessThanOrEqual(before.canvasCount + 2);
         expect(after.domCount).toBeLessThanOrEqual(before.domCount + 80);
+        if (typeof before.heapUsed === 'number' && typeof after.heapUsed === 'number') {
+            const heapGrowth = after.heapUsed - before.heapUsed;
+            expect(heapGrowth).toBeLessThanOrEqual(64 * 1024 * 1024);
+        }
 
         await attachDiagnostics(page, testInfo);
     });
