@@ -8,10 +8,23 @@ on:
       - 'modern-view-chart/backend/bridge/**'
       - 'modern-view-chart/package.json'
       - '.github/workflows/release-artifacts.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modern-view-chart/android/**'
+      - 'modern-view-chart/desktop/**'
+      - 'modern-view-chart/backend/bridge/**'
+      - 'modern-view-chart/package.json'
+      - '.github/workflows/release-artifacts.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-artifacts-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android-apk:
