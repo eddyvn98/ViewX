@@ -131,7 +131,7 @@ export function ChartPanels({
                         "absolute top-0 left-0 right-0 bottom-0"
                     )}
                 >
-                    <div ref={priceContainerRef} className="w-full h-full touch-none" />
+                    <div ref={priceContainerRef} data-testid={`chart-price-${chartId}`} className="w-full h-full touch-none" />
                 </div>
 
                 {children}
