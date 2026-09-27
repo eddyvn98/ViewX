@@ -265,6 +265,41 @@ test.describe('chart interaction stability', () => {
         await attachDiagnostics(page, testInfo);
     });
 
+    test('rapid indicator parameter edits preserve only the latest configuration', async ({ page }, testInfo) => {
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.clearIndicators();
+            window.__VIEWX_E2E__?.addIndicator('RSI');
+        });
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getIndicatorState().configured.length ?? -1)
+        ).toBe(1);
+
+        for (let period = 2; period <= 80; period += 1) {
+            await page.evaluate((nextPeriod) => {
+                window.__VIEWX_E2E__?.updateFirstIndicatorParams({ period: nextPeriod });
+            }, period);
+        }
+        await page.evaluate(() => window.__VIEWX_E2E__?.updateFirstIndicatorParams({ period: 37 }));
+
+        await expect.poll(async () =>
+            page.evaluate(() => Number(window.__VIEWX_E2E__?.getIndicatorState().configured[0]?.params?.period ?? -1))
+        ).toBe(37);
+
+        await expect.poll(async () =>
+            page.evaluate(() => Number(window.__VIEWX_E2E__?.getIndicatorState().runtime[0]?.params?.period ?? -1))
+        ).toBe(37);
+
+        await page.waitForTimeout(500);
+        const state = await page.evaluate(() => window.__VIEWX_E2E__?.getIndicatorState());
+        expect(state?.configured).toHaveLength(1);
+        expect(state?.runtime).toHaveLength(1);
+        expect(state?.runtime[0]?.id).toBe(state?.configured[0]?.id);
+        expect(Number(state?.runtime[0]?.params?.period)).toBe(37);
+
+        await attachDiagnostics(page, testInfo);
+    });
+
     test('drawing primitives survive rapid create and clear cycles', async ({ page }, testInfo) => {
         await page.evaluate(() => window.__VIEWX_E2E__?.clearDrawings());
 
