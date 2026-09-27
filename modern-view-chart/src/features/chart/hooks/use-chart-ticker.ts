@@ -239,10 +239,11 @@ export function useChartTicker({
                     };
                     bumpChartPerfCounter('realtimeSeriesUpdates');
                     if (isSmart) {
-                        seriesRef.current?.update({
+                        const smartCandle = {
                             ...seriesNewCandle,
                             candleColor: seriesNewCandle.close >= seriesNewCandle.open ? candleUpColor : candleDownColor,
-                        } as any);
+                        };
+                        seriesRef.current?.update(smartCandle);
                     } else {
                         seriesRef.current?.update(seriesNewCandle);
                     }
@@ -300,14 +301,15 @@ export function useChartTicker({
 
                 bumpChartPerfCounter('realtimeSeriesUpdates');
                 if (isSmart) {
-                    seriesRef.current?.update({
+                    const smartUpdate = {
                         time: updateTime as Time,
                         open: updateData.open,
                         high: updateData.high,
                         low: updateData.low,
                         close: updateData.close,
                         candleColor: updateData.close >= updateData.open ? candleUpColor : candleDownColor,
-                    } as any);
+                    };
+                    seriesRef.current?.update(smartUpdate);
                 } else {
                     seriesRef.current?.update({
                         time: updateTime as Time,
