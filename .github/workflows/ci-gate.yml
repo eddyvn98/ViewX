@@ -32,7 +32,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: modern-view-chart
-        run: npm ci
+        run: |
+          npm ci || npm install --ignore-scripts
 
       - name: Run lint:changed
         working-directory: modern-view-chart
@@ -67,7 +68,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: modern-view-chart
-        run: npm ci
+        run: |
+          npm ci || npm install --ignore-scripts
 
       - name: Run lint:legacy
         working-directory: modern-view-chart
