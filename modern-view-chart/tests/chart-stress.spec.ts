@@ -47,38 +47,52 @@ async function chartPoint(page: Page, xRatio: number, yRatio: number) {
     };
 }
 
+async function dispatchDrawingPointer(page: Page, xRatio: number, yRatio: number) {
+    await page.evaluate(({ xRatio, yRatio }) => {
+        const surface = document.querySelector('[data-testid="chart-price-e2e-chart"]') as HTMLElement | null;
+        const root = document.querySelector('[data-testid="chart-container-e2e-chart"]') as HTMLElement | null;
+        if (!surface || !root) throw new Error('Chart drawing surface is unavailable');
+
+        const surfaceRect = surface.getBoundingClientRect();
+        const rootRect = root.getBoundingClientRect();
+        const left = Math.max(0, surfaceRect.left, rootRect.left) + 24;
+        const right = Math.min(window.innerWidth, surfaceRect.right, rootRect.right) - 96;
+        const top = Math.max(0, surfaceRect.top, rootRect.top) + 24;
+        const bottom = Math.min(window.innerHeight, surfaceRect.bottom, rootRect.bottom) - 48;
+        if (right <= left || bottom <= top) throw new Error('Chart drawing surface is outside the viewport');
+
+        const clientX = left + (right - left) * xRatio;
+        const clientY = top + (bottom - top) * yRatio;
+        const base = {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            clientX,
+            clientY,
+            button: 0,
+            pointerId: 1,
+            pointerType: 'mouse',
+            isPrimary: true,
+        };
+
+        surface.dispatchEvent(new PointerEvent('pointermove', { ...base, buttons: 0 }));
+        surface.dispatchEvent(new PointerEvent('pointerdown', { ...base, buttons: 1 }));
+        surface.dispatchEvent(new PointerEvent('pointerup', { ...base, buttons: 0 }));
+    }, { xRatio, yRatio });
+}
+
 async function drawTwoPointTool(page: Page, tool: 'trend-line' | 'rectangle' | 'fib-retracement') {
     await page.evaluate((drawingTool) => window.__VIEWX_E2E__?.startDrawing(drawingTool), tool);
 
-    const surface = page.getByTestId('chart-price-e2e-chart');
-    const size = await surface.evaluate((element) => ({
-        width: (element as HTMLElement).clientWidth,
-        height: (element as HTMLElement).clientHeight,
-    }));
-    expect(size.width).toBeGreaterThan(200);
-    expect(size.height).toBeGreaterThan(200);
-
-    const first = {
-        x: Math.max(32, size.width * 0.35),
-        y: Math.max(32, size.height * 0.35),
-    };
-    const second = {
-        x: Math.min(size.width - 96, size.width * 0.65),
-        y: Math.min(size.height - 32, size.height * 0.62),
-    };
-
-    // Use element-relative pointer actions. This stays stable even when
-    // Lightweight Charts adds/reorders internal canvases and CSS transforms.
-    await surface.hover({ position: first, force: true });
-    await page.waitForTimeout(24);
-    await surface.click({ position: first, force: true });
+    // Dispatch native pointer events without Playwright auto-scroll. Locator.click()
+    // may scroll transformed chart internals between point 1 and point 2, which can
+    // move the second absolute coordinate outside the viewport in headless Chromium.
+    await dispatchDrawingPointer(page, 0.35, 0.35);
     await expect.poll(async () =>
         page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().tempPoints ?? -1)
     ).toBe(1);
 
-    await surface.hover({ position: second, force: true });
-    await page.waitForTimeout(24);
-    await surface.click({ position: second, force: true });
+    await dispatchDrawingPointer(page, 0.65, 0.62);
     await expect.poll(async () =>
         page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().isDrawing ?? true)
     ).toBe(false);
