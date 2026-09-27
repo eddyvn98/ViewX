@@ -41,7 +41,7 @@
     "dev:all": "dev.bat",
     "dev:ide": "concurrently -n \"FE,BE,BRIDGE,TUNNEL\" -c \"cyan,magenta,yellow,green\" \"npm run dev\" \"npm run server:dev\" \"python backend/bridge/main.py\" \"python start_mobile_access.py\"",
     "test:e2e": "npx playwright test",
-    "test:unit": "npx --yes tsx --import ./tests/unit.setup.ts --test \"src/**/*.test.ts\"",
+    "test:unit": "node scripts/run-unit-tests.mjs",
     "test:forecast": "node --test backend/services/forecast-timeframe.test.js && cmd /c backend\\forecast\\.venv-311\\Scripts\\python.exe backend\\forecast\\test_forecast_service.py",
     "test:chart-timeframes": "node scripts/check-chart-timeframes.mjs",
     "test:market-symbols": "node scripts/check-mt5-symbol-message.mjs",
