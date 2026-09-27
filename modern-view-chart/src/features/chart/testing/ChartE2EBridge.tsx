@@ -2,7 +2,20 @@
 
 import { useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
-import type { Candle, ChartInstance } from '@/lib/store/types';
+import type { Candle, ChartInstance, DrawingTool, IndicatorConfig } from '@/lib/store/types';
+
+type IndicatorState = {
+    configured: Array<{ id: string; type: string; visible: boolean }>;
+    runtime: Array<{ id: string; type: string }>;
+};
+
+type DrawingState = {
+    count: number;
+    isDrawing: boolean;
+    currentTool: DrawingTool;
+    tempPoints: number;
+    selectedDrawingId: string | null;
+};
 
 type E2EBridge = {
     seed: () => void;
@@ -10,6 +23,12 @@ type E2EBridge = {
     setChartSymbol: (symbol: string, source?: ChartInstance['source']) => void;
     setChartTimeframe: (interval: string) => void;
     burstTicks: (count?: number) => void;
+    addIndicator: (type: string, pane?: IndicatorConfig['pane']) => void;
+    clearIndicators: () => void;
+    getIndicatorState: () => IndicatorState;
+    startDrawing: (tool: DrawingTool) => void;
+    clearDrawings: () => void;
+    getDrawingState: () => DrawingState;
 };
 
 declare global {
@@ -64,6 +83,26 @@ function activeChart() {
     return tab.charts[tab.activeChartId] || null;
 }
 
+function indicatorDefaults(type: string, pane?: IndicatorConfig['pane']): Omit<IndicatorConfig, 'id'> {
+    const normalized = type.toUpperCase();
+    const isSubchart = ['RSI', 'MACD', 'ATR', 'STOCHASTIC', 'ADX'].includes(normalized);
+    const params: Record<string, unknown> =
+        normalized === 'MACD'
+            ? { fast: 12, slow: 26, signal: 9 }
+            : normalized === 'BOLLINGERBANDS' || normalized === 'BOLLINGER_BANDS'
+                ? { period: 20, stdDev: 2 }
+                : { period: 14 };
+
+    return {
+        type,
+        params,
+        color: '#ffffff',
+        visible: true,
+        lineWidth: 2,
+        pane: pane ?? (isSubchart ? 'subchart' : 'main'),
+    };
+}
+
 function seed() {
     useMarketStore.setState({
         activeTabId: 'e2e-tab',
@@ -97,6 +136,14 @@ function seed() {
         isBridgeOnline: false,
         watchlist: [...SYMBOLS],
         chartIndicators: {},
+        chartIndicatorRuntime: {},
+        chartDrawings: {},
+        activeIndicatorId: null,
+        activeDrawingId: null,
+        selectedDrawingId: null,
+        currentDrawingTool: 'none',
+        isDrawing: false,
+        tempPoints: [],
     });
 
     const state = useMarketStore.getState();
@@ -157,6 +204,45 @@ export function ChartE2EBridge() {
                         serverTime: Date.now() + index,
                     });
                 }
+            },
+            addIndicator: (type, pane) => {
+                const chart = activeChart();
+                if (!chart) return;
+                useMarketStore.getState().addIndicator(chart.id, indicatorDefaults(type, pane));
+            },
+            clearIndicators: () => {
+                const chart = activeChart();
+                if (!chart) return;
+                const state = useMarketStore.getState();
+                const ids = (state.chartIndicators[chart.id] || []).map((indicator) => indicator.id);
+                ids.forEach((id) => useMarketStore.getState().removeIndicator(chart.id, id));
+            },
+            getIndicatorState: () => {
+                const chart = activeChart();
+                if (!chart) return { configured: [], runtime: [] };
+                const state = useMarketStore.getState();
+                return {
+                    configured: (state.chartIndicators[chart.id] || []).map(({ id, type, visible }) => ({ id, type, visible })),
+                    runtime: (state.chartIndicatorRuntime[chart.id] || []).map(({ id, type }) => ({ id, type })),
+                };
+            },
+            startDrawing: (tool) => {
+                useMarketStore.getState().startDrawing(tool);
+            },
+            clearDrawings: () => {
+                const chart = activeChart();
+                if (chart) useMarketStore.getState().clearDrawings(chart.id);
+            },
+            getDrawingState: () => {
+                const chart = activeChart();
+                const state = useMarketStore.getState();
+                return {
+                    count: chart ? (state.chartDrawings[chart.id] || []).length : 0,
+                    isDrawing: state.isDrawing,
+                    currentTool: state.currentDrawingTool,
+                    tempPoints: state.tempPoints.length,
+                    selectedDrawingId: state.selectedDrawingId,
+                };
             },
         };
 
