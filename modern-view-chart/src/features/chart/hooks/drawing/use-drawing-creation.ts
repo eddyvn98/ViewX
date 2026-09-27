@@ -163,7 +163,8 @@ export function useDrawingCreation(
     // Resolve the click coordinates synchronously instead of depending on the
     // preview RAF. Fast users can move and click before the next animation frame.
     const handleCreationClick = useCallback((param: MouseEventParams) => {
-        if (currentTool === 'none' || !series) return;
+        const activeTool = useMarketStore.getState().currentDrawingTool;
+        if (activeTool === 'none' || !series) return;
 
         let point = lastSnappedPointRef.current;
         if (param.point) {
@@ -187,12 +188,12 @@ export function useDrawingCreation(
         // Read the synchronous Zustand state after the point was added.
         // A second click can arrive before React re-renders this hook, so relying
         // on the captured tempPoints array can miss the completion threshold.
-        const pointsNeeded = (currentTool === 'horizontal-line' || currentTool === 'vertical-line' || currentTool === 'crosshair') ? 1 : 2;
+        const pointsNeeded = (activeTool === 'horizontal-line' || activeTool === 'vertical-line' || activeTool === 'crosshair') ? 1 : 2;
         const currentPointCount = useMarketStore.getState().tempPoints.length;
         if (currentPointCount >= pointsNeeded) {
             finishDrawing(chartId, context);
         }
-    }, [currentTool, series, chart, snapToCandle, candles, addDrawingPoint, finishDrawing, chartId, context]);
+    }, [series, chart, snapToCandle, candles, addDrawingPoint, finishDrawing, chartId, context]);
 
     return { handleCreationClick };
 }
