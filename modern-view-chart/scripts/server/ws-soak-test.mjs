@@ -24,17 +24,18 @@ function parseArgs(argv) {
     return args;
 }
 
-function withAccessToken(wsUrl, token) {
-    if (!token) return wsUrl;
-    try {
-        const parsed = new URL(wsUrl);
-        if (!parsed.searchParams.get("access_token") && !parsed.searchParams.get("access_ticket")) {
-            parsed.searchParams.set("access_token", token);
-        }
-        return parsed.toString();
-    } catch {
-        return wsUrl;
-    }
+function parseBoolean(value, fallback = false) {
+    if (value === undefined || value === null || value === "") return fallback;
+    return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
+}
+
+function createWebSocket(wsUrl, token) {
+    if (!token) return new WebSocket(wsUrl);
+    return new WebSocket(wsUrl, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
 }
 
 function sleep(ms) {
@@ -52,8 +53,8 @@ async function main() {
     const wsBaseUrl = (args["ws-url"] || process.env.NODE_WS_URL || "ws://127.0.0.1:8091").trim();
     const apiBaseUrl = (args["api-url"] || `http://127.0.0.1:${process.env.PORT || "8091"}`).replace(/\/+$/, "");
     const outputPathArg = args.output || "";
+    const requireMetrics = parseBoolean(args["require-metrics"], Boolean(token));
 
-    const wsUrl = withAccessToken(wsBaseUrl, token);
     const connectSpacingMs = Math.max(1, Math.floor((rampSec * 1000) / Math.max(1, clientsTarget)));
     const testStartedAt = Date.now();
     const runUntil = testStartedAt + durationSec * 1000;
@@ -77,42 +78,54 @@ async function main() {
     }
 
     async function pollHealth() {
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const ts = Date.now();
+        const sample = {
+            ts,
+            ok: false,
+            health_ok: false,
+            metrics_ok: false,
+            ws_clients: null,
+            ws_dropped_rate_limit: null,
+            ws_dropped_backpressure: null,
+            ws_buffer_pressure: null,
+            broadcast_p95_ms: null,
+        };
+
         try {
-            const res = await fetch(`${apiBaseUrl}/api/health`, { headers });
-            if (!res.ok) {
-                healthSamples.push({ ts: Date.now(), ok: false, status: res.status });
-                return;
+            const healthRes = await fetch(`${apiBaseUrl}/api/health`);
+            sample.health_status = healthRes.status;
+            sample.health_ok = healthRes.ok;
+            if (healthRes.ok) {
+                const health = await healthRes.json();
+                sample.health = health;
             }
-            const data = await res.json();
-            const broadcastP95 =
-                data.broadcast_p95_ms ??
-                data.broadcast_loop_ms_p95 ??
-                null;
-            const wsDroppedRateLimit =
-                data.ws_dropped_rate_limit ??
-                data.ws_droppedRateLimit ??
-                null;
-            const wsDroppedBackpressure =
-                data.ws_dropped_backpressure ??
-                data.ws_droppedBackpressure ??
-                null;
-            const wsBufferPressure =
-                data.ws_buffer_pressure ??
-                data.wsBufferPressure ??
-                null;
-            healthSamples.push({
-                ts: Date.now(),
-                ok: true,
-                ws_clients: data.ws_clients ?? null,
-                ws_dropped_rate_limit: wsDroppedRateLimit,
-                ws_dropped_backpressure: wsDroppedBackpressure,
-                ws_buffer_pressure: wsBufferPressure,
-                broadcast_p95_ms: broadcastP95,
-            });
         } catch (err) {
-            healthSamples.push({ ts: Date.now(), ok: false, error: err?.message || String(err) });
+            sample.health_error = err?.message || String(err);
         }
+
+        if (token) {
+            try {
+                const metricsRes = await fetch(`${apiBaseUrl}/api/metrics`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                sample.metrics_status = metricsRes.status;
+                sample.metrics_ok = metricsRes.ok;
+                if (metricsRes.ok) {
+                    const metrics = await metricsRes.json();
+                    const websocket = metrics?.websocket || {};
+                    sample.ws_clients = websocket.connected ?? null;
+                    sample.ws_dropped_rate_limit = websocket.dropped_rate_limit ?? null;
+                    sample.ws_dropped_backpressure = websocket.dropped_backpressure ?? null;
+                    sample.ws_buffer_pressure = websocket.buffer_pressure ?? null;
+                    sample.broadcast_p95_ms = websocket.broadcast_loop_p95_ms ?? null;
+                }
+            } catch (err) {
+                sample.metrics_error = err?.message || String(err);
+            }
+        }
+
+        sample.ok = sample.health_ok && (!requireMetrics || sample.metrics_ok);
+        healthSamples.push(sample);
     }
 
     const healthTimer = setInterval(() => {
@@ -121,7 +134,7 @@ async function main() {
     await pollHealth();
 
     for (let i = 0; i < clientsTarget; i += 1) {
-        const ws = new WebSocket(wsUrl);
+        const ws = createWebSocket(wsBaseUrl, token);
         ws.__opened = false;
         sockets.push(ws);
 
@@ -187,8 +200,11 @@ async function main() {
     const maxBroadcastP95 = healthOkSamples.length > 0 ? Math.max(...healthOkSamples.map((x) => x.broadcast_p95_ms)) : null;
 
     const gates = {
+        all_clients_opened: opened === clientsTarget,
+        received_realtime_messages: totalMessages > 0,
         disconnect_rate_under_1_percent: disconnectRate < 1,
-        broadcast_p95_under_250_ms: maxBroadcastP95 !== null ? maxBroadcastP95 < 250 : null,
+        metrics_available_when_required: requireMetrics ? maxBroadcastP95 !== null : true,
+        broadcast_p95_under_250_ms: maxBroadcastP95 !== null ? maxBroadcastP95 < 250 : (requireMetrics ? false : null),
     };
 
     const report = {
@@ -200,6 +216,8 @@ async function main() {
             health_poll_sec: healthPollSec,
             ws_url: wsBaseUrl,
             api_url: apiBaseUrl,
+            auth_mode: token ? "authorization_header" : "guest",
+            require_metrics: requireMetrics,
         },
         summary: {
             opened,
@@ -224,7 +242,8 @@ async function main() {
     process.stdout.write(`[soak] report written: ${outputPath}\n`);
     process.stdout.write(`[soak] disconnect_rate=${report.summary.disconnect_rate_percent}% | max_broadcast_p95_ms=${String(maxBroadcastP95)}\n`);
 
-    if (!gates.disconnect_rate_under_1_percent || gates.broadcast_p95_under_250_ms === false) {
+    const failedGate = Object.values(gates).some((value) => value === false);
+    if (failedGate) {
         process.exitCode = 2;
     }
 }
