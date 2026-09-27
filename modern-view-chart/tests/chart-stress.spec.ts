@@ -49,19 +49,36 @@ async function chartPoint(page: Page, xRatio: number, yRatio: number) {
 
 async function drawTwoPointTool(page: Page, tool: 'trend-line' | 'rectangle' | 'fib-retracement') {
     await page.evaluate((drawingTool) => window.__VIEWX_E2E__?.startDrawing(drawingTool), tool);
-    const first = await chartPoint(page, 0.35, 0.35);
-    const second = await chartPoint(page, 0.65, 0.62);
 
-    await page.mouse.move(first.x, first.y);
+    const surface = page.getByTestId('chart-price-e2e-chart');
+    const size = await surface.evaluate((element) => ({
+        width: (element as HTMLElement).clientWidth,
+        height: (element as HTMLElement).clientHeight,
+    }));
+    expect(size.width).toBeGreaterThan(200);
+    expect(size.height).toBeGreaterThan(200);
+
+    const first = {
+        x: Math.max(32, size.width * 0.35),
+        y: Math.max(32, size.height * 0.35),
+    };
+    const second = {
+        x: Math.min(size.width - 96, size.width * 0.65),
+        y: Math.min(size.height - 32, size.height * 0.62),
+    };
+
+    // Use element-relative pointer actions. This stays stable even when
+    // Lightweight Charts adds/reorders internal canvases and CSS transforms.
+    await surface.hover({ position: first, force: true });
     await page.waitForTimeout(24);
-    await page.mouse.click(first.x, first.y);
+    await surface.click({ position: first, force: true });
     await expect.poll(async () =>
         page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().tempPoints ?? -1)
     ).toBe(1);
 
-    await page.mouse.move(second.x, second.y);
+    await surface.hover({ position: second, force: true });
     await page.waitForTimeout(24);
-    await page.mouse.click(second.x, second.y);
+    await surface.click({ position: second, force: true });
     await expect.poll(async () =>
         page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().isDrawing ?? true)
     ).toBe(false);
