@@ -202,11 +202,13 @@ These are engineering targets, not immediate GitHub-runner hard gates:
 
 ### Phase 5 - live soak
 - [x] Add optional/scheduled WebSocket live soak workflow with JSON artifacts.
-- [ ] Run authenticated live soak against the deployed API/WS endpoint and archive a passing report.
+- [x] Run public production WebSocket connectivity soak automatically on relevant main-branch changes.
+- [x] Use Authorization header for service-authenticated WebSocket soak and read performance metrics from `/api/metrics`.
+- [ ] Run authenticated live soak against the deployed API/WS endpoint and archive a passing report (requires GitHub secret `VIEWX_SOAK_ACCESS_TOKEN`).
 
 ## Current validation status
 
-Deterministic chart hardening is implemented, including rapid indicator parameter-change torture and stale worker-result protection. The remaining completion item is an authenticated live soak against the deployed backend/WebSocket endpoint; this intentionally stays outside the deterministic PR gate because it depends on live credentials and service availability.
+Deterministic chart hardening is implemented, including rapid indicator parameter-change torture and stale worker-result protection. Production connectivity soak is automated. The only external completion item is the service-authenticated production soak, which requires the repository secret `VIEWX_SOAK_ACCESS_TOKEN`; when present, the workflow first verifies WebSocket service auth, then enforces live `/api/metrics` performance budgets.
 
 ## Definition of done
 

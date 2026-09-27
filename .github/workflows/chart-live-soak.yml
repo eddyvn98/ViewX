@@ -80,19 +80,17 @@ jobs:
           echo "SOAK_DURATION_SEC=120" >> "$GITHUB_ENV"
           echo "SOAK_RAMP_SEC=20" >> "$GITHUB_ENV"
 
-      - name: Validate live target and authentication
+      - name: Validate live target
         run: |
           test -n "$SOAK_WS_URL"
           test -n "$SOAK_API_URL"
-          if [ -z "$ACCESS_TOKEN" ]; then
-            echo "::error::VIEWX_SOAK_ACCESS_TOKEN is required for authenticated live soak."
-            exit 1
-          fi
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run authenticated live WebSocket soak
+      - name: Run public live connectivity soak
+        env:
+          ACCESS_TOKEN: ''
         run: |
           mkdir -p logs
           npm run soak:ws -- \
@@ -101,13 +99,40 @@ jobs:
             --clients "$SOAK_CLIENTS" \
             --duration-sec "$SOAK_DURATION_SEC" \
             --ramp-sec "$SOAK_RAMP_SEC" \
-            --output logs/chart-live-soak.json
+            --require-metrics false \
+            --output logs/chart-live-public-soak.json
 
-      - name: Upload soak report
+      - name: Run authenticated WebSocket auth smoke
+        if: env.ACCESS_TOKEN != ''
+        run: npm run smoke:ws-auth -- --ws-url "$SOAK_WS_URL"
+
+      - name: Run authenticated live WebSocket soak
+        if: env.ACCESS_TOKEN != ''
+        run: |
+          npm run soak:ws -- \
+            --ws-url "$SOAK_WS_URL" \
+            --api-url "$SOAK_API_URL" \
+            --clients "$SOAK_CLIENTS" \
+            --duration-sec "$SOAK_DURATION_SEC" \
+            --ramp-sec "$SOAK_RAMP_SEC" \
+            --require-metrics true \
+            --output logs/chart-live-authenticated-soak.json
+
+      - name: Record missing authenticated-soak credential
+        if: env.ACCESS_TOKEN == ''
+        run: |
+          echo "::warning::VIEWX_SOAK_ACCESS_TOKEN is not configured; public live soak ran, authenticated soak was not executed."
+          printf '%s\n' '{"authenticated_soak":"not_run","reason":"VIEWX_SOAK_ACCESS_TOKEN_missing"}' > logs/chart-live-auth-status.json
+
+      - name: Upload soak reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: chart-live-soak-report
-          path: modern-view-chart/logs/chart-live-soak.json
+          path: |
+            modern-view-chart/logs/chart-live-public-soak.json
+            modern-view-chart/logs/chart-live-authenticated-soak.json
+            modern-view-chart/logs/chart-live-auth-status.json
+            modern-view-chart/logs/ws-auth-smoke-*.json
           if-no-files-found: warn
           retention-days: 30
