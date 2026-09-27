@@ -183,7 +183,7 @@ These are engineering targets, not immediate GitHub-runner hard gates:
 
 ### Phase 2 - indicator/drawing stress
 - [x] Indicator add/remove churn and stale-worker-result protection.
-- [ ] Indicator parameter-change torture.
+- [x] Indicator parameter-change torture.
 - [x] Drawing create/move/resize/delete torture.
 - [x] Mixed chaos scenario.
 - [x] Track drawing/indicator state and bounded chart resources.
@@ -206,7 +206,7 @@ These are engineering targets, not immediate GitHub-runner hard gates:
 
 ## Current validation status
 
-Deterministic chart hardening is implemented and CI-gated. The remaining completion item is an authenticated live soak against the deployed backend/WebSocket endpoint; this intentionally stays outside the deterministic PR gate because it depends on live credentials and service availability.
+Deterministic chart hardening is implemented, including rapid indicator parameter-change torture and stale worker-result protection. The remaining completion item is an authenticated live soak against the deployed backend/WebSocket endpoint; this intentionally stays outside the deterministic PR gate because it depends on live credentials and service availability.
 
 ## Definition of done
 
