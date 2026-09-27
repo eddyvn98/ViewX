@@ -25,13 +25,31 @@ async function attachDiagnostics(page: Page, testInfo: TestInfo) {
 }
 
 async function chartPoint(page: Page, xRatio: number, yRatio: number) {
-    const plotCanvas = page.getByTestId('chart-price-e2e-chart').locator('canvas').first();
-    const box = await plotCanvas.boundingBox();
+    const canvases = page.getByTestId('chart-price-e2e-chart').locator('canvas');
+    const box = await canvases.evaluateAll((elements) => {
+        const visible = elements
+            .map((element) => {
+                const rect = element.getBoundingClientRect();
+                return {
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height,
+                    area: rect.width * rect.height,
+                };
+            })
+            .filter((rect) => rect.width > 0 && rect.height > 0)
+            .sort((a, b) => b.area - a.area);
+        return visible[0] ?? null;
+    });
     const viewport = page.viewportSize();
     expect(box).not.toBeNull();
     expect(viewport).not.toBeNull();
     if (!box || !viewport) throw new Error('Visible chart canvas is unavailable');
 
+    // Lightweight Charts adds extra canvases for price scales and primitives.
+    // Their DOM order changes as drawings are attached, so canvas.first() is
+    // not a stable interaction target. Use the largest visible plot canvas.
     const left = Math.max(0, box.x) + 8;
     const right = Math.min(viewport.width, box.x + box.width) - 8;
     const top = Math.max(0, box.y) + 8;
