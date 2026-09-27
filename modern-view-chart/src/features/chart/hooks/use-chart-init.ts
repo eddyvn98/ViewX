@@ -288,7 +288,7 @@ export function useChartInit(
     // The chart DOM instance must NOT be destroyed/recreated on every symbol or timeframe
     // switch. currentContextKeyRef is kept in sync via the lightweight effect above (line 50-52).
     // Only chart-level concerns (theme, timezone, chartId, container) should trigger a chart rebuild.
-    }, [chartId, timezone, theme, themeColor, candleUpColor, candleDownColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [chartId, timezone, theme, themeColor, candleUpColor, candleDownColor, updateChart, priceContainerRef, subchartContainerRef, timescaleContainerRef]);
 
     const syncRange = useCallback(() => {
         const range = priceChartRef.current?.timeScale().getVisibleLogicalRange();
