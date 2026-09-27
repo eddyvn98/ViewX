@@ -183,11 +183,27 @@ test.describe('chart interaction stability', () => {
         }
         await page.mouse.up();
 
+        await page.evaluate(() => window.__VIEWX_E2E__?.resetPerfCounters());
         await page.evaluate(() => window.__VIEWX_E2E__?.burstTicks(500));
+        await page.evaluate(() => new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        ));
         await page.mouse.move(center.x + 40, center.y + 20);
         await page.mouse.move(center.x - 80, center.y - 25, { steps: 30 });
 
         await expect(page.getByTestId('chart-container-e2e-chart')).toHaveAttribute('data-symbol', 'XAUUSDm');
+
+        const counters = await page.evaluate(() => window.__VIEWX_E2E__?.getPerfCounters());
+        expect(counters).toBeTruthy();
+        expect(counters?.tickerMessages).toBe(500);
+        expect(counters?.tickerFrames).toBeLessThanOrEqual(2);
+        expect(counters?.realtimeSeriesUpdates).toBeLessThanOrEqual(2);
+        expect(counters?.historySetDataBatches).toBe(0);
+
+        await testInfo.attach('chart-perf-counters.json', {
+            body: Buffer.from(JSON.stringify(counters, null, 2)),
+            contentType: 'application/json',
+        });
         await attachDiagnostics(page, testInfo);
     });
 
@@ -260,6 +276,55 @@ test.describe('chart interaction stability', () => {
             currentTool: 'none',
             tempPoints: 0,
         });
+
+        await attachDiagnostics(page, testInfo);
+    });
+
+    test('repeated chart churn releases temporary resources', async ({ page }, testInfo) => {
+        const before = await readChartPerfSnapshot(page);
+
+        for (let round = 0; round < 6; round += 1) {
+            await page.evaluate(({ symbol, interval }) => {
+                window.__VIEWX_E2E__?.setChartSymbol(symbol, 'MT5');
+                window.__VIEWX_E2E__?.setChartTimeframe(interval);
+                window.__VIEWX_E2E__?.clearIndicators();
+                window.__VIEWX_E2E__?.addIndicator('RSI');
+                window.__VIEWX_E2E__?.addIndicator('MACD');
+            }, {
+                symbol: round % 2 === 0 ? 'BTCUSDm' : 'XAUUSDm',
+                interval: round % 2 === 0 ? '5' : '15',
+            });
+
+            await dispatchDrawingPointer(page, 0.32, 0.36);
+            await page.evaluate(() => window.__VIEWX_E2E__?.clearDrawings());
+            await page.evaluate(() => window.__VIEWX_E2E__?.clearIndicators());
+        }
+
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.clearIndicators();
+            window.__VIEWX_E2E__?.clearDrawings();
+            window.__VIEWX_E2E__?.setChartSymbol('XAUUSDm', 'MT5');
+            window.__VIEWX_E2E__?.setChartTimeframe('15');
+        });
+        await page.waitForTimeout(500);
+
+        const after = await readChartPerfSnapshot(page);
+        const finalState = await page.evaluate(() => ({
+            chart: window.__VIEWX_E2E__?.getChartState(),
+            indicators: window.__VIEWX_E2E__?.getIndicatorState(),
+            drawings: window.__VIEWX_E2E__?.getDrawingState(),
+        }));
+
+        await testInfo.attach('resource-leak-metrics.json', {
+            body: Buffer.from(JSON.stringify({ before, after, finalState }, null, 2)),
+            contentType: 'application/json',
+        });
+
+        expect(finalState.chart).toMatchObject({ symbol: 'XAUUSDm', interval: '15', source: 'MT5' });
+        expect(finalState.indicators?.configured ?? []).toEqual([]);
+        expect(finalState.drawings).toMatchObject({ count: 0, isDrawing: false, tempPoints: 0 });
+        expect(after.canvasCount).toBeLessThanOrEqual(before.canvasCount + 4);
+        expect(after.domCount).toBeLessThanOrEqual(before.domCount + 200);
 
         await attachDiagnostics(page, testInfo);
     });

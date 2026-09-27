@@ -3,6 +3,11 @@
 import { useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
 import type { Candle, ChartInstance, DrawingTool, IndicatorConfig } from '@/lib/store/types';
+import {
+    getChartPerfCounters,
+    resetChartPerfCounters,
+    type ChartPerfCounters,
+} from './chart-perf-counters';
 
 type IndicatorState = {
     configured: Array<{ id: string; type: string; visible: boolean }>;
@@ -23,6 +28,9 @@ type E2EBridge = {
     setChartSymbol: (symbol: string, source?: ChartInstance['source']) => void;
     setChartTimeframe: (interval: string) => void;
     burstTicks: (count?: number) => void;
+    getLastCandle: () => Candle | null;
+    getPerfCounters: () => ChartPerfCounters;
+    resetPerfCounters: () => void;
     addIndicator: (type: string, pane?: IndicatorConfig['pane']) => void;
     clearIndicators: () => void;
     getIndicatorState: () => IndicatorState;
@@ -144,7 +152,9 @@ function seed() {
         currentDrawingTool: 'none',
         isDrawing: false,
         tempPoints: [],
+        candleHistoryRevision: {},
     });
+    resetChartPerfCounters();
 
     const state = useMarketStore.getState();
     state.updateTickers({
@@ -195,16 +205,32 @@ export function ChartE2EBridge() {
                 const chart = activeChart();
                 if (!chart) return;
                 const state = useMarketStore.getState();
-                const start = basePrice(chart.symbol);
+                const candles = Object.entries(state.candleData)
+                    .find(([key]) => key.toLowerCase() === `${chart.source}:${chart.symbol}:${chart.interval}`.toLowerCase())?.[1] || [];
+                const last = candles[candles.length - 1];
+                const start = Number(last?.close ?? basePrice(chart.symbol));
+                const lastTime = Number(last?.time ?? Math.floor(Date.now() / 1000));
+                const sameBarTimeMs = (lastTime + Math.max(1, Math.floor(intervalSeconds(chart.interval) / 2))) * 1000;
+
                 for (let index = 0; index < count; index += 1) {
                     state.updateTicker(chart.symbol, {
                         symbol: chart.symbol,
                         source: chart.source,
                         price: start + Math.sin(index / 5) * (start * 0.0005),
-                        serverTime: Date.now() + index,
+                        serverTime: sameBarTimeMs,
                     });
                 }
             },
+            getLastCandle: () => {
+                const chart = activeChart();
+                if (!chart) return null;
+                const state = useMarketStore.getState();
+                const candles = Object.entries(state.candleData)
+                    .find(([key]) => key.toLowerCase() === `${chart.source}:${chart.symbol}:${chart.interval}`.toLowerCase())?.[1] || [];
+                return candles.length ? { ...candles[candles.length - 1] } : null;
+            },
+            getPerfCounters: getChartPerfCounters,
+            resetPerfCounters: resetChartPerfCounters,
             addIndicator: (type, pane) => {
                 const chart = activeChart();
                 if (!chart) return;

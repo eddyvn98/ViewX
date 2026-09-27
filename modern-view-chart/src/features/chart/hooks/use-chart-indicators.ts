@@ -8,6 +8,7 @@ import { DEFAULT_CHART_INDICATORS } from './indicators/default-indicators';
 import { formatCandles, buildLiveCandle } from './indicators/indicator-candle-utils';
 import { createIndicatorInstance } from './indicators/sync-indicator-series';
 import { IndicatorCache } from '../logic/indicator-calculations';
+import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
 
 const EMPTY_INDICATORS: IndicatorConfig[] = [];
 type BatchResult = { id: string; values: unknown };
@@ -181,6 +182,8 @@ export function useChartIndicators(
                 const runBatch = async (configs: IndicatorConfig[], inputCandles: Candle[]) => {
                     if (configs.length === 0) return;
                     try {
+                        bumpChartPerfCounter('indicatorWorkerBatches');
+                        bumpChartPerfCounter('indicatorConfigsCalculated', configs.length);
                         const results = await chartWorkerClient.calculateBatch(configs, inputCandles);
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
                         if (!Array.isArray(results)) return;
