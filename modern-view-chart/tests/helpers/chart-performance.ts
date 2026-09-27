@@ -8,7 +8,24 @@ export type ChartPerfSnapshot = {
     heapUsed?: number;
 };
 
+export type BrowserErrorSnapshot = {
+    pageErrors: string[];
+    consoleErrors: string[];
+};
+
+const browserErrors = new WeakMap<Page, BrowserErrorSnapshot>();
+
 export async function installChartPerfProbe(page: Page) {
+    const errors: BrowserErrorSnapshot = { pageErrors: [], consoleErrors: [] };
+    browserErrors.set(page, errors);
+
+    page.on('pageerror', (error) => {
+        errors.pageErrors.push(error.message);
+    });
+    page.on('console', (message) => {
+        if (message.type() === 'error') errors.consoleErrors.push(message.text());
+    });
+
     await page.addInitScript(() => {
         const state = {
             longTasks: [] as number[],
@@ -40,6 +57,13 @@ export async function installChartPerfProbe(page: Page) {
         };
         requestAnimationFrame(sampleFrame);
     });
+}
+
+export function readBrowserErrors(page: Page): BrowserErrorSnapshot {
+    const errors = browserErrors.get(page);
+    return errors
+        ? { pageErrors: [...errors.pageErrors], consoleErrors: [...errors.consoleErrors] }
+        : { pageErrors: [], consoleErrors: [] };
 }
 
 export async function readChartPerfSnapshot(page: Page): Promise<ChartPerfSnapshot> {
