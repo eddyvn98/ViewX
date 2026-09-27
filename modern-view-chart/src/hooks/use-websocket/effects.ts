@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import { wsRuntime } from './runtime';
+import { reconnectSocketNow } from './connection';
 import { clearForegroundResyncTimer, clearQueuedSymbolInterest, queueForegroundResync, queueSymbolsInterestSync, requestChartBackfill, sendSymbolsInterestNow, syncForegroundCharts } from './senders';
 import { APP_PING_INTERVAL_MS, APP_PONG_TIMEOUT_MS, RESUME_SOCKET_GRACE_MS, SOCKET_STALE_MS } from './constants';
 
@@ -10,7 +11,10 @@ function ensureLiveSocket(reason: string) {
     const isOpen = socket?.readyState === WebSocket.OPEN;
     const staleForMs = wsRuntime.lastMessageAt > 0 ? Date.now() - wsRuntime.lastMessageAt : Number.POSITIVE_INFINITY;
 
-    if (!isOpen) return;
+    if (!isOpen) {
+        reconnectSocketNow(`resume_missing_socket:${reason}`);
+        return;
+    }
     if (staleForMs < SOCKET_STALE_MS) return;
 
     try {
