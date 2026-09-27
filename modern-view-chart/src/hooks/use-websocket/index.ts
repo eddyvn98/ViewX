@@ -22,6 +22,7 @@ export function useWebSocket(): { sendMessage: (data: WsMessage) => void } {
     const isConnected = useMarketStore((state) => state.isConnected);
 
     useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') return;
         if (typeof window === 'undefined') return;
         if (wsRuntime.globalSocket) return;
 
