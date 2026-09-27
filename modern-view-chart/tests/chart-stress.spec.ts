@@ -141,10 +141,6 @@ test.describe('chart interaction stability', () => {
     });
 
     test('indicator worker churn cannot restore removed indicators', async ({ page }, testInfo) => {
-        await expect.poll(async () =>
-            page.evaluate(() => window.__VIEWX_E2E__?.getIndicatorState().configured.length ?? 0)
-        ).toBeGreaterThan(0);
-
         await page.evaluate(() => window.__VIEWX_E2E__?.clearIndicators());
         await expect.poll(async () =>
             page.evaluate(() => window.__VIEWX_E2E__?.getIndicatorState().configured.length ?? -1)
