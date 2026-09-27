@@ -5,6 +5,7 @@ on:
     paths:
       - 'modern-view-chart/**'
       - '.github/workflows/chart-performance.yml'
+      - '.github/workflows/chart-live-soak.yml'
   push:
     branches:
       - main
