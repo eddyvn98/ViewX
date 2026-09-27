@@ -59,8 +59,14 @@ export function useChartDrawings(
     // drop very fast consecutive clicks.
     const creationClickRef = useRef(handleCreationClick);
     const editorClickRef = useRef(handleEditorClick);
+    const dragStartRef = useRef(handleDragStart);
+    const dragMoveRef = useRef(handleDragMove);
+    const dragEndRef = useRef(handleDragEnd);
     creationClickRef.current = handleCreationClick;
     editorClickRef.current = handleEditorClick;
+    dragStartRef.current = handleDragStart;
+    dragMoveRef.current = handleDragMove;
+    dragEndRef.current = handleDragEnd;
     const suppressEditorClickRef = useRef(false);
 
     const handleClick = useCallback((param: MouseEventParams) => {
@@ -108,7 +114,7 @@ export function useChartDrawings(
                 creationClickRef.current(param);
                 return;
             }
-            handleDragStart(param);
+            dragStartRef.current(param);
         };
 
         const handlePointerMove = (e: PointerEvent) => {
@@ -123,11 +129,11 @@ export function useChartDrawings(
                 sourceEvent: e
             } as unknown) as MouseEventParams;
 
-            handleDragMove(param);
+            dragMoveRef.current(param);
         };
 
         const handlePointerUp = () => {
-            handleDragEnd();
+            dragEndRef.current();
         };
 
         // Capture phase is intentional: Lightweight Charts / attached primitives
@@ -144,5 +150,8 @@ export function useChartDrawings(
             window.removeEventListener('pointerup', handlePointerUp);
             window.removeEventListener('pointercancel', handlePointerUp);
         };
-    }, [chart, containerRef, handleDragStart, handleDragMove, handleDragEnd]);
+    // Keep native pointer listeners mounted across drawing-state transitions.
+    // Handler refs above are refreshed every render, so rapid tool changes cannot
+    // create an unsubscribe/re-subscribe gap that drops the next pointerdown.
+    }, [chart, containerRef]);
 }
