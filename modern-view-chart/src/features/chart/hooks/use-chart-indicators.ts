@@ -71,6 +71,10 @@ export function useChartIndicators(
     const getCandles = useCallback(() => (key ? (useMarketStore.getState().candleData[key] || []) : []), [key]);
 
     useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') {
+            defaultsAppliedRef.current = true;
+            return;
+        }
         if (!symbol || defaultsAppliedRef.current || indicators.length > 0) return;
         addIndicators(chartId, DEFAULT_CHART_INDICATORS);
         defaultsAppliedRef.current = true;
