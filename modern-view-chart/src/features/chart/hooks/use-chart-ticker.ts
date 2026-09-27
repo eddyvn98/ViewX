@@ -317,19 +317,39 @@ export function useChartTicker({
             syncToStore(base);
         };
 
+        let tickRafId: number | null = null;
+        let pendingTick: { price: number; serverTime?: number } | null = null;
+
         const unsub = useMarketStore.subscribe(
             (state) => state.tickers[tickerKey] || state.tickers[normSymbol],
             (ticker) => {
                 if (!ticker) return;
+
+                pendingTick = {
+                    price: Number(ticker.price),
+                    serverTime: ticker.serverTime,
+                };
+
+                // Coalesce bursty ticker updates into one visual update per frame.
+                // The latest tick wins, which keeps latency low without queueing RAF callbacks.
+                if (tickRafId !== null) return;
                 const scheduledContextKey = effectContextKey;
-                requestAnimationFrame(() => {
+                tickRafId = requestAnimationFrame(() => {
+                    tickRafId = null;
+                    const nextTick = pendingTick;
+                    pendingTick = null;
+                    if (!nextTick) return;
                     if (activeContextKeyRef.current !== scheduledContextKey) return;
-                    handleTick(Number(ticker.price), ticker.serverTime);
+                    handleTick(nextTick.price, nextTick.serverTime);
                 });
             }
         );
 
-        return () => unsub();
+        return () => {
+            unsub();
+            pendingTick = null;
+            if (tickRafId !== null) cancelAnimationFrame(tickRafId);
+        };
     }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
