@@ -184,13 +184,15 @@ export function useDrawingCreation(
         if (!point) return;
         addDrawingPoint({ time: toSec(point.time), price: point.price });
 
-        // Check if finished
+        // Read the synchronous Zustand state after the point was added.
+        // A second click can arrive before React re-renders this hook, so relying
+        // on the captured tempPoints array can miss the completion threshold.
         const pointsNeeded = (currentTool === 'horizontal-line' || currentTool === 'vertical-line' || currentTool === 'crosshair') ? 1 : 2;
-        // tempPoints is BEFORE this click, so +1
-        if (tempPoints.length + 1 >= pointsNeeded) {
+        const currentPointCount = useMarketStore.getState().tempPoints.length;
+        if (currentPointCount >= pointsNeeded) {
             finishDrawing(chartId, context);
         }
-    }, [currentTool, series, chart, snapToCandle, candles, addDrawingPoint, tempPoints, finishDrawing, chartId, context]);
+    }, [currentTool, series, chart, snapToCandle, candles, addDrawingPoint, finishDrawing, chartId, context]);
 
     return { handleCreationClick };
 }
