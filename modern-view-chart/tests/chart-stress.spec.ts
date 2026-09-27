@@ -183,6 +183,8 @@ test.describe('chart interaction stability', () => {
         }
         await page.mouse.up();
 
+        const beforeBurst = await page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle());
+        expect(beforeBurst).toBeTruthy();
         await page.evaluate(() => window.__VIEWX_E2E__?.resetPerfCounters());
         await page.evaluate(() => window.__VIEWX_E2E__?.burstTicks(500));
         await page.evaluate(() => new Promise<void>((resolve) =>
@@ -199,6 +201,20 @@ test.describe('chart interaction stability', () => {
         expect(counters?.tickerFrames).toBeLessThanOrEqual(2);
         expect(counters?.realtimeSeriesUpdates).toBeLessThanOrEqual(2);
         expect(counters?.historySetDataBatches).toBe(0);
+
+        const afterBurst = await page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle());
+        expect(afterBurst).toBeTruthy();
+        if (beforeBurst && afterBurst) {
+            const start = Number(beforeBurst.close);
+            const prices = Array.from({ length: 500 }, (_, index) =>
+                start + Math.sin(index / 5) * (start * 0.0005)
+            );
+            const expectedHigh = Math.max(Number(beforeBurst.high), ...prices);
+            const expectedLow = Math.min(Number(beforeBurst.low), ...prices);
+            expect(Number(afterBurst.high)).toBeCloseTo(expectedHigh, 6);
+            expect(Number(afterBurst.low)).toBeCloseTo(expectedLow, 6);
+            expect(Number(afterBurst.close)).toBeCloseTo(prices[prices.length - 1], 6);
+        }
 
         await testInfo.attach('chart-perf-counters.json', {
             body: Buffer.from(JSON.stringify(counters, null, 2)),
@@ -295,7 +311,13 @@ test.describe('chart interaction stability', () => {
                 interval: round % 2 === 0 ? '5' : '15',
             });
 
-            await dispatchDrawingPointer(page, 0.32, 0.36);
+            await page.evaluate(() => window.__VIEWX_E2E__?.addDrawingFixture());
+            await expect.poll(async () =>
+                page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().count ?? -1)
+            ).toBe(1);
+            await page.evaluate(() => new Promise<void>((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+            ));
             await page.evaluate(() => window.__VIEWX_E2E__?.clearDrawings());
             await page.evaluate(() => window.__VIEWX_E2E__?.clearIndicators());
         }
@@ -304,7 +326,7 @@ test.describe('chart interaction stability', () => {
             window.__VIEWX_E2E__?.clearIndicators();
             window.__VIEWX_E2E__?.clearDrawings();
             window.__VIEWX_E2E__?.setChartSymbol('XAUUSDm', 'MT5');
-            window.__VIEWX_E2E__?.setChartTimeframe('15');
+            window.__VIEWX_E2E__?.setChartTimeframe('1');
         });
         await page.waitForTimeout(500);
 
@@ -320,7 +342,7 @@ test.describe('chart interaction stability', () => {
             contentType: 'application/json',
         });
 
-        expect(finalState.chart).toMatchObject({ symbol: 'XAUUSDm', interval: '15', source: 'MT5' });
+        expect(finalState.chart).toMatchObject({ symbol: 'XAUUSDm', interval: '1', source: 'MT5' });
         expect(finalState.indicators?.configured ?? []).toEqual([]);
         expect(finalState.drawings).toMatchObject({ count: 0, isDrawing: false, tempPoints: 0 });
         expect(after.canvasCount).toBeLessThanOrEqual(before.canvasCount + 4);
