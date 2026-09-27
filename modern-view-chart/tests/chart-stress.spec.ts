@@ -229,17 +229,18 @@ test.describe('chart interaction stability', () => {
 
         for (let round = 0; round < 12; round += 1) {
             await page.evaluate(
-                ({ symbol, interval, indicator }) => {
+                ({ symbol, interval, indicator, clearIndicators }) => {
                     window.__VIEWX_E2E__?.setChartSymbol(symbol, 'MT5');
                     window.__VIEWX_E2E__?.setChartTimeframe(interval);
                     window.__VIEWX_E2E__?.addIndicator(indicator);
-                    if (round % 3 === 2) window.__VIEWX_E2E__?.clearIndicators();
+                    if (clearIndicators) window.__VIEWX_E2E__?.clearIndicators();
                     window.__VIEWX_E2E__?.burstTicks(60);
                 },
                 {
                     symbol: symbols[round % symbols.length],
                     interval: intervals[round % intervals.length],
                     indicator: indicators[round % indicators.length],
+                    clearIndicators: round % 3 === 2,
                 }
             );
 
