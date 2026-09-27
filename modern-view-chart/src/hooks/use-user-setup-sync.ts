@@ -64,7 +64,13 @@ export function useUserSetupSync() {
         lastLocalMutationAtRef,
     }), [tabSyncSourceId]);
 
-    useEffect(() => setupAuthSyncEffect({ setAuthToken, setAuthResolved }), []);
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_E2E === '1') {
+            setAuthResolved(true);
+            return;
+        }
+        return setupAuthSyncEffect({ setAuthToken, setAuthResolved });
+    }, []);
 
     useEffect(() => {
         if (process.env.NEXT_PUBLIC_E2E === '1') return;
