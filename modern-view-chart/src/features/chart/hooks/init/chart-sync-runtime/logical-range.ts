@@ -11,6 +11,15 @@ type LogicalRangeSyncDeps = {
     getPointerInteractionSource: () => LogicalRangeSource | null;
 };
 
+export const shouldAcceptLogicalRangeSource = (
+    source: LogicalRangeSource,
+    isPointerInteracting: boolean,
+    pointerInteractionSource: LogicalRangeSource | null,
+): boolean => {
+    if (source === 'price') return true;
+    return isPointerInteracting && pointerInteractionSource === source;
+};
+
 export type LogicalRangeSync = {
     queueLogicalRangeSync: (range: unknown, source: LogicalRangeSource) => void;
     flushLogicalRangeSync: () => void;
@@ -60,7 +69,12 @@ export function createLogicalRangeSync({
         if (!nextRange || syncing) return;
         const isPointerInteracting = getIsPointerInteracting();
         const pointerInteractionSource = getPointerInteractionSource();
-        if (isPointerInteracting && pointerInteractionSource && source !== pointerInteractionSource) return;
+
+        // The price chart is the canonical viewport. Subchart/footer may only
+        // drive the range while the user is actively manipulating that exact pane.
+        // This prevents resize/setData events from a secondary chart from pushing
+        // a transient logical range back into the price chart.
+        if (!shouldAcceptLogicalRangeSource(source, isPointerInteracting, pointerInteractionSource)) return;
         if (
             logicalRangesEqual(nextRange, pendingLogicalRange) ||
             logicalRangesEqual(nextRange, lastAppliedLogicalRange)

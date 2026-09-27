@@ -50,6 +50,11 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
                 return;
             }
             const state = useMarketStore.getState();
+            if (!state.isConnected) {
+                containerRef.current.style.display = 'none';
+                if (countdownRef.current) countdownRef.current.textContent = '--:--';
+                return;
+            }
             const symbolInfo = state.symbolInfo[normSymbol];
             const currentPrice = realTimeRef?.current?.close ?? state.tickers[normSymbol]?.price;
             const candles = state.candleData[key] || [];
@@ -101,6 +106,13 @@ export function CandleCountdown({ chart, series, interval, realTimeRef }: Candle
                 : Number(lastCandle.time);
 
             const nextCandleTime = lastCandleTime + timeframeSeconds;
+            const feedAgeSeconds = Math.max(0, now - lastCandleTime);
+            const staleThresholdSeconds = Math.max(timeframeSeconds * 2, 120);
+            if (!Number.isFinite(lastCandleTime) || lastCandleTime <= 0 || feedAgeSeconds > staleThresholdSeconds) {
+                containerRef.current.style.display = 'none';
+                if (countdownRef.current) countdownRef.current.textContent = '--:--';
+                return;
+            }
             let secondsLeft = nextCandleTime - now;
             if (secondsLeft < 0) secondsLeft = 0;
 

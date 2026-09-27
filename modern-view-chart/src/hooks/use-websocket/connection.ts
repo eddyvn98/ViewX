@@ -8,7 +8,10 @@ export interface ConnectionDeps extends MessageHandlerDeps {
     setBridgeOnline: (online: boolean) => void;
 }
 
-export async function connectSocket(deps: ConnectionDeps): Promise<void> {
+async function openSocket(deps: ConnectionDeps): Promise<void> {
+    const current = wsRuntime.globalSocket;
+    if (current && (current.readyState === WebSocket.OPEN || current.readyState === WebSocket.CONNECTING)) return;
+
     const mustRefreshTicket = wsRuntime.forceFreshTicketOnReconnect;
     const socketConfig = buildSocketConfig({ ignoreUrlCredential: mustRefreshTicket });
     if (mustRefreshTicket) {
@@ -45,11 +48,13 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
     };
 
     socket.onclose = (closeEvent) => {
+        // Ignore stale sockets. A superseded socket must never mark the live
+        // connection offline or schedule a competing reconnect.
+        if (wsRuntime.globalSocket !== socket) return;
+
         deps.setConnected(false);
         deps.setBridgeOnline(false);
-        if (wsRuntime.globalSocket === socket) {
-            wsRuntime.globalSocket = null;
-        }
+        wsRuntime.globalSocket = null;
         if (wsRuntime.resumeHealthCheckTimer) {
             clearTimeout(wsRuntime.resumeHealthCheckTimer);
             wsRuntime.resumeHealthCheckTimer = null;
@@ -74,12 +79,53 @@ export async function connectSocket(deps: ConnectionDeps): Promise<void> {
 
         wsRuntime.reconnectAttempts += 1;
         const delay = Math.min(3000 * Math.pow(2, wsRuntime.reconnectAttempts - 1), 30000);
-        setTimeout(() => {
-            void connectSocket(deps);
+        if (wsRuntime.reconnectTimer) clearTimeout(wsRuntime.reconnectTimer);
+        wsRuntime.reconnectTimer = setTimeout(() => {
+            wsRuntime.reconnectTimer = null;
+            void connectSocket(wsRuntime.connectionDeps ?? deps);
         }, delay);
     };
 
     socket.onerror = () => {
         socket.close();
     };
+}
+
+
+export function connectSocket(deps: ConnectionDeps): Promise<void> {
+    wsRuntime.connectionDeps = deps;
+
+    const current = wsRuntime.globalSocket;
+    if (current && (current.readyState === WebSocket.OPEN || current.readyState === WebSocket.CONNECTING)) {
+        return Promise.resolve();
+    }
+    if (wsRuntime.connectPromise) return wsRuntime.connectPromise;
+
+    const pending = openSocket(deps).finally(() => {
+        if (wsRuntime.connectPromise === pending) wsRuntime.connectPromise = null;
+    });
+    wsRuntime.connectPromise = pending;
+    return pending;
+}
+
+export function reconnectSocketNow(reason = 'manual_reconnect'): void {
+    const deps = wsRuntime.connectionDeps;
+    if (!deps) return;
+
+    if (wsRuntime.reconnectTimer) {
+        clearTimeout(wsRuntime.reconnectTimer);
+        wsRuntime.reconnectTimer = null;
+    }
+
+    const socket = wsRuntime.globalSocket;
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        try {
+            socket.close(4006, reason);
+        } catch {
+            // Fall through and reconnect below.
+        }
+        return;
+    }
+
+    void connectSocket(deps);
 }

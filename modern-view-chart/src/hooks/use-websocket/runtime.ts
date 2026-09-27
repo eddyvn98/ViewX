@@ -5,6 +5,9 @@ export type WsTicketPromise = Promise<string> | null;
 export const wsRuntime = {
     socketUrl: WS_URL_FROM_ENV || '',
     globalSocket: null as WebSocket | null,
+    connectPromise: null as Promise<void> | null,
+    reconnectTimer: null as ReturnType<typeof setTimeout> | null,
+    connectionDeps: null as import('./connection').ConnectionDeps | null,
     historyFetched: false,
     reconnectAttempts: 0,
     lastMessageAt: 0,

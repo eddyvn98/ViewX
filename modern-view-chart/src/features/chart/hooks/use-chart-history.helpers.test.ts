@@ -16,8 +16,13 @@ describe('chart history interval helpers', () => {
     });
 
     it('can find candle data stored under canonical IDs when a legacy interval is requested', () => {
-        assert.deepEqual(buildIntervalCandidates('D'), ['D', '1440']);
-        assert.deepEqual(buildIntervalCandidates('W'), ['W', '10080']);
+        const daily = buildIntervalCandidates('D');
+        const weekly = buildIntervalCandidates('W');
+
+        assert.deepEqual(daily.slice(0, 2), ['D', '1440']);
+        assert.deepEqual(weekly.slice(0, 2), ['W', '10080']);
+        for (const alias of ['1440m', '1D', '1d', 'd1']) assert.ok(daily.includes(alias));
+        for (const alias of ['10080m', '1W', '1w', 'w1']) assert.ok(weekly.includes(alias));
 
         const candles = [{ time: 1700000000, open: 1, high: 2, low: 1, close: 2 }];
         const resolved = resolveCandles(
