@@ -25,13 +25,22 @@ async function attachDiagnostics(page: Page, testInfo: TestInfo) {
 }
 
 async function chartPoint(page: Page, xRatio: number, yRatio: number) {
-    const chart = page.getByTestId('chart-price-e2e-chart');
-    const box = await chart.boundingBox();
+    const plotCanvas = page.getByTestId('chart-price-e2e-chart').locator('canvas').first();
+    const box = await plotCanvas.boundingBox();
+    const viewport = page.viewportSize();
     expect(box).not.toBeNull();
-    if (!box) throw new Error('Chart interaction box is unavailable');
+    expect(viewport).not.toBeNull();
+    if (!box || !viewport) throw new Error('Visible chart canvas is unavailable');
+
+    const left = Math.max(0, box.x) + 8;
+    const right = Math.min(viewport.width, box.x + box.width) - 8;
+    const top = Math.max(0, box.y) + 8;
+    const bottom = Math.min(viewport.height, box.y + box.height) - 8;
+    if (right <= left || bottom <= top) throw new Error('Chart canvas is outside the viewport');
+
     return {
-        x: box.x + box.width * xRatio,
-        y: box.y + box.height * yRatio,
+        x: left + (right - left) * xRatio,
+        y: top + (bottom - top) * yRatio,
     };
 }
 
@@ -43,13 +52,21 @@ async function drawTwoPointTool(page: Page, tool: 'trend-line' | 'rectangle' | '
     await page.mouse.move(first.x, first.y);
     await page.waitForTimeout(24);
     await page.mouse.click(first.x, first.y);
+    await expect.poll(async () =>
+        page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().tempPoints ?? -1)
+    ).toBe(1);
 
     await page.mouse.move(second.x, second.y);
     await page.waitForTimeout(24);
     await page.mouse.click(second.x, second.y);
+    await expect.poll(async () =>
+        page.evaluate(() => window.__VIEWX_E2E__?.getDrawingState().isDrawing ?? true)
+    ).toBe(false);
 }
 
 test.describe('chart interaction stability', () => {
+    test.use({ viewport: { width: 1440, height: 900 } });
+
     test.beforeEach(async ({ page }) => {
         await installChartPerfProbe(page);
         await page.goto('/en/chart', { waitUntil: 'domcontentloaded' });
