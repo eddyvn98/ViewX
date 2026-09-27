@@ -37,32 +37,15 @@ export function useChartScaleReset(
 
             const startIndex = Math.max(0, total - count);
             const endIndex = total - 1;
-            const slice = candles.slice(startIndex, endIndex + 1);
-
-            let minLow = Number.POSITIVE_INFINITY;
-            let maxHigh = Number.NEGATIVE_INFINITY;
-            for (const candle of slice) {
-                const low = Number(candle.low);
-                const high = Number(candle.high);
-                if (Number.isFinite(low) && low < minLow) minLow = low;
-                if (Number.isFinite(high) && high > maxHigh) maxHigh = high;
-            }
-
-            chart.timeScale().setVisibleLogicalRange({
+            const nextRange = {
                 from: Math.max(-0.5, startIndex - 1),
                 to: endIndex + 2,
-            });
+            };
 
-            const priceScale = chart.priceScale('right') as { setVisibleRange?: (range: { from: number; to: number }) => void };
-            if (Number.isFinite(minLow) && Number.isFinite(maxHigh) && maxHigh > minLow) {
-                const padding = (maxHigh - minLow) * 0.08;
-                priceScale.setVisibleRange?.({
-                    from: minLow - padding,
-                    to: maxHigh + padding,
-                });
-            } else {
-                chart.priceScale('right').applyOptions({ autoScale: true });
-            }
+            chart.timeScale().setVisibleLogicalRange(nextRange);
+            subchartChartRef.current?.timeScale().setVisibleLogicalRange(nextRange);
+            timescaleChartRef.current?.timeScale().setVisibleLogicalRange(nextRange);
+            chart.priceScale('right').applyOptions({ autoScale: true });
             if (isAutoScrollEnabledRef) isAutoScrollEnabledRef.current = true;
         };
 
@@ -113,7 +96,40 @@ export function useChartScaleReset(
         const handleForegroundResync = () => {
             const chart = priceChartRef.current;
             if (!chart || !isAutoScrollEnabledRef?.current) return;
-            chart.timeScale().scrollToRealTime();
+
+            const recover = () => {
+                const priceChart = priceChartRef.current;
+                const subChart = subchartChartRef.current;
+                const footerChart = timescaleChartRef.current;
+                if (!priceChart) return;
+
+                if (priceContainer.clientWidth > 0 && priceContainer.clientHeight > 0) {
+                    priceChart.resize(priceContainer.clientWidth, priceContainer.clientHeight, true);
+                }
+                if (subChart && subchartContainer.clientWidth > 0 && subchartContainer.clientHeight > 0) {
+                    subChart.resize(subchartContainer.clientWidth, subchartContainer.clientHeight, true);
+                }
+                if (footerChart && timescaleContainer.clientWidth > 0 && timescaleContainer.clientHeight > 0) {
+                    footerChart.resize(timescaleContainer.clientWidth, timescaleContainer.clientHeight, true);
+                }
+
+                const total = candles.length;
+                if (total > 0) {
+                    const nextRange = {
+                        from: Math.max(0, total - (window.innerWidth < 768 ? 40 : 80)),
+                        to: total + 5,
+                    };
+                    priceChart.timeScale().setVisibleLogicalRange(nextRange);
+                    subChart?.timeScale().setVisibleLogicalRange(nextRange);
+                    footerChart?.timeScale().setVisibleLogicalRange(nextRange);
+                } else {
+                    priceChart.timeScale().scrollToRealTime();
+                }
+                priceChart.priceScale('right').applyOptions({ autoScale: true });
+            };
+
+            requestAnimationFrame(recover);
+            window.setTimeout(recover, 120);
         };
         window.addEventListener('chart-foreground-resync', handleForegroundResync as EventListener);
 
