@@ -89,6 +89,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         priceChartRef.current,
         seriesRef.current,
         isReady,
+        mainContainerRef,
         priceContainerRef,
         symbol,
         interval,
