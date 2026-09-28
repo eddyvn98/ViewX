@@ -106,6 +106,15 @@ function refreshVangTodayQuotes() {
     return inflight;
 }
 
+export function getCachedVangTodayQuotes({ refresh = true } = {}) {
+    const now = Date.now();
+    const stale = latestCache.quotes.length === 0 || now - latestCache.updatedAt >= CACHE_TTL_MS;
+    if (refresh && stale) {
+        void refreshVangTodayQuotes();
+    }
+    return latestCache.quotes;
+}
+
 export async function getVangTodayLatestQuotes({ force = false, nonBlocking = false } = {}) {
     const now = Date.now();
     if (!force && latestCache.quotes.length > 0 && now - latestCache.updatedAt < CACHE_TTL_MS) {

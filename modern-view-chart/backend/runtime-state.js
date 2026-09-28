@@ -7,6 +7,9 @@ export const runtimeState = {
     broadcastLoopMsP95: 0,
     broadcastStageP95Ms: {
         price: 0,
+        price_sources: 0,
+        price_scope: 0,
+        price_send: 0,
         candle: 0,
         candle_fetch: 0,
         candle_indicator: 0,

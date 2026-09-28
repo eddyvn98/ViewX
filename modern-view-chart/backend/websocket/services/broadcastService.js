@@ -6,8 +6,8 @@ import { candleBuffers } from "../handlers/subscribeHandler.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol } from "../subscriptionIndex.js";
 import { getScopedMt5Prices, isRecipientForMt5Owner } from "../mt5Scope.js";
-import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
-import { getVangTodayLatestQuotes } from "../../services/vangTodayService.js";
+import { getCachedVietnamGoldQuotes } from "../../services/vnGoldService.js";
+import { getCachedVangTodayQuotes } from "../../services/vangTodayService.js";
 import { logWarn } from "../../logger.js";
 import { recordBroadcastStageDuration } from "../../runtime-state.js";
 
@@ -122,6 +122,8 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
 
 export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }) {
     try {
+        const sourcesStartAt = performance.now();
+
         // Do not walk the full Binance !ticker@arr cache every second. Most viewers only
         // subscribe to a handful of symbols (and many sessions are MT5-only).
         const requestedSymbols = new Set(subscriptionIndex.symbolSubscribers.keys());
@@ -137,10 +139,10 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             binancePrices = await fetchPrices(requestedBinanceSymbols, { includeGold: false });
         }
 
-        const [vnGoldQuotes, vangTodayQuotes] = await Promise.all([
-            getVietnamGoldQuotes({ nonBlocking: true }),
-            getVangTodayLatestQuotes({ nonBlocking: true }),
-        ]);
+        // Realtime price broadcasts must never wait for external gold refresh work.
+        // Read the current cache synchronously and kick a stale refresh in the background.
+        const vnGoldQuotes = getCachedVietnamGoldQuotes();
+        const vangTodayQuotes = getCachedVangTodayQuotes();
         const mappedVangTodayQuotes = vangTodayQuotes.map((item) => ({
             symbol: item.symbol,
             price: Number(item.buy) || Number(item.sell) || 0,
@@ -159,15 +161,19 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             const symbol = normalizeSymbol(item?.symbol);
             if (symbol) binanceBySymbol.set(symbol, { ...item, symbol });
         }
+        recordBroadcastStageDuration("price_sources", performance.now() - sourcesStartAt);
 
         const payloadCache = new Map();
         const latestByScopeCache = new Map();
+        let scopeBuildMs = 0;
+        let sendMs = 0;
 
         const getLatestByScope = (userId) => {
             const scopeKey = userId ? `user:${userId}` : "__global__";
             const cached = latestByScopeCache.get(scopeKey);
             if (cached) return cached;
 
+            const scopeStartAt = performance.now();
             const latestBySymbol = new Map(binanceBySymbol);
             for (const item of getScopedMt5Prices(mt5Prices, userId || null)) {
                 const symbol = normalizeSymbol(item?.symbol);
@@ -175,6 +181,7 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
                     latestBySymbol.set(symbol, { ...item, symbol });
                 }
             }
+            scopeBuildMs += performance.now() - scopeStartAt;
             latestByScopeCache.set(scopeKey, latestBySymbol);
             return latestBySymbol;
         };
@@ -184,17 +191,19 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             if (!meta || meta.isBridgeAuthenticated) continue;
 
             const latestBySymbol = getLatestByScope(meta.userId || null);
+            const sendStartAt = performance.now();
             const orderedSymbols = Array.isArray(meta.symbols) ? meta.symbols : [];
             const data = orderedSymbols.map((s) => latestBySymbol.get(normalizeSymbol(s))).filter(Boolean);
-            if (data.length === 0) continue;
-
-            const cacheKey = `explicit:${meta.userId || "__global__"}:${orderedSymbols.join("|")}`;
-            let payload = payloadCache.get(cacheKey);
-            if (!payload) {
-                payload = JSON.stringify({ topic: "priceUpdate", data });
-                payloadCache.set(cacheKey, payload);
+            if (data.length > 0) {
+                const cacheKey = `explicit:${meta.userId || "__global__"}:${orderedSymbols.join("|")}`;
+                let payload = payloadCache.get(cacheKey);
+                if (!payload) {
+                    payload = JSON.stringify({ topic: "priceUpdate", data });
+                    payloadCache.set(cacheKey, payload);
+                }
+                safeSend(ws, payload, { nonCritical: true });
             }
-            safeSend(ws, payload, { nonCritical: true });
+            sendMs += performance.now() - sendStartAt;
         }
 
         const coreSymbols = subscriptionIndex.coreSymbols || [];
@@ -204,17 +213,22 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             if (!meta || meta.isBridgeAuthenticated) continue;
 
             const latestBySymbol = getLatestByScope(meta.userId || null);
+            const sendStartAt = performance.now();
             const data = coreSymbols.map((s) => latestBySymbol.get(s)).filter(Boolean);
-            if (data.length === 0) continue;
-
-            const cacheKey = `core:${meta.userId || "__global__"}:${coreSymbols.join("|")}`;
-            let payload = payloadCache.get(cacheKey);
-            if (!payload) {
-                payload = JSON.stringify({ topic: "priceUpdate", data });
-                payloadCache.set(cacheKey, payload);
+            if (data.length > 0) {
+                const cacheKey = `core:${meta.userId || "__global__"}:${coreSymbols.join("|")}`;
+                let payload = payloadCache.get(cacheKey);
+                if (!payload) {
+                    payload = JSON.stringify({ topic: "priceUpdate", data });
+                    payloadCache.set(cacheKey, payload);
+                }
+                safeSend(ws, payload, { nonCritical: true });
             }
-            safeSend(ws, payload, { nonCritical: true });
+            sendMs += performance.now() - sendStartAt;
         }
+
+        recordBroadcastStageDuration("price_scope", scopeBuildMs);
+        recordBroadcastStageDuration("price_send", sendMs);
     } catch (err) {
         warnBroadcast("ws.price_broadcast.failed", { error: err?.message || err });
     }
