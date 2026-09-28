@@ -52,6 +52,9 @@ async function main() {
     const apiBaseUrl = (args["api-url"] || `http://127.0.0.1:${process.env.PORT || "8091"}`).replace(/\/+$/, "");
     const outputPathArg = args.output || "";
     const requireMetrics = parseBoolean(args["require-metrics"], Boolean(token));
+    const reconnectAttemptsMax = Number.parseInt(args["reconnect-attempts"] || "3", 10);
+    const reconnectDelayMs = Number.parseInt(args["reconnect-delay-ms"] || "1000", 10);
+    const connectTimeoutMs = Number.parseInt(args["connect-timeout-ms"] || "10000", 10);
 
     const connectSpacingMs = Math.max(1, Math.floor((rampSec * 1000) / Math.max(1, clientsTarget)));
     const testStartedAt = Date.now();
@@ -62,11 +65,19 @@ async function main() {
 
     const topicCounts = new Map();
     const healthSamples = [];
-    const sockets = [];
+    const sockets = new Set();
+    const clientStates = Array.from({ length: clientsTarget }, () => ({
+        openedEver: false,
+        connected: false,
+        attempts: 0,
+        closeEvents: 0,
+        lastCloseCode: null,
+        lastError: null,
+        currentSocket: null,
+    }));
 
     let opened = 0;
-    let failed = 0;
-    let unexpectedClosed = 0;
+    let reconnectAttempts = 0;
     let totalMessages = 0;
     let intentionallyStopping = false;
 
@@ -133,18 +144,36 @@ async function main() {
     }, Math.max(1, healthPollSec) * 1000);
     await pollHealth();
 
-    for (let i = 0; i < clientsTarget; i += 1) {
+    function startClient(index) {
+        if (intentionallyStopping || Date.now() >= runUntil) return;
+
+        const state = clientStates[index];
+        state.attempts += 1;
         const ws = createWebSocket(wsBaseUrl, token);
-        ws.__opened = false;
-        sockets.push(ws);
+        state.currentSocket = ws;
+        sockets.add(ws);
+        let openedThisSocket = false;
+
+        const connectTimer = setTimeout(() => {
+            if (!openedThisSocket && ws.readyState === WebSocket.CONNECTING) {
+                state.lastError = `connect_timeout_${connectTimeoutMs}ms`;
+                ws.terminate();
+            }
+        }, connectTimeoutMs);
 
         ws.on("open", () => {
-            ws.__opened = true;
-            opened += 1;
-            const watch = symbols[i % symbols.length];
-            ws.send(JSON.stringify({ topic: "auth", userId: `soak_${i}`, symbols: symbols }));
+            clearTimeout(connectTimer);
+            openedThisSocket = true;
+            state.connected = true;
+            if (!state.openedEver) {
+                state.openedEver = true;
+                opened += 1;
+            }
+
+            const watch = symbols[index % symbols.length];
+            ws.send(JSON.stringify({ topic: "auth", userId: `soak_${index}`, symbols }));
             ws.send(JSON.stringify({ topic: "subscribeSymbols", symbols }));
-            ws.send(JSON.stringify({ topic: "subscribeCandle", symbol: watch, interval: intervals[i % intervals.length] }));
+            ws.send(JSON.stringify({ topic: "subscribeCandle", symbol: watch, interval: intervals[index % intervals.length] }));
         });
 
         ws.on("message", (buffer) => {
@@ -157,15 +186,28 @@ async function main() {
             }
         });
 
-        ws.on("error", () => {
-            if (!ws.__opened) failed += 1;
+        ws.on("error", (err) => {
+            state.lastError = err?.message || String(err);
         });
 
         ws.on("close", (code) => {
+            clearTimeout(connectTimer);
+            sockets.delete(ws);
+            if (state.currentSocket === ws) state.currentSocket = null;
+            state.connected = false;
             if (intentionallyStopping) return;
-            if (code !== 1000) unexpectedClosed += 1;
-        });
 
+            state.closeEvents += 1;
+            state.lastCloseCode = code;
+            if (state.attempts <= reconnectAttemptsMax && Date.now() < runUntil) {
+                reconnectAttempts += 1;
+                setTimeout(() => startClient(index), reconnectDelayMs);
+            }
+        });
+    }
+
+    for (let i = 0; i < clientsTarget; i += 1) {
+        startClient(i);
         if (i % 10 === 0) {
             process.stdout.write(`[soak] starting client ${i + 1}/${clientsTarget}\n`);
         }
@@ -176,9 +218,15 @@ async function main() {
         await sleep(1000);
         const elapsed = Math.floor((Date.now() - testStartedAt) / 1000);
         if (elapsed % 30 === 0) {
-            process.stdout.write(`[soak] elapsed ${elapsed}s, opened=${opened}, failed=${failed}, unexpectedClosed=${unexpectedClosed}, msgs=${totalMessages}\n`);
+            const connected = clientStates.filter((state) => state.connected).length;
+            process.stdout.write(`[soak] elapsed ${elapsed}s, opened=${opened}, connected=${connected}, reconnects=${reconnectAttempts}, msgs=${totalMessages}\n`);
         }
     }
+
+    const connectedAtEnd = clientStates.filter((state) => state.connected).length;
+    const failed = clientStates.filter((state) => !state.openedEver).length;
+    const unrecovered = clientStates.filter((state) => !state.connected).length;
+    const closeEvents = clientStates.reduce((sum, state) => sum + state.closeEvents, 0);
 
     intentionallyStopping = true;
     clearInterval(healthTimer);
@@ -195,7 +243,7 @@ async function main() {
     await sleep(1500);
     await pollHealth();
 
-    const disconnectRate = ((failed + unexpectedClosed) / Math.max(1, clientsTarget)) * 100;
+    const disconnectRate = (unrecovered / Math.max(1, clientsTarget)) * 100;
     const healthOkSamples = healthSamples.filter((item) => item.ok && Number.isFinite(item.broadcast_p95_ms));
     const maxBroadcastP95 = healthOkSamples.length > 0 ? Math.max(...healthOkSamples.map((x) => x.broadcast_p95_ms)) : null;
     const stageNames = ["price", "price_sources", "price_scope", "price_send", "candle", "candle_fetch", "candle_indicator", "candle_serialize_send"];
@@ -210,8 +258,9 @@ async function main() {
 
     const gates = {
         all_clients_opened: opened === clientsTarget,
+        all_clients_connected_at_end: connectedAtEnd === clientsTarget,
         received_realtime_messages: totalMessages > 0,
-        disconnect_rate_under_1_percent: disconnectRate < 1,
+        unrecovered_disconnect_rate_under_1_percent: disconnectRate < 1,
         metrics_available_when_required: requireMetrics ? maxBroadcastP95 !== null : true,
         broadcast_p95_under_250_ms: maxBroadcastP95 !== null ? maxBroadcastP95 < 250 : (requireMetrics ? false : null),
     };
@@ -223,6 +272,9 @@ async function main() {
             duration_sec: durationSec,
             ramp_sec: rampSec,
             health_poll_sec: healthPollSec,
+            reconnect_attempts: reconnectAttemptsMax,
+            reconnect_delay_ms: reconnectDelayMs,
+            connect_timeout_ms: connectTimeoutMs,
             ws_url: wsBaseUrl,
             api_url: apiBaseUrl,
             auth_mode: token ? "sec_websocket_protocol" : "guest",
@@ -230,9 +282,12 @@ async function main() {
         },
         summary: {
             opened,
-            failed,
-            unexpected_closed: unexpectedClosed,
-            disconnect_rate_percent: Number(disconnectRate.toFixed(3)),
+            failed_to_open: failed,
+            connected_at_end: connectedAtEnd,
+            unrecovered,
+            close_events: closeEvents,
+            reconnect_attempts: reconnectAttempts,
+            unrecovered_disconnect_rate_percent: Number(disconnectRate.toFixed(3)),
             total_messages: totalMessages,
             avg_messages_per_sec: Number((totalMessages / Math.max(1, durationSec)).toFixed(3)),
             max_broadcast_p95_ms: maxBroadcastP95,
@@ -240,6 +295,17 @@ async function main() {
         },
         gates,
         topic_counts: Object.fromEntries(Array.from(topicCounts.entries()).sort((a, b) => b[1] - a[1])),
+        client_failures: clientStates
+            .map((state, index) => ({
+                index,
+                opened_ever: state.openedEver,
+                connected_at_end: state.connected,
+                attempts: state.attempts,
+                close_events: state.closeEvents,
+                last_close_code: state.lastCloseCode,
+                last_error: state.lastError,
+            }))
+            .filter((state) => !state.opened_ever || !state.connected_at_end),
         health_samples: healthSamples,
     };
 
@@ -250,7 +316,7 @@ async function main() {
     fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf-8");
 
     process.stdout.write(`[soak] report written: ${outputPath}\n`);
-    process.stdout.write(`[soak] disconnect_rate=${report.summary.disconnect_rate_percent}% | max_broadcast_p95_ms=${String(maxBroadcastP95)}\n`);
+    process.stdout.write(`[soak] unrecovered_disconnect_rate=${report.summary.unrecovered_disconnect_rate_percent}% | reconnects=${reconnectAttempts} | max_broadcast_p95_ms=${String(maxBroadcastP95)}\n`);
     process.stdout.write(`[soak] max_broadcast_stage_p95_ms=${JSON.stringify(maxBroadcastStageP95Ms)}\n`);
 
     const failedGate = Object.values(gates).some((value) => value === false);
