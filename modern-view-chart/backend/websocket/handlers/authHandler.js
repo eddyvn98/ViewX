@@ -17,7 +17,7 @@ function normalizeOptional(value) {
 }
 
 function selectWebMt5Scope(clientData, bridgeRegistry, data) {
-    if (!clientData || clientData.isBridgeAuthenticated) return true;
+    if (!clientData || clientData.isBridgeAuthenticated) return "ok";
 
     const requestedSource = String(data?.mt5_source || data?.mt5Source || "").trim().toUpperCase();
     const accountLogin = normalizeOptional(data?.account_login || data?.accountLogin);
@@ -27,17 +27,17 @@ function selectWebMt5Scope(clientData, bridgeRegistry, data) {
         clientData.selectedMt5AccountLogin = null;
         clientData.selectedMt5TerminalId = null;
         clientData.selectedMt5Broker = null;
-        return true;
+        return "ok";
     }
 
     if (!accountLogin && !terminalId && requestedSource !== "MT5_PERSONAL") {
-        return true;
+        return "ok";
     }
 
     if (clientData.authType !== "user" || clientData.accountTier !== "pro") {
-        return false;
+        return "forbidden";
     }
-    if (!accountLogin) return false;
+    if (!accountLogin) return "forbidden";
 
     const route = bridgeRegistry?.resolve({
         userId: clientData.userId,
@@ -45,13 +45,16 @@ function selectWebMt5Scope(clientData, bridgeRegistry, data) {
         terminalId,
     });
     if (!route?.record || route.record.clientMode !== WS_CLIENT_MODES.PRO_EXTENSION) {
-        return false;
+        clientData.selectedMt5AccountLogin = null;
+        clientData.selectedMt5TerminalId = null;
+        clientData.selectedMt5Broker = null;
+        return "unavailable";
     }
 
     clientData.selectedMt5AccountLogin = route.record.accountLogin;
     clientData.selectedMt5TerminalId = route.record.terminalId;
     clientData.selectedMt5Broker = route.record.broker;
-    return true;
+    return "ok";
 }
 
 export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex, bridgeRegistry }, data) {
@@ -89,13 +92,21 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex, bridgeRe
             }
         }
 
-        if (!selectWebMt5Scope(clientData, bridgeRegistry, data)) {
+        const scopeSelection = selectWebMt5Scope(clientData, bridgeRegistry, data);
+        if (scopeSelection === "forbidden") {
             safeSend(ws, JSON.stringify({
                 topic: "error",
                 code: "forbidden",
                 detail: "mt5_account_scope_not_allowed",
             }));
             return;
+        }
+        if (scopeSelection === "unavailable") {
+            safeSend(ws, JSON.stringify({
+                topic: "error",
+                code: "service_unavailable",
+                detail: "mt5_account_scope_unavailable_fallback_shared",
+            }));
         }
 
         if (Array.isArray(data.symbols)) {
