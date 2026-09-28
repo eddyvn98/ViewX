@@ -45,7 +45,6 @@ export function useChartTicker({
     const sourceRef = useRef(source);
     const selectedMt5Scope = useMarketStore(state => state.selectedMt5Scope);
     const dataSource = resolveChartDataSource(source, selectedMt5Scope);
-    const dataSourceRef = useRef(dataSource);
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${dataSource}:${normSymbol}`;
@@ -62,7 +61,7 @@ export function useChartTicker({
             /^\d+$/.test(intervalLower) ? `${intervalLower}m` : intervalLower,
             intervalLower.endsWith('m') ? intervalLower.slice(0, -1) : intervalLower,
         ]));
-        const sourceVariants = Array.from(new Set([dataSource, dataSource.toUpperCase(), dataSource.toLowerCase()]));
+        const sourceVariants = Array.from(new Set([source, source.toUpperCase(), source.toLowerCase()]));
         for (const src of sourceVariants) {
             for (const itv of intervalCandidates) {
                 const key = `${src}:${normSymbol}:${itv}`;
@@ -71,7 +70,7 @@ export function useChartTicker({
             }
         }
         return [];
-    }, [dataSource, normSymbol, interval]);
+    }, [source, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
         const raw = String(intv || '').trim();
@@ -108,7 +107,6 @@ export function useChartTicker({
     useEffect(() => {
         intervalRef.current = interval;
         sourceRef.current = source;
-        dataSourceRef.current = dataSource;
     });
 
     // Reset local state when context changes
@@ -145,7 +143,7 @@ export function useChartTicker({
             if (!force && now - lastStoreSync < 250) return;
             lastStoreSync = now;
             // BUG #4 fix: use sourceRef.current to get the always-current source value
-            updateLastCandle(dataSourceRef.current, symbol!, intervalRef.current ?? interval!, {
+            updateLastCandle(sourceRef.current ?? source!, symbol!, intervalRef.current ?? interval!, {
                 time: toSec(candle.time),
                 open: candle.rawOpen ?? candle.open,
                 high: candle.rawHigh ?? candle.high,
