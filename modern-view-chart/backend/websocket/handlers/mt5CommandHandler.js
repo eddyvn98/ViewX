@@ -9,16 +9,23 @@ function normalizeOptional(value) {
 
 export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
     const senderMeta = clients.get(ws);
-    const targetOwnerUserId = senderMeta?.userId ? String(senderMeta.userId) : null;
-    const accountLogin = normalizeOptional(data?.account_login || data?.accountLogin);
-    const terminalId = normalizeOptional(data?.terminal_id || data?.terminalId);
-    const payload = JSON.stringify(data);
+    const explicitAccountLogin = normalizeOptional(data?.account_login || data?.accountLogin);
+    const explicitTerminalId = normalizeOptional(data?.terminal_id || data?.terminalId);
+    const accountLogin = explicitAccountLogin || normalizeOptional(senderMeta?.selectedMt5AccountLogin);
+    const terminalId = explicitTerminalId || normalizeOptional(senderMeta?.selectedMt5TerminalId);
+    const targetOwnerUserId = accountLogin && senderMeta?.userId ? String(senderMeta.userId) : null;
 
     const route = bridgeRegistry?.resolve({
         userId: targetOwnerUserId,
         accountLogin,
         terminalId,
     }) || { record: null, reason: "registry_unavailable", candidateCount: 0 };
+
+    const payload = JSON.stringify({
+        ...data,
+        ...(accountLogin ? { account_login: accountLogin } : {}),
+        ...(terminalId ? { terminal_id: terminalId } : {}),
+    });
 
     if (!route.record?.ws || route.record.ws.readyState !== route.record.ws.OPEN) {
         incrementBridgeRouteMiss();
