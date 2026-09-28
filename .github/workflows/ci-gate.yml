@@ -56,6 +56,10 @@ jobs:
         working-directory: modern-view-chart
         run: npm run test:unit
 
+      - name: Run backend runtime metrics tests
+        working-directory: modern-view-chart
+        run: npm run test:backend-runtime
+
       - name: Run build
         working-directory: modern-view-chart
         run: npm run build
