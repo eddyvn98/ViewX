@@ -33,12 +33,6 @@ function maskCredential(value) {
     return `***${suffix}`;
 }
 
-function withQueryToken(url, token) {
-    const parsed = new URL(url);
-    parsed.searchParams.set("access_token", token);
-    return parsed.toString();
-}
-
 function runWsCase({ name, url, headers, protocols, timeoutMs = 5000, onOpen }) {
     return new Promise((resolve) => {
         let settled = false;
