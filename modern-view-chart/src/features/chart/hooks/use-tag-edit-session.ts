@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { dispatchTagEditSaveAction, TagEditState } from '../logic/tag-command-dispatcher';
+import type { Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface StartTagEditEventDetail {
     ticket: string | number;
@@ -11,9 +12,10 @@ interface StartTagEditEventDetail {
 
 interface UseTagEditSessionInput {
     sendMessage?: (data: unknown) => void;
+    identity?: Mt5TradingIdentity;
 }
 
-export function useTagEditSession({ sendMessage }: UseTagEditSessionInput) {
+export function useTagEditSession({ sendMessage, identity }: UseTagEditSessionInput) {
     const [editingState, setEditingState] = useState<TagEditState | null>(null);
     const isDeletingRef = useRef(false);
     const editingStateRef = useRef<TagEditState | null>(editingState);
@@ -27,11 +29,11 @@ export function useTagEditSession({ sendMessage }: UseTagEditSessionInput) {
         if (sessionId && state?.id !== sessionId) return;
 
         if (save && state && !isDeletingRef.current) {
-            dispatchTagEditSaveAction(state, val, sendMessage);
+            dispatchTagEditSaveAction(state, val, sendMessage, identity);
         }
 
         setEditingState(null);
-    }, [sendMessage]);
+    }, [sendMessage, identity]);
 
     useEffect(() => {
         const handleStartEdit = (e: Event) => {
