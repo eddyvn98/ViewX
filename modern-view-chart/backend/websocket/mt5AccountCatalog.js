@@ -37,3 +37,19 @@ export function buildAvailableMt5Accounts(clientData, bridgeRegistry) {
 
     return accounts;
 }
+
+export function resolveClientMt5Bridge(clientData, bridgeRegistry) {
+    if (!bridgeRegistry) return { record: null, reason: "registry_unavailable", candidateCount: 0 };
+
+    const accountLogin = String(clientData?.selectedMt5AccountLogin || "").trim() || null;
+    const terminalId = String(clientData?.selectedMt5TerminalId || "").trim() || null;
+    if (accountLogin && clientData?.userId) {
+        return bridgeRegistry.resolve({
+            userId: String(clientData.userId),
+            accountLogin,
+            terminalId,
+        });
+    }
+
+    return bridgeRegistry.resolve({ userId: null });
+}
