@@ -3,6 +3,20 @@ import WebSocket from 'ws';
 let binancePrices = {};
 let ws = null;
 
+export function mergeBinancePrices(prices = []) {
+    for (const item of prices) {
+        const symbol = String(item?.symbol || "").trim().toUpperCase();
+        if (!symbol.endsWith("USDT")) continue;
+        binancePrices[symbol] = {
+            ...item,
+            symbol,
+            price: Number(item.price),
+            change: Number(item.change ?? 0),
+            source: item.source || "BINANCE",
+        };
+    }
+}
+
 export function startBinanceTickerStream() {
     if (ws) return;
 
