@@ -11,13 +11,15 @@ function encodeBase64Url(value) {
     return Buffer.from(value).toString("base64url");
 }
 
-export function createAccessTicket(secret, ttlSec = 300, type = "ws_auth") {
+export function createAccessTicket(secret, ttlSec = 300, type = "ws_auth", claims = {}) {
     const normalizedSecret = (secret || "").trim();
     if (!normalizedSecret) return "";
 
     const nowSec = Math.floor(Date.now() / 1000);
     const safeTtl = Math.max(30, Number.parseInt(String(ttlSec || "300"), 10) || 300);
+    const safeClaims = claims && typeof claims === "object" ? claims : {};
     const payload = {
+        ...safeClaims,
         typ: type,
         iat: nowSec,
         exp: nowSec + safeTtl,
@@ -28,28 +30,33 @@ export function createAccessTicket(secret, ttlSec = 300, type = "ws_auth") {
     return `${payloadPart}.${signature}`;
 }
 
-export function verifyAccessTicket(ticket, secret, nowMs = Date.now()) {
-    if (!ticket || !secret) return false;
+export function readAccessTicket(ticket, secret, nowMs = Date.now()) {
+    if (!ticket || !secret) return null;
     const parts = String(ticket).split(".");
-    if (parts.length !== 2) return false;
+    if (parts.length !== 2) return null;
 
     const [payloadPart, signaturePart] = parts;
-    if (!payloadPart || !signaturePart) return false;
+    if (!payloadPart || !signaturePart) return null;
 
     const expectedSignature = crypto.createHmac("sha256", secret).update(payloadPart).digest();
     const providedSignature = decodeBase64Url(signaturePart);
-    if (providedSignature.length !== expectedSignature.length) return false;
-    if (!crypto.timingSafeEqual(expectedSignature, providedSignature)) return false;
+    if (providedSignature.length !== expectedSignature.length) return null;
+    if (!crypto.timingSafeEqual(expectedSignature, providedSignature)) return null;
 
     try {
         const payloadRaw = decodeBase64Url(payloadPart).toString("utf-8");
         const payload = JSON.parse(payloadRaw);
-        if (payload?.typ !== "ws_auth") return false;
+        if (payload?.typ !== "ws_auth") return null;
 
         const exp = Number(payload?.exp);
-        if (!Number.isFinite(exp)) return false;
-        return nowMs < exp * 1000;
+        if (!Number.isFinite(exp)) return null;
+        if (nowMs >= exp * 1000) return null;
+        return payload;
     } catch {
-        return false;
+        return null;
     }
+}
+
+export function verifyAccessTicket(ticket, secret, nowMs = Date.now()) {
+    return Boolean(readAccessTicket(ticket, secret, nowMs));
 }
