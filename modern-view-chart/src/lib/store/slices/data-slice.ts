@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { Candle } from '../types';
 import { debugLog } from '@/lib/debug';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { scheduleCandleCacheWrite } from '@/features/chart/cache/candle-history-cache';
 
 export interface DataSlice {
     candleData: Record<string, Candle[]>;
@@ -79,6 +80,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
             const nextCandles = normalized.length > MAX_CANDLES
                 ? normalized.slice(normalized.length - MAX_CANDLES)
                 : normalized;
+            scheduleCandleCacheWrite(sourceUpper, normSymbol, interval, nextCandles);
             return {
                 candleData: { ...state.candleData, [key]: nextCandles },
                 candleHistoryRevision: {
@@ -106,6 +108,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
 
         const MAX_CANDLES = 5000;
         const nextCandles = merged.length > MAX_CANDLES ? merged.slice(merged.length - MAX_CANDLES) : merged;
+        scheduleCandleCacheWrite(sourceUpper, normSymbol, interval, nextCandles);
 
         return {
             candleData: { ...state.candleData, [key]: nextCandles },
@@ -128,6 +131,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         if (last && toSeconds(last.time) === toSeconds(normalizedCandle.time)) {
             const newCandles = [...currentCandles];
             newCandles[newCandles.length - 1] = normalizedCandle;
+            scheduleCandleCacheWrite(String(source || '').toUpperCase(), normSymbol, interval, newCandles);
             return { candleData: { ...state.candleData, [key]: newCandles } };
         }
 
@@ -135,6 +139,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const newCandles = currentCandles.length >= MAX_CANDLES
             ? [...currentCandles.slice(1), normalizedCandle]
             : [...currentCandles, normalizedCandle];
+        scheduleCandleCacheWrite(String(source || '').toUpperCase(), normSymbol, interval, newCandles);
 
         return { candleData: { ...state.candleData, [key]: newCandles } };
     }),
