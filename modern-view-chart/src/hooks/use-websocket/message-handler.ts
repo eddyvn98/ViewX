@@ -1,5 +1,4 @@
 import { useMarketStore } from '@/lib/store';
-import { debugLog } from '@/lib/debug';
 import { soundService } from '@/features/strategy/logic/SoundService';
 import { voiceNotifier } from '@/features/notifications/voice';
 import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_BUFFER_MS } from './constants';
@@ -227,14 +226,19 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const result = msg.data;
             const setOptimizationResult = useMarketStore.getState().setOptimizationResult;
             if (setOptimizationResult) {
-                setOptimizationResult(result as any);
+                setOptimizationResult(result as Parameters<typeof setOptimizationResult>[0]);
             }
         }
 
         if (msgType === 'binance_positions_update') {
-            if (msg.account) deps.setAccount('BINANCE_DEMO', msg.account as any);
+            if (msg.account) {
+                deps.setAccount('BINANCE_DEMO', msg.account as Record<string, unknown>);
+            }
             if (msg.positions && Array.isArray(msg.positions)) {
-                const mapped = msg.positions.map((p: any) => ({ ...p, source: 'BINANCE_DEMO' }));
+                const mapped = msg.positions.map((position) => ({
+                    ...(position as Record<string, unknown>),
+                    source: 'BINANCE_DEMO',
+                }));
                 deps.setPositions(mapped);
             }
         }
@@ -257,7 +261,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_symbol_info') {
-            deps.setSymbolInfo(msg.data as any);
+            deps.setSymbolInfo(msg.data as Record<string, unknown>);
         }
 
         if (msgType === 'mt5_available_symbols') {
@@ -304,7 +308,11 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 console.log('[WS] Processing strategy signal:', { symbol: signal.symbol, action: signal.signal });
                 
                 useMarketStore.getState().addNotification(
-                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String((signal.params as any)?.reason || '')}`,
+                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String(
+                        signal.params && typeof signal.params === 'object'
+                            ? (signal.params as Record<string, unknown>).reason || ''
+                            : ''
+                    )}`,
                     direction === 'bullish' ? 'success' : 'warning',
                 );
                 
