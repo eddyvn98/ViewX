@@ -177,6 +177,7 @@ def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, A
         repo_id = str(os.getenv("TIMESFM_REPO", "google/timesfm-2.5-200m-pytorch")).strip()
         if repo_id == "google/timesfm-3.0-pytorch":
             print("[timesfm] TimesFM 3.0 weights are not licensed for production; using 2.5 checkpoint.", file=sys.stderr)
+            repo_id = "google/timesfm-2.5-200m-pytorch"
         import math
         max_horizon = max(32, int(math.ceil(max(1, int(horizon)) / 16) * 16))
 
