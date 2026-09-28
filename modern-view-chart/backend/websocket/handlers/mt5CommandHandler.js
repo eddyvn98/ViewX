@@ -187,6 +187,7 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
     if (writeCommand && requestId) {
         pendingWriteRequests.set(requestId, {
             clientWs: ws,
+            bridgeWs: route.record.ws,
             ownerUserId: targetOwnerUserId,
             accountLogin,
             terminalId,
@@ -252,6 +253,14 @@ export function handleMt5OrderResult({ ws, clients }, data) {
         logWarn("ws.mt5_order_result.unmatched", {
             request_id: requestId,
             command: data?.command || null,
+        });
+        return;
+    }
+
+    if (pending.bridgeWs && pending.bridgeWs !== ws) {
+        logWarn("ws.mt5_order_result.bridge_mismatch", {
+            request_id: requestId,
+            command: data?.command || pending.command,
         });
         return;
     }
