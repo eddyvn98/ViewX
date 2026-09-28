@@ -1,7 +1,7 @@
-import React, { useRef, useEffect, useCallback, memo } from 'react';
+import React, { useCallback, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Zap, Check, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
@@ -41,11 +41,6 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
         const price = getCurrentPrice();
         if (!price || !symbol) return;
 
-        let distance = 0.00500;
-        if (symbol.includes('JPY')) distance = 0.50;
-        else if (symbol.includes('XAU')) distance = 10.0;
-        else if (symbol.includes('BTC')) distance = 100.0;
-
         setDraftOrder({
             // Keep the exact broker symbol for execution. Normalization is only
             // for lookup/display and must never rewrite a trading transport ID.
@@ -83,9 +78,9 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
         if (errorMsg) {
             useMarketStore.getState().addNotification(errorMsg, 'error');
             // Play error sound
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
+            const AudioContextCtor = window.AudioContext;
+            if (AudioContextCtor) {
+                const ctx = new AudioContextCtor();
                 const osc = ctx.createOscillator();
                 osc.frequency.setValueAtTime(150, ctx.currentTime);
                 osc.type = 'sawtooth';
@@ -96,7 +91,7 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
             return;
         }
 
-        const payload: any = {
+        const payload: Record<string, unknown> = {
             topic: 'mt5_command',
             command: 'order',
             symbol: draftOrder.symbol,
@@ -118,15 +113,11 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
         if (draftOrder.sl && draftOrder.sl > 0) payload.sl = Number(draftOrder.sl.toFixed(digits));
         if (draftOrder.tp && draftOrder.tp > 0) payload.tp = Number(draftOrder.tp.toFixed(digits));
 
-        sendMessage(payload);
+        sendMessage(payload as Parameters<typeof sendMessage>[0]);
         setDraftOrder(null);
     };
 
     const handleCancel = () => setDraftOrder(null);
-    const toggleMarket = () => {
-        if (!draftOrder) return;
-        setDraftOrder({ ...draftOrder, isMarket: !draftOrder.isMarket });
-    };
 
     // Don't render if no symbol
     if (!symbol) return null;
