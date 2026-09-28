@@ -7,6 +7,7 @@ import { ChartContainer } from '../ChartContainer';
 import { cn } from '@/lib/utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { formatChartTimeframe } from './timeframe-config';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 
 interface ChartItemProps {
@@ -43,19 +44,20 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
     const resolveAlertPrice = React.useCallback((): number => {
         const store = useMarketStore.getState();
         const normalizedSymbol = normalizeSymbol(chart.symbol);
+        const dataSource = resolveChartIdentityDataSource(chart.source, chart);
 
-        const directTicker = store.tickers[`${chart.source}:${chart.symbol}`]?.price;
+        const directTicker = store.tickers[`${dataSource}:${normalizedSymbol}`]?.price;
         if (Number.isFinite(directTicker) && Number(directTicker) > 0) return Number(directTicker);
 
         const normalizedTicker = store.tickers[normalizedSymbol]?.price;
         if (Number.isFinite(normalizedTicker) && Number(normalizedTicker) > 0) return Number(normalizedTicker);
 
-        const exactKey = `${chart.source}:${normalizedSymbol}:${chart.interval}`;
+        const exactKey = `${dataSource}:${normalizedSymbol}:${chart.interval}`;
         const exactCandles = store.candleData[exactKey];
         const exactClose = exactCandles?.[exactCandles.length - 1]?.close;
         if (Number.isFinite(exactClose) && Number(exactClose) > 0) return Number(exactClose);
 
-        const prefix = `${chart.source}:${normalizedSymbol}:`;
+        const prefix = `${dataSource}:${normalizedSymbol}:`;
         const anyKey = Object.keys(store.candleData).find((key) => key.startsWith(prefix));
         if (anyKey) {
             const candles = store.candleData[anyKey];
@@ -64,7 +66,17 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
         }
 
         return 0;
-    }, [chart.interval, chart.source, chart.symbol]);
+    }, [chart.accountLogin, chart.broker, chart.interval, chart.source, chart.symbol, chart.terminalId]);
+
+    const popoutParams = new URLSearchParams({
+        symbol: chart.symbol,
+        interval: chart.interval,
+        source: chart.source,
+    });
+    if (chart.accountLogin) popoutParams.set('accountLogin', chart.accountLogin);
+    if (chart.terminalId) popoutParams.set('terminalId', chart.terminalId);
+    if (chart.broker) popoutParams.set('broker', chart.broker);
+    const popoutHref = `/chart/${chart.id}?${popoutParams.toString()}`;
 
     return (
         <div
@@ -139,7 +151,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                         <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={11} /></button>
                         <a
-                            href={`/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`}
+                            href={popoutHref}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => {
@@ -149,7 +161,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                                 const left = (window.screen.width - width) / 2;
                                 const top = (window.screen.height - height) / 2;
                                 window.open(
-                                    `/chart/${chart.id}?symbol=${chart.symbol}&interval=${chart.interval}&source=${chart.source}`,
+                                    popoutHref,
                                     `chart_${chart.id}`,
                                     `width=${width},height=${height},left=${left},top=${top},menubar=no,location=no,status=no,toolbar=no,scrollbars=no`
                                 );
