@@ -81,20 +81,23 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             incomingData.forEach((item) => {
                 const symbol = String(item?.symbol || '');
                 if (activeSymbols.has(symbol)) {
-                    const source = getMt5FrameSource(item);
+                    const sourceKey = getMt5FrameSource(item);
+                    const logicalSource = sourceKey.startsWith('MT5_PERSONAL@')
+                        ? 'MT5_PERSONAL'
+                        : sourceKey;
                     const ticker = {
                         symbol,
                         price: Number(item?.price || 0),
                         change: Number(item?.change || 0),
                         changeValue: Number(item?.changeValue || 0),
                         volume: 0,
-                        source,
+                        source: logicalSource,
                         bid: item?.bid !== undefined ? Number(item.bid || 0) : undefined,
                         ask: item?.ask !== undefined ? Number(item.ask || 0) : undefined,
                         displayName: item?.displayName ? String(item.displayName) : undefined,
                         serverTime: Number(item?.serverTime || item?.time || 0) || undefined,
                     };
-                    for (const key of buildTickerStoreKeys(source, symbol)) {
+                    for (const key of buildTickerStoreKeys(sourceKey, symbol)) {
                         wsRuntime.tickerUpdateBuffer[key] = ticker;
                     }
                     usefulUpdate = true;
