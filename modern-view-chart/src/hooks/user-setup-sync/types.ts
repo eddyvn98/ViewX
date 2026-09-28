@@ -48,6 +48,7 @@ export type PersistedStrategyState = Pick<
 
 export type PersistedSetupState = {
     watchlist: RootState['watchlist'];
+    watchlistItems: RootState['watchlistItems'];
     tabs: RootState['tabs'];
     activeTabId: RootState['activeTabId'];
     favoriteTimeframes: RootState['favoriteTimeframes'];
