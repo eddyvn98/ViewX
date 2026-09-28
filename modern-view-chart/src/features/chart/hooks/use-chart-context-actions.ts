@@ -61,10 +61,14 @@ export function useChartContextActions({
     );
 
     const onCancelOrder = React.useCallback((ticket: string | number) => {
+        const normalizedSource = String(source || '').trim().toUpperCase();
+        if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') return;
         sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
     }, [sendMessage, source, mt5Identity]);
 
     const onClosePosition = React.useCallback((ticket: string | number) => {
+        const normalizedSource = String(source || '').trim().toUpperCase();
+        if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') return;
         sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
     }, [sendMessage, source, mt5Identity]);
 
