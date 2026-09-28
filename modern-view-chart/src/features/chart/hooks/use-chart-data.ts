@@ -7,6 +7,11 @@ export function useChartData(
     symbol: string | undefined,
     interval: string | undefined,
     source: string | undefined,
+    mt5Identity: {
+        accountLogin?: string | null;
+        terminalId?: string | null;
+        broker?: string | null;
+    },
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles',
     chartRef: React.RefObject<IChartApi | null>,
     subchartRef: React.RefObject<IChartApi | null>,
@@ -25,7 +30,7 @@ export function useChartData(
     // Manages initial load, chart resets, and full candle updates from Store
     useChartHistory({
         chartId: id,
-        symbol, interval, source, chartType,
+        symbol, interval, source, mt5Identity, chartType,
         chartRef, subchartRef, seriesRef, markerSeriesRef,
         subSyncRef, timescaleSyncRef,
         isReady,
@@ -41,7 +46,7 @@ export function useChartData(
     // Manages high-frequency visual price updates (Tick-by-Tick)
     // Only updates the EXISTING candle visually to prevent timezone/offset bugs
     const realTimeCandleRef = useChartTicker({
-        symbol, interval, source, seriesRef, chartType,
+        symbol, interval, source, mt5Identity, seriesRef, chartType,
         isAutoScrollEnabledRef, chartRef, theme, contextKey, candleUpColor, candleDownColor
     });
 
