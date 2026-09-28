@@ -36,6 +36,13 @@ function getMt5FrameSource(frame: Record<string, unknown>): string {
     return rawSource || 'MT5';
 }
 
+export function buildTickerUpdateKeys(source: string, symbol: string): string[] {
+    const normalizedSymbol = normalizeSymbol(symbol);
+    if (!normalizedSymbol) return [];
+    const normalizedSource = String(source || '').trim() || 'MT5';
+    return [`${normalizedSource}:${normalizedSymbol}`, normalizedSymbol];
+}
+
 export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps: MessageHandlerDeps) {
     try {
         wsRuntime.lastMessageAt = Date.now();
@@ -80,7 +87,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 const symbol = String(item?.symbol || '');
                 if (activeSymbols.has(symbol)) {
                     const source = getMt5FrameSource(item);
-                    wsRuntime.tickerUpdateBuffer[symbol] = {
+                    const ticker = {
                         symbol,
                         price: Number(item?.price || 0),
                         change: Number(item?.change || 0),
@@ -92,6 +99,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         displayName: item?.displayName ? String(item.displayName) : undefined,
                         serverTime: Number(item?.serverTime || item?.time || 0) || undefined,
                     };
+                    for (const key of buildTickerUpdateKeys(source, symbol)) {
+                        wsRuntime.tickerUpdateBuffer[key] = ticker;
+                    }
                     usefulUpdate = true;
                 }
             });
