@@ -13,6 +13,7 @@ import { logInfo, logWarn } from "../logger.js";
 import { BRIDGE_TOPICS, resolveQueryAuthPolicy } from "./config.js";
 import { emitWsError, resolveAuthContext } from "./auth.js";
 import { startPeriodicTasks } from "./loopManager.js";
+import { getDefaultClientMode, isBridgeClientMode } from "./clientMode.js";
 import {
     clearScopedMt5Prices,
     clearScopedMt5State,
@@ -80,8 +81,10 @@ export default function initWebSocket(server) {
         clients.set(ws, {
             userId: authContext.type === "user" ? authContext.userId : null,
             role: authContext.type === "user" ? authContext.role : null,
+            accountTier: authContext.type === "user" ? authContext.accountTier : authContext.type === "guest" ? "free" : null,
             authType: authContext.type,
             authVia: authContext.via || "unknown",
+            clientMode: getDefaultClientMode(authContext),
             isServiceAuth: authContext.type === "service",
             symbols: [],
             charts: new Set(),
@@ -115,9 +118,15 @@ export default function initWebSocket(server) {
                 const parsed = JSON.parse(msg.toString());
                 const topic = parsed.topic || parsed.type || parsed.event || "";
                 if (typeof topic === "string" && BRIDGE_TOPICS.has(topic)) {
-                    if (!(meta.isServiceAuth || meta.authType === "user")) {
-                        emitWsError(ws, { code: "forbidden", detail: "bridge_topic_requires_service_auth" });
-                        logWarn("ws.bridge_topic.forbidden", { topic, auth_type: meta.authType, role: meta.role || null });
+                    if (!isBridgeClientMode(meta.clientMode)) {
+                        emitWsError(ws, { code: "forbidden", detail: "bridge_topic_requires_bridge_client_mode" });
+                        logWarn("ws.bridge_topic.forbidden", {
+                            topic,
+                            auth_type: meta.authType,
+                            role: meta.role || null,
+                            account_tier: meta.accountTier || null,
+                            client_mode: meta.clientMode || null,
+                        });
                         ws.close(1008, "Forbidden");
                         return;
                     }
@@ -126,7 +135,11 @@ export default function initWebSocket(server) {
                         meta.isBridgeAuthenticated = true;
                         ws.isBridgeAuthenticated = true;
                         removeClientFromIndexes(subscriptionIndex, ws);
-                        logInfo("ws.bridge.authenticated", { via: meta.authVia || "unknown" });
+                        logInfo("ws.bridge.authenticated", {
+                            via: meta.authVia || "unknown",
+                            client_mode: meta.clientMode || null,
+                            account_tier: meta.accountTier || null,
+                        });
                     }
                 }
             } catch {
