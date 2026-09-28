@@ -98,3 +98,24 @@ test("legacy global service bridge remains routable without account metadata", (
     assert.equal(matched.record?.ws, service);
     assert.equal(registry.hasForUser(null), true);
 });
+
+
+test("authenticated web user falls back to legacy global service bridge only without account targeting", () => {
+    const registry = createBridgeRegistry();
+    const service = makeSocket();
+    registry.register(service, makeMeta({
+        authType: "service",
+        userId: null,
+        clientMode: "service_bridge",
+        bridgeAccountLogin: null,
+        bridgeTerminalId: null,
+    }));
+
+    const fallback = registry.resolve({ userId: "user-1" });
+    assert.equal(fallback.record?.ws, service);
+    assert.equal(fallback.reason, "global_service_fallback");
+
+    const accountSpecific = registry.resolve({ userId: "user-1", accountLogin: "10001" });
+    assert.equal(accountSpecific.record, null);
+    assert.equal(accountSpecific.reason, "not_found");
+});
