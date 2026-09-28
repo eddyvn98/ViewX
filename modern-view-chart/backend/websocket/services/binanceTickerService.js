@@ -45,6 +45,18 @@ export function startBinanceTickerStream() {
     });
 }
 
-export function getBinancePrices() {
-    return Object.values(binancePrices);
+export function getBinancePrices(symbols = null) {
+    if (!Array.isArray(symbols)) {
+        return Object.values(binancePrices);
+    }
+
+    const unique = Array.from(new Set(
+        symbols
+            .map((symbol) => String(symbol || "").trim().toUpperCase())
+            .filter((symbol) => symbol.endsWith("USDT"))
+    ));
+
+    return unique
+        .map((symbol) => binancePrices[symbol])
+        .filter(Boolean);
 }

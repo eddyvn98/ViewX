@@ -115,7 +115,21 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
 
 export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }) {
     try {
-        const allPrices = getBinancePrices();
+        // Do not walk the full Binance !ticker@arr cache every second. Most viewers only
+        // subscribe to a handful of symbols (and many sessions are MT5-only).
+        const requestedSymbols = new Set(subscriptionIndex.symbolSubscribers.keys());
+        if ((subscriptionIndex.defaultPriceClients?.size || 0) > 0) {
+            for (const symbol of subscriptionIndex.coreSymbols || []) requestedSymbols.add(symbol);
+        }
+        const requestedBinanceSymbols = Array.from(requestedSymbols)
+            .map((symbol) => normalizeSymbol(symbol))
+            .filter((symbol) => String(symbol || "").toUpperCase().endsWith("USDT"));
+
+        let binancePrices = getBinancePrices(requestedBinanceSymbols);
+        if (requestedBinanceSymbols.length > 0 && binancePrices.length === 0) {
+            binancePrices = await fetchPrices(requestedBinanceSymbols, { includeGold: false });
+        }
+
         const [vnGoldQuotes, vangTodayQuotes] = await Promise.all([
             getVietnamGoldQuotes({ nonBlocking: true }),
             getVangTodayLatestQuotes({ nonBlocking: true }),
@@ -132,9 +146,7 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             changeValue: 0,
             volume: 0,
         }));
-        const tickers = allPrices.length > 0
-            ? [...allPrices, ...vnGoldQuotes, ...mappedVangTodayQuotes]
-            : await fetchPrices();
+        const tickers = [...binancePrices, ...vnGoldQuotes, ...mappedVangTodayQuotes];
         const binanceBySymbol = new Map();
         for (const item of tickers) {
             const symbol = normalizeSymbol(item?.symbol);
