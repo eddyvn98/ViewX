@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import { getScopedMt5Price } from "../mt5Scope.js";
+import { createMt5Scope, getScopedMt5Price } from "../mt5Scope.js";
 import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
 import { getVangTodayLatestQuotes } from "../../services/vangTodayService.js";
 import { logWarn } from "../../logger.js";
@@ -14,9 +14,10 @@ function warnBinanceFetch(event, fields = {}) {
     logWarn(event, fields);
 }
 
-export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId = null) {
+export async function fetchLatestCandle(mt5Prices, symbol, interval, mt5ScopeInput = null) {
+    const mt5Scope = createMt5Scope(mt5ScopeInput || {});
     const symbolLower = (symbol || "").toLowerCase();
-    const scopedMt5Price = getScopedMt5Price(mt5Prices, ownerUserId, symbol);
+    const scopedMt5Price = getScopedMt5Price(mt5Prices, mt5Scope, symbol);
     const isVietnamGold = symbolLower === "sjcvn" || symbolLower === "dojivn";
     const isMt5 = symbolLower.endsWith('m') || symbolLower.endsWith('.m') || Boolean(scopedMt5Price);
 
@@ -75,7 +76,7 @@ export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId
         const brokerOffsetSeconds = 0;
         const candleTime = Math.floor((nowSeconds + brokerOffsetSeconds) / secondsPerCandle) * secondsPerCandle;
 
-        const key = `${ownerUserId || "__global__"}|${symbol}|${interval}`;
+        const key = `${mt5Scope.scopeId}|${symbol}|${interval}`;
         let cached = currentCandleCache[key];
 
         if (!cached || cached.time !== candleTime) {
