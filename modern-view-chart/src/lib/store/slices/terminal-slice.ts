@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AccountInfo, HistoryDeal, Order, Position } from '../types';
 import { withOrderAnchors, withPositionAnchors } from './terminal/anchor-utils';
+import { Mt5AccountScope, persistMt5Scope, readStoredMt5Scope, sameMt5Scope, SHARED_MT5_SCOPE } from '@/lib/mt5/account-scope';
 import {
     applyPendingOrderLocks,
     applyPendingPositionLocks,
@@ -75,6 +76,8 @@ export interface OptimizationResult {
 
 export interface TerminalSlice {
     accounts: Record<string, AccountInfo>;
+    mt5AccountsAvailable: Mt5AccountScope[];
+    selectedMt5Scope: Mt5AccountScope;
     positions: Position[];
     orders: Order[];
     history: HistoryDeal[];
@@ -91,6 +94,8 @@ export interface TerminalSlice {
     pendingModifications: Record<string, PendingModification>;
     pendingDeletions: Record<number, number>;
     setAccount: (source: string, data: AccountInfo) => void;
+    setMt5AccountsAvailable: (accounts: Mt5AccountScope[]) => void;
+    setSelectedMt5Scope: (scope: Mt5AccountScope) => void;
     setPositions: (data: Position[] | ((prev: Position[]) => Position[])) => void;
     setOrders: (data: Order[] | ((prev: Order[]) => Order[])) => void;
     addPendingModification: (ticket: number, field: 'sl' | 'tp' | 'open_price' | 'price_open', price: number) => void;
@@ -112,6 +117,8 @@ export interface TerminalSlice {
 
 export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     accounts: {},
+    mt5AccountsAvailable: [SHARED_MT5_SCOPE],
+    selectedMt5Scope: readStoredMt5Scope(),
     positions: [],
     orders: [],
     history: [],
@@ -158,6 +165,22 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     setAccount: (source, data) => set((state) => ({
         accounts: { ...state.accounts, [source]: data }
     })),
+
+    setMt5AccountsAvailable: (accounts) => set((state) => {
+        const normalized = Array.isArray(accounts) && accounts.length > 0 ? accounts : [SHARED_MT5_SCOPE];
+        const selectedStillExists = normalized.some((scope) => sameMt5Scope(scope, state.selectedMt5Scope));
+        if (selectedStillExists) {
+            return { mt5AccountsAvailable: normalized };
+        }
+        return {
+            mt5AccountsAvailable: normalized,
+            selectedMt5Scope: persistMt5Scope(SHARED_MT5_SCOPE),
+        };
+    }),
+
+    setSelectedMt5Scope: (scope) => set({
+        selectedMt5Scope: persistMt5Scope(scope),
+    }),
 
     setPositions: (data) => set((state) => {
         const payload = typeof data === 'function' ? data(state.positions) : data;
