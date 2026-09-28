@@ -23,11 +23,12 @@ export function handleMt5Update({ ws, clients, mt5Prices, subscriptionIndex }, d
     if (!openPrice) {
         const now = new Date();
         const todayStr = now.toISOString().split("T")[0];
-        const openKey = `${normalizedSymbol}_${todayStr}`;
+        const openPrefix = `${mt5Scope.scopeId}|${normalizedSymbol}|`;
+        const openKey = `${openPrefix}${todayStr}`;
 
         if (!dailyOpens.has(openKey)) {
             for (const key of dailyOpens.keys()) {
-                if (key.startsWith(normalizedSymbol)) dailyOpens.delete(key);
+                if (key.startsWith(openPrefix)) dailyOpens.delete(key);
             }
             dailyOpens.set(openKey, data.price);
         }
