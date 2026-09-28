@@ -30,7 +30,9 @@ export const AccountSummary = memo(function AccountSummary({ account, sourceKey 
 
         // Calculate real-time profit
         const realTimeProfit = positions.reduce((sum, pos) => {
-            const livePrice = tickers[pos.symbol]?.price || pos.current_price;
+            const scopedTicker = tickers[`${sourceKey}:${pos.symbol}`];
+            const sharedTicker = sourceKey === 'MT5' ? tickers[pos.symbol] : undefined;
+            const livePrice = scopedTicker?.price ?? sharedTicker?.price ?? pos.current_price;
             const symbolInfo = symbolInfoMap[pos.symbol];
             const pnl = calculatePnL({
                 type: pos.type,
