@@ -1,4 +1,4 @@
-import { clearStoredAuthSession, readStoredAccessToken, refreshStoredAccessToken } from '@/lib/auth/session';
+import { clearStoredAuthSession, readStoredAccessToken, readStoredAuthUser, refreshStoredAccessToken } from '@/lib/auth/session';
 import { wsRuntime } from './runtime';
 import { WS_URL_FROM_ENV } from './constants';
 
@@ -25,6 +25,27 @@ export function parseIntervalSeconds(interval: string): number {
     if (unit === 'mo' || unit === 'mn') return value * 2592000;
     if (unit === 'y') return value * 31536000;
     return 60;
+}
+
+export function deriveWebClientMode(): 'web_free' | 'web_pro' {
+    if (typeof window === 'undefined') return 'web_free';
+
+    const raw = readStoredAuthUser();
+    if (!raw) return 'web_free';
+
+    try {
+        const user = JSON.parse(raw) as Record<string, unknown>;
+        const accountTier = String(user.account_tier || '').trim().toLowerCase();
+        if (accountTier === 'pro') return 'web_pro';
+
+        const subscription = user.subscription && typeof user.subscription === 'object'
+            ? user.subscription as Record<string, unknown>
+            : {};
+        const plan = String(subscription.plan || user.plan || 'free').trim().toLowerCase();
+        return plan === 'pro' || plan === 'pro_plus' ? 'web_pro' : 'web_free';
+    } catch {
+        return 'web_free';
+    }
 }
 
 export function deriveDefaultSocketUrl(): string {
