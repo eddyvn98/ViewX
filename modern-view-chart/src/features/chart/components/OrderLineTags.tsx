@@ -11,6 +11,7 @@ import { syncTagElements } from '../logic/tag-dom-registry';
 import { OrderTagEditOverlay } from './OrderTagEditOverlay';
 import { setupTagInteractions } from './order-line-tags/tag-interactions';
 import { applyTagCaptionDeclutter } from './order-line-tags/tag-priority';
+import type { Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface OrderLineTagsProps {
     symbol: string | undefined;
@@ -20,9 +21,12 @@ interface OrderLineTagsProps {
     sendMessage?: (data: any) => void;
     source?: string;
     interval?: string;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
 }
 
-export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, priceChartRef, isReady, sendMessage, source, interval }: OrderLineTagsProps) {
+export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, priceChartRef, isReady, sendMessage, source, interval, accountLogin, terminalId, broker }: OrderLineTagsProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const tagElementsMap = useRef<Map<string, TagElements>>(new Map());
     const dragVisualRafRef = useRef<number | null>(null);
@@ -31,6 +35,13 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
     const hoveredTicketRef = useRef<number | null>(null);
     const focusedTicket = useMarketStore((state) => state.focusedTicket);
     const hoveredTicket = useMarketStore((state) => state.hoveredTicket);
+
+    const identity = React.useMemo<Mt5TradingIdentity>(() => ({
+        source,
+        accountLogin,
+        terminalId,
+        broker,
+    }), [source, accountLogin, terminalId, broker]);
 
     const { tags, currentPrice, symbolInfo, draftOrder } = useOrderTags(symbol);
     const symbolInfoRef = useRef(symbolInfo);
@@ -42,7 +53,7 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
         const t = (candles[candles.length - 1] as any).time;
         return typeof t === 'object' ? (t as any).timestamp : Number(t);
     });
-    const { editingState, isDeletingRef, handleInputFinish } = useTagEditSession({ sendMessage });
+    const { editingState, isDeletingRef, handleInputFinish } = useTagEditSession({ sendMessage, identity });
 
     useEffect(() => {
         latestCandleTimeRef.current = latestCandleTime;
@@ -70,14 +81,14 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
             tags,
             tagElementsMap.current,
             createTagElement,
-            (elements, tag) => setupTagInteractions(elements, tag, sendMessage),
+            (elements, tag) => setupTagInteractions(elements, tag, sendMessage, identity),
             (elements, tag) => {
                 updateTagVisuals(elements, tag, symbolInfo, currentPrice, draftOrder, symbol);
                 updateTagPosition(elements, series, tag.price, priceChartRef.current, tag, latestCandleTimeRef.current);
             }
         );
         applyTagCaptionDeclutter(tagElementsMap.current, focusedTicket, hoveredTicket);
-    }, [tags, currentPrice, symbolInfo, draftOrder, seriesRef, symbol, sendMessage, priceChartRef, focusedTicket, hoveredTicket]);
+    }, [tags, currentPrice, symbolInfo, draftOrder, seriesRef, symbol, sendMessage, identity, priceChartRef, focusedTicket, hoveredTicket]);
 
     useLayoutEffect(() => {
         const priceChart = priceChartRef.current;
@@ -160,6 +171,7 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
                     isDeletingRef={isDeletingRef}
                     onFinish={handleInputFinish}
                     sendMessage={sendMessage}
+                    identity={identity}
                 />
             )}
         </div>
