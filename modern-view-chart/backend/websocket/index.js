@@ -145,7 +145,7 @@ export default function initWebSocket(server) {
                         setBridgeOnline(bridgeRegistry.size() > 0);
                         const ownerUserId = resolveBridgeOwnerUserId(meta);
                         meta.bridgeStatusAnnounced = true;
-                        broadcastBridgeStatus(ownerUserId, true);
+                        broadcastBridgeStatus(ownerUserId, true, bridgeRegistry);
                         logInfo("ws.bridge.authenticated", {
                             via: meta.authVia || "unknown",
                             client_mode: meta.clientMode || null,
@@ -190,6 +190,7 @@ export default function initWebSocket(server) {
             if (closedMeta?.isBridgeAuthenticated) {
                 const ownerUserId = resolveBridgeOwnerUserId(closedMeta);
                 bridgeRegistry.unregister(ws);
+                const ownerStillHasDirectBridge = bridgeRegistry.hasDirectForUser(ownerUserId);
                 const ownerStillOnline = bridgeRegistry.hasForUser(ownerUserId);
                 setBridgeRegistered(bridgeRegistry.size());
                 setBridgeOnline(bridgeRegistry.size() > 0);
@@ -200,12 +201,12 @@ export default function initWebSocket(server) {
                     owner_user_id: ownerUserId,
                     owner_still_online: ownerStillOnline,
                 });
-                if (!ownerStillOnline) {
+                if (!ownerStillHasDirectBridge) {
                     clearScopedMt5Prices(mt5Prices, ownerUserId);
                     clearScopedMt5State(ownerUserId);
                     clearScopedMt5Symbols(ownerUserId);
                 }
-                broadcastBridgeStatus(ownerUserId, ownerStillOnline);
+                broadcastBridgeStatus(ownerUserId, ownerStillOnline, bridgeRegistry);
             }
             clients.delete(ws);
             removeClientFromIndexes(subscriptionIndex, ws);
@@ -220,12 +221,15 @@ export default function initWebSocket(server) {
     return wss;
 }
 
-function broadcastBridgeStatus(ownerUserId, online) {
-    const payload = JSON.stringify({ topic: "bridgeStatus", online });
+function broadcastBridgeStatus(ownerUserId, online, bridgeRegistry = null) {
     for (const [clientWs, meta] of clients.entries()) {
-        if (!isRecipientForMt5Owner(meta, ownerUserId)) continue;
-        if (clientWs.readyState === clientWs.OPEN) {
-            safeSend(clientWs, payload);
-        }
+        if (meta?.isBridgeAuthenticated) continue;
+        if (ownerUserId && !isRecipientForMt5Owner(meta, ownerUserId)) continue;
+        if (clientWs.readyState !== clientWs.OPEN) continue;
+
+        const effectiveOnline = !ownerUserId && bridgeRegistry
+            ? bridgeRegistry.hasForUser(meta?.userId || null)
+            : online;
+        safeSend(clientWs, JSON.stringify({ topic: "bridgeStatus", online: effectiveOnline }));
     }
 }
