@@ -146,7 +146,13 @@ export function createBridgeRegistry() {
     }
 
     function hasForUser(userId) {
-        return listForUser(userId).length > 0;
+        if (listForUser(userId).length > 0) return true;
+        if (!userId) return false;
+        return listForUser(null).some((record) =>
+            record.clientMode === "service_bridge" &&
+            !record.accountLogin &&
+            !record.terminalId
+        );
     }
 
     function size() {
