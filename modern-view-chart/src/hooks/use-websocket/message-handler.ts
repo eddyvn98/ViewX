@@ -14,9 +14,9 @@ export interface MessageHandlerDeps {
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Record<string, unknown>) => void;
     setBridgeOnline: (online: boolean) => void;
     setAccount: (source: string, account: Record<string, unknown>) => void;
-    setPositions: (positions: Array<Record<string, unknown>>) => void;
-    setOrders: (orders: Array<Record<string, unknown>>) => void;
-    appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean) => void;
+    setPositions: (positions: Array<Record<string, unknown>>, source?: string) => void;
+    setOrders: (orders: Array<Record<string, unknown>>, source?: string) => void;
+    appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean, source?: string) => void;
     setSymbolInfo: (info: Record<string, unknown>) => void;
     setAvailableSymbols: (symbols: string[]) => void;
 }
@@ -198,7 +198,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             magic: p.magic || 0,
                             source: mt5Source,
                         }));
-                        deps.setPositions(mappedPositions);
+                        deps.setPositions(mappedPositions, mt5Source);
                     }
                     if (data.orders && Array.isArray(data.orders)) {
                         const mappedOrders = data.orders.map((o: Record<string, unknown>) => ({
@@ -215,7 +215,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             magic: o.magic || 0,
                             source: mt5Source,
                         }));
-                        deps.setOrders(mappedOrders);
+                        deps.setOrders(mappedOrders, mt5Source);
                     }
                     wsRuntime.positionUpdateTimer = null;
                 }, POSITION_BUFFER_MS);
@@ -239,7 +239,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                     ...(position as Record<string, unknown>),
                     source: 'BINANCE_DEMO',
                 }));
-                deps.setPositions(mapped);
+                deps.setPositions(mapped, 'BINANCE_DEMO');
             }
         }
 
@@ -257,7 +257,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 }))
                 : [];
             const isReset = (msg.is_chunk === false);
-            deps.appendHistory(dealData, isReset);
+            deps.appendHistory(dealData, isReset, mt5Source);
         }
 
         if (msgType === 'mt5_symbol_info') {
