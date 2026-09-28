@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { IChartApi, ISeriesApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { parseIntervalSeconds } from './use-chart-history.helpers';
@@ -36,26 +36,49 @@ export function useForecastRenderer(
         return tab?.charts[chartId]?.symbol;
     });
 
-    // Clean up series when symbol or interval changes
-    useEffect(() => {
+    const source = useMarketStore((state) => {
+        const tab = state.tabs[state.activeTabId];
+        return tab?.charts[chartId]?.source;
+    });
+
+    const clearForecastSeries = useCallback(() => {
         if (!priceChart) return;
+        safeRemoveSeries(priceChart, forecastLineRef.current, 'ForecastRenderer');
+        safeRemoveSeries(priceChart, upperBandRef.current, 'ForecastRenderer');
+        safeRemoveSeries(priceChart, lowerBandRef.current, 'ForecastRenderer');
+        safeRemoveSeries(priceChart, areaBandRef.current, 'ForecastRenderer');
+        forecastLineRef.current = null;
+        upperBandRef.current = null;
+        lowerBandRef.current = null;
+        areaBandRef.current = null;
 
-        const cleanup = () => {
-            safeRemoveSeries(priceChart, forecastLineRef.current, 'ForecastRenderer');
-            safeRemoveSeries(priceChart, upperBandRef.current, 'ForecastRenderer');
-            safeRemoveSeries(priceChart, lowerBandRef.current, 'ForecastRenderer');
-            safeRemoveSeries(priceChart, areaBandRef.current, 'ForecastRenderer');
-            forecastLineRef.current = null;
-            upperBandRef.current = null;
-            lowerBandRef.current = null;
-            areaBandRef.current = null;
-        };
+        // Series removal can happen in the same render cycle as the new symbol data.
+        // Re-enable autoscale immediately so the old symbol's range is not retained.
+        priceChart.priceScale('right').applyOptions({ autoScale: true });
+    }, [priceChart]);
 
-        cleanup();
-    }, [priceChart, symbol, interval]);
+    // Forecast is chart-context-bound. Remove it before a symbol/source/timeframe switch
+    // so stale values cannot participate in Lightweight Charts autoscaling.
+    useEffect(() => {
+        clearForecastSeries();
+        return clearForecastSeries;
+    }, [clearForecastSeries, symbol, interval, source]);
 
     useEffect(() => {
-        if (!isReady || !priceChart || !forecast || !interval) return;
+        const contextMatches = Boolean(
+            forecast
+            && symbol
+            && interval
+            && source
+            && forecast.symbol === symbol
+            && forecast.interval === interval
+            && forecast.source === source
+        );
+
+        if (!isReady || !priceChart || !forecast || !interval || !contextMatches) {
+            clearForecastSeries();
+            return;
+        }
 
         // Ensure series exist
         if (!forecastLineRef.current) {
@@ -131,7 +154,7 @@ export function useForecastRenderer(
             // priceChart.timeScale().scrollToPosition(1, true);
         }
 
-    }, [isReady, priceChart, forecast, interval]);
+    }, [isReady, priceChart, forecast, interval, symbol, source, clearForecastSeries]);
 
     return null;
 }
