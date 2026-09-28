@@ -1,31 +1,32 @@
 'use client';
 
 import type { RowComponentProps } from 'react-window';
-import type { DataSource } from './market-list-constants';
+import type { SymbolDescriptor } from '@/lib/store/types';
+import { buildSymbolIdentityKey } from '@/lib/market/symbol-catalog';
 import { TickerRow } from './TickerRow';
 
 export interface RowData {
-    items: { symbol: string; source: DataSource }[];
+    items: SymbolDescriptor[];
     mode: 'discovery' | 'watchlist';
-    activeChartSymbol: string | null;
+    activeChartKey: string | null;
     watchedSet: Set<string>;
-    onSelect: (symbol: string, source: DataSource) => void;
-    onAdd: (symbol: string) => void;
-    onRemove: (symbol: string) => void;
+    onSelect: (item: SymbolDescriptor) => void;
+    onAdd: (item: SymbolDescriptor) => void;
+    onRemove: (item: SymbolDescriptor) => void;
 }
 
 export function VirtualRow({ index, style, ...data }: RowComponentProps<RowData>) {
     const item = data.items[index];
     if (!item) return null;
+    const identityKey = buildSymbolIdentityKey(item);
 
     return (
         <div style={style}>
             <TickerRow
-                symbol={item.symbol}
-                source={item.source}
+                item={item}
                 mode={data.mode}
-                isActive={data.activeChartSymbol === item.symbol}
-                isWatched={data.watchedSet.has(item.symbol)}
+                isActive={data.activeChartKey === identityKey}
+                isWatched={data.watchedSet.has(identityKey)}
                 onSelect={data.onSelect}
                 onAdd={data.onAdd}
                 onRemove={data.onRemove}
