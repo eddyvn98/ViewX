@@ -39,7 +39,41 @@ describe('persisted chart layout sanitization', () => {
         );
         assert.equal(
             buildChartContextKey({ symbol: ' XAUUSDm ', interval: 'W', source: 'MT5' }),
-            'XAUUSDm|W|MT5',
+            'XAUUSDm|W|MT5||',
         );
     });
 });
+
+
+    it('preserves personal MT5 chart account identity across setup reloads', () => {
+        const tabs = sanitizeTabsInput({
+            workspace: {
+                charts: {
+                    personal: {
+                        id: 'personal',
+                        symbol: 'XAUUSD.m',
+                        interval: '15',
+                        source: 'MT5_PERSONAL',
+                        accountLogin: '10001',
+                        terminalId: 'terminal-a',
+                        broker: 'Broker A',
+                        chartType: 'candles',
+                    },
+                },
+                activeChartId: 'personal',
+                rows: 1,
+                cols: 1,
+            },
+        });
+
+        const chart = tabs?.workspace?.charts?.personal;
+        assert.ok(chart);
+        assert.equal(chart.source, 'MT5_PERSONAL');
+        assert.equal(chart.symbol, 'XAUUSD.m');
+        assert.equal(chart.accountLogin, '10001');
+        assert.equal(chart.terminalId, 'terminal-a');
+        assert.equal(
+            buildChartContextKey(chart),
+            'XAUUSD.m|15|MT5_PERSONAL|10001|terminal-a',
+        );
+    });
