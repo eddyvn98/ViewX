@@ -8,7 +8,17 @@ export function issueWsTicket(req, res) {
 
     const ttlSec = Number.parseInt(process.env.WS_AUTH_TICKET_TTL_SEC || "300", 10);
     const safeTtl = Number.isFinite(ttlSec) && ttlSec > 0 ? ttlSec : 300;
-    const ticket = createAccessTicket(secret, safeTtl, "ws_auth");
+    const claims = req.auth.type === "user"
+        ? {
+            auth_type: "user",
+            sub: req.auth.userId,
+            role: req.auth.role,
+            sv: req.auth.sessionVersion,
+            account_tier: req.auth.accountTier === "pro" ? "pro" : "free",
+        }
+        : { auth_type: "service" };
+
+    const ticket = createAccessTicket(secret, safeTtl, "ws_auth", claims);
     const expiresAt = Math.floor(Date.now() / 1000) + safeTtl;
     return res.status(200).json({
         token_type: "ticket",
@@ -16,4 +26,3 @@ export function issueWsTicket(req, res) {
         expires_at: expiresAt,
     });
 }
-
