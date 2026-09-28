@@ -25,13 +25,17 @@ export function normalizeMt5AccountScope(value: unknown): Mt5AccountScope {
     const raw = value && typeof value === 'object'
         ? value as Record<string, unknown>
         : {};
-    const source = String(raw.source || '').trim().toUpperCase() === 'MT5_PERSONAL'
-        ? 'MT5_PERSONAL'
-        : 'MT5';
+    const accountLogin = normalizeOptional(raw.accountLogin ?? raw.account_login);
+    const requestedPersonal = String(raw.source || '').trim().toUpperCase() === 'MT5_PERSONAL';
+    const source = requestedPersonal && accountLogin ? 'MT5_PERSONAL' : 'MT5';
+
+    if (source === 'MT5') {
+        return SHARED_MT5_SCOPE;
+    }
 
     return {
         source,
-        accountLogin: normalizeOptional(raw.accountLogin ?? raw.account_login),
+        accountLogin,
         terminalId: normalizeOptional(raw.terminalId ?? raw.terminal_id),
         broker: normalizeOptional(raw.broker),
     };
