@@ -117,6 +117,9 @@ export interface ChartInstance {
     symbol: string;
     interval: string;
     source: MarketDataSource;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
     group?: 'A' | 'B' | 'C' | 'D' | 'none'; // Symbol Linking Group
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
