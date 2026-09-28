@@ -177,16 +177,24 @@ def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, A
         repo_id = str(os.getenv("TIMESFM_REPO", "google/timesfm-2.5-200m-pytorch")).strip()
         if repo_id == "google/timesfm-3.0-pytorch":
             print("[timesfm] TimesFM 3.0 weights are not licensed for production; using 2.5 checkpoint.", file=sys.stderr)
-            repo_id = "google/timesfm-2.5-200m-pytorch"
-        max_horizon = max(128, int(horizon))
+        import math
+        max_horizon = max(32, int(math.ceil(max(1, int(horizon)) / 16) * 16))
 
         if _TIMESFM_MODEL is None or _TIMESFM_REPO != repo_id or _TIMESFM_HORIZON != max_horizon:
             _TIMESFM_REPO = repo_id
             _TIMESFM_HORIZON = max_horizon
-            _TIMESFM_MODEL = timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-                repo_id,
-                torch_compile=False,
-            )
+            try:
+                _TIMESFM_MODEL = timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                    repo_id,
+                    local_files_only=True,
+                    torch_compile=False,
+                )
+            except Exception:
+                _TIMESFM_MODEL = timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                    repo_id,
+                    local_files_only=False,
+                    torch_compile=False,
+                )
             _TIMESFM_MODEL.compile(
                 timesfm.ForecastConfig(
                     max_context=512,

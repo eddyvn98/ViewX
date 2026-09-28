@@ -26,7 +26,7 @@ const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const result = spawnSync(
   command,
   ['--yes', 'tsx', '--import', './tests/unit.setup.ts', '--test', ...tests],
-  { stdio: 'inherit' },
+  { stdio: 'inherit', shell: true },
 );
 
 if (result.error) {

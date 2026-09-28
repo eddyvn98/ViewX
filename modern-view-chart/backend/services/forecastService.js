@@ -36,12 +36,14 @@ function parseForecastPayload(stdout) {
 
 function resolvePythonBin() {
     const managedRuntime = path.resolve(__dirname, "../forecast/.venv-311/Scripts/python.exe");
-    return (
-        process.env.FORECAST_PYTHON_BIN ||
-        process.env.PYTHON_BIN ||
-        (process.platform === "win32" && fs.existsSync(managedRuntime) ? managedRuntime : "") ||
-        "python"
-    ).trim();
+    const configured = (process.env.FORECAST_PYTHON_BIN || process.env.PYTHON_BIN || "").trim();
+    if (configured) {
+        return path.isAbsolute(configured) ? configured : path.resolve(process.cwd(), configured);
+    }
+    if (process.platform === "win32" && fs.existsSync(managedRuntime)) {
+        return managedRuntime;
+    }
+    return "python";
 }
 
 function sanitizeFiniteNumber(value, digits = 8) {
@@ -73,7 +75,7 @@ function sanitizeCandles(candles) {
         .filter(Boolean);
 }
 
-function buildHumanSummary(chart, result, probabilities = null, lang = "vi") {
+function buildHumanSummary(chart, result, probabilities = null, lang = "vi", question = "") {
     const symbol = String(chart?.symbol || "").trim() || (lang === "vi" ? "chart này" : "this chart");
     const rawTimeframe = String(chart?.timeframe || chart?.interval || "").trim();
     const timeframe = formatForecastTimeframe(rawTimeframe) || (lang === "vi" ? "khung hiện tại" : "current timeframe");
@@ -100,15 +102,27 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi") {
         ? (confidence >= 75 ? "độ tin cậy **Khá cao**" : confidence >= 55 ? "độ tin cậy **Trung bình**" : "độ tin cậy **Thấp**")
         : (confidence >= 75 ? "**High confidence**" : confidence >= 55 ? "**Medium confidence**" : "**Low confidence**");
 
+    const isTimesfm = String(result?.engine || "").toLowerCase() === "timesfm";
+    const engineTag = isTimesfm ? "TimesFM AI" : (isVi ? "TimesFM Heuristic" : "TimesFM Heuristic");
+
     const lines = [
         `### 📊 ${isVi ? `Dự báo ${symbol} (${timeframe})` : `Forecast ${symbol} (${timeframe})`}`,
         isVi
             ? `Xu hướng chủ đạo trong ${horizon} nến tới là ${directionText} với ${confidenceText}.`
             : `Dominant trend for the next ${horizon} candles is ${directionText} with ${confidenceText}.`,
         isVi
-            ? `**Kịch bản giá (TimesFM)**: Dự kiến ${moveText} từ giá hiện tại **${currentPrice.toFixed(3)}** về vùng mục tiêu **${targetPrice.toFixed(3)}** (Biên độ: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`).`
-            : `**Price Scenario (TimesFM)**: Expected to ${moveText} from current price **${currentPrice.toFixed(3)}** towards target **${targetPrice.toFixed(3)}** (Range: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`).`
+            ? `**Kịch bản giá (${engineTag})**: Dự kiến ${moveText} từ giá hiện tại **${currentPrice.toFixed(3)}** về vùng mục tiêu **${targetPrice.toFixed(3)}** (Biên độ: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`).`
+            : `**Price Scenario (${engineTag})**: Expected to ${moveText} from current price **${currentPrice.toFixed(3)}** towards target **${targetPrice.toFixed(3)}** (Range: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`).`
     ];
+
+    const q = String(question || "").toLowerCase();
+    const asksRange = /(vung gia|vùng giá|range|bien do|biên độ|volatility)/i.test(q);
+    if (asksRange) {
+        lines.splice(2, 0, isVi
+            ? `- **Vùng giá kỳ vọng**: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\` (Biên độ dự kiến: ${(bandHigh - bandLow).toFixed(3)})`
+            : `- **Expected Price Range**: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\` (Expected span: ${(bandHigh - bandLow).toFixed(3)})`
+        );
+    }
 
     if (probabilities) {
         const trend = probabilities.trendProbabilities || {};
@@ -282,7 +296,7 @@ export async function generateForecast({
                         ...parsed.result,
                         probabilities,
                     },
-                    response: buildHumanSummary(payload.chart, parsed.result, probabilities, lang),
+                    response: buildHumanSummary(payload.chart, parsed.result, probabilities, lang, question),
                     engine: String(parsed.result?.engine || "unknown"),
                     probabilities,
                 });
