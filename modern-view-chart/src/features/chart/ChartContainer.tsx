@@ -259,7 +259,13 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     isReady={isReady}
                 />
 
-                <ChartTradingOverlay symbol={symbol} source={source} />
+                <ChartTradingOverlay
+                    symbol={symbol}
+                    source={source}
+                    accountLogin={accountLogin}
+                    terminalId={terminalId}
+                    broker={broker}
+                />
 
                 {isReady && priceChartRef.current && seriesRef.current && symbol && (
                     <StrategyMarkers
