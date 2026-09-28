@@ -114,6 +114,7 @@ test("authenticated web user falls back to legacy global service bridge only wit
     const fallback = registry.resolve({ userId: "user-1" });
     assert.equal(fallback.record?.ws, service);
     assert.equal(fallback.reason, "global_service_fallback");
+    assert.equal(registry.hasForUser("user-1"), true);
 
     const accountSpecific = registry.resolve({ userId: "user-1", accountLogin: "10001" });
     assert.equal(accountSpecific.record, null);
