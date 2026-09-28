@@ -66,7 +66,7 @@ export function useChartContextActions({
 
     const onClosePosition = React.useCallback((ticket: string | number) => {
         sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
-    }, [sendMessage, source]);
+    }, [sendMessage, source, mt5Identity]);
 
     const onCancelDraft = React.useCallback(() => {
         useMarketStore.getState().setDraftOrder(null);
