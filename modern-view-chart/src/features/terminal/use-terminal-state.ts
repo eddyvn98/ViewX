@@ -119,9 +119,9 @@ export function useTerminalState(forceExpanded: boolean) {
         const state = useMarketStore.getState();
         const activeTab = state.tabs[state.activeTabId];
         if (activeTab && activeTab.activeChartId) {
-            setChartSymbol(activeTab.activeChartId, symbol);
+            setChartSymbol(activeTab.activeChartId, symbol, selectedMt5Scope.source, selectedMt5Scope);
         }
-    }, [setChartSymbol]);
+    }, [selectedMt5Scope, setChartSymbol]);
 
     const handleAnalyze = useCallback((deal: unknown) => {
         debugLog('[TERMINAL][analyze]', deal);
