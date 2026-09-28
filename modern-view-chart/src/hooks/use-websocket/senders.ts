@@ -7,6 +7,7 @@ import { wsRuntime } from './runtime';
 import { parseIntervalSeconds } from './socket-config';
 import { collectActiveSymbolsFromStore, normalizeSymbol } from './symbol-utils';
 import { getIncrementalHistoryCount } from '@/features/chart/hooks/history-sync';
+import { buildMt5AuthFields, resolveChartDataSource } from '@/lib/mt5/account-scope';
 
 type ChartLike = {
     source?: string;
@@ -80,13 +81,16 @@ export function requestChartBackfill(
     const socket = wsRuntime.globalSocket;
     if (!source || !symbol || !interval || !socket || socket.readyState !== WebSocket.OPEN) return;
 
+    const selectedMt5Scope = useMarketStore.getState().selectedMt5Scope;
+    const scopedSource = resolveChartDataSource(source, selectedMt5Scope);
+    const mt5ScopeFields = source === 'MT5' ? buildMt5AuthFields(selectedMt5Scope) : {};
     const direction = options?.direction === 'older' ? 'older' : 'latest';
     const anchorTimeSec = Number(options?.anchorTimeSec);
     const intervalSec = Math.max(60, parseIntervalSeconds(interval));
     const anchorKey = direction === 'older' && Number.isFinite(anchorTimeSec)
         ? Math.floor(anchorTimeSec)
         : 'latest';
-    const throttleKey = `${source}:${normalizeSymbol(symbol)}:${interval}:${direction}:${anchorKey}`;
+    const throttleKey = `${scopedSource}:${normalizeSymbol(symbol)}:${interval}:${direction}:${anchorKey}`;
     const nowMs = Date.now();
     const lastRequestedAt = wsRuntime.lastForegroundResyncAtByKey[throttleKey] || 0;
     if (nowMs - lastRequestedAt < BACKFILL_THROTTLE_MS) return;
@@ -103,6 +107,7 @@ export function requestChartBackfill(
                     timestamp: Math.max(1, Math.floor(anchorTimeSec - intervalSec)),
                     count,
                     reason,
+                    ...mt5ScopeFields,
                 }),
             );
             return;
@@ -116,6 +121,7 @@ export function requestChartBackfill(
                 interval,
                 count,
                 reason,
+                ...mt5ScopeFields,
             }),
         );
         return;
@@ -167,7 +173,8 @@ export function syncForegroundCharts(force: boolean, reason: string) {
             const interval = String(chart?.interval || '').trim();
             if (!source || !symbol || !interval) return;
 
-            const key = `${source}:${normalizeSymbol(symbol)}:${interval}`;
+            const dataSource = resolveChartDataSource(source, state.selectedMt5Scope);
+            const key = `${dataSource}:${normalizeSymbol(symbol)}:${interval}`;
             const candles = state.candleData[key] || [];
             if (candles.length === 0) {
                 requestChartBackfill(source, symbol, interval, reason);
@@ -198,7 +205,8 @@ export function syncForegroundCharts(force: boolean, reason: string) {
     getMatrixCandleRequests(scanners).forEach(({ source, symbol, interval }) => {
         const normalizedSource = String(source || '').toUpperCase();
         const normalizedInterval = String(interval || '').trim();
-        const key = `${normalizedSource}:${normalizeSymbol(symbol)}:${normalizedInterval}`;
+        const dataSource = resolveChartDataSource(normalizedSource, state.selectedMt5Scope);
+        const key = `${dataSource}:${normalizeSymbol(symbol)}:${normalizedInterval}`;
         const candles = state.candleData[key] || [];
 
         if (candles.length === 0) {
