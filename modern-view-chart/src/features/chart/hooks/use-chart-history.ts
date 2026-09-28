@@ -140,7 +140,6 @@ export function useChartHistory(props: UseChartHistoryProps) {
         symbol,
         interval,
         source,
-        dataSource,
         normSymbol,
         intervalCandidates,
         historyRequestKey,
@@ -165,7 +164,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         return () => {
             cancelled = true;
         };
-    }, [historyRequestKey, dataSource, normSymbol, interval]);
+    }, [historyRequestKey, dataSource, source, normSymbol, interval]);
 
     useEffect(() => {
         if (isVietnamGoldSource) return;
@@ -385,7 +384,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 lastHistoryRevisionRef.current = historyRevision;
             });
         }
-    }, [isReady, candlesCount, historyRevision, key, scopedContextKey, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource, isCacheReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, historyRevision, key, scopedContextKey, dataSource, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource, isCacheReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {
