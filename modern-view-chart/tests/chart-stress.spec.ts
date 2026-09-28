@@ -171,6 +171,36 @@ test.describe('chart interaction stability', () => {
         await attachDiagnostics(page, testInfo);
     });
 
+    test('symbol switch clears stale forecast before autoscale', async ({ page }, testInfo) => {
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.setChartSymbol('BTCUSDm', 'MT5');
+            window.__VIEWX_E2E__?.setChartTimeframe('60');
+        });
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getChartState())
+        ).toMatchObject({ symbol: 'BTCUSDm', interval: '60', source: 'MT5' });
+
+        await page.evaluate(() => window.__VIEWX_E2E__?.seedForecast(83000));
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getForecastState())
+        ).toMatchObject({ symbol: 'BTCUSDm', interval: '60', source: 'MT5', firstPoint: 83000 });
+
+        await page.evaluate(() => window.__VIEWX_E2E__?.setChartSymbol('XAUUSDm', 'MT5'));
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getChartState())
+        ).toMatchObject({ symbol: 'XAUUSDm', interval: '60', source: 'MT5' });
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getForecastState() ?? null)
+        ).toBeNull();
+
+        const chart = page.getByTestId('chart-container-e2e-chart');
+        await expect(chart).toHaveAttribute('data-symbol', 'XAUUSDm');
+        await attachDiagnostics(page, testInfo);
+    });
+
     test('pan zoom pointer and tick burst keep chart responsive', async ({ page }, testInfo) => {
         const center = await chartPoint(page, 0.55, 0.45);
 
