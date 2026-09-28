@@ -9,6 +9,7 @@ import { getScopedMt5Prices, isRecipientForMt5Owner } from "../mt5Scope.js";
 import { getVietnamGoldQuotes } from "../../services/vnGoldService.js";
 import { getVangTodayLatestQuotes } from "../../services/vangTodayService.js";
 import { logWarn } from "../../logger.js";
+import { recordBroadcastStageDuration } from "../../runtime-state.js";
 
 let lastBroadcastWarnAt = 0;
 
@@ -60,7 +61,9 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
         }
 
         for (const [scopeKey, group] of groups.entries()) {
+            const fetchStartAt = performance.now();
             const data = await fetchLatestCandle(mt5Prices, symbol, interval, group.userId);
+            recordBroadcastStageDuration("candle_fetch", performance.now() - fetchStartAt);
             if (!data) continue;
 
             const candle = data.candle;
@@ -76,6 +79,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
                 if (buffer.length > 200) buffer.shift();
             }
 
+            const indicatorStartAt = performance.now();
             const closes = buffer.map((c) => c.close);
             const rsiArr = RSI.calculate({ period: 14, values: closes });
             const rsiValue = rsiArr[rsiArr.length - 1];
@@ -87,6 +91,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
                     bollinger = bands[bands.length - 1];
                 }
             }
+            recordBroadcastStageDuration("candle_indicator", performance.now() - indicatorStartAt);
 
             const source = String(symbol || "").toUpperCase().includes("USDT")
                 ? "BINANCE"
@@ -94,6 +99,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
                     ? "VN_GOLD"
                     : "MT5";
 
+            const serializeSendStartAt = performance.now();
             const payload = JSON.stringify({
                 topic: "candleUpdate",
                 data: {
@@ -109,6 +115,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
             for (const ws of group.sockets) {
                 safeSend(ws, payload, { nonCritical: true });
             }
+            recordBroadcastStageDuration("candle_serialize_send", performance.now() - serializeSendStartAt);
         }
     }
 }
