@@ -1,4 +1,4 @@
-import { buildSocketConfig, fetchWsTicketFromApi } from './socket-config';
+import { buildSocketConfig, deriveWebClientMode, fetchWsTicketFromApi } from './socket-config';
 import { wsRuntime } from './runtime';
 import { collectActiveSymbolsFromStore } from './symbol-utils';
 import { handleSocketMessage, MessageHandlerDeps } from './message-handler';
@@ -37,9 +37,9 @@ async function openSocket(deps: ConnectionDeps): Promise<void> {
         wsRuntime.lastMessageAt = Date.now();
         wsRuntime.lastAppPongAt = Date.now();
         deps.setConnected(true);
-        const userId = 'user_123';
         const symbols = collectActiveSymbolsFromStore();
-        socket.send(JSON.stringify({ topic: 'auth', userId, symbols }));
+        const clientMode = deriveWebClientMode();
+        socket.send(JSON.stringify({ topic: 'auth', client_mode: clientMode, symbols }));
         socket.send(JSON.stringify({ topic: 'subscribeSymbols', symbols }));
     };
 
