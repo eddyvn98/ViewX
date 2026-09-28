@@ -7,7 +7,7 @@ import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { getAvailableMt5Symbol } from './symbol-message-utils';
-import { buildMt5DataSourceKey, normalizeMt5AccountScope } from '@/lib/mt5/account-scope';
+import { buildMt5AuthFields, buildMt5DataSourceKey, normalizeMt5AccountScope, sameMt5Scope } from '@/lib/mt5/account-scope';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -51,7 +51,16 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const accounts = Array.isArray(msg.accounts)
                 ? msg.accounts.map((item) => normalizeMt5AccountScope(item))
                 : [];
+            const before = useMarketStore.getState().selectedMt5Scope;
             useMarketStore.getState().setMt5AccountsAvailable(accounts);
+            const after = useMarketStore.getState().selectedMt5Scope;
+
+            if (!sameMt5Scope(before, after) && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    topic: 'auth',
+                    ...buildMt5AuthFields(after),
+                }));
+            }
         }
         if (msgType === 'error' && String(msg?.code || '').toLowerCase() === 'unauthorized') {
             wsRuntime.unauthorizedFrameReceived = true;
