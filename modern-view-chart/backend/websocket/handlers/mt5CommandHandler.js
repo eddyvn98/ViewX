@@ -1,29 +1,51 @@
 import { logInfo, logWarn } from "../../logger.js";
-import { resolveBridgeOwnerUserId } from "../mt5Scope.js";
+import { incrementBridgeRouteMiss } from "../../runtime-state.js";
+import { safeSend } from "../wsSend.js";
 
-export function handleMt5Command({ ws, clients }, data) {
+function normalizeOptional(value) {
+    const text = String(value || "").trim();
+    return text || null;
+}
+
+export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
     const senderMeta = clients.get(ws);
     const targetOwnerUserId = senderMeta?.userId ? String(senderMeta.userId) : null;
+    const accountLogin = normalizeOptional(data?.account_login || data?.accountLogin);
+    const terminalId = normalizeOptional(data?.terminal_id || data?.terminalId);
     const payload = JSON.stringify(data);
-    const bridgeSockets = [];
-    for (const [clientWs, meta] of clients.entries()) {
-        if (!meta?.isBridgeAuthenticated) continue;
-        if (resolveBridgeOwnerUserId(meta) !== targetOwnerUserId) continue;
-        if (clientWs.readyState === clientWs.OPEN) bridgeSockets.push(clientWs);
+
+    const route = bridgeRegistry?.resolve({
+        userId: targetOwnerUserId,
+        accountLogin,
+        terminalId,
+    }) || { record: null, reason: "registry_unavailable", candidateCount: 0 };
+
+    if (!route.record?.ws || route.record.ws.readyState !== route.record.ws.OPEN) {
+        incrementBridgeRouteMiss();
+        logWarn("ws.mt5_command.route_miss", {
+            command: data?.command || null,
+            owner_user_id: targetOwnerUserId,
+            account_login: accountLogin,
+            terminal_id: terminalId,
+            route_reason: route.reason,
+            candidate_count: route.candidateCount,
+        });
+        safeSend(ws, JSON.stringify({
+            topic: "error",
+            code: "service_unavailable",
+            detail: "mt5_bridge_route_not_found",
+            command: data?.command || null,
+        }));
+        return;
     }
 
-    if (bridgeSockets.length > 1) {
-        logWarn("ws.mt5_command.multiple_bridges_detected", {
-            connected_bridge_clients: bridgeSockets.length,
+    if (route.reason === "legacy_multiple_service_bridges") {
+        logWarn("ws.mt5_command.multiple_service_bridges_detected", {
+            connected_bridge_clients: route.candidateCount,
         });
     }
 
-    let forwarded = 0;
-    const primaryBridge = bridgeSockets[0];
-    if (primaryBridge) {
-        primaryBridge.send(payload);
-        forwarded = 1;
-    }
+    route.record.ws.send(payload);
 
     const command = String(data?.command || "").trim();
     if (["get_candles", "get_symbol_info", "get_history", "get_candles_at"].includes(command)) {
@@ -33,7 +55,10 @@ export function handleMt5Command({ ws, clients }, data) {
             interval: data?.interval || null,
             count: data?.count ?? null,
             owner_user_id: targetOwnerUserId,
-            forwarded_bridge_clients: forwarded,
+            account_login: accountLogin,
+            terminal_id: terminalId,
+            route_reason: route.reason,
+            bridge_client_mode: route.record.clientMode,
         });
     }
 }
