@@ -24,8 +24,12 @@ if (tests.length === 0) {
 console.log(`[test:unit] Running ${tests.length} test file(s)`);
 const args = ['--yes', 'tsx', '--import', './tests/unit.setup.ts', '--test', ...tests];
 
+function quoteWindowsArg(value) {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
 const result = process.platform === 'win32'
-  ? spawnSync(['npx', ...args].join(' '), { stdio: 'inherit', shell: true })
+  ? spawnSync(['npx', ...args].map(quoteWindowsArg).join(' '), { stdio: 'inherit', shell: true })
   : spawnSync('npx', args, { stdio: 'inherit' });
 
 if (result.error) {
