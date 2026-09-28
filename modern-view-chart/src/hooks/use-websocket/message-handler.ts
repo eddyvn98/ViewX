@@ -5,8 +5,9 @@ import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_B
 import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
-import { getAvailableMt5Symbol } from './symbol-message-utils';
 import { buildMt5AuthFields, buildMt5DataSourceKey, buildTickerStoreKeys, normalizeMt5AccountScope, sameMt5Scope } from '@/lib/mt5/account-scope';
+import { createSymbolDescriptor } from '@/lib/market/symbol-catalog';
+import type { SymbolDescriptor } from '@/lib/store/types';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -18,7 +19,7 @@ export interface MessageHandlerDeps {
     setOrders: (orders: Array<Record<string, unknown>>, source?: string) => void;
     appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean, source?: string) => void;
     setSymbolInfo: (info: Record<string, unknown>, keyOverride?: string) => void;
-    setAvailableSymbols: (symbols: string[]) => void;
+    setAvailableSymbols: (symbols: SymbolDescriptor[], scopeKey?: string) => void;
 }
 
 type CandleBufferItem = {
@@ -56,6 +57,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
 
             if (!sameMt5Scope(before, after)) {
                 useMarketStore.getState().clearMt5CandleRuntime();
+                useMarketStore.getState().activateSymbolCatalog(buildMt5DataSourceKey(after));
             }
             if (!sameMt5Scope(before, after) && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
@@ -149,8 +151,8 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const symbol = String(c.symbol || '');
             const interval = String(c.interval || '');
             const rawSource = String(c.source || '').toUpperCase();
-            const source = rawSource.startsWith('MT5')
-                ? 'MT5'
+            const source = rawSource.startsWith('MT5') || c.mt5_scope
+                ? getMt5FrameSource(c)
                 : rawSource || (symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
@@ -272,10 +274,20 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_available_symbols') {
+            const scope = normalizeMt5AccountScope(msg.mt5_scope || msg);
+            const scopeKey = buildMt5DataSourceKey(scope);
+            const source = scope.source === 'MT5_PERSONAL' ? 'MT5_PERSONAL' : 'MT5';
             const symbols = Array.isArray(msg.symbols)
-                ? msg.symbols.map(getAvailableMt5Symbol).filter(Boolean)
+                ? msg.symbols
+                    .map((item) => createSymbolDescriptor(item, {
+                        source,
+                        accountLogin: scope.accountLogin,
+                        terminalId: scope.terminalId,
+                        broker: scope.broker,
+                    }))
+                    .filter((item): item is SymbolDescriptor => Boolean(item))
                 : [];
-            deps.setAvailableSymbols(symbols);
+            deps.setAvailableSymbols(symbols, scopeKey);
         }
 
         if (msgType === 'alert_triggered') {
