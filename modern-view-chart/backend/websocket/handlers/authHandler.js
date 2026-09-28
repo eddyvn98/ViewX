@@ -14,15 +14,17 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) 
         }
     }
 
-    // Immediately send current prices so the UI isn't empty on load
-    const binanceData = getBinancePrices();
-    const mt5Data = getScopedMt5Prices(mt5Prices, clientData?.userId || null);
-    let combined = [...binanceData, ...mt5Data];
-
-    if (requestedSymbols.length > 0) {
-        const symbolSet = new Set(requestedSymbols);
-        combined = combined.filter((item) => symbolSet.has(item.symbol));
-    }
+    // Immediately send current prices so the UI isn't empty on load, but only
+    // materialize the symbols this client actually needs. Walking the full Binance
+    // market for every reconnect can stall the shared broadcast loop during ramp-up.
+    const initialSymbols = requestedSymbols.length > 0
+        ? requestedSymbols
+        : (subscriptionIndex.coreSymbols || []);
+    const symbolSet = new Set(initialSymbols.map((symbol) => normalizeSymbol(symbol)).filter(Boolean));
+    const binanceData = getBinancePrices(initialSymbols);
+    const mt5Data = getScopedMt5Prices(mt5Prices, clientData?.userId || null)
+        .filter((item) => symbolSet.size === 0 || symbolSet.has(normalizeSymbol(item?.symbol)));
+    const combined = [...binanceData, ...mt5Data];
 
     if (combined.length > 0) {
         safeSend(ws, JSON.stringify({ topic: "priceUpdate", data: combined }), { nonCritical: true });
