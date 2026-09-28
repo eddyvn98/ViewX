@@ -198,7 +198,7 @@ async function main() {
     const disconnectRate = ((failed + unexpectedClosed) / Math.max(1, clientsTarget)) * 100;
     const healthOkSamples = healthSamples.filter((item) => item.ok && Number.isFinite(item.broadcast_p95_ms));
     const maxBroadcastP95 = healthOkSamples.length > 0 ? Math.max(...healthOkSamples.map((x) => x.broadcast_p95_ms)) : null;
-    const stageNames = ["price", "candle", "candle_fetch", "candle_indicator", "candle_serialize_send"];
+    const stageNames = ["price", "price_sources", "price_scope", "price_send", "candle", "candle_fetch", "candle_indicator", "candle_serialize_send"];
     const maxBroadcastStageP95Ms = Object.fromEntries(
         stageNames.map((stage) => {
             const values = healthOkSamples
