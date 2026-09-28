@@ -1,3 +1,4 @@
+import { resolveUserAccountTier } from "../../auth/accountTier.js";
 export function getGoogleClientId() {
     return (process.env.GOOGLE_CLIENT_ID || "").trim();
 }
@@ -109,6 +110,7 @@ export function toAuthResponse(user, tokens, normalizedRole) {
             display_name: user.displayName || "",
             avatar_url: user.avatarUrl || "",
             plan: user.plan || "free",
+            account_tier: resolveUserAccountTier(user),
             modules,
             subscription: {
                 ...(user.subscription || { plan: user.plan || "free", modules }),
