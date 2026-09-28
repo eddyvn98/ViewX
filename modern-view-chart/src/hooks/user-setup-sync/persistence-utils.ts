@@ -1,4 +1,6 @@
 import { RootState, useMarketStore } from '@/lib/store';
+import type { MarketDataSource, SymbolDescriptor } from '@/lib/store/types';
+import { createLegacySymbolDescriptor } from '@/lib/market/symbol-catalog';
 import { migrateStrategyStoreState } from '@/features/strategy/store/strategy-store.migrations';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import type {
@@ -23,6 +25,39 @@ import {
 } from './state-utils';
 import { mergePersistedStrategyState } from './strategy-utils';
 
+
+const VALID_SYMBOL_SOURCES = new Set<MarketDataSource>(['BINANCE', 'MT5', 'MT5_PERSONAL', 'VN_GOLD']);
+
+function sanitizePersistedWatchlistItems(value: unknown, legacyWatchlist: string[]): SymbolDescriptor[] {
+    if (!Array.isArray(value)) return legacyWatchlist.map(createLegacySymbolDescriptor);
+
+    const items = value.flatMap((entry): SymbolDescriptor[] => {
+        if (!entry || typeof entry !== 'object') return [];
+        const raw = entry as Record<string, unknown>;
+        const symbol = String(raw.symbol || '').trim();
+        const source = String(raw.source || '').trim().toUpperCase() as MarketDataSource;
+        if (!symbol || !VALID_SYMBOL_SOURCES.has(source)) return [];
+        const optional = (input: unknown) => {
+            const text = String(input || '').trim();
+            return text || null;
+        };
+        const digits = Number(raw.digits);
+        return [{
+            symbol,
+            source,
+            accountLogin: optional(raw.accountLogin ?? raw.account_login),
+            terminalId: optional(raw.terminalId ?? raw.terminal_id),
+            broker: optional(raw.broker),
+            description: optional(raw.description) || undefined,
+            path: optional(raw.path) || undefined,
+            digits: Number.isFinite(digits) ? digits : undefined,
+            type: optional(raw.type) || undefined,
+        }];
+    });
+
+    return items.length > 0 ? items : legacyWatchlist.map(createLegacySymbolDescriptor);
+}
+
 function getPersistedUiState(state: Partial<PersistedSetupState> | undefined): Partial<PersistedUiState> | null {
     if (!state || !isPlainObject(state.ui)) return null;
     return state.ui as Partial<PersistedUiState>;
@@ -38,7 +73,13 @@ function applyPersistedSetupState(
     useMarketStore.setState((prev) => {
         const next: Partial<RootState> = {};
 
-        if (Array.isArray(persisted.watchlist)) next.watchlist = persisted.watchlist.filter((s): s is string => typeof s === 'string');
+        const persistedWatchlist = Array.isArray(persisted.watchlist)
+            ? persisted.watchlist.filter((s): s is string => typeof s === 'string')
+            : prev.watchlist;
+        if (Array.isArray(persisted.watchlist)) next.watchlist = persistedWatchlist;
+        if (Array.isArray(persisted.watchlistItems) || Array.isArray(persisted.watchlist)) {
+            next.watchlistItems = sanitizePersistedWatchlistItems(persisted.watchlistItems, persistedWatchlist);
+        }
         if (Array.isArray(persisted.favoriteTimeframes)) {
             next.favoriteTimeframes = persisted.favoriteTimeframes.filter((s): s is string => typeof s === 'string');
         }
