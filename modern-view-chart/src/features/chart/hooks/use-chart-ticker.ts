@@ -74,7 +74,7 @@ export function useChartTicker({
             }
         }
         return [];
-    }, [dataSource, normSymbol, interval]);
+    }, [source, dataSource, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
         const raw = String(intv || '').trim();
