@@ -80,15 +80,17 @@ export function requestChartBackfill(
     const socket = wsRuntime.globalSocket;
     if (!source || !symbol || !interval || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-    const throttleKey = `${source}:${normalizeSymbol(symbol)}:${interval}`;
+    const direction = options?.direction === 'older' ? 'older' : 'latest';
+    const anchorTimeSec = Number(options?.anchorTimeSec);
+    const intervalSec = Math.max(60, parseIntervalSeconds(interval));
+    const anchorKey = direction === 'older' && Number.isFinite(anchorTimeSec)
+        ? Math.floor(anchorTimeSec)
+        : 'latest';
+    const throttleKey = `${source}:${normalizeSymbol(symbol)}:${interval}:${direction}:${anchorKey}`;
     const nowMs = Date.now();
     const lastRequestedAt = wsRuntime.lastForegroundResyncAtByKey[throttleKey] || 0;
     if (nowMs - lastRequestedAt < BACKFILL_THROTTLE_MS) return;
     wsRuntime.lastForegroundResyncAtByKey[throttleKey] = nowMs;
-
-    const direction = options?.direction === 'older' ? 'older' : 'latest';
-    const anchorTimeSec = Number(options?.anchorTimeSec);
-    const intervalSec = Math.max(60, parseIntervalSeconds(interval));
 
     if (source === 'MT5') {
         if (direction === 'older' && Number.isFinite(anchorTimeSec) && anchorTimeSec > 0) {
