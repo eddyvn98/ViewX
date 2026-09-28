@@ -22,12 +22,11 @@ if (tests.length === 0) {
 }
 
 console.log(`[test:unit] Running ${tests.length} test file(s)`);
-const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const result = spawnSync(
-  command,
-  ['--yes', 'tsx', '--import', './tests/unit.setup.ts', '--test', ...tests],
-  { stdio: 'inherit', shell: true },
-);
+const args = ['--yes', 'tsx', '--import', './tests/unit.setup.ts', '--test', ...tests];
+
+const result = process.platform === 'win32'
+  ? spawnSync(['npx', ...args].join(' '), { stdio: 'inherit', shell: true })
+  : spawnSync('npx', args, { stdio: 'inherit' });
 
 if (result.error) {
   console.error(result.error);
