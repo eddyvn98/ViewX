@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { debugLog } from '@/lib/debug';
@@ -21,6 +21,8 @@ import {
     completeHistoryRequest,
     tryStartHistoryRequest,
 } from './history-request-gate';
+import { loadCachedCandles } from '../cache/candle-history-cache';
+import { getIncrementalHistoryCount, INITIAL_HISTORY_COUNT } from './history-sync';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
 
@@ -57,6 +59,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
     const lastHistoryRevisionRef = useRef(-1);
+    const [cacheHydration, setCacheHydration] = useState({ key: '', ready: false });
     // BUG #3 fix: generation counter to reject stale RAF callbacks on rapid symbol/timeframe switching.
     // Each context change bumps the generation; RAF callbacks that don't match are discarded.
     const applyDataGenerationRef = useRef(0);
@@ -67,6 +70,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
     const historyRequestKey = buildHistoryRequestKey(source, normSymbol, interval);
+    const isCacheReady = cacheHydration.key === historyRequestKey && cacheHydration.ready;
 
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
@@ -75,33 +79,36 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
     const requestHistory = useCallback(() => {
-        if (!symbol || !interval) return;
+        if (!symbol || !interval || !isCacheReady) return;
         const sourceText = String(source || '').toUpperCase();
+        const resolved = resolveCandles(
+            useMarketStore.getState(),
+            source,
+            normSymbol,
+            intervalCandidates,
+        );
+        const cachedCandles = resolved.candles;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const secondsPerBar = Math.max(60, parseIntervalSeconds(interval));
 
-        if (sourceText !== 'VN_GOLD') {
-            const cachedCount = resolveCandles(
-                useMarketStore.getState(),
-                source,
-                normSymbol,
-                intervalCandidates,
-            ).candles.length;
-
-            if (cachedCount >= MIN_CANDLES_THRESHOLD) {
+        let requestCount = INITIAL_HISTORY_COUNT;
+        if (sourceText !== 'VN_GOLD' && cachedCandles.length >= MIN_CANDLES_THRESHOLD) {
+            const lastTime = Number(cachedCandles[cachedCandles.length - 1]?.time);
+            requestCount = getIncrementalHistoryCount(lastTime, nowSec, secondsPerBar);
+            if (requestCount === 0) {
                 completeHistoryRequest(historyRequestKey);
                 return;
             }
-
-            if (!tryStartHistoryRequest(historyRequestKey)) return;
         }
 
+        if (sourceText !== 'VN_GOLD' && !tryStartHistoryRequest(historyRequestKey)) return;
+
         if (sourceText === 'BINANCE') {
-            const nowSec = Math.floor(Date.now() / 1000);
-            const secondsPerBar = parseIntervalSeconds(interval);
             sendMessage({
                 topic: "get_binance_candles",
                 symbol,
                 interval,
-                fromTimestamp: nowSec - secondsPerBar * 300,
+                fromTimestamp: Math.max(1, nowSec - secondsPerBar * requestCount),
                 toTimestamp: nowSec,
             });
             return;
@@ -112,30 +119,74 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 topic: "get_vn_gold_candles",
                 symbol,
                 interval,
-                count: 300,
+                count: INITIAL_HISTORY_COUNT,
             });
             return;
         }
 
-        sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
+        sendMessage({
+            topic: "mt5_command",
+            command: "get_candles",
+            symbol,
+            interval,
+            count: requestCount,
+        });
         sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
-    }, [symbol, interval, source, normSymbol, intervalCandidates, historyRequestKey, sendMessage]);
+    }, [
+        symbol,
+        interval,
+        source,
+        normSymbol,
+        intervalCandidates,
+        historyRequestKey,
+        isCacheReady,
+        sendMessage,
+    ]);
+
+    useEffect(() => {
+        if (!source || !normSymbol || !interval) {
+            setCacheHydration({ key: historyRequestKey, ready: true });
+            return;
+        }
+
+        let cancelled = false;
+        const targetKey = historyRequestKey;
+        setCacheHydration({ key: targetKey, ready: false });
+
+        void loadCachedCandles(source, normSymbol, interval).then((cached) => {
+            if (cancelled) return;
+            if (cached.length > 0) {
+                useMarketStore.getState().setCandles(source, normSymbol, interval, cached);
+            }
+            setCacheHydration({ key: targetKey, ready: true });
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [historyRequestKey, source, normSymbol, interval]);
 
     useEffect(() => {
         if (isVietnamGoldSource) return;
-        if (candlesCount >= MIN_CANDLES_THRESHOLD) {
-            completeHistoryRequest(historyRequestKey);
-        }
-    }, [candlesCount, historyRequestKey, isVietnamGoldSource]);
+        if (historyRevision > 0) completeHistoryRequest(historyRequestKey);
+    }, [historyRevision, historyRequestKey, isVietnamGoldSource]);
 
     useEffect(() => {
-        if (!isReady || !symbol || !interval || !isConnected) return;
-        if (!isVietnamGoldSource && candlesCount >= MIN_CANDLES_THRESHOLD) return;
+        if (!isCacheReady || !isReady || !symbol || !interval || !isConnected) return;
 
         requestHistory();
-        const timer = setInterval(requestHistory, isVietnamGoldSource ? 15000 : 2500);
+        const timer = setInterval(requestHistory, isVietnamGoldSource ? 15_000 : 10_000);
         return () => clearInterval(timer);
-    }, [isReady, symbol, interval, source, isConnected, candlesCount, sendMessage, requestHistory, isVietnamGoldSource]);
+    }, [
+        isCacheReady,
+        isReady,
+        symbol,
+        interval,
+        source,
+        isConnected,
+        requestHistory,
+        isVietnamGoldSource,
+    ]);
 
     const getPersistedViewport = (): ChartInstance['viewport'] | undefined => {
         const state = useMarketStore.getState();
@@ -203,7 +254,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         });
         const isContextChange = key !== lastKeyRef.current;
 
-        if ((isVietnamGoldSource || currentCandles.length < MIN_CANDLES_THRESHOLD) && isConnected) {
+        if (isCacheReady && (isVietnamGoldSource || currentCandles.length < MIN_CANDLES_THRESHOLD) && isConnected) {
             const now = Date.now();
             if (now - lastFetchRequestTimeRef.current > 2000) {
                 lastFetchRequestTimeRef.current = now;
@@ -333,7 +384,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 lastHistoryRevisionRef.current = historyRevision;
             });
         }
-    }, [isReady, candlesCount, historyRevision, key, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, historyRevision, key, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource, isCacheReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {
