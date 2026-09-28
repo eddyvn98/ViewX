@@ -331,6 +331,8 @@ class MT5Service:
             }
 
         done_codes = {mt5.TRADE_RETCODE_DONE}
+        if hasattr(mt5, "TRADE_RETCODE_PLACED"):
+            done_codes.add(mt5.TRADE_RETCODE_PLACED)
         if hasattr(mt5, "TRADE_RETCODE_DONE_PARTIAL"):
             done_codes.add(mt5.TRADE_RETCODE_DONE_PARTIAL)
         success = result.retcode in done_codes
@@ -389,8 +391,14 @@ class MT5Service:
         if minimum_distance <= 0:
             return None
 
-        sl_value = float(sl or 0.0)
-        tp_value = float(tp or 0.0)
+        try:
+            sl_value = float(sl or 0.0)
+        except (TypeError, ValueError):
+            return "invalid_sl"
+        try:
+            tp_value = float(tp or 0.0)
+        except (TypeError, ValueError):
+            return "invalid_tp"
         is_buy = "buy" in order_type_str
         reference = float(tick.bid if is_buy else tick.ask)
 
@@ -550,11 +558,21 @@ class MT5Service:
                     resolved_symbol=info.name,
                 )
 
+        try:
+            sl_value = float(sl) if sl else 0.0
+            tp_value = float(tp) if tp else 0.0
+        except (TypeError, ValueError):
+            return self._validation_error(
+                "invalid_sl_or_tp",
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
+
         request = {
             "symbol": info.name,
             "volume": volume_value,
-            "sl": float(sl) if sl else 0.0,
-            "tp": float(tp) if tp else 0.0,
+            "sl": sl_value,
+            "tp": tp_value,
             "magic": int(magic) if magic is not None else 234000,
             "comment": str(comment) if comment is not None else "VivuTrade Web",
             "type_time": mt5.ORDER_TIME_GTC,
