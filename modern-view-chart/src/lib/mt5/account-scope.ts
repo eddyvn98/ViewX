@@ -79,10 +79,17 @@ export function resolveChartIdentityDataSource(
 }
 
 export function buildTickerStoreKeys(source: string, symbol: string): string[] {
-    const normalizedSymbol = normalizeSymbol(symbol);
-    if (!normalizedSymbol) return [];
+    const exactSymbol = String(symbol || '').trim();
+    const normalizedSymbol = normalizeSymbol(exactSymbol);
+    if (!exactSymbol && !normalizedSymbol) return [];
+
     const normalizedSource = String(source || '').trim() || 'MT5';
-    return [`${normalizedSource}:${normalizedSymbol}`, normalizedSymbol];
+    const keys = new Set<string>();
+    if (exactSymbol) keys.add(`${normalizedSource}:${exactSymbol}`);
+    if (normalizedSymbol) keys.add(`${normalizedSource}:${normalizedSymbol}`);
+    if (exactSymbol) keys.add(exactSymbol);
+    if (normalizedSymbol) keys.add(normalizedSymbol);
+    return Array.from(keys);
 }
 
 export function buildMt5AuthFields(scopeInput: unknown): Record<string, string | null> {
