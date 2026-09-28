@@ -203,12 +203,12 @@ These are engineering targets, not immediate GitHub-runner hard gates:
 ### Phase 5 - live soak
 - [x] Add optional/scheduled WebSocket live soak workflow with JSON artifacts.
 - [x] Run public production WebSocket connectivity soak automatically on relevant main-branch changes.
-- [x] Use Authorization header for service-authenticated WebSocket soak and read performance metrics from `/api/metrics`.
+- [x] Use the `bearer.<token>` WebSocket subprotocol for service-authenticated soak and an Authorization header for `/api/metrics`.
 - [ ] Run authenticated live soak against the deployed API/WS endpoint and archive a passing report. Authentication is configured and passing; latest deployed-backend soak is blocked only by the broadcast p95 budget pending production deployment of the merged performance fix.
 
 ## Current validation status
 
-Deterministic chart hardening is implemented, including rapid indicator parameter-change torture and stale worker-result protection. Production connectivity soak is automated. `VIEWX_SOAK_ACCESS_TOKEN` is configured and the WebSocket auth smoke matrix passes 4/4. The authenticated soak opens 20/20 clients with 0% disconnect and receives live metrics, but the currently deployed backend reports broadcast p95 around 755 ms versus the 250 ms budget. PR #7 / commit `1c56f032c855cf6b89c3fcc19137884e0ee4ee0f` removes external gold HTTP refreshes from the realtime broadcast critical path; the remaining completion item is to deploy that revision to production and rerun the authenticated soak until the p95 budget passes.
+Deterministic chart hardening is implemented, including rapid indicator parameter-change torture and stale worker-result protection. Production connectivity soak is automated. `VIEWX_SOAK_ACCESS_TOKEN` is configured and the production WebSocket auth smoke passes guest + service-subprotocol cases. The authenticated soak opens 20/20 clients with 0% disconnect and receives live metrics, but the currently deployed backend reports broadcast p95 around 755 ms versus the 250 ms budget. PR #7 / commit `1c56f032c855cf6b89c3fcc19137884e0ee4ee0f` removes external gold HTTP refreshes from the realtime broadcast critical path; the remaining completion item is to deploy that revision to production and rerun the authenticated soak until the p95 budget passes.
 
 ## Definition of done
 

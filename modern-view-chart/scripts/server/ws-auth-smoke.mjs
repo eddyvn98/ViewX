@@ -33,12 +33,6 @@ function maskCredential(value) {
     return `***${suffix}`;
 }
 
-function withQueryToken(url, token) {
-    const parsed = new URL(url);
-    parsed.searchParams.set("access_token", token);
-    return parsed.toString();
-}
-
 function runWsCase({ name, url, headers, protocols, timeoutMs = 5000, onOpen }) {
     return new Promise((resolve) => {
         let settled = false;
@@ -116,48 +110,18 @@ async function main() {
 
     const results = [];
 
+    // Anonymous WebSocket access is intentionally supported as a viewer/guest.
     results.push(await runWsCase({
-        name: "unauthorized_without_auth",
+        name: "guest_without_auth",
         url: baseUrl,
     }));
 
-    results.push(await runWsCase({
-        name: "service_authorization_header",
-        url: baseUrl,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-        onOpen: async (ws) => {
-            let forbidden = false;
-            const listener = (raw) => {
-                try {
-                    const data = JSON.parse(raw.toString());
-                    if (data?.topic === "error" && data?.code === "forbidden") {
-                        forbidden = true;
-                    }
-                } catch {
-                    // ignore
-                }
-            };
-            ws.on("message", listener);
-            ws.send(JSON.stringify({ topic: "mt5_command", command: "get_history", limit: 1 }));
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            ws.off("message", listener);
-            return {
-                detail: forbidden ? "received_forbidden" : "no_forbidden",
-            };
-        },
-    }));
-
+    // Service authentication for production WebSockets uses a bearer subprotocol.
+    // This survives the Cloudflare WebSocket path used by api.vivutrade.io.vn.
     results.push(await runWsCase({
         name: "service_subprotocol_bearer",
         url: baseUrl,
         protocols: [`bearer.${token}`],
-    }));
-
-    results.push(await runWsCase({
-        name: "query_auth_compat",
-        url: withQueryToken(baseUrl, token),
     }));
 
     const summary = {
