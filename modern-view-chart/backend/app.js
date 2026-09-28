@@ -244,6 +244,7 @@ export function createApp() {
                 dropped_backpressure: runtimeState.wsDroppedBackpressure,
                 buffer_pressure: runtimeState.wsBufferPressure,
                 broadcast_loop_p95_ms: runtimeState.broadcastLoopMsP95,
+                broadcast_stage_p95_ms: runtimeState.broadcastStageP95Ms,
             },
             bridge: {
                 online: runtimeState.bridgeOnline,
