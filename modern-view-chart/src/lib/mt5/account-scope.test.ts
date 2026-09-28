@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     buildMt5AuthFields,
     buildMt5DataSourceKey,
+    buildTickerStoreKeys,
     normalizeMt5AccountScope,
     resolveChartDataSource,
     sameMt5Scope,
@@ -47,4 +48,12 @@ test('auth fields retain selected account and terminal identity', () => {
     });
     assert.equal(sameMt5Scope(personal, { ...personal }), true);
     assert.equal(sameMt5Scope(personal, SHARED_MT5_SCOPE), false);
+});
+
+
+test('stores personal realtime tickers under an account scoped key and legacy symbol alias', () => {
+    assert.deepEqual(
+        buildTickerStoreKeys('MT5_PERSONAL@10001@terminal-a', 'XAUUSDm'),
+        ['MT5_PERSONAL@10001@terminal-a:XAUUSDm', 'XAUUSDm'],
+    );
 });
