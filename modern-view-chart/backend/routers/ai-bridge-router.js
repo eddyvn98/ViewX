@@ -21,27 +21,6 @@ const AI_POLICY = [
     "Keep answers concise and practical.",
 ].join(" ");
 
-const AI_TOOLS = [
-    {
-        function_declarations: [
-            {
-                name: "generate_forecast",
-                description: "Predict future price movement, targets, and confidence levels based on historical candle data. Use this when the user asks about price direction, future scenarios, or next moves.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        symbol: { type: "string", description: "The trading symbol (e.g. XAUUSDm, BTCUSDm)." },
-                        timeframe: { type: "string", description: "The timeframe/interval (e.g. 1m, 5m, 1h)." },
-                        horizon: { type: "number", description: "Number of future candles to predict (optional)." }
-                    },
-                    required: ["symbol", "timeframe"]
-                }
-            }
-        ]
-    }
-];
-
-
 const INPUT_BLOCK_PATTERNS = [
     /\bignore\s+(all|previous|prior)\s+(instructions|rules)\b/i,
     /\bsystem\s*prompt\b/i,
@@ -159,7 +138,7 @@ function buildForecastTextFromQuestion({ question, chart, forecast, lang = "vi" 
 
     const directionVi = direction === "bullish" ? "Tăng" : direction === "bearish" ? "Giảm" : "Đi ngang";
     const directionEn = direction === "bullish" ? "Bullish" : direction === "bearish" ? "Bearish" : "Sideways";
-    const engineTag = String(forecast?.engine || "").toLowerCase() === "timesfm" ? "TimesFM AI" : "TimesFM Heuristic";
+    const engineTag = String(forecast?.engine || "").toLowerCase() === "timesfm" ? "TimesFM AI" : "Heuristic fallback";
 
     const lines = [];
     if (asksRange) {
@@ -535,7 +514,7 @@ router.post("/result", (req, res) => {
  * Generic task creation endpoint (used by the app/bot)
  */
 router.post("/task", async (req, res) => {
-    const { prompt, timeout = 120000, source = "system", conversationId, messageId } = req.body;
+    const { prompt, source = "system", conversationId, messageId } = req.body;
     const actorKey = getActorKey(req, req.body, req.query);
     const isChatSource = String(source || "").trim().toLowerCase() === "chat";
     const billingUserId = resolveBillingUserId(req, req.body, req.query);
