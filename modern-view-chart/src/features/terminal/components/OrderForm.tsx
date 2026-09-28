@@ -33,9 +33,11 @@ export function useOrderFormLogic() {
     const tp = useMarketStore((state) => state.orderForm.tp);
     const setOrderForm = useMarketStore((state) => state.setOrderForm);
     const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
+    const isConnected = useMarketStore((state) => state.isConnected);
     const [isDrafting, setIsDrafting] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const pendingRequestIdRef = React.useRef<string | null>(null);
+    const pendingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const setInputFocused = useMarketStore(state => state.setInputFocused);
@@ -94,6 +96,10 @@ export function useOrderFormLogic() {
             if (!requestId || requestId !== pendingRequestIdRef.current) return;
 
             pendingRequestIdRef.current = null;
+            if (pendingTimeoutRef.current) {
+                clearTimeout(pendingTimeoutRef.current);
+                pendingTimeoutRef.current = null;
+            }
             setIsSubmitting(false);
             if (detail.success === true) {
                 resetOrderForm();
@@ -103,7 +109,13 @@ export function useOrderFormLogic() {
         };
 
         window.addEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
-        return () => window.removeEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+        return () => {
+            window.removeEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+            if (pendingTimeoutRef.current) {
+                clearTimeout(pendingTimeoutRef.current);
+                pendingTimeoutRef.current = null;
+            }
+        };
     }, [resetOrderForm, setDraftOrder]);
 
     const adjustValue = (val: string, step: number, isSL: boolean) => {
@@ -131,6 +143,11 @@ export function useOrderFormLogic() {
             return;
         }
 
+        if (!isConnected) {
+            useMarketStore.getState().addNotification('WebSocket chưa kết nối. Vui lòng thử lại.', 'warning');
+            return;
+        }
+
         if (isCrypto) {
             sendMessage({
                 topic: 'binance_command',
@@ -151,6 +168,14 @@ export function useOrderFormLogic() {
         const requestId = createMt5RequestId();
         pendingRequestIdRef.current = requestId;
         setIsSubmitting(true);
+        if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
+        pendingTimeoutRef.current = setTimeout(() => {
+            if (pendingRequestIdRef.current !== requestId) return;
+            pendingRequestIdRef.current = null;
+            pendingTimeoutRef.current = null;
+            setIsSubmitting(false);
+            useMarketStore.getState().addNotification('MT5: Hết thời gian chờ phản hồi lệnh', 'warning');
+        }, 20000);
         sendMessage({
             topic: 'mt5_command',
             command: 'place_order',
