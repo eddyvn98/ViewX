@@ -22,6 +22,13 @@ type DrawingState = {
     selectedDrawingId: string | null;
 };
 
+type ForecastState = {
+    symbol: string;
+    interval: string;
+    source: ChartInstance['source'];
+    firstPoint: number | null;
+} | null;
+
 type E2EBridge = {
     seed: () => void;
     getChartState: () => { id: string; symbol: string; interval: string; source: string } | null;
@@ -31,6 +38,8 @@ type E2EBridge = {
     getLastCandle: () => Candle | null;
     getPerfCounters: () => ChartPerfCounters;
     resetPerfCounters: () => void;
+    seedForecast: (firstPoint?: number) => void;
+    getForecastState: () => ForecastState;
     addDrawingFixture: () => void;
     addIndicator: (type: string, pane?: IndicatorConfig['pane']) => void;
     clearIndicators: () => void;
@@ -241,6 +250,35 @@ export function ChartE2EBridge() {
             },
             getPerfCounters: getChartPerfCounters,
             resetPerfCounters: resetChartPerfCounters,
+            seedForecast: (firstPoint) => {
+                const chart = activeChart();
+                if (!chart) return;
+                const base = Number(firstPoint ?? basePrice(chart.symbol));
+                useMarketStore.getState().updateChart(chart.id, {
+                    forecast: {
+                        timestamp: Date.now(),
+                        symbol: chart.symbol,
+                        interval: chart.interval,
+                        source: chart.source,
+                        points: [base, base * 1.001, base * 0.999],
+                        lower_band: [base * 0.99, base * 0.99, base * 0.99],
+                        upper_band: [base * 1.01, base * 1.01, base * 1.01],
+                        engine: 'heuristic',
+                        confidence: 75,
+                        horizon: 3,
+                    },
+                });
+            },
+            getForecastState: () => {
+                const forecast = activeChart()?.forecast;
+                if (!forecast) return null;
+                return {
+                    symbol: forecast.symbol,
+                    interval: forecast.interval,
+                    source: forecast.source,
+                    firstPoint: forecast.points.length > 0 ? Number(forecast.points[0]) : null,
+                };
+            },
             addDrawingFixture: () => {
                 const chart = activeChart();
                 const candles = activeCandles();
