@@ -72,6 +72,26 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             return;
         }
 
+        if (msgType === 'error' && msg.request_id) {
+            const tradeError = {
+                ...msg,
+                topic: 'mt5_order_result',
+                success: false,
+                status: 'error',
+                comment: msg.detail || msg.code || 'mt5_request_failed',
+                message: msg.detail || msg.code || 'mt5_request_failed',
+            };
+            useMarketStore.getState().addNotification(
+                `MT5: ${String(tradeError.comment)}`,
+                'error',
+            );
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('vivutrade:mt5-order-result', {
+                    detail: tradeError,
+                }));
+            }
+        }
+
         if ((msgType === 'priceUpdate' && Array.isArray(msg.data)) || msgType === 'tick' || msgType === 'mt5_update') {
             const state = useMarketStore.getState();
             const activeSymbols = buildActiveSymbolSet(state);
