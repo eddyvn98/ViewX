@@ -21,6 +21,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         visiblePositions,
         visibleOrders,
         visibleHistory,
+        accountSource,
         mt5AccountsAvailable,
         selectedMt5Scope,
         handleSelectMt5Scope,
@@ -45,6 +46,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                 handleDragStart={handleDragStart}
                 toggleCollapse={toggleCollapse}
                 visibleAccount={visibleAccount}
+                accountSource={accountSource}
                 mt5AccountsAvailable={mt5AccountsAvailable}
                 selectedMt5Scope={selectedMt5Scope}
                 onSelectMt5Scope={handleSelectMt5Scope}
