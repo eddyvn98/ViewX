@@ -57,6 +57,27 @@ export function resolveChartDataSource(source: string | undefined, scopeInput: u
     return buildMt5DataSourceKey(scopeInput);
 }
 
+export function resolveChartIdentityDataSource(
+    source: string | undefined,
+    identity?: {
+        accountLogin?: string | null;
+        terminalId?: string | null;
+        broker?: string | null;
+    },
+): string {
+    const normalized = String(source || '').trim().toUpperCase();
+    if (normalized === 'MT5_PERSONAL') {
+        return buildMt5DataSourceKey({
+            source: 'MT5_PERSONAL',
+            accountLogin: identity?.accountLogin,
+            terminalId: identity?.terminalId,
+            broker: identity?.broker,
+        });
+    }
+    if (normalized === 'MT5') return 'MT5';
+    return normalized || String(source || '');
+}
+
 export function buildTickerStoreKeys(source: string, symbol: string): string[] {
     const normalizedSymbol = normalizeSymbol(symbol);
     if (!normalizedSymbol) return [];
