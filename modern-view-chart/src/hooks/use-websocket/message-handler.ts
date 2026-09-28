@@ -123,7 +123,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
             }));
             const frameSource = String(msg.source || 'MT5').toUpperCase();
-            const source = frameSource.startsWith('MT5') ? 'MT5' : frameSource;
+            const source = frameSource.startsWith('MT5') || msg.mt5_scope
+                ? getMt5FrameSource(msg)
+                : frameSource;
             if (!targetInterval && targetSymbol) {
                 const state = useMarketStore.getState();
                 const wantedSymbol = normalizeSymbol(targetSymbol);
