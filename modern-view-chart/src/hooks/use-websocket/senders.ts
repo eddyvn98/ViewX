@@ -173,8 +173,7 @@ export function syncForegroundCharts(force: boolean, reason: string) {
             const interval = String(chart?.interval || '').trim();
             if (!source || !symbol || !interval) return;
 
-            const dataSource = resolveChartDataSource(source, state.selectedMt5Scope);
-            const key = `${dataSource}:${normalizeSymbol(symbol)}:${interval}`;
+            const key = `${source}:${normalizeSymbol(symbol)}:${interval}`;
             const candles = state.candleData[key] || [];
             if (candles.length === 0) {
                 requestChartBackfill(source, symbol, interval, reason);
@@ -205,8 +204,7 @@ export function syncForegroundCharts(force: boolean, reason: string) {
     getMatrixCandleRequests(scanners).forEach(({ source, symbol, interval }) => {
         const normalizedSource = String(source || '').toUpperCase();
         const normalizedInterval = String(interval || '').trim();
-        const dataSource = resolveChartDataSource(normalizedSource, state.selectedMt5Scope);
-        const key = `${dataSource}:${normalizeSymbol(symbol)}:${normalizedInterval}`;
+        const key = `${normalizedSource}:${normalizeSymbol(symbol)}:${normalizedInterval}`;
         const candles = state.candleData[key] || [];
 
         if (candles.length === 0) {
