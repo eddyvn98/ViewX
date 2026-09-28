@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { normalizeUserRole } from "./roles.js";
 import { userModel } from "../model/user.js";
 import { refreshTokenModel } from "../model/refreshToken.js";
+import { resolveUserAccountTier } from "./accountTier.js";
 
 const memoryFallbackJtis = new Map();
 let warnedJwtFallback = false;
@@ -68,11 +69,12 @@ function toNumericDate(value) {
     return nowEpochSeconds();
 }
 
-export async function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
+export async function issueAuthTokens({ userId, role, sessionVersion = 1, accountTier = "free" }) {
     const { accessSecret, refreshSecret } = requireSecrets();
     const subject = String(userId || "");
     const userRole = normalizeUserRole(role);
     const userSessionVersion = Number.isFinite(Number(sessionVersion)) ? Number(sessionVersion) : 1;
+    const normalizedAccountTier = accountTier === "pro" ? "pro" : "free";
     const refreshJti = crypto.randomUUID();
 
     const accessToken = jwt.sign(
@@ -80,6 +82,7 @@ export async function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
             sub: subject,
             role: userRole,
             sv: userSessionVersion,
+            account_tier: normalizedAccountTier,
             type: "access",
         },
         accessSecret,
@@ -93,6 +96,7 @@ export async function issueAuthTokens({ userId, role, sessionVersion = 1 }) {
             sub: subject,
             role: userRole,
             sv: userSessionVersion,
+            account_tier: normalizedAccountTier,
             type: "refresh",
             jti: refreshJti,
         },
@@ -171,7 +175,7 @@ export async function rotateRefreshToken(refreshToken) {
         const graceUntil = tokenDoc.gracePeriodUntil ? new Date(tokenDoc.gracePeriodUntil).getTime() : 0;
         if (now < graceUntil) {
             // Concurrent tab refresh within grace period: issue a fresh valid token pair for this tab
-            const user = await userModel.findById(payload.sub).select("_id role sessionVersion");
+            const user = await userModel.findById(payload.sub).select("_id role sessionVersion plan subscription");
             if (!user?._id) throw new Error("User not found");
             const currentSessionVersion = Number.isFinite(Number(user.sessionVersion)) ? Number(user.sessionVersion) : 1;
             const tokenSessionVersion = Number.isFinite(Number(payload.sv)) ? Number(payload.sv) : 1;
@@ -181,12 +185,13 @@ export async function rotateRefreshToken(refreshToken) {
                 userId: user._id,
                 role: normalizeUserRole(user.role),
                 sessionVersion: currentSessionVersion,
+                accountTier: resolveUserAccountTier(user),
             });
         }
         throw new Error("Refresh token revoked");
     }
 
-    const user = await userModel.findById(payload.sub).select("_id role sessionVersion");
+    const user = await userModel.findById(payload.sub).select("_id role sessionVersion plan subscription");
     if (!user?._id) {
         throw new Error("User not found");
     }
@@ -213,6 +218,7 @@ export async function rotateRefreshToken(refreshToken) {
         userId: user._id,
         role: normalizeUserRole(user.role),
         sessionVersion: currentSessionVersion,
+        accountTier: resolveUserAccountTier(user),
     });
 }
 
