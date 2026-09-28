@@ -54,6 +54,7 @@ export function useTerminalState(forceExpanded: boolean) {
 
     const handleSelectMt5Scope = useCallback((scope: Mt5AccountScope) => {
         setSelectedMt5Scope(scope);
+        useMarketStore.getState().clearMt5CandleRuntime();
         sendMessage({
             topic: 'auth',
             ...buildMt5AuthFields(scope),
@@ -152,6 +153,7 @@ export function useTerminalState(forceExpanded: boolean) {
         visiblePositions,
         visibleOrders,
         visibleHistory,
+        accountSource,
         mt5AccountsAvailable,
         selectedMt5Scope,
         handleSelectMt5Scope,
