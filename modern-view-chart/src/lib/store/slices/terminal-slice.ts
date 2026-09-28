@@ -191,10 +191,14 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         if (!source && payload.length === 0) return {};
 
         const finalSource = source || 'MT5';
-        const otherPositions = state.positions.filter((p) => p.source !== finalSource);
-        const prevMap = new Map(state.positions.map((p) => [p.ticket, p]));
+        const otherPositions = state.positions.filter((p) => String(p.source || 'MT5') !== finalSource);
+        const positionKey = (position: Position) => `${String(position.source || 'MT5')}:${position.ticket}`;
+        const prevMap = new Map(state.positions.map((p) => [positionKey(p), p]));
 
-        const merged = [...otherPositions, ...payload].map((p) => withPositionAnchors(p, prevMap.get(p.ticket)));
+        const merged = [
+            ...otherPositions,
+            ...payload.map((p) => withPositionAnchors(p, prevMap.get(`${finalSource}:${p.ticket}`))),
+        ];
         const filtered = filterPendingDeletions(merged, state.pendingDeletions, 10000);
         const newPositions = filtered.map((position) => applyPendingPositionLocks(position, state.pendingModifications, 3000));
 
@@ -210,7 +214,7 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
             if (!hasStructuralChange) {
                 let anyValueChange = false;
                 for (const nextPos of newPositions) {
-                    const prevPos = prevMap.get(nextPos.ticket);
+                    const prevPos = prevMap.get(positionKey(nextPos));
                     if (prevPos && patchRealtimePositionFields(prevPos, nextPos)) {
                         anyValueChange = true;
                     }
@@ -225,11 +229,19 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
 
     setOrders: (data) => set((state) => {
         const payload = typeof data === 'function' ? data(state.orders) : data;
-        const prevMap = new Map(state.orders.map((o) => [o.ticket, o]));
+        const finalSource = payload[0]?.source || 'MT5';
+        const orderKey = (order: Order) => `${String(order.source || 'MT5')}:${order.ticket}`;
+        const prevMap = new Map(state.orders.map((order) => [orderKey(order), order]));
+        const otherOrders = state.orders.filter((order) => String(order.source || 'MT5') !== finalSource);
 
-        const merged = payload.map((o) => withOrderAnchors(o, prevMap.get(o.ticket)));
-        const protectedOrders = filterPendingDeletions(merged, state.pendingDeletions, 10000)
-            .map((order) => applyPendingOrderLocks(order, state.pendingModifications, 3000));
+        const scopedOrders = payload.map((order) =>
+            withOrderAnchors(order, prevMap.get(`${finalSource}:${order.ticket}`))
+        );
+        const protectedOrders = filterPendingDeletions(
+            [...otherOrders, ...scopedOrders],
+            state.pendingDeletions,
+            10000,
+        ).map((order) => applyPendingOrderLocks(order, state.pendingModifications, 3000));
 
         return { orders: protectedOrders };
     }),
@@ -241,8 +253,9 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     appendHistory: (newData, isReset = false) => set((state) => {
         const source = newData[0]?.source || 'MT5';
         const baseHistory = isReset ? state.history.filter((h) => h.source !== source) : state.history;
-        const map = new Map(baseHistory.map((d) => [d.ticket, d]));
-        newData.forEach((d) => map.set(d.ticket, d));
+        const historyKey = (deal: HistoryDeal) => `${String(deal.source || 'MT5')}:${deal.ticket}`;
+        const map = new Map(baseHistory.map((deal) => [historyKey(deal), deal]));
+        newData.forEach((deal) => map.set(historyKey(deal), deal));
         const combined = Array.from(map.values());
         combined.sort((a, b) => b.time - a.time);
         return { history: combined };
