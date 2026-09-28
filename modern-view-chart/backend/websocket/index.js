@@ -238,12 +238,6 @@ export default function initWebSocket(server) {
 }
 
 function broadcastBridgeStatus(mt5Scope, online, bridgeRegistry = null) {
-    const payload = JSON.stringify({
-        topic: "bridgeStatus",
-        online,
-        mt5_scope: scopeMetadata(mt5Scope),
-    });
-
     for (const [clientWs, meta] of clients.entries()) {
         if (meta?.isBridgeAuthenticated) continue;
         if (!isRecipientForMt5Scope(meta, mt5Scope)) continue;
