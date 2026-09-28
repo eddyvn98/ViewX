@@ -66,7 +66,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
         }
 
         return 0;
-    }, [chart.accountLogin, chart.broker, chart.interval, chart.source, chart.symbol, chart.terminalId]);
+    }, [chart]);
 
     const popoutParams = new URLSearchParams({
         symbol: chart.symbol,
