@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     runtimeState,
+    incrementBridgeRouteMiss,
     recordBroadcastLoopDuration,
     recordBroadcastStageDuration,
+    setBridgeRegistered,
 } from "./runtime-state.js";
 
 test("broadcast loop p95 tracks rolling samples", () => {
@@ -29,4 +31,14 @@ test("broadcast stage metrics reject invalid durations", () => {
     recordBroadcastStageDuration("price", -1);
     recordBroadcastStageDuration("price", Number.NaN);
     assert.equal(runtimeState.broadcastStageP95Ms.price, before);
+});
+
+
+test("bridge registry metrics track active bridges and route misses", () => {
+    const beforeMisses = runtimeState.bridgeRouteMisses;
+    setBridgeRegistered(3);
+    incrementBridgeRouteMiss();
+
+    assert.equal(runtimeState.bridgeRegistered, 3);
+    assert.equal(runtimeState.bridgeRouteMisses, beforeMisses + 1);
 });

@@ -248,6 +248,8 @@ export function createApp() {
             },
             bridge: {
                 online: runtimeState.bridgeOnline,
+                registered: runtimeState.bridgeRegistered,
+                route_misses: runtimeState.bridgeRouteMisses,
             },
             auth: {
                 active_refresh_tokens: getActiveRefreshTokenCount(),

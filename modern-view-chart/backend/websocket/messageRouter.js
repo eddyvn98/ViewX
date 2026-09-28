@@ -70,14 +70,14 @@ function isReadOnlyBinanceCommand(command) {
     return BINANCE_READ_ONLY_COMMANDS.has(normalizeCommandName(command));
 }
 
-export function setupMessageRouter(clients, mt5Prices, subscriptionIndex) {
+export function setupMessageRouter(clients, mt5Prices, subscriptionIndex, bridgeRegistry) {
     return async (ws, msg) => {
         try {
             const data = JSON.parse(msg.toString());
             const senderMeta = clients.get(ws);
             if (!senderMeta) return;
 
-            const context = { ws, clients, mt5Prices, subscriptionIndex };
+            const context = { ws, clients, mt5Prices, subscriptionIndex, bridgeRegistry };
             const msgTopic = data.topic || data.event || data.type;
             if (typeof msgTopic !== "string" || !msgTopic) return;
 
