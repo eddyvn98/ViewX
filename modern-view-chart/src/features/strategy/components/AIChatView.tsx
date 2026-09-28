@@ -380,15 +380,40 @@ export function AIChatView() {
             const data = await response.json() as ChatMessage[];
             const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp);
             setMessages((prev) => {
-                if (prev.length === sorted.length) {
+                // Map existing local conversationId by message id so server responses don't wipe client conversationId
+                const localConvMap = new Map<string, string>();
+                for (const m of prev) {
+                    if (m.conversationId) {
+                        localConvMap.set(m.id, m.conversationId);
+                    }
+                }
+
+                // Enrich incoming server messages with local conversationId if server returned undefined
+                const enriched = sorted.map((m) => {
+                    const localConv = localConvMap.get(m.id);
+                    return {
+                        ...m,
+                        conversationId: m.conversationId || localConv || undefined,
+                    };
+                });
+
+                // Retain any recent local messages (< 30s) that might not yet be in server DB response
+                const serverIds = new Set(enriched.map((m) => m.id));
+                const now = Date.now();
+                const pendingLocal = prev.filter((m) => !serverIds.has(m.id) && (now - m.timestamp < 30000));
+
+                const merged = [...enriched, ...pendingLocal].sort((a, b) => a.timestamp - b.timestamp);
+
+                if (prev.length === merged.length) {
                     const isIdentical = prev.every((item, idx) =>
-                        item.id === sorted[idx]?.id &&
-                        item.response === sorted[idx]?.response &&
-                        item.timestamp === sorted[idx]?.timestamp
+                        item.id === merged[idx]?.id &&
+                        item.conversationId === merged[idx]?.conversationId &&
+                        item.response === merged[idx]?.response &&
+                        item.timestamp === merged[idx]?.timestamp
                     );
                     if (isIdentical) return prev;
                 }
-                return sorted;
+                return merged;
             });
         } finally {
             setIsLoading(false);
@@ -521,14 +546,17 @@ export function AIChatView() {
         const byConvId = chat.filter((m) => m.conversationId && m.conversationId === selectedConversationId);
         if (byConvId.length > 0) return byConvId;
 
-        // 2. If it's a new conversation created with 'conv_' that has no messages yet
-        if (selectedConversationId.startsWith('conv_')) {
-            return [];
-        }
-
-        // 3. If it's a conversation group from buildConversationGroups (legacy conv-timestamp-id)
+        // 2. If it's a conversation group from buildConversationGroups (legacy conv-timestamp-id)
         const group = conversations.find((item) => item.id === selectedConversationId);
         if (group) return group.items;
+
+        // 3. Fallback for 'conv_' where messages might not have conversationId yet,
+        // but were created in this active session
+        if (selectedConversationId.startsWith('conv_')) {
+            const sessionMessages = chat.filter((m) => !m.conversationId && m.timestamp >= sessionStartTs - 30000);
+            if (sessionMessages.length > 0) return sessionMessages;
+            return [];
+        }
 
         // 4. Fallback for 'active': if sessionStartTs was saved, filter >= sessionStartTs
         if (selectedConversationId === 'active') {
@@ -785,8 +813,14 @@ export function AIChatView() {
         const question = inputValue.trim();
         if (!question || isSending) return;
         setInputValue('');
-        await sendPrompt(question);
-    }, [inputValue, isSending, sendPrompt]);
+
+        const intent = classifyIntent(question);
+        if (intent === 'forecast' && marketData.activeChart && recentCandles.length >= 20) {
+            await sendForecast(question);
+        } else {
+            await sendPrompt(question);
+        }
+    }, [inputValue, isSending, marketData.activeChart, recentCandles.length, sendForecast, sendPrompt]);
 
     const handleNewConversation = useCallback(() => {
         const newId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -817,20 +851,45 @@ export function AIChatView() {
         e?.stopPropagation();
         const { accessToken, hasAccessToken } = getAuthContext();
         if (!hasAccessToken) return;
+
+        const group = conversations.find((item) => item.id === convId);
+        const explicitConversation = Boolean(group?.items.some((item) => item.conversationId === convId));
+        const legacyMessageIds = explicitConversation
+            ? []
+            : (group?.items || []).map((item) => item.id).filter(Boolean);
+
         try {
-            await fetch(`/api/ai/bridge/history?conversationId=${encodeURIComponent(convId)}`, {
+            const response = await fetch('/api/ai/bridge/history', {
                 method: 'DELETE',
-                headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
+                headers: {
+                    'content-type': 'application/json',
+                    ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+                },
                 credentials: 'include',
+                body: JSON.stringify(
+                    explicitConversation
+                        ? { conversationId: convId }
+                        : legacyMessageIds.length > 0
+                            ? { messageIds: legacyMessageIds }
+                            : { conversationId: convId },
+                ),
             });
-            setMessages((prev) => prev.filter((m) => m.conversationId !== convId && !convId.includes(String(m.timestamp))));
+            if (!response.ok) {
+                throw new Error(`history_delete_failed_${response.status}`);
+            }
+
+            const legacyIdSet = new Set(legacyMessageIds);
+            setMessages((prev) => prev.filter((m) => {
+                if (explicitConversation) return m.conversationId !== convId;
+                return !legacyIdSet.has(m.id);
+            }));
             if (selectedConversationId === convId) {
                 handleNewConversation();
             }
         } catch (err) {
             console.error('Delete conversation failed:', err);
         }
-    }, [handleNewConversation, selectedConversationId]);
+    }, [conversations, handleNewConversation, selectedConversationId]);
 
     const handleClearAllHistory = useCallback(async () => {
         const confirmMsg = isVi ? 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?' : 'Are you sure you want to clear all chat history?';

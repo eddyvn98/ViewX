@@ -21,27 +21,6 @@ const AI_POLICY = [
     "Keep answers concise and practical.",
 ].join(" ");
 
-const AI_TOOLS = [
-    {
-        function_declarations: [
-            {
-                name: "generate_forecast",
-                description: "Predict future price movement, targets, and confidence levels based on historical candle data. Use this when the user asks about price direction, future scenarios, or next moves.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        symbol: { type: "string", description: "The trading symbol (e.g. XAUUSDm, BTCUSDm)." },
-                        timeframe: { type: "string", description: "The timeframe/interval (e.g. 1m, 5m, 1h)." },
-                        horizon: { type: "number", description: "Number of future candles to predict (optional)." }
-                    },
-                    required: ["symbol", "timeframe"]
-                }
-            }
-        ]
-    }
-];
-
-
 const INPUT_BLOCK_PATTERNS = [
     /\bignore\s+(all|previous|prior)\s+(instructions|rules)\b/i,
     /\bsystem\s*prompt\b/i,
@@ -159,38 +138,71 @@ function buildForecastTextFromQuestion({ question, chart, forecast, lang = "vi" 
 
     const directionVi = direction === "bullish" ? "Tăng" : direction === "bearish" ? "Giảm" : "Đi ngang";
     const directionEn = direction === "bullish" ? "Bullish" : direction === "bearish" ? "Bearish" : "Sideways";
+    const engineTag = String(forecast?.engine || "").toLowerCase() === "timesfm" ? "TimesFM AI" : "Heuristic fallback";
 
+    const lines = [];
     if (asksRange) {
         if (isVi) {
-            return [
-                `Dự báo vùng giá kế tiếp ${symbol} (${timeframe}) trong ${horizon} nến:`,
+            lines.push(
+                `Dự báo vùng giá kế tiếp ${symbol} (${timeframe}) trong ${horizon} nến (${engineTag}):`,
                 `- Vùng kỳ vọng: ${low.toFixed(3)} - ${high.toFixed(3)}`,
                 `- Biên độ dự kiến: ${(high - low).toFixed(3)}`,
-                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`,
-            ].join("\n");
+                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`
+            );
+        } else {
+            lines.push(
+                `Next range forecast for ${symbol} (${timeframe}) over ${horizon} candles (${engineTag}):`,
+                `- Expected range: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+                `- Expected volatility span: ${(high - low).toFixed(3)}`,
+                `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`
+            );
         }
-        return [
-            `Next range forecast for ${symbol} (${timeframe}) over ${horizon} candles:`,
-            `- Expected range: ${low.toFixed(3)} - ${high.toFixed(3)}`,
-            `- Expected volatility span: ${(high - low).toFixed(3)}`,
-            `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`,
-        ].join("\n");
+    } else {
+        if (isVi) {
+            lines.push(
+                `Dự đoán giá sắp tới ${symbol} (${timeframe}) trong ${horizon} nến (${engineTag}):`,
+                `- Giá hiện tại: ${current.toFixed(3)}`,
+                `- Giá mục tiêu: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
+                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`
+            );
+        } else {
+            lines.push(
+                `Next move forecast for ${symbol} (${timeframe}) over ${horizon} candles (${engineTag}):`,
+                `- Current price: ${current.toFixed(3)}`,
+                `- Target price: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
+                `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`
+            );
+        }
     }
 
-    if (isVi) {
-        return [
-            `Dự đoán giá sắp tới ${symbol} (${timeframe}) trong ${horizon} nến:`,
-            `- Giá hiện tại: ${current.toFixed(3)}`,
-            `- Giá mục tiêu: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
-            `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`,
-        ].join("\n");
+    if (forecast?.probabilities) {
+        const probs = forecast.probabilities;
+        const action = probs.action || "WAIT";
+        const actionPct = Math.round(((probs.actionProbabilities && probs.actionProbabilities[action]) || probs.actionConfidence || 0.7) * 100);
+        const shouldEnterPct = Math.round((probs.shouldEnterScore || 0) * 100);
+        const trend = probs.trendProbabilities || {};
+        const pBull = Math.round((trend.bullish || 0) * 100);
+        const pSide = Math.round((trend.sideways || 0) * 100);
+        const pBear = Math.round((trend.bearish || 0) * 100);
+
+        if (isVi) {
+            lines.push(
+                `\nThẩm định xác suất & Vào lệnh (Jev AI %):`,
+                `- Khuyến nghị: ${action} (${actionPct}%)`,
+                `- Xác suất xu hướng: Tăng ${pBull}% | Đi ngang ${pSide}% | Giảm ${pBear}%`,
+                `- Xác suất nên vào lệnh: ${shouldEnterPct}%`
+            );
+        } else {
+            lines.push(
+                `\nProbabilistic Entry Assessment (Jev AI %):`,
+                `- Action Recommendation: ${action} (${actionPct}%)`,
+                `- Trend Probabilities: Bullish ${pBull}% | Sideways ${pSide}% | Bearish ${pBear}%`,
+                `- Should-Enter Probability: ${shouldEnterPct}%`
+            );
+        }
     }
-    return [
-        `Next move forecast for ${symbol} (${timeframe}) over ${horizon} candles:`,
-        `- Current price: ${current.toFixed(3)}`,
-        `- Target price: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
-        `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`,
-    ].join("\n");
+
+    return lines.join("\n");
 }
 
 function aiDisabledResponse(res) {
@@ -272,6 +284,7 @@ async function loadHistory(actorKey, limit = 50) {
         if (Array.isArray(rows) && rows.length > 0) {
             return rows.map((row) => ({
                 id: String(row.messageId || row._id),
+                conversationId: row.conversationId ? String(row.conversationId).trim() : undefined,
                 source: row.source || "chat",
                 prompt: row.prompt || "",
                 response: row.response || "",
@@ -281,7 +294,18 @@ async function loadHistory(actorKey, limit = 50) {
     } catch (error) {
         console.error("[AI History] load failed:", error?.message || error);
     }
-    return getHistory(actorKey).slice(-limit).reverse().filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
+    return getHistory(actorKey)
+        .slice(-limit)
+        .reverse()
+        .map((item) => ({
+            id: String(item?.id || crypto.randomUUID()),
+            conversationId: item?.conversationId ? String(item.conversationId).trim() : undefined,
+            source: item?.source || "chat",
+            prompt: item?.prompt || "",
+            response: item?.response || "",
+            timestamp: Number(item?.timestamp || Date.now()),
+        }))
+        .filter((item) => String(item?.prompt || "").trim() || String(item?.response || "").trim());
 }
 
 function pushHistory(actorKey, item) {
@@ -289,14 +313,20 @@ function pushHistory(actorKey, item) {
         return;
     }
     const history = getHistory(actorKey);
-    history.push(item);
+    const entry = {
+        ...item,
+        id: String(item?.id || crypto.randomUUID()),
+        conversationId: item?.conversationId ? String(item.conversationId).trim() : null,
+    };
+    history.push(entry);
     if (history.length > 300) {
         history.splice(0, history.length - 300);
     }
     const payload = {
         actorKey,
         userId: extractUserIdFromActorKey(actorKey),
-        messageId: String(item?.id || crypto.randomUUID()),
+        messageId: entry.id,
+        conversationId: entry.conversationId,
         source: item?.source === "system" ? "system" : "chat",
         prompt: String(item?.prompt || ""),
         response: String(item?.response || ""),
@@ -356,8 +386,62 @@ async function consumeOneChatCredit(userId) {
  */
 router.get("/history", async (req, res) => {
     const actorKey = getActorKey(req, req.body, req.query);
-    const history = await loadHistory(actorKey, 50);
+    const limit = Math.min(200, Math.max(1, Number(req.query?.limit) || 100));
+    const history = await loadHistory(actorKey, limit);
     return res.json(history); // newest first
+});
+
+router.delete("/history", async (req, res) => {
+    try {
+        const actorKey = getActorKey(req, req.body, req.query);
+        const rawConversationId = req.body?.conversationId ?? req.query?.conversationId;
+        const conversationId = typeof rawConversationId === "string" ? rawConversationId.trim() : "";
+        const messageIds = Array.isArray(req.body?.messageIds)
+            ? req.body.messageIds.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 200)
+            : [];
+
+        if (conversationId) {
+            const result = await aiChatLogModel.deleteMany({ actorKey, conversationId });
+            const memHistory = getHistory(actorKey);
+            const filtered = memHistory.filter((item) => item.conversationId !== conversationId);
+            aiHistoryByActor.set(actorKey, filtered);
+            return res.json({
+                status: "ok",
+                deleted: "conversation",
+                conversationId,
+                deletedCount: Number(result?.deletedCount || 0),
+            });
+        }
+
+        if (messageIds.length > 0) {
+            const messageIdSet = new Set(messageIds);
+            const result = await aiChatLogModel.deleteMany({
+                actorKey,
+                messageId: { $in: messageIds },
+            });
+            const memHistory = getHistory(actorKey);
+            aiHistoryByActor.set(
+                actorKey,
+                memHistory.filter((item) => !messageIdSet.has(String(item?.id || ""))),
+            );
+            return res.json({
+                status: "ok",
+                deleted: "messages",
+                deletedCount: Number(result?.deletedCount || 0),
+            });
+        }
+
+        const result = await aiChatLogModel.deleteMany({ actorKey });
+        aiHistoryByActor.set(actorKey, []);
+        return res.json({
+            status: "ok",
+            deleted: "all",
+            deletedCount: Number(result?.deletedCount || 0),
+        });
+    } catch (error) {
+        console.error("[AI History] delete failed:", error?.message || error);
+        return res.status(500).json({ status: "error", msg: "history_delete_failed" });
+    }
 });
 
 router.post("/context", async (req, res) => {
@@ -461,10 +545,12 @@ router.post("/result", (req, res) => {
  * Generic task creation endpoint (used by the app/bot)
  */
 router.post("/task", async (req, res) => {
-    const { prompt, timeout = 120000, source = "system" } = req.body;
+    const { prompt, source = "system", conversationId, messageId } = req.body;
     const actorKey = getActorKey(req, req.body, req.query);
     const isChatSource = String(source || "").trim().toLowerCase() === "chat";
     const billingUserId = resolveBillingUserId(req, req.body, req.query);
+    const clientMsgId = String(messageId || crypto.randomUUID());
+    const convId = conversationId ? String(conversationId).trim() : null;
     if (!prompt) return res.status(400).send("Prompt missing");
     const promptBlockReason = getPromptBlockReason(prompt);
     if (promptBlockReason) {
@@ -520,7 +606,8 @@ router.post("/task", async (req, res) => {
             const safeText = sanitizeAssistantOutput(text);
 
             pushHistory(actorKey, {
-                id: crypto.randomUUID(),
+                id: clientMsgId,
+                conversationId: convId,
                 source,
                 prompt,
                 response: safeText,
@@ -531,9 +618,9 @@ router.post("/task", async (req, res) => {
                 if (!consumed.ok) {
                     return res.status(409).json({ status: "error", msg: "ai_chat_credits_exhausted", remainingCredits: 0 });
                 }
-                return res.json({ status: "ok", response: safeText, remainingCredits: consumed.remainingCredits });
+                return res.json({ status: "ok", id: clientMsgId, conversationId: convId, response: safeText, remainingCredits: consumed.remainingCredits });
             }
-            return res.json({ status: "ok", response: safeText });
+            return res.json({ status: "ok", id: clientMsgId, conversationId: convId, response: safeText });
         }
     } catch (error) {
         console.error(`  [AI Core API] Error: ${error.message}`);
@@ -585,6 +672,9 @@ router.post("/forecast", async (req, res) => {
     const horizon = Number.isFinite(horizonRaw) && horizonRaw > 0 ? horizonRaw : undefined;
     const lang = req.body?.lang || "vi";
 
+    const clientMsgId = String(req.body?.messageId || crypto.randomUUID());
+    const convId = req.body?.conversationId ? String(req.body.conversationId).trim() : null;
+
     if (!billingUserId) {
         return res.status(401).json({ status: "error", msg: "user_auth_required_for_chat_ai" });
     }
@@ -624,7 +714,7 @@ router.post("/forecast", async (req, res) => {
             });
         }
 
-        const responseText = buildForecastTextFromQuestion({
+        const responseText = result.response || buildForecastTextFromQuestion({
             question,
             chart,
             forecast: result.forecast,
@@ -632,7 +722,8 @@ router.post("/forecast", async (req, res) => {
         });
 
         pushHistory(actorKey, {
-            id: crypto.randomUUID(),
+            id: clientMsgId,
+            conversationId: convId,
             source,
             prompt: question || `Du bao ${chart.symbol} ${chart.timeframe}`,
             response: responseText,
@@ -646,6 +737,8 @@ router.post("/forecast", async (req, res) => {
 
         return res.json({
             status: "ok",
+            id: clientMsgId,
+            conversationId: convId,
             response: responseText,
             remainingCredits: consumed.remainingCredits,
             forecast: result.forecast,
