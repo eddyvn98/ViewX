@@ -2,6 +2,7 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import { ISeriesApi } from 'lightweight-charts';
 import { useMarketStore } from '@/lib/store';
 import { dispatchTagDeleteAction, TagEditState } from '../logic/tag-command-dispatcher';
+import type { Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface OrderTagEditOverlayProps {
     state: TagEditState;
@@ -9,6 +10,7 @@ interface OrderTagEditOverlayProps {
     isDeletingRef: React.RefObject<boolean>;
     onFinish: (val: number, save: boolean, sessionId?: string) => void;
     sendMessage?: (msg: unknown) => void;
+    identity?: Mt5TradingIdentity;
 }
 
 export const OrderTagEditOverlay = memo(function OrderTagEditOverlay({
@@ -16,7 +18,8 @@ export const OrderTagEditOverlay = memo(function OrderTagEditOverlay({
     series,
     isDeletingRef,
     onFinish,
-    sendMessage
+    sendMessage,
+    identity
 }: OrderTagEditOverlayProps) {
     const [livePrice, setLivePrice] = useState(state.price);
     const isInteractingRef = useRef(false);
@@ -110,7 +113,7 @@ export const OrderTagEditOverlay = memo(function OrderTagEditOverlay({
                     e.preventDefault();
                     e.stopPropagation();
                     isDeletingRef.current = true;
-                    dispatchTagDeleteAction(state, sendMessage);
+                    dispatchTagDeleteAction(state, sendMessage, identity);
                     onFinish(0, false, state.id);
                 }}
             >
