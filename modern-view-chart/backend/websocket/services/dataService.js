@@ -129,7 +129,10 @@ export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId
     }
 }
 
-export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "XRPUSDT", "SUIUSDT"]) {
+export async function fetchPrices(
+    symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "XRPUSDT", "SUIUSDT"],
+    { includeGold = true } = {}
+) {
     const requests = symbols.map(async (symbol) => {
         const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
         if (!response.ok) {
@@ -158,18 +161,22 @@ export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "B
         });
     }
 
+    const mappedBinance = results.map((item) => ({
+        symbol: item.symbol,
+        price: parseFloat(item.lastPrice),
+        change: parseFloat(item.priceChangePercent),
+        source: 'BINANCE'
+    }));
+
+    if (!includeGold) return mappedBinance;
+
     const [vnGoldQuotes, vangTodayQuotes] = await Promise.all([
         getVietnamGoldQuotes({ nonBlocking: true }),
         getVangTodayLatestQuotes({ nonBlocking: true }),
     ]);
 
     return [
-        ...results.map((item) => ({
-        symbol: item.symbol,
-        price: parseFloat(item.lastPrice),
-        change: parseFloat(item.priceChangePercent),
-        source: 'BINANCE'
-        })),
+        ...mappedBinance,
         ...vnGoldQuotes,
         ...vangTodayQuotes.map((item) => ({
             symbol: item.symbol,
