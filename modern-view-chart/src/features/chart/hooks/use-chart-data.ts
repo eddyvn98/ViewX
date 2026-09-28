@@ -1,6 +1,4 @@
-import { useRef, useEffect } from 'react';
 import { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { Candle } from '@/lib/store';
 import { useChartHistory } from './use-chart-history';
 import { useChartTicker } from './use-chart-ticker';
 
@@ -23,12 +21,9 @@ export function useChartData(
     candleDownColor: string,
     contextKey?: string
 ) {
-    // Shared reference to the trusted "Current Candle" (from Store/History)
-    const lastCandleRef = useRef<Candle | null>(null);
-
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store
-    const { candles } = useChartHistory({
+    useChartHistory({
         chartId: id,
         symbol, interval, source, chartType,
         chartRef, subchartRef, seriesRef, markerSeriesRef,
@@ -39,21 +34,14 @@ export function useChartData(
         candleUpColor,
         candleDownColor,
         contextKey,
-        onHistoryLoaded: (last) => { lastCandleRef.current = last; }
+        onHistoryLoaded: () => {}
     });
-
-    // Sync ref when store updates (e.g. new candle arrived via WS)
-    useEffect(() => {
-        if (candles.length > 0) {
-            lastCandleRef.current = candles[candles.length - 1];
-        }
-    }, [candles]);
 
     // 2. Real-time Ticker Hook
     // Manages high-frequency visual price updates (Tick-by-Tick)
     // Only updates the EXISTING candle visually to prevent timezone/offset bugs
     const realTimeCandleRef = useChartTicker({
-        symbol, interval, source, seriesRef, chartType, lastCandleRef,
+        symbol, interval, source, seriesRef, chartType,
         isAutoScrollEnabledRef, chartRef, theme, contextKey, candleUpColor, candleDownColor
     });
 

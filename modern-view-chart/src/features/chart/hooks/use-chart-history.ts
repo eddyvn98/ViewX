@@ -181,27 +181,16 @@ export function useChartHistory(props: UseChartHistoryProps) {
             }
         }
 
-        if (isContextChange && currentCandles.length === 0) {
-            chartStateRef.current = 'loading';
-            if (clearedForKeyRef.current !== key) {
-                clearedForKeyRef.current = key;
-                try {
-                    bumpChartPerfCounter('historySetDataBatches');
-                    seriesRef.current?.setData([]);
-                    markerSeriesRef.current?.setData([]);
-                    updateSyncData([], subSyncRef, timescaleSyncRef);
-                    // BUG #2 fix: Reset price scale immediately when clearing chart on context change.
-                    // Without this, switching from BTC (price ~100k) to EUR (price ~1.05) leaves the
-                    // scale locked at the old range — candles render as stretched lines or are invisible.
-                    chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-                } catch {
-                    // Ignore transient teardown races while the chart is rebuilding.
-                }
-            }
-            return;
-        }
-
         if (isContextChange) {
+            // Invalidate the previous context BEFORE any early return. The old code
+            // returned first when the destination had no cached candles, leaving the
+            // previous key/generation active long enough for a stale RAF to repaint
+            // symbol A after the UI had already switched to symbol B.
+            if (applyDataRafRef.current !== null) {
+                cancelAnimationFrame(applyDataRafRef.current);
+                applyDataRafRef.current = null;
+            }
+            applyDataGenerationRef.current++;
             chartStateRef.current = 'loading';
             lastKeyRef.current = key;
             isInitialMount.current = true;
@@ -209,14 +198,23 @@ export function useChartHistory(props: UseChartHistoryProps) {
             autoFitProgressRef.current = null;
             clearedForKeyRef.current = null;
             lastHistoryRevisionRef.current = -1;
-            // BUG #3 fix: Bump generation to invalidate any in-flight RAF for the old context.
-            // This prevents data of symbol A from being applied to the chart now showing symbol B.
-            applyDataGenerationRef.current++;
-            // Reset auto-scroll so the ticker's scrollToRealTime() call works on the new context.
-            // Without this, if the user had manually panned away on the previous timeframe,
-            // isAutoScrollEnabledRef stays false and the chart won't follow the realtime bar
-            // after switching timeframes.
             if (isAutoScrollEnabledRef) isAutoScrollEnabledRef.current = true;
+        }
+
+        if (isContextChange && currentCandles.length === 0) {
+            if (clearedForKeyRef.current !== key) {
+                clearedForKeyRef.current = key;
+                try {
+                    bumpChartPerfCounter('historySetDataBatches');
+                    seriesRef.current?.setData([]);
+                    markerSeriesRef.current?.setData([]);
+                    updateSyncData([], subSyncRef, timescaleSyncRef);
+                    chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+                } catch {
+                    // Ignore transient teardown races while the chart is rebuilding.
+                }
+            }
+            return;
         }
 
         const isTypeChange = chartType !== lastChartTypeRef.current;
