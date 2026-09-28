@@ -16,6 +16,7 @@ export interface MarketSlice {
     symbolInfo: Record<string, SymbolInfo>;
     availableSymbols: SymbolDescriptor[];
     symbolCatalogByScope: Record<string, SymbolDescriptor[]>;
+    activeSymbolCatalogScope: string;
     watchlist: string[];
     watchlistItems: SymbolDescriptor[];
     setConnected: (status: boolean) => void;
@@ -38,6 +39,7 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
     symbolInfo: {},
     availableSymbols: [],
     symbolCatalogByScope: {},
+    activeSymbolCatalogScope: 'MT5',
     watchlist: DEFAULT_WATCHLIST,
     watchlistItems: DEFAULT_WATCHLIST.map(createLegacySymbolDescriptor),
 
@@ -92,7 +94,9 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
             ? symbols.filter((item) => Boolean(item?.symbol))
             : [];
         return {
-            availableSymbols: clean,
+            availableSymbols: state.activeSymbolCatalogScope === scopeKey
+                ? clean
+                : state.availableSymbols,
             symbolCatalogByScope: {
                 ...state.symbolCatalogByScope,
                 [scopeKey]: clean,
@@ -101,6 +105,7 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
     }),
 
     activateSymbolCatalog: (scopeKey) => set((state) => ({
+        activeSymbolCatalogScope: scopeKey,
         availableSymbols: state.symbolCatalogByScope[scopeKey] || [],
     })),
 
