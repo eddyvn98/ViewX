@@ -33,7 +33,9 @@ export const AccountSummary = memo(function AccountSummary({ account, sourceKey 
             const scopedTicker = tickers[`${sourceKey}:${pos.symbol}`];
             const sharedTicker = sourceKey === 'MT5' ? tickers[pos.symbol] : undefined;
             const livePrice = scopedTicker?.price ?? sharedTicker?.price ?? pos.current_price;
-            const symbolInfo = symbolInfoMap[pos.symbol];
+            const scopedSymbolInfo = symbolInfoMap[`${sourceKey}:${pos.symbol}`];
+            const sharedSymbolInfo = sourceKey === 'MT5' ? symbolInfoMap[pos.symbol] : undefined;
+            const symbolInfo = scopedSymbolInfo ?? sharedSymbolInfo;
             const pnl = calculatePnL({
                 type: pos.type,
                 openPrice: pos.open_price,
