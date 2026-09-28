@@ -158,7 +158,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const rawSource = String(c.source || '').toUpperCase();
             const source = rawSource.startsWith('MT5') || c.mt5_scope
                 ? getMt5FrameSource(c)
-                : rawSource || (symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
+                : rawSource || String(useMarketStore.getState().tickers[symbol]?.source || 'MT5').toUpperCase();
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
 
@@ -272,10 +272,14 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
 
         if (msgType === 'mt5_symbol_info') {
             const info = msg.data as Record<string, unknown>;
-            const symbol = normalizeSymbol(String(info?.symbol || ''));
+            const exactSymbol = String(info?.symbol || '').trim();
+            const normalized = normalizeSymbol(exactSymbol);
             const mt5Source = getMt5FrameSource(msg);
-            const scopedKey = symbol ? `${mt5Source}:${symbol}` : undefined;
-            deps.setSymbolInfo(info, scopedKey);
+            const exactScopedKey = exactSymbol ? `${mt5Source}:${exactSymbol}` : undefined;
+            deps.setSymbolInfo(info, exactScopedKey);
+            if (normalized && normalized !== exactSymbol) {
+                deps.setSymbolInfo(info, `${mt5Source}:${normalized}`);
+            }
         }
 
         if (msgType === 'mt5_available_symbols') {
