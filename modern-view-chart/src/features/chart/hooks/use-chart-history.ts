@@ -59,7 +59,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
     const lastHistoryRevisionRef = useRef(-1);
-    const [cacheHydration, setCacheHydration] = useState({ key: '', ready: false });
+    const [hydratedCacheKey, setHydratedCacheKey] = useState('');
     // BUG #3 fix: generation counter to reject stale RAF callbacks on rapid symbol/timeframe switching.
     // Each context change bumps the generation; RAF callbacks that don't match are discarded.
     const applyDataGenerationRef = useRef(0);
@@ -70,7 +70,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
     const historyRequestKey = buildHistoryRequestKey(source, normSymbol, interval);
-    const isCacheReady = cacheHydration.key === historyRequestKey && cacheHydration.ready;
+    const isCacheReady = hydratedCacheKey === historyRequestKey;
 
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
@@ -144,21 +144,17 @@ export function useChartHistory(props: UseChartHistoryProps) {
     ]);
 
     useEffect(() => {
-        if (!source || !normSymbol || !interval) {
-            setCacheHydration({ key: historyRequestKey, ready: true });
-            return;
-        }
+        if (!source || !normSymbol || !interval) return;
 
         let cancelled = false;
         const targetKey = historyRequestKey;
-        setCacheHydration({ key: targetKey, ready: false });
 
         void loadCachedCandles(source, normSymbol, interval).then((cached) => {
             if (cancelled) return;
             if (cached.length > 0) {
                 useMarketStore.getState().setCandles(source, normSymbol, interval, cached);
             }
-            setCacheHydration({ key: targetKey, ready: true });
+            setHydratedCacheKey(targetKey);
         });
 
         return () => {
