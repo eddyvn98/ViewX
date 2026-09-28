@@ -87,6 +87,7 @@ async function main() {
             ws_dropped_backpressure: null,
             ws_buffer_pressure: null,
             broadcast_p95_ms: null,
+            broadcast_stage_p95_ms: null,
         };
 
         try {
@@ -116,6 +117,7 @@ async function main() {
                     sample.ws_dropped_backpressure = websocket.dropped_backpressure ?? null;
                     sample.ws_buffer_pressure = websocket.buffer_pressure ?? null;
                     sample.broadcast_p95_ms = websocket.broadcast_loop_p95_ms ?? null;
+                    sample.broadcast_stage_p95_ms = websocket.broadcast_stage_p95_ms ?? null;
                 }
             } catch (err) {
                 sample.metrics_error = err?.message || String(err);
@@ -196,6 +198,15 @@ async function main() {
     const disconnectRate = ((failed + unexpectedClosed) / Math.max(1, clientsTarget)) * 100;
     const healthOkSamples = healthSamples.filter((item) => item.ok && Number.isFinite(item.broadcast_p95_ms));
     const maxBroadcastP95 = healthOkSamples.length > 0 ? Math.max(...healthOkSamples.map((x) => x.broadcast_p95_ms)) : null;
+    const stageNames = ["price", "candle", "candle_fetch", "candle_indicator", "candle_serialize_send"];
+    const maxBroadcastStageP95Ms = Object.fromEntries(
+        stageNames.map((stage) => {
+            const values = healthOkSamples
+                .map((sample) => sample.broadcast_stage_p95_ms?.[stage])
+                .filter(Number.isFinite);
+            return [stage, values.length > 0 ? Math.max(...values) : null];
+        })
+    );
 
     const gates = {
         all_clients_opened: opened === clientsTarget,
@@ -225,6 +236,7 @@ async function main() {
             total_messages: totalMessages,
             avg_messages_per_sec: Number((totalMessages / Math.max(1, durationSec)).toFixed(3)),
             max_broadcast_p95_ms: maxBroadcastP95,
+            max_broadcast_stage_p95_ms: maxBroadcastStageP95Ms,
         },
         gates,
         topic_counts: Object.fromEntries(Array.from(topicCounts.entries()).sort((a, b) => b[1] - a[1])),
@@ -239,6 +251,7 @@ async function main() {
 
     process.stdout.write(`[soak] report written: ${outputPath}\n`);
     process.stdout.write(`[soak] disconnect_rate=${report.summary.disconnect_rate_percent}% | max_broadcast_p95_ms=${String(maxBroadcastP95)}\n`);
+    process.stdout.write(`[soak] max_broadcast_stage_p95_ms=${JSON.stringify(maxBroadcastStageP95Ms)}\n`);
 
     const failedGate = Object.values(gates).some((value) => value === false);
     if (failedGate) {
