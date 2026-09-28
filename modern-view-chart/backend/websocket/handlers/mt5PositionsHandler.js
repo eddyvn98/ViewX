@@ -1,13 +1,13 @@
 import { setBridgeOnline } from "../../runtime-state.js";
-import { isRecipientForMt5Owner, resolveBridgeOwnerUserId, setScopedMt5State } from "../mt5Scope.js";
+import { isRecipientForMt5Scope, resolveBridgeMt5Scope, setScopedMt5State, scopeMetadata } from "../mt5Scope.js";
 
 export function handleMt5Positions({ ws, clients }, data) {
     const senderMeta = clients.get(ws);
     if (!senderMeta?.isBridgeAuthenticated) return;
-    const ownerUserId = resolveBridgeOwnerUserId(senderMeta);
+    const mt5Scope = resolveBridgeMt5Scope(senderMeta);
 
     setBridgeOnline(true);
-    setScopedMt5State(ownerUserId, {
+    setScopedMt5State(mt5Scope, {
         account: data.account,
         positions: data.positions,
         orders: data.orders || []
@@ -17,11 +17,13 @@ export function handleMt5Positions({ ws, clients }, data) {
         topic: "mt5_positions_update",
         account: data.account,
         positions: data.positions,
-        orders: data.orders || []
+        orders: data.orders || [],
+        source: mt5Scope.source,
+        mt5_scope: scopeMetadata(mt5Scope),
     });
 
     for (const [clientWs, meta] of clients.entries()) {
-        if (!isRecipientForMt5Owner(meta, ownerUserId)) continue;
+        if (!isRecipientForMt5Scope(meta, mt5Scope)) continue;
         if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
         }

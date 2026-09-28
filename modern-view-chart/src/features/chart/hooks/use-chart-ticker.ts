@@ -5,6 +5,7 @@ import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { Candle } from '@/lib/store/types';
 import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
+import { resolveChartDataSource } from '@/lib/mt5/account-scope';
 
 type RealtimeCandle = Candle & {
     rawOpen?: number;
@@ -42,9 +43,11 @@ export function useChartTicker({
     // when the user switches symbol or timeframe faster than React can re-run the effect.
     const intervalRef = useRef(interval);
     const sourceRef = useRef(source);
+    const selectedMt5Scope = useMarketStore(state => state.selectedMt5Scope);
+    const dataSource = resolveChartDataSource(source, selectedMt5Scope);
 
     const normSymbol = normalizeSymbol(symbol);
-    const tickerKey = `${source}:${normSymbol}`;
+    const tickerKey = `${dataSource}:${normSymbol}`;
 
     const getStoreCandles = useCallback(() => {
         if (!source || !normSymbol || !interval) return [];
@@ -113,7 +116,7 @@ export function useChartTicker({
 
     useEffect(() => {
         realTimeCandleRef.current = null;
-    }, [symbol, interval, source, contextKey]);
+    }, [symbol, interval, source, dataSource, contextKey]);
 
     // Seed visualized candle strictly from the CURRENT store context.
     // Never copy the shared ref on a context switch: that ref may still belong
@@ -188,7 +191,7 @@ export function useChartTicker({
 
             // TradingView-style guard:
             if (lagBars >= 2) {
-                const backfillKey = `${source}:${normSymbol}:${interval}`;
+                const backfillKey = `${dataSource}:${normSymbol}:${interval}`;
                 const nowMs = Date.now();
                 const lastRequestedAt = lastBackfillRequestAtRef.current[backfillKey] || 0;
                 if (nowMs - lastRequestedAt > 5000) {
@@ -378,7 +381,7 @@ export function useChartTicker({
             pendingByBar.clear();
             if (tickRafId !== null) cancelAnimationFrame(tickRafId);
         };
-    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
+    }, [symbol, source, dataSource, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
 }

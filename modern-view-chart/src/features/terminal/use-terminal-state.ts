@@ -6,6 +6,7 @@ import { getClientEntitlements } from '@/lib/auth/entitlements';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminalResize } from './hooks/use-terminal-resize';
+import { buildMt5AuthFields, buildMt5DataSourceKey, Mt5AccountScope } from '@/lib/mt5/account-scope';
 
 type TerminalTab = 'positions' | 'orders' | 'history';
 
@@ -31,15 +32,34 @@ export function useTerminalState(forceExpanded: boolean) {
     const positions = useMarketStore((state) => state.positions);
     const orders = useMarketStore((state) => state.orders);
     const history = useMarketStore((state) => state.history);
+    const mt5AccountsAvailable = useMarketStore((state) => state.mt5AccountsAvailable);
+    const selectedMt5Scope = useMarketStore((state) => state.selectedMt5Scope);
+    const setSelectedMt5Scope = useMarketStore((state) => state.setSelectedMt5Scope);
 
-    const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5';
-    const account = useMarketStore((state) => state.accounts[accountSource] || state.accounts['MT5'] || null);
+    const selectedMt5Source = buildMt5DataSourceKey(selectedMt5Scope);
+    const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : selectedMt5Source;
+    const account = useMarketStore((state) => state.accounts[accountSource] || null);
     const visibleAccount = hasYourMt5Module ? account : null;
-    const visiblePositions = hasYourMt5Module ? positions : [];
-    const visibleOrders = hasYourMt5Module ? orders : [];
-    const visibleHistory = hasYourMt5Module ? history : [];
+    const visiblePositions = hasYourMt5Module
+        ? positions.filter((position) => String(position.source || 'MT5') === accountSource)
+        : [];
+    const visibleOrders = hasYourMt5Module
+        ? orders.filter((order) => String(order.source || 'MT5') === accountSource)
+        : [];
+    const visibleHistory = hasYourMt5Module
+        ? history.filter((deal) => String(deal.source || 'MT5') === accountSource)
+        : [];
 
     const { sendMessage } = useWebSocket();
+
+    const handleSelectMt5Scope = useCallback((scope: Mt5AccountScope) => {
+        setSelectedMt5Scope(scope);
+        useMarketStore.getState().clearMt5CandleRuntime();
+        sendMessage({
+            topic: 'auth',
+            ...buildMt5AuthFields(scope),
+        });
+    }, [sendMessage, setSelectedMt5Scope]);
     const [
         terminalTab,
         setTerminalTab,
@@ -133,6 +153,10 @@ export function useTerminalState(forceExpanded: boolean) {
         visiblePositions,
         visibleOrders,
         visibleHistory,
+        accountSource,
+        mt5AccountsAvailable,
+        selectedMt5Scope,
+        handleSelectMt5Scope,
         terminalTab,
         setTerminalTab,
         effectiveCollapsed,

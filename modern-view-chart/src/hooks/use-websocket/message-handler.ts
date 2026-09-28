@@ -1,5 +1,4 @@
 import { useMarketStore } from '@/lib/store';
-import { debugLog } from '@/lib/debug';
 import { soundService } from '@/features/strategy/logic/SoundService';
 import { voiceNotifier } from '@/features/notifications/voice';
 import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_BUFFER_MS } from './constants';
@@ -7,6 +6,7 @@ import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { getAvailableMt5Symbol } from './symbol-message-utils';
+import { buildMt5AuthFields, buildMt5DataSourceKey, buildTickerStoreKeys, normalizeMt5AccountScope, sameMt5Scope } from '@/lib/mt5/account-scope';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -14,10 +14,10 @@ export interface MessageHandlerDeps {
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Record<string, unknown>) => void;
     setBridgeOnline: (online: boolean) => void;
     setAccount: (source: string, account: Record<string, unknown>) => void;
-    setPositions: (positions: Array<Record<string, unknown>>) => void;
-    setOrders: (orders: Array<Record<string, unknown>>) => void;
-    appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean) => void;
-    setSymbolInfo: (info: Record<string, unknown>) => void;
+    setPositions: (positions: Array<Record<string, unknown>>, source?: string) => void;
+    setOrders: (orders: Array<Record<string, unknown>>, source?: string) => void;
+    appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean, source?: string) => void;
+    setSymbolInfo: (info: Record<string, unknown>, keyOverride?: string) => void;
     setAvailableSymbols: (symbols: string[]) => void;
 }
 
@@ -28,6 +28,14 @@ type CandleBufferItem = {
     candle: Record<string, unknown>;
 };
 
+function getMt5FrameSource(frame: Record<string, unknown>): string {
+    const rawSource = String(frame.source || '').trim().toUpperCase();
+    if (rawSource === 'MT5_PERSONAL' || frame.mt5_scope) {
+        return buildMt5DataSourceKey(normalizeMt5AccountScope(frame.mt5_scope || frame));
+    }
+    return rawSource || 'MT5';
+}
+
 export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps: MessageHandlerDeps) {
     try {
         wsRuntime.lastMessageAt = Date.now();
@@ -36,6 +44,25 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         if (msgType === 'app_pong') {
             wsRuntime.lastAppPongAt = Date.now();
             return;
+        }
+
+        if (msgType === 'mt5_accounts_available') {
+            const accounts = Array.isArray(msg.accounts)
+                ? msg.accounts.map((item) => normalizeMt5AccountScope(item))
+                : [];
+            const before = useMarketStore.getState().selectedMt5Scope;
+            useMarketStore.getState().setMt5AccountsAvailable(accounts);
+            const after = useMarketStore.getState().selectedMt5Scope;
+
+            if (!sameMt5Scope(before, after)) {
+                useMarketStore.getState().clearMt5CandleRuntime();
+            }
+            if (!sameMt5Scope(before, after) && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    topic: 'auth',
+                    ...buildMt5AuthFields(after),
+                }));
+            }
         }
         if (msgType === 'error' && String(msg?.code || '').toLowerCase() === 'unauthorized') {
             wsRuntime.unauthorizedFrameReceived = true;
@@ -52,18 +79,22 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             incomingData.forEach((item) => {
                 const symbol = String(item?.symbol || '');
                 if (activeSymbols.has(symbol)) {
-                    wsRuntime.tickerUpdateBuffer[symbol] = {
+                    const source = getMt5FrameSource(item);
+                    const ticker = {
                         symbol,
                         price: Number(item?.price || 0),
                         change: Number(item?.change || 0),
                         changeValue: Number(item?.changeValue || 0),
                         volume: 0,
-                        source: String(item?.source || 'MT5'),
+                        source,
                         bid: item?.bid !== undefined ? Number(item.bid || 0) : undefined,
                         ask: item?.ask !== undefined ? Number(item.ask || 0) : undefined,
                         displayName: item?.displayName ? String(item.displayName) : undefined,
                         serverTime: Number(item?.serverTime || item?.time || 0) || undefined,
                     };
+                    for (const key of buildTickerStoreKeys(source, symbol)) {
+                        wsRuntime.tickerUpdateBuffer[key] = ticker;
+                    }
                     usefulUpdate = true;
                 }
             });
@@ -89,7 +120,8 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 close: c.close ?? c.c ?? c.close_price ?? c.price_close,
                 volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
             }));
-            const source = String(msg.source || 'MT5');
+            const frameSource = String(msg.source || 'MT5').toUpperCase();
+            const source = frameSource.startsWith('MT5') ? 'MT5' : frameSource;
             if (!targetInterval && targetSymbol) {
                 const state = useMarketStore.getState();
                 const wantedSymbol = normalizeSymbol(targetSymbol);
@@ -116,9 +148,10 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const c = msg.data as Record<string, unknown>;
             const symbol = String(c.symbol || '');
             const interval = String(c.interval || '');
-            const source = String(c.source || '').toUpperCase() || (
-                symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5'
-            );
+            const rawSource = String(c.source || '').toUpperCase();
+            const source = rawSource.startsWith('MT5')
+                ? 'MT5'
+                : rawSource || (symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
 
@@ -149,8 +182,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         wsRuntime.positionUpdateTimer = null;
                         return;
                     }
+                    const mt5Source = getMt5FrameSource(data);
                     if (data?.account) {
-                        deps.setAccount('MT5', data.account as Record<string, unknown>);
+                        deps.setAccount(mt5Source, data.account as Record<string, unknown>);
                     }
                     if (data.positions && Array.isArray(data.positions)) {
                         const mappedPositions = data.positions.map((p: Record<string, unknown>) => ({
@@ -165,9 +199,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             profit: p.profit || 0,
                             time: p.time,
                             magic: p.magic || 0,
-                            source: 'MT5',
+                            source: mt5Source,
                         }));
-                        deps.setPositions(mappedPositions);
+                        deps.setPositions(mappedPositions, mt5Source);
                     }
                     if (data.orders && Array.isArray(data.orders)) {
                         const mappedOrders = data.orders.map((o: Record<string, unknown>) => ({
@@ -182,9 +216,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                             profit: o.profit || 0,
                             time: o.time,
                             magic: o.magic || 0,
-                            source: 'MT5',
+                            source: mt5Source,
                         }));
-                        deps.setOrders(mappedOrders);
+                        deps.setOrders(mappedOrders, mt5Source);
                     }
                     wsRuntime.positionUpdateTimer = null;
                 }, POSITION_BUFFER_MS);
@@ -195,15 +229,20 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const result = msg.data;
             const setOptimizationResult = useMarketStore.getState().setOptimizationResult;
             if (setOptimizationResult) {
-                setOptimizationResult(result as any);
+                setOptimizationResult(result as Parameters<typeof setOptimizationResult>[0]);
             }
         }
 
         if (msgType === 'binance_positions_update') {
-            if (msg.account) deps.setAccount('BINANCE_DEMO', msg.account as any);
+            if (msg.account) {
+                deps.setAccount('BINANCE_DEMO', msg.account as Record<string, unknown>);
+            }
             if (msg.positions && Array.isArray(msg.positions)) {
-                const mapped = msg.positions.map((p: any) => ({ ...p, source: 'BINANCE_DEMO' }));
-                deps.setPositions(mapped);
+                const mapped = msg.positions.map((position) => ({
+                    ...(position as Record<string, unknown>),
+                    source: 'BINANCE_DEMO',
+                }));
+                deps.setPositions(mapped, 'BINANCE_DEMO');
             }
         }
 
@@ -213,13 +252,23 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_history_deals') {
-            const dealData = Array.isArray(msg.data) ? msg.data : [];
+            const mt5Source = getMt5FrameSource(msg);
+            const dealData = Array.isArray(msg.data)
+                ? msg.data.map((deal) => ({
+                    ...(deal as Record<string, unknown>),
+                    source: mt5Source,
+                }))
+                : [];
             const isReset = (msg.is_chunk === false);
-            deps.appendHistory(dealData, isReset);
+            deps.appendHistory(dealData, isReset, mt5Source);
         }
 
         if (msgType === 'mt5_symbol_info') {
-            deps.setSymbolInfo(msg.data as any);
+            const info = msg.data as Record<string, unknown>;
+            const symbol = normalizeSymbol(String(info?.symbol || ''));
+            const mt5Source = getMt5FrameSource(msg);
+            const scopedKey = symbol ? `${mt5Source}:${symbol}` : undefined;
+            deps.setSymbolInfo(info, scopedKey);
         }
 
         if (msgType === 'mt5_available_symbols') {
@@ -266,7 +315,11 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 console.log('[WS] Processing strategy signal:', { symbol: signal.symbol, action: signal.signal });
                 
                 useMarketStore.getState().addNotification(
-                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String((signal.params as any)?.reason || '')}`,
+                    `STRATEGY: ${String(signal.signal || '')} ${String(signal.symbol || '')} - ${String(
+                        signal.params && typeof signal.params === 'object'
+                            ? (signal.params as Record<string, unknown>).reason || ''
+                            : ''
+                    )}`,
                     direction === 'bullish' ? 'success' : 'warning',
                 );
                 

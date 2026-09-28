@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AccountInfo, HistoryDeal, Order, Position } from '../types';
 import { withOrderAnchors, withPositionAnchors } from './terminal/anchor-utils';
+import { Mt5AccountScope, persistMt5Scope, readStoredMt5Scope, sameMt5Scope, SHARED_MT5_SCOPE } from '@/lib/mt5/account-scope';
 import {
     applyPendingOrderLocks,
     applyPendingPositionLocks,
@@ -75,6 +76,8 @@ export interface OptimizationResult {
 
 export interface TerminalSlice {
     accounts: Record<string, AccountInfo>;
+    mt5AccountsAvailable: Mt5AccountScope[];
+    selectedMt5Scope: Mt5AccountScope;
     positions: Position[];
     orders: Order[];
     history: HistoryDeal[];
@@ -91,12 +94,14 @@ export interface TerminalSlice {
     pendingModifications: Record<string, PendingModification>;
     pendingDeletions: Record<number, number>;
     setAccount: (source: string, data: AccountInfo) => void;
-    setPositions: (data: Position[] | ((prev: Position[]) => Position[])) => void;
-    setOrders: (data: Order[] | ((prev: Order[]) => Order[])) => void;
+    setMt5AccountsAvailable: (accounts: Mt5AccountScope[]) => void;
+    setSelectedMt5Scope: (scope: Mt5AccountScope) => void;
+    setPositions: (data: Position[] | ((prev: Position[]) => Position[]), sourceOverride?: string) => void;
+    setOrders: (data: Order[] | ((prev: Order[]) => Order[]), sourceOverride?: string) => void;
     addPendingModification: (ticket: number, field: 'sl' | 'tp' | 'open_price' | 'price_open', price: number) => void;
     addPendingDeletion: (ticket: number) => void;
     setHistory: (data: HistoryDeal[] | ((prev: HistoryDeal[]) => HistoryDeal[])) => void;
-    appendHistory: (newData: HistoryDeal[], isReset?: boolean) => void;
+    appendHistory: (newData: HistoryDeal[], isReset?: boolean, sourceOverride?: string) => void;
     setAnalysisResult: (ticket: number, result: AnalysisResult) => void;
     setOptimizationResult: (result: OptimizationResult | null) => void;
     setTerminalVisible: (visible: boolean) => void;
@@ -112,6 +117,8 @@ export interface TerminalSlice {
 
 export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     accounts: {},
+    mt5AccountsAvailable: [SHARED_MT5_SCOPE],
+    selectedMt5Scope: readStoredMt5Scope(),
     positions: [],
     orders: [],
     history: [],
@@ -159,23 +166,43 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         accounts: { ...state.accounts, [source]: data }
     })),
 
-    setPositions: (data) => set((state) => {
+    setMt5AccountsAvailable: (accounts) => set((state) => {
+        const normalized = Array.isArray(accounts) && accounts.length > 0 ? accounts : [SHARED_MT5_SCOPE];
+        const selectedStillExists = normalized.some((scope) => sameMt5Scope(scope, state.selectedMt5Scope));
+        if (selectedStillExists) {
+            return { mt5AccountsAvailable: normalized };
+        }
+        const fallback = normalized.find((scope) => scope.source === 'MT5')
+            || normalized[0]
+            || SHARED_MT5_SCOPE;
+        return {
+            mt5AccountsAvailable: normalized,
+            selectedMt5Scope: persistMt5Scope(fallback),
+        };
+    }),
+
+    setSelectedMt5Scope: (scope) => set({
+        selectedMt5Scope: persistMt5Scope(scope),
+    }),
+
+    setPositions: (data, sourceOverride) => set((state) => {
         const payload = typeof data === 'function' ? data(state.positions) : data;
-        const source = payload[0]?.source;
-        if (!source && payload.length === 0) return {};
+        const finalSource = sourceOverride || payload[0]?.source || 'MT5';
+        const otherPositions = state.positions.filter((p) => String(p.source || 'MT5') !== finalSource);
+        const positionKey = (position: Position) => `${String(position.source || 'MT5')}:${position.ticket}`;
+        const prevMap = new Map(state.positions.map((p) => [positionKey(p), p]));
 
-        const finalSource = source || 'MT5';
-        const otherPositions = state.positions.filter((p) => p.source !== finalSource);
-        const prevMap = new Map(state.positions.map((p) => [p.ticket, p]));
-
-        const merged = [...otherPositions, ...payload].map((p) => withPositionAnchors(p, prevMap.get(p.ticket)));
+        const merged = [
+            ...otherPositions,
+            ...payload.map((p) => withPositionAnchors(p, prevMap.get(`${finalSource}:${p.ticket}`))),
+        ];
         const filtered = filterPendingDeletions(merged, state.pendingDeletions, 10000);
         const newPositions = filtered.map((position) => applyPendingPositionLocks(position, state.pendingModifications, 3000));
 
         if (state.positions.length === newPositions.length) {
             let hasStructuralChange = false;
             for (const nextPos of newPositions) {
-                if (hasPositionStructuralChange(prevMap.get(nextPos.ticket), nextPos)) {
+                if (hasPositionStructuralChange(prevMap.get(positionKey(nextPos)), nextPos)) {
                     hasStructuralChange = true;
                     break;
                 }
@@ -184,7 +211,7 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
             if (!hasStructuralChange) {
                 let anyValueChange = false;
                 for (const nextPos of newPositions) {
-                    const prevPos = prevMap.get(nextPos.ticket);
+                    const prevPos = prevMap.get(positionKey(nextPos));
                     if (prevPos && patchRealtimePositionFields(prevPos, nextPos)) {
                         anyValueChange = true;
                     }
@@ -197,13 +224,21 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         return { positions: newPositions };
     }),
 
-    setOrders: (data) => set((state) => {
+    setOrders: (data, sourceOverride) => set((state) => {
         const payload = typeof data === 'function' ? data(state.orders) : data;
-        const prevMap = new Map(state.orders.map((o) => [o.ticket, o]));
+        const finalSource = sourceOverride || payload[0]?.source || 'MT5';
+        const orderKey = (order: Order) => `${String(order.source || 'MT5')}:${order.ticket}`;
+        const prevMap = new Map(state.orders.map((order) => [orderKey(order), order]));
+        const otherOrders = state.orders.filter((order) => String(order.source || 'MT5') !== finalSource);
 
-        const merged = payload.map((o) => withOrderAnchors(o, prevMap.get(o.ticket)));
-        const protectedOrders = filterPendingDeletions(merged, state.pendingDeletions, 10000)
-            .map((order) => applyPendingOrderLocks(order, state.pendingModifications, 3000));
+        const scopedOrders = payload.map((order) =>
+            withOrderAnchors(order, prevMap.get(`${finalSource}:${order.ticket}`))
+        );
+        const protectedOrders = filterPendingDeletions(
+            [...otherOrders, ...scopedOrders],
+            state.pendingDeletions,
+            10000,
+        ).map((order) => applyPendingOrderLocks(order, state.pendingModifications, 3000));
 
         return { orders: protectedOrders };
     }),
@@ -212,11 +247,12 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         history: typeof data === 'function' ? data(state.history) : data
     })),
 
-    appendHistory: (newData, isReset = false) => set((state) => {
-        const source = newData[0]?.source || 'MT5';
+    appendHistory: (newData, isReset = false, sourceOverride) => set((state) => {
+        const source = sourceOverride || newData[0]?.source || 'MT5';
         const baseHistory = isReset ? state.history.filter((h) => h.source !== source) : state.history;
-        const map = new Map(baseHistory.map((d) => [d.ticket, d]));
-        newData.forEach((d) => map.set(d.ticket, d));
+        const historyKey = (deal: HistoryDeal) => `${String(deal.source || 'MT5')}:${deal.ticket}`;
+        const map = new Map(baseHistory.map((deal) => [historyKey(deal), deal]));
+        newData.forEach((deal) => map.set(historyKey(deal), deal));
         const combined = Array.from(map.values());
         combined.sort((a, b) => b.time - a.time);
         return { history: combined };

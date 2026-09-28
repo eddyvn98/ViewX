@@ -5,7 +5,7 @@ import { getBinancePrices, mergeBinancePrices } from "./binanceTickerService.js"
 import { candleBuffers } from "../handlers/subscribeHandler.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol } from "../subscriptionIndex.js";
-import { getScopedMt5Prices, isRecipientForMt5Owner } from "../mt5Scope.js";
+import { createMt5Scope, getScopedMt5Prices, isRecipientForMt5Scope, resolveClientMt5Scope, scopeMetadata } from "../mt5Scope.js";
 import { getCachedVietnamGoldQuotes } from "../../services/vnGoldService.js";
 import { getCachedVangTodayQuotes } from "../../services/vangTodayService.js";
 import { logWarn } from "../../logger.js";
@@ -25,7 +25,7 @@ function isVietnamGoldSymbol(symbol) {
     return upper === "SJCVN" || upper === "DOJIVN";
 }
 
-export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbolTarget, ownerUserId = null) {
+export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbolTarget, mt5ScopeInput = null) {
     const normalizedTarget = normalizeSymbol(symbolTarget);
     if (!normalizedTarget) return;
 
@@ -34,27 +34,30 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
         if (String(key).startsWith(`${normalizedTarget}|`)) keys.push(key);
     }
 
+    const upperTarget = String(normalizedTarget || "").toUpperCase();
+    const isSharedMarket = upperTarget.endsWith("USDT") || isVietnamGoldSymbol(upperTarget);
+    const requestedScope = mt5ScopeInput ? createMt5Scope(mt5ScopeInput) : null;
+
     for (const key of keys) {
         const [symbol, interval] = key.split("|");
         const subscribers = subscriptionIndex.chartSubscribers.get(key);
         if (!subscribers || subscribers.size === 0) continue;
 
-        // Subscribers in the same MT5 scope receive identical candle data.
-        // Group them so candle lookup + RSI/Bollinger + JSON serialization happen once
-        // per scope instead of once per socket.
         const groups = new Map();
         for (const ws of subscribers) {
             const meta = clients.get(ws);
-            if (!meta || !isRecipientForMt5Owner(meta, ownerUserId)) continue;
+            if (!meta || meta.isBridgeAuthenticated) continue;
             if (ws.readyState !== ws.OPEN) continue;
+            if (requestedScope && !isRecipientForMt5Scope(meta, requestedScope)) continue;
 
-            const scopeKey = meta.userId ? `user:${meta.userId}` : "__global__";
+            const mt5Scope = isSharedMarket
+                ? createMt5Scope()
+                : (requestedScope || resolveClientMt5Scope(meta));
+            const scopeKey = isSharedMarket ? "__shared_market__" : mt5Scope.scopeId;
+
             let group = groups.get(scopeKey);
             if (!group) {
-                group = {
-                    userId: meta.userId || null,
-                    sockets: [],
-                };
+                group = { mt5Scope, sockets: [] };
                 groups.set(scopeKey, group);
             }
             group.sockets.push(ws);
@@ -62,7 +65,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
 
         for (const [scopeKey, group] of groups.entries()) {
             const fetchStartAt = performance.now();
-            const data = await fetchLatestCandle(mt5Prices, symbol, interval, group.userId);
+            const data = await fetchLatestCandle(mt5Prices, symbol, interval, group.mt5Scope);
             recordBroadcastStageDuration("candle_fetch", performance.now() - fetchStartAt);
             if (!data) continue;
 
@@ -80,24 +83,22 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
             }
 
             const indicatorStartAt = performance.now();
-            const closes = buffer.map((c) => c.close);
+            const closes = buffer.map((item) => item.close);
             const rsiArr = RSI.calculate({ period: 14, values: closes });
             const rsiValue = rsiArr[rsiArr.length - 1];
 
             let bollinger = null;
             if (buffer.length >= 20) {
                 const bands = calcBollingerBands(buffer, 20, 2);
-                if (bands.length > 0) {
-                    bollinger = bands[bands.length - 1];
-                }
+                if (bands.length > 0) bollinger = bands[bands.length - 1];
             }
             recordBroadcastStageDuration("candle_indicator", performance.now() - indicatorStartAt);
 
-            const source = String(symbol || "").toUpperCase().includes("USDT")
+            const source = upperTarget.endsWith("USDT")
                 ? "BINANCE"
-                : String(symbol || "").toUpperCase() === "SJCVN" || String(symbol || "").toUpperCase() === "DOJIVN"
+                : isVietnamGoldSymbol(upperTarget)
                     ? "VN_GOLD"
-                    : "MT5";
+                    : group.mt5Scope.source;
 
             const serializeSendStartAt = performance.now();
             const payload = JSON.stringify({
@@ -107,6 +108,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
                     symbol,
                     interval,
                     source,
+                    ...(source.startsWith("MT5") ? { mt5_scope: scopeMetadata(group.mt5Scope) } : {}),
                     rsi: rsiValue,
                     bollinger,
                 },
@@ -172,14 +174,15 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
         let scopeBuildMs = 0;
         let sendMs = 0;
 
-        const getLatestByScope = (userId) => {
-            const scopeKey = userId ? `user:${userId}` : "__global__";
+        const getLatestByScope = (meta) => {
+            const mt5Scope = resolveClientMt5Scope(meta);
+            const scopeKey = mt5Scope.scopeId;
             const cached = latestByScopeCache.get(scopeKey);
             if (cached) return cached;
 
             const scopeStartAt = performance.now();
             const latestBySymbol = new Map(binanceBySymbol);
-            for (const item of getScopedMt5Prices(mt5Prices, userId || null)) {
+            for (const item of getScopedMt5Prices(mt5Prices, mt5Scope)) {
                 const symbol = normalizeSymbol(item?.symbol);
                 if (symbol && !isVietnamGoldSymbol(symbol)) {
                     latestBySymbol.set(symbol, { ...item, symbol });
@@ -194,12 +197,12 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             if (ws.readyState !== ws.OPEN) continue;
             if (!meta || meta.isBridgeAuthenticated) continue;
 
-            const latestBySymbol = getLatestByScope(meta.userId || null);
+            const latestBySymbol = getLatestByScope(meta);
             const sendStartAt = performance.now();
             const orderedSymbols = Array.isArray(meta.symbols) ? meta.symbols : [];
             const data = orderedSymbols.map((s) => latestBySymbol.get(normalizeSymbol(s))).filter(Boolean);
             if (data.length > 0) {
-                const cacheKey = `explicit:${meta.userId || "__global__"}:${orderedSymbols.join("|")}`;
+                const cacheKey = `explicit:${resolveClientMt5Scope(meta).scopeId}:${orderedSymbols.join("|")}`;
                 let payload = payloadCache.get(cacheKey);
                 if (!payload) {
                     payload = JSON.stringify({ topic: "priceUpdate", data });
@@ -216,11 +219,11 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             const meta = clients.get(ws);
             if (!meta || meta.isBridgeAuthenticated) continue;
 
-            const latestBySymbol = getLatestByScope(meta.userId || null);
+            const latestBySymbol = getLatestByScope(meta);
             const sendStartAt = performance.now();
             const data = coreSymbols.map((s) => latestBySymbol.get(s)).filter(Boolean);
             if (data.length > 0) {
-                const cacheKey = `core:${meta.userId || "__global__"}:${coreSymbols.join("|")}`;
+                const cacheKey = `core:${resolveClientMt5Scope(meta).scopeId}:${coreSymbols.join("|")}`;
                 let payload = payloadCache.get(cacheKey);
                 if (!payload) {
                     payload = JSON.stringify({ topic: "priceUpdate", data });

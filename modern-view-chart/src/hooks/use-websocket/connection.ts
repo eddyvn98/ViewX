@@ -2,6 +2,8 @@ import { buildSocketConfig, deriveWebClientMode, fetchWsTicketFromApi } from './
 import { wsRuntime } from './runtime';
 import { collectActiveSymbolsFromStore } from './symbol-utils';
 import { handleSocketMessage, MessageHandlerDeps } from './message-handler';
+import { useMarketStore } from '@/lib/store';
+import { buildMt5AuthFields } from '@/lib/mt5/account-scope';
 
 export interface ConnectionDeps extends MessageHandlerDeps {
     setConnected: (connected: boolean) => void;
@@ -39,7 +41,13 @@ async function openSocket(deps: ConnectionDeps): Promise<void> {
         deps.setConnected(true);
         const symbols = collectActiveSymbolsFromStore();
         const clientMode = deriveWebClientMode();
-        socket.send(JSON.stringify({ topic: 'auth', client_mode: clientMode, symbols }));
+        const selectedMt5Scope = useMarketStore.getState().selectedMt5Scope;
+        socket.send(JSON.stringify({
+            topic: 'auth',
+            client_mode: clientMode,
+            symbols,
+            ...buildMt5AuthFields(selectedMt5Scope),
+        }));
         socket.send(JSON.stringify({ topic: 'subscribeSymbols', symbols }));
     };
 

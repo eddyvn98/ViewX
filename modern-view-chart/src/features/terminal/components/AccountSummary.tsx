@@ -5,13 +5,14 @@ import { calculatePnL } from "@/lib/utils/pnl";
 
 interface AccountSummaryProps {
     account: AccountInfo | null;
+    sourceKey: string;
 }
 
 /**
  * Optimized AccountSummary - Uses RAF + DOM manipulation for real-time profit updates
  * This prevents React re-renders when tickers change (which happens ~30fps)
  */
-export const AccountSummary = memo(function AccountSummary({ account }: AccountSummaryProps) {
+export const AccountSummary = memo(function AccountSummary({ account, sourceKey }: AccountSummaryProps) {
     const profitRef = useRef<HTMLSpanElement>(null);
     const equityRef = useRef<HTMLSpanElement>(null);
     const rafIdRef = useRef<number | null>(null);
@@ -23,14 +24,18 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
         if (!account) return;
 
         const state = useMarketStore.getState();
-        const positions = state.positions;
+        const positions = state.positions.filter((position) => String(position.source || 'MT5') === sourceKey);
         const tickers = state.tickers;
         const symbolInfoMap = state.symbolInfo;
 
         // Calculate real-time profit
         const realTimeProfit = positions.reduce((sum, pos) => {
-            const livePrice = tickers[pos.symbol]?.price || pos.current_price;
-            const symbolInfo = symbolInfoMap[pos.symbol];
+            const scopedTicker = tickers[`${sourceKey}:${pos.symbol}`];
+            const sharedTicker = sourceKey === 'MT5' ? tickers[pos.symbol] : undefined;
+            const livePrice = scopedTicker?.price ?? sharedTicker?.price ?? pos.current_price;
+            const scopedSymbolInfo = symbolInfoMap[`${sourceKey}:${pos.symbol}`];
+            const sharedSymbolInfo = sourceKey === 'MT5' ? symbolInfoMap[pos.symbol] : undefined;
+            const symbolInfo = scopedSymbolInfo ?? sharedSymbolInfo;
             const pnl = calculatePnL({
                 type: pos.type,
                 openPrice: pos.open_price,
@@ -59,7 +64,7 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
             equityRef.current.textContent = equityStr;
             equityRef.current.className = `font-semibold ${realTimeEquity >= (account.balance ?? 0) ? 'text-foreground' : 'text-red-400'}`;
         }
-    }, [account]);
+    }, [account, sourceKey]);
 
     // Subscribe to store changes via RAF loop (not React re-renders)
     useEffect(() => {

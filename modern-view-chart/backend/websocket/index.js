@@ -20,9 +20,12 @@ import {
     clearScopedMt5Prices,
     clearScopedMt5State,
     clearScopedMt5Symbols,
-    isRecipientForMt5Owner,
-    resolveBridgeOwnerUserId,
+    isRecipientForMt5Scope,
+    resolveBridgeMt5Scope,
+    resolveClientMt5Scope,
+    scopeMetadata,
 } from "./mt5Scope.js";
+import { buildAvailableMt5Accounts, resolveClientMt5Bridge } from "./mt5AccountCatalog.js";
 
 export const clients = new Map();
 export const mt5Prices = new Map();
@@ -100,11 +103,15 @@ export default function initWebSocket(server) {
         addDefaultPriceClient(subscriptionIndex, ws);
         setWsClients(clients.size);
         if (!clients.get(ws)?.isBridgeAuthenticated) {
+            const clientMeta = clients.get(ws);
+            const selectedScope = resolveClientMt5Scope(clientMeta);
+            const route = resolveClientMt5Bridge(clientMeta, bridgeRegistry);
             safeSend(
                 ws,
                 JSON.stringify({
                     topic: "bridgeStatus",
-                    online: bridgeRegistry.hasForUser(clients.get(ws)?.userId || null),
+                    online: Boolean(route.record),
+                    mt5_scope: scopeMetadata(selectedScope),
                 })
             );
         }
@@ -143,14 +150,15 @@ export default function initWebSocket(server) {
                         const registration = bridgeRegistry.register(ws, meta);
                         setBridgeRegistered(bridgeRegistry.size());
                         setBridgeOnline(bridgeRegistry.size() > 0);
-                        const ownerUserId = resolveBridgeOwnerUserId(meta);
+                        const mt5Scope = resolveBridgeMt5Scope(meta);
                         meta.bridgeStatusAnnounced = true;
-                        broadcastBridgeStatus(ownerUserId, true, bridgeRegistry);
+                        broadcastBridgeStatus(mt5Scope, true, bridgeRegistry);
+                        broadcastMt5AccountsAvailable(mt5Scope.ownerUserId, bridgeRegistry);
                         logInfo("ws.bridge.authenticated", {
                             via: meta.authVia || "unknown",
                             client_mode: meta.clientMode || null,
                             account_tier: meta.accountTier || null,
-                            owner_user_id: ownerUserId,
+                            owner_user_id: mt5Scope.ownerUserId,
                             account_login: registration?.record?.accountLogin || null,
                             terminal_id: registration?.record?.terminalId || null,
                             replaced_existing: Boolean(registration?.replaced),
@@ -188,25 +196,33 @@ export default function initWebSocket(server) {
         ws.on("close", (code, reason) => {
             const closedMeta = clients.get(ws);
             if (closedMeta?.isBridgeAuthenticated) {
-                const ownerUserId = resolveBridgeOwnerUserId(closedMeta);
-                bridgeRegistry.unregister(ws);
-                const ownerStillHasDirectBridge = bridgeRegistry.hasDirectForUser(ownerUserId);
-                const ownerStillOnline = bridgeRegistry.hasForUser(ownerUserId);
+                const mt5Scope = resolveBridgeMt5Scope(closedMeta);
+                const removed = bridgeRegistry.unregister(ws);
+                const replacementRoute = bridgeRegistry.resolve({
+                    userId: mt5Scope.ownerUserId,
+                    accountLogin: mt5Scope.accountLogin,
+                    terminalId: mt5Scope.terminalId,
+                });
+                const sameScopeStillOnline = Boolean(replacementRoute.record);
                 setBridgeRegistered(bridgeRegistry.size());
                 setBridgeOnline(bridgeRegistry.size() > 0);
                 const reasonText = typeof reason === "string" ? reason : Buffer.from(reason || []).toString();
                 logInfo("ws.bridge.disconnected", {
                     code,
                     reason: reasonText || "n/a",
-                    owner_user_id: ownerUserId,
-                    owner_still_online: ownerStillOnline,
+                    owner_user_id: mt5Scope.ownerUserId,
+                    account_login: mt5Scope.accountLogin,
+                    terminal_id: mt5Scope.terminalId,
+                    scope_still_online: sameScopeStillOnline,
+                    registry_removed: Boolean(removed),
                 });
-                if (!ownerStillHasDirectBridge) {
-                    clearScopedMt5Prices(mt5Prices, ownerUserId);
-                    clearScopedMt5State(ownerUserId);
-                    clearScopedMt5Symbols(ownerUserId);
+                if (removed && !sameScopeStillOnline) {
+                    clearScopedMt5Prices(mt5Prices, mt5Scope);
+                    clearScopedMt5State(mt5Scope);
+                    clearScopedMt5Symbols(mt5Scope);
                 }
-                broadcastBridgeStatus(ownerUserId, ownerStillOnline, bridgeRegistry);
+                broadcastBridgeStatus(mt5Scope, sameScopeStillOnline, bridgeRegistry);
+                broadcastMt5AccountsAvailable(mt5Scope.ownerUserId, bridgeRegistry);
             }
             clients.delete(ws);
             removeClientFromIndexes(subscriptionIndex, ws);
@@ -221,15 +237,33 @@ export default function initWebSocket(server) {
     return wss;
 }
 
-function broadcastBridgeStatus(ownerUserId, online, bridgeRegistry = null) {
+function broadcastBridgeStatus(mt5Scope, online, bridgeRegistry = null) {
     for (const [clientWs, meta] of clients.entries()) {
         if (meta?.isBridgeAuthenticated) continue;
-        if (ownerUserId && !isRecipientForMt5Owner(meta, ownerUserId)) continue;
+        if (!isRecipientForMt5Scope(meta, mt5Scope)) continue;
         if (clientWs.readyState !== clientWs.OPEN) continue;
 
-        const effectiveOnline = !ownerUserId && bridgeRegistry
-            ? bridgeRegistry.hasForUser(meta?.userId || null)
+        const effectiveOnline = bridgeRegistry
+            ? Boolean(resolveClientMt5Bridge(meta, bridgeRegistry).record)
             : online;
-        safeSend(clientWs, JSON.stringify({ topic: "bridgeStatus", online: effectiveOnline }));
+        safeSend(clientWs, JSON.stringify({
+            topic: "bridgeStatus",
+            online: effectiveOnline,
+            mt5_scope: scopeMetadata(resolveClientMt5Scope(meta)),
+        }));
+    }
+}
+
+function broadcastMt5AccountsAvailable(ownerUserId, bridgeRegistry) {
+    for (const [clientWs, meta] of clients.entries()) {
+        if (meta?.isBridgeAuthenticated) continue;
+        if (ownerUserId && String(meta?.userId || "") !== String(ownerUserId)) continue;
+        if (clientWs.readyState !== clientWs.OPEN) continue;
+
+        safeSend(clientWs, JSON.stringify({
+            topic: "mt5_accounts_available",
+            accounts: buildAvailableMt5Accounts(meta, bridgeRegistry),
+            selected: scopeMetadata(resolveClientMt5Scope(meta)),
+        }));
     }
 }

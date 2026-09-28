@@ -1,15 +1,20 @@
 import { logInfo } from "../../logger.js";
-import { isRecipientForMt5Owner, resolveBridgeOwnerUserId } from "../mt5Scope.js";
+import { isRecipientForMt5Scope, resolveBridgeMt5Scope, scopeMetadata } from "../mt5Scope.js";
 import { candleBuffers } from "./subscribeHandler.js";
 
 export function handleMt5Candles({ ws, clients }, data) {
     const senderMeta = clients.get(ws);
     if (!senderMeta?.isBridgeAuthenticated) return;
-    const ownerUserId = resolveBridgeOwnerUserId(senderMeta);
-    const payload = JSON.stringify(data);
+    const mt5Scope = resolveBridgeMt5Scope(senderMeta);
+    const scopedPayload = {
+        ...data,
+        source: mt5Scope.source,
+        mt5_scope: scopeMetadata(mt5Scope),
+    };
+    const payload = JSON.stringify(scopedPayload);
     let delivered = 0;
     for (const [clientWs, metadata] of clients.entries()) {
-        if (!isRecipientForMt5Owner(metadata, ownerUserId)) continue;
+        if (!isRecipientForMt5Scope(metadata, mt5Scope)) continue;
         if (clientWs.readyState === clientWs.OPEN) {
             clientWs.send(payload);
             delivered += 1;
@@ -18,7 +23,7 @@ export function handleMt5Candles({ ws, clients }, data) {
     if (Array.isArray(data?.candles)) {
         const normalizedSymbol = String(data?.symbol || "").trim().toUpperCase();
         const normalizedInterval = String(data?.interval || "").trim();
-        candleBuffers[`${normalizedSymbol}|${normalizedInterval}`] = data.candles.map((candle) => ({
+        candleBuffers[`${mt5Scope.scopeId}|${normalizedSymbol}|${normalizedInterval}`] = data.candles.map((candle) => ({
             time: candle.time,
             close: candle.close,
         }));

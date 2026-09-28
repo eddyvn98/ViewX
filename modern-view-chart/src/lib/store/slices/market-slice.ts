@@ -13,7 +13,7 @@ export interface MarketSlice {
     setBridgeOnline: (status: boolean) => void;
     updateTicker: (symbol: string, data: Partial<Ticker>) => void;
     updateTickers: (data: Record<string, Partial<Ticker>>) => void;
-    setSymbolInfo: (data: SymbolInfo) => void;
+    setSymbolInfo: (data: SymbolInfo, keyOverride?: string) => void;
     setAvailableSymbols: (symbols: Array<Record<string, unknown> | string>) => void;
     addToWatchlist: (symbol: string) => void;
     removeFromWatchlist: (symbol: string) => void;
@@ -65,12 +65,17 @@ export const createMarketSlice: StateCreator<MarketSlice> = (set) => ({
         return hasChange ? { tickers: newTickers } : state;
     }),
 
-    setSymbolInfo: (data) => set((state) => ({
-        symbolInfo: {
-            ...state.symbolInfo,
-            [data.symbol]: data
-        }
-    })),
+    setSymbolInfo: (data, keyOverride) => set((state) => {
+        const key = String(keyOverride || data.symbol || '').trim();
+        if (!key) return state;
+        return {
+            symbolInfo: {
+                ...state.symbolInfo,
+                [key]: data,
+                [data.symbol]: data,
+            },
+        };
+    }),
     setAvailableSymbols: (symbols) => set({ availableSymbols: symbols }),
 
     addToWatchlist: (symbol) => set((state) => {
