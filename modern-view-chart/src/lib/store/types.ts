@@ -206,7 +206,7 @@ export interface DrawingConfig {
     points: DrawingPoint[];
     symbol?: string;
     interval?: string;
-    source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    source?: MarketDataSource;
     color: string;
     visible: boolean;
     locked?: boolean;
