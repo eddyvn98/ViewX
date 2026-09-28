@@ -1,5 +1,7 @@
 export const runtimeState = {
     bridgeOnline: false,
+    bridgeRegistered: 0,
+    bridgeRouteMisses: 0,
     wsClients: 0,
     wsDroppedRateLimit: 0,
     wsDroppedBackpressure: 0,
@@ -19,6 +21,14 @@ export const runtimeState = {
 
 export function setBridgeOnline(online) {
     runtimeState.bridgeOnline = Boolean(online);
+}
+
+export function setBridgeRegistered(count) {
+    runtimeState.bridgeRegistered = Number.isFinite(count) ? Math.max(0, count) : 0;
+}
+
+export function incrementBridgeRouteMiss() {
+    runtimeState.bridgeRouteMisses += 1;
 }
 
 export function setWsClients(count) {
