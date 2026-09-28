@@ -194,6 +194,21 @@ export function syncForegroundCharts(force: boolean, reason: string) {
     // evaluate and every matrix cell remains in the no-trade state.
     const scanners = useStrategyStore.getState().matrixScanners || [];
     getMatrixCandleRequests(scanners).forEach(({ source, symbol, interval }) => {
-        requestChartBackfill(source, symbol, interval, reason);
+        const normalizedSource = String(source || '').toUpperCase();
+        const normalizedInterval = String(interval || '').trim();
+        const key = `${normalizedSource}:${normalizeSymbol(symbol)}:${normalizedInterval}`;
+        const candles = state.candleData[key] || [];
+
+        if (candles.length === 0) {
+            requestChartBackfill(source, symbol, interval, reason);
+            return;
+        }
+
+        const lastTime = Number(candles[candles.length - 1]?.time);
+        const intervalSec = Math.max(60, parseIntervalSeconds(normalizedInterval));
+        const requestCount = getIncrementalHistoryCount(lastTime, nowSec, intervalSec);
+        if (requestCount > 0) {
+            requestChartBackfill(source, symbol, interval, reason, requestCount);
+        }
     });
 }
