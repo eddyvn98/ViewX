@@ -262,7 +262,7 @@ export function handleMt5OrderResult({ ws, clients }, data) {
     const bridgeAccountLogin = normalizeOptional(senderMeta.bridgeAccountLogin);
     const bridgeTerminalId = normalizeOptional(senderMeta.bridgeTerminalId);
 
-    if (pending.ownerUserId && bridgeOwnerUserId && pending.ownerUserId !== bridgeOwnerUserId) {
+    if (pending.ownerUserId && pending.ownerUserId !== bridgeOwnerUserId) {
         logWarn("ws.mt5_order_result.owner_mismatch", {
             request_id: requestId,
             expected_owner_user_id: pending.ownerUserId,
@@ -270,7 +270,7 @@ export function handleMt5OrderResult({ ws, clients }, data) {
         });
         return;
     }
-    if (pending.accountLogin && bridgeAccountLogin && pending.accountLogin !== bridgeAccountLogin) {
+    if (pending.accountLogin && pending.accountLogin !== bridgeAccountLogin) {
         logWarn("ws.mt5_order_result.account_mismatch", {
             request_id: requestId,
             expected_account_login: pending.accountLogin,
@@ -278,7 +278,7 @@ export function handleMt5OrderResult({ ws, clients }, data) {
         });
         return;
     }
-    if (pending.terminalId && bridgeTerminalId && pending.terminalId !== bridgeTerminalId) {
+    if (pending.terminalId && pending.terminalId !== bridgeTerminalId) {
         logWarn("ws.mt5_order_result.terminal_mismatch", {
             request_id: requestId,
             expected_terminal_id: pending.terminalId,
