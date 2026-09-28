@@ -42,8 +42,11 @@ export function useWebSocket(): { sendMessage: (data: WsMessage) => void } {
                 setOrders(orders as unknown as Parameters<typeof setOrders>[0], source),
             setPositions: (positions: Array<Record<string, unknown>>, source?: string) =>
                 setPositions(positions as unknown as Parameters<typeof setPositions>[0], source),
-            setSymbolInfo: (info: Record<string, unknown>) =>
-                setSymbolInfo(info as unknown as Parameters<typeof setSymbolInfo>[0]),
+            setSymbolInfo: (info: Record<string, unknown>, keyOverride?: string) =>
+                setSymbolInfo(
+                    info as unknown as Parameters<typeof setSymbolInfo>[0],
+                    keyOverride,
+                ),
             updateLastCandle: (source: string, symbol: string, interval: string, candle: Record<string, unknown>) =>
                 updateLastCandle(source, symbol, interval, candle as unknown as Parameters<typeof updateLastCandle>[3]),
             updateTickers: (tickers: Record<string, unknown>) =>
