@@ -1,11 +1,16 @@
-import { DEFAULT_BINANCE_SYMBOLS, DEFAULT_VN_GOLD_SYMBOLS, type DataSource, type SourceTab } from './market-list-constants';
-import { resolveDataSource } from './market-list-utils';
+import type { SymbolDescriptor } from '@/lib/store/types';
+import {
+    buildSymbolIdentityKey,
+    createLegacySymbolDescriptor,
+} from '@/lib/market/symbol-catalog';
+import { DEFAULT_BINANCE_SYMBOLS, DEFAULT_VN_GOLD_SYMBOLS, type SourceTab } from './market-list-constants';
 
 export interface BuildSymbolListParams {
     mode: 'discovery' | 'watchlist';
-    watchlist: string[];
-    availableSymbols: Array<{ symbol?: string | undefined } | string>;
-    allSymbols: string[];
+    legacyWatchlist: string[];
+    watchlistItems: SymbolDescriptor[];
+    availableSymbols: SymbolDescriptor[];
+    tickerItems: SymbolDescriptor[];
     deferredSearch: string;
     sourceTab: SourceTab;
     binanceUniverse: string[];
@@ -14,137 +19,101 @@ export interface BuildSymbolListParams {
     watchlistSearchIncludesDiscovery: boolean;
 }
 
+function matchesSourceTab(item: SymbolDescriptor, sourceTab: SourceTab): boolean {
+    if (sourceTab === 'ALL') return true;
+    if (sourceTab === 'MT5') return item.source === 'MT5' || item.source === 'MT5_PERSONAL';
+    return item.source === sourceTab;
+}
+
+function matchesSearch(item: SymbolDescriptor, normalizedSearch: string): boolean {
+    if (!normalizedSearch) return true;
+    return [
+        item.symbol,
+        item.description,
+        item.path,
+        item.broker,
+        item.accountLogin,
+    ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+}
+
+function addDescriptor(map: Map<string, SymbolDescriptor>, item: SymbolDescriptor | null | undefined) {
+    if (!item?.symbol) return;
+    map.set(buildSymbolIdentityKey(item), item);
+}
+
 export function buildSymbolList({
     mode,
-    watchlist,
+    legacyWatchlist,
+    watchlistItems,
     availableSymbols,
-    allSymbols,
+    tickerItems,
     deferredSearch,
     sourceTab,
     binanceUniverse,
     vangTodaySymbols,
     prioritizeWatched,
     watchlistSearchIncludesDiscovery,
-}: BuildSymbolListParams): { symbol: string; source: DataSource }[] {
-    const discoveryMap = new Map<string, DataSource>();
-    const normalizedSearch = deferredSearch.toLowerCase();
+}: BuildSymbolListParams): SymbolDescriptor[] {
+    const discoveryMap = new Map<string, SymbolDescriptor>();
+    const normalizedSearch = deferredSearch.trim().toLowerCase();
 
-    availableSymbols.forEach((s) => {
-        const raw = typeof s === 'string' ? s : s?.symbol;
-        const symbol = String(raw || '').trim();
-        if (!symbol) return;
-        discoveryMap.set(symbol, resolveDataSource(symbol));
-    });
+    availableSymbols.forEach((item) => addDescriptor(discoveryMap, item));
+    tickerItems.forEach((item) => addDescriptor(discoveryMap, item));
 
-    allSymbols.forEach((symbol) => {
-        const normalized = String(symbol || '').trim();
-        if (!normalized) return;
-        discoveryMap.set(normalized, resolveDataSource(normalized));
-    });
+    DEFAULT_BINANCE_SYMBOLS.forEach((symbol) =>
+        addDescriptor(discoveryMap, { symbol, source: 'BINANCE' }));
+    binanceUniverse.forEach((symbol) =>
+        addDescriptor(discoveryMap, { symbol, source: 'BINANCE' }));
 
-    DEFAULT_BINANCE_SYMBOLS.forEach((symbol) => {
-        if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
-    });
-
-    binanceUniverse.forEach((symbol) => {
-        if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'BINANCE');
-    });
-
-    DEFAULT_VN_GOLD_SYMBOLS.forEach((symbol) => {
-        if (!discoveryMap.has(symbol)) discoveryMap.set(symbol, 'VN_GOLD');
-    });
-
+    DEFAULT_VN_GOLD_SYMBOLS.forEach((symbol) =>
+        addDescriptor(discoveryMap, { symbol, source: 'VN_GOLD' }));
     vangTodaySymbols.forEach((symbol) => {
         const normalized = String(symbol || '').trim().toUpperCase();
-        if (!normalized) return;
-        discoveryMap.set(normalized, 'VN_GOLD');
+        if (normalized) addDescriptor(discoveryMap, { symbol: normalized, source: 'VN_GOLD' });
     });
 
-    let symbols: { symbol: string; source: DataSource }[] = [];
+    const migratedWatchlist = watchlistItems.length > 0
+        ? watchlistItems
+        : legacyWatchlist.map(createLegacySymbolDescriptor);
+    const watchedKeys = new Set(migratedWatchlist.map(buildSymbolIdentityKey));
 
-    if (mode === 'watchlist') {
-        symbols = watchlist.map((symbol) => ({
-            symbol,
-            source: discoveryMap.get(symbol) ?? resolveDataSource(symbol),
-        }));
-    } else {
-        symbols = Array.from(discoveryMap.entries()).map(([symbol, source]) => ({ symbol, source }));
-    }
-
-    const filtered = symbols
-        .filter((ticker) => {
-            const s = ticker.symbol.toLowerCase();
-            const matchesSearch = s.includes(normalizedSearch);
-            const matchesTab = sourceTab === 'ALL' || ticker.source === sourceTab;
-            return matchesSearch && matchesTab;
-        })
-        .sort((a, b) => {
-            if (prioritizeWatched) {
-                const aWatched = watchlist.includes(a.symbol);
-                const bWatched = watchlist.includes(b.symbol);
-                if (aWatched !== bWatched) return aWatched ? -1 : 1;
-            }
-            return a.symbol.localeCompare(b.symbol);
-        });
-
-    if (normalizedSearch) {
-        const rawSearch = deferredSearch.trim().toUpperCase();
-        const looksLikeForexPair = /^[A-Z]{6}M?$/.test(rawSearch);
-        if (looksLikeForexPair) {
-            const normalizedCandidate = rawSearch.endsWith('M') ? rawSearch : `${rawSearch}m`;
-            const candidateSource = resolveDataSource(normalizedCandidate);
-            const candidateMatchesTab = sourceTab === 'ALL' || sourceTab === candidateSource;
-            const exists = filtered.some((item) => item.symbol === rawSearch || item.symbol === normalizedCandidate);
-            if (candidateMatchesTab && !exists) {
-                filtered.unshift({ symbol: normalizedCandidate, source: candidateSource });
-            }
-        }
-    }
-
-    if (mode === 'watchlist' && watchlistSearchIncludesDiscovery && normalizedSearch) {
-        const merged = new Map<string, { symbol: string; source: DataSource }>();
-        const rawSearch = deferredSearch.trim().toUpperCase();
-
-        watchlist.forEach((symbol) => {
-            const normalized = String(symbol || '').trim();
-            if (!normalized) return;
-            if (normalized.toLowerCase().includes(normalizedSearch)) {
-                merged.set(normalized, {
-                    symbol: normalized,
-                    source: discoveryMap.get(normalized) ?? resolveDataSource(normalized),
-                });
-            }
-        });
-
-        Array.from(discoveryMap.entries()).forEach(([symbol, source]) => {
-            if (symbol.toLowerCase().includes(normalizedSearch)) {
-                merged.set(symbol, { symbol, source });
-            }
-        });
-
-        filtered.forEach((item) => merged.set(item.symbol, item));
-
-        // Allow manual-typed FX symbol discovery when the upstream symbol universe is incomplete on local.
-        // Example: user types USDCAD and can still add it to watchlist.
-        const looksLikeForexPair = /^[A-Z]{6}M?$/.test(rawSearch);
-        if (looksLikeForexPair) {
-            const normalizedCandidate = rawSearch.endsWith('M') ? rawSearch : `${rawSearch}m`;
-            if (!merged.has(rawSearch) && !merged.has(normalizedCandidate)) {
-                const candidate = normalizedCandidate;
-                const candidateSource = resolveDataSource(candidate);
-                if (sourceTab === 'ALL' || sourceTab === candidateSource) {
-                    merged.set(candidate, { symbol: candidate, source: candidateSource });
+    const filterAndSort = (items: SymbolDescriptor[]) =>
+        items
+            .filter((item) => matchesSearch(item, normalizedSearch) && matchesSourceTab(item, sourceTab))
+            .sort((a, b) => {
+                if (prioritizeWatched) {
+                    const aWatched = watchedKeys.has(buildSymbolIdentityKey(a));
+                    const bWatched = watchedKeys.has(buildSymbolIdentityKey(b));
+                    if (aWatched !== bWatched) return aWatched ? -1 : 1;
                 }
-            }
-        }
+                const symbolCompare = a.symbol.localeCompare(b.symbol);
+                if (symbolCompare !== 0) return symbolCompare;
+                return buildSymbolIdentityKey(a).localeCompare(buildSymbolIdentityKey(b));
+            });
 
-        return Array.from(merged.values()).sort((a, b) => {
-            const aWatched = watchlist.includes(a.symbol);
-            const bWatched = watchlist.includes(b.symbol);
-            if (aWatched !== bWatched) return aWatched ? -1 : 1;
-            return a.symbol.localeCompare(b.symbol);
-        });
+    if (mode === 'watchlist' && (!watchlistSearchIncludesDiscovery || !normalizedSearch)) {
+        return filterAndSort(migratedWatchlist);
     }
 
-    return filtered;
+    const base = mode === 'watchlist'
+        ? [...migratedWatchlist, ...discoveryMap.values()]
+        : Array.from(discoveryMap.values());
+
+    const merged = new Map<string, SymbolDescriptor>();
+    base.forEach((item) => addDescriptor(merged, item));
+
+    // Manual MT5 symbol fallback is only allowed when the user explicitly selected
+    // the MT5 source tab. We do not infer source from symbol suffix/text.
+    if (normalizedSearch && sourceTab === 'MT5') {
+        const rawSearch = deferredSearch.trim();
+        if (rawSearch) {
+            const candidate: SymbolDescriptor = { symbol: rawSearch, source: 'MT5' };
+            const candidateKey = buildSymbolIdentityKey(candidate);
+            if (!merged.has(candidateKey)) merged.set(candidateKey, candidate);
+        }
+    }
+
+    return filterAndSort(Array.from(merged.values()));
 }
