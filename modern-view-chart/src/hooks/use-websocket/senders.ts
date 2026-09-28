@@ -6,6 +6,7 @@ import { BACKFILL_THROTTLE_MS, FOREGROUND_RESYNC_DEBOUNCE_MS, SYMBOL_INTEREST_DE
 import { wsRuntime } from './runtime';
 import { parseIntervalSeconds } from './socket-config';
 import { collectActiveSymbolsFromStore, normalizeSymbol } from './symbol-utils';
+import { getIncrementalHistoryCount } from '@/features/chart/hooks/history-sync';
 
 type ChartLike = {
     source?: string;
@@ -152,6 +153,7 @@ export function requestChartBackfill(
 }
 
 export function syncForegroundCharts(force: boolean, reason: string) {
+    void force;
     const state = useMarketStore.getState();
     const tabs = state.tabs;
     const nowSec = Math.floor(Date.now() / 1000);
@@ -165,7 +167,7 @@ export function syncForegroundCharts(force: boolean, reason: string) {
 
             const key = `${source}:${normalizeSymbol(symbol)}:${interval}`;
             const candles = state.candleData[key] || [];
-            if (force || candles.length === 0) {
+            if (candles.length === 0) {
                 requestChartBackfill(source, symbol, interval, reason);
                 return;
             }
@@ -177,11 +179,12 @@ export function syncForegroundCharts(force: boolean, reason: string) {
             }
 
             const intervalSec = Math.max(60, parseIntervalSeconds(interval));
-            const secondsGap = nowSec - lastTime;
+            const requestCount = getIncrementalHistoryCount(lastTime, nowSec, intervalSec);
 
-            // Backfill as soon as we detect a likely missed closed bar.
-            if (secondsGap >= intervalSec) {
-                requestChartBackfill(source, symbol, interval, reason);
+            // Even forced foreground resyncs should only request bars that can
+            // actually be missing. Realtime ticks cover the current open bar.
+            if (requestCount > 0) {
+                requestChartBackfill(source, symbol, interval, reason, requestCount);
             }
         });
     });
