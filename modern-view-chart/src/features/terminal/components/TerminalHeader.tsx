@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { AccountSummary } from './AccountSummary';
 import { MobileAccountSummary } from './MobileAccountSummary';
+import { buildMt5DataSourceKey, Mt5AccountScope } from '@/lib/mt5/account-scope';
 
 type TerminalHeaderProps = {
     forceExpanded: boolean;
@@ -14,6 +15,9 @@ type TerminalHeaderProps = {
     handleDragStart: MouseEventHandler<HTMLDivElement>;
     toggleCollapse: () => void;
     visibleAccount: AccountInfo | null;
+    mt5AccountsAvailable: Mt5AccountScope[];
+    selectedMt5Scope: Mt5AccountScope;
+    onSelectMt5Scope: (scope: Mt5AccountScope) => void;
 };
 
 export function TerminalHeader({
@@ -23,6 +27,9 @@ export function TerminalHeader({
     handleDragStart,
     toggleCollapse,
     visibleAccount,
+    mt5AccountsAvailable,
+    selectedMt5Scope,
+    onSelectMt5Scope,
 }: TerminalHeaderProps) {
     return (
         <>
@@ -60,6 +67,28 @@ export function TerminalHeader({
                                 <AccountSummary account={visibleAccount} />
                             )}
                         </div>
+                        {mt5AccountsAvailable.length > 1 && (
+                            <select
+                                value={buildMt5DataSourceKey(selectedMt5Scope)}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={(event) => {
+                                    const next = mt5AccountsAvailable.find(
+                                        (scope) => buildMt5DataSourceKey(scope) === event.target.value,
+                                    );
+                                    if (next) onSelectMt5Scope(next);
+                                }}
+                                className="h-6 max-w-44 rounded border border-border/40 bg-background/70 px-2 text-[10px] font-semibold text-foreground outline-none"
+                                aria-label="MT5 account"
+                            >
+                                {mt5AccountsAvailable.map((scope) => {
+                                    const key = buildMt5DataSourceKey(scope);
+                                    const label = scope.source === 'MT5'
+                                        ? 'Shared MT5'
+                                        : `${scope.accountLogin || 'MT5'}${scope.broker ? ` · ${scope.broker}` : ''}`;
+                                    return <option key={key} value={key}>{label}</option>;
+                                })}
+                            </select>
+                        )}
                     </div>
                     <div className="flex items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-black uppercase tracking-widest hidden group-hover:block transition-all opacity-0 group-hover:opacity-100 italic">
