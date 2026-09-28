@@ -238,7 +238,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     };
 
     useEffect(() => {
-        if (!isReady || !symbol || !interval || !seriesRef.current) return;
+        if (!isCacheReady || !isReady || !symbol || !interval || !seriesRef.current) return;
 
         const currentCandles = getCandles();
         debugLog('[ChartHistory][candles]', {
