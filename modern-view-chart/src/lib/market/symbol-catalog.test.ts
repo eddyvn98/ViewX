@@ -24,7 +24,7 @@ test('personal MT5 symbol identity includes account and terminal', () => {
 test('MT5 transport symbol stays exact while non-MT5 keeps legacy normalization', () => {
     assert.equal(normalizeTransportSymbol('XAUUSD.m', 'MT5_PERSONAL'), 'XAUUSD.m');
     assert.equal(normalizeTransportSymbol('XAUUSD.M', 'MT5'), 'XAUUSD.M');
-    assert.equal(normalizeTransportSymbol('btcusdt', 'BINANCE'), 'btcusdt');
+    assert.equal(normalizeTransportSymbol('btcusdt', 'BINANCE'), 'BTCUSDT');
 });
 
 test('catalog descriptor preserves broker metadata', () => {
