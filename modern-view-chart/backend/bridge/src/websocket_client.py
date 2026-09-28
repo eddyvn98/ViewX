@@ -78,6 +78,18 @@ class BridgeClient:
                 await self.handle_symbols_interest(data)
         except Exception as e:
             print(f"[ERROR] Command handling error (topic:{msg_topic}): {e}")
+            if msg_topic == "mt5_command" and "data" in locals():
+                command = str(data.get("command") or "").strip().lower()
+                if command in self.WRITE_COMMANDS:
+                    await self._send_execution_result(
+                        data,
+                        {
+                            "success": False,
+                            "retcode": None,
+                            "comment": "bridge_command_exception",
+                            "message": str(e),
+                        },
+                    )
 
     async def drain_pending_commands(self, max_messages=20, timeout_sec=0.001):
         if not self.websocket:
