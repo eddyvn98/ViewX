@@ -17,7 +17,7 @@ export interface MessageHandlerDeps {
     setPositions: (positions: Array<Record<string, unknown>>, source?: string) => void;
     setOrders: (orders: Array<Record<string, unknown>>, source?: string) => void;
     appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean, source?: string) => void;
-    setSymbolInfo: (info: Record<string, unknown>) => void;
+    setSymbolInfo: (info: Record<string, unknown>, keyOverride?: string) => void;
     setAvailableSymbols: (symbols: string[]) => void;
 }
 
@@ -264,7 +264,11 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'mt5_symbol_info') {
-            deps.setSymbolInfo(msg.data as Record<string, unknown>);
+            const info = msg.data as Record<string, unknown>;
+            const symbol = normalizeSymbol(String(info?.symbol || ''));
+            const mt5Source = getMt5FrameSource(msg);
+            const scopedKey = symbol ? `${mt5Source}:${symbol}` : undefined;
+            deps.setSymbolInfo(info, scopedKey);
         }
 
         if (msgType === 'mt5_available_symbols') {
