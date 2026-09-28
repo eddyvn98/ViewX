@@ -4,7 +4,8 @@ import React, { useState, useMemo, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { cn } from '@/lib/utils';
-import { buildMt5AuthFields, buildMt5DataSourceKey, normalizeMt5AccountScope } from '@/lib/mt5/account-scope';
+import { buildMt5DataSourceKey, normalizeMt5AccountScope } from '@/lib/mt5/account-scope';
+import { buildMt5WriteFields } from '@/lib/mt5/trading-request';
 // Sub-components
 import { OrderTypeTabs } from './OrderForm/OrderTypeTabs';
 import { SideButtons } from './OrderForm/SideButtons';
@@ -14,13 +15,6 @@ import { SentimentBar } from './OrderForm/SentimentBar';
 
 type OrderType = 'market' | 'pending';
 type Side = 'buy' | 'sell';
-
-function createMt5RequestId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    return `mt5-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
 
 /**
  * Mobile-specific order logic hook
@@ -165,7 +159,8 @@ export function useOrderFormLogic() {
             return;
         }
 
-        const requestId = createMt5RequestId();
+        const writeFields = buildMt5WriteFields(mt5Scope);
+        const requestId = writeFields.request_id;
         pendingRequestIdRef.current = requestId;
         setIsSubmitting(true);
         if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
@@ -179,7 +174,7 @@ export function useOrderFormLogic() {
         sendMessage({
             topic: 'mt5_command',
             command: 'place_order',
-            request_id: requestId,
+            ...writeFields,
             symbol,
             order_type: side,
             volume: parsedVolume,
@@ -188,8 +183,6 @@ export function useOrderFormLogic() {
             sl: parseFloat(sl) || 0,
             tp: parseFloat(tp) || 0,
             is_market: orderType === 'market',
-            ...buildMt5AuthFields(mt5Scope),
-            broker: mt5Scope.broker,
         });
     };
 
