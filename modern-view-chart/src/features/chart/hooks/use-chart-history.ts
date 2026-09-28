@@ -16,6 +16,11 @@ import {
 } from './use-chart-history.helpers';
 import type { Candle } from '@/lib/store/types';
 import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
+import {
+    buildHistoryRequestKey,
+    completeHistoryRequest,
+    tryStartHistoryRequest,
+} from './history-request-gate';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
 
@@ -61,6 +66,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const isVietnamGoldSource = String(source || '').toUpperCase() === 'VN_GOLD';
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
+    const historyRequestKey = buildHistoryRequestKey(source, normSymbol, interval);
 
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
@@ -71,6 +77,23 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const requestHistory = useCallback(() => {
         if (!symbol || !interval) return;
         const sourceText = String(source || '').toUpperCase();
+
+        if (sourceText !== 'VN_GOLD') {
+            const cachedCount = resolveCandles(
+                useMarketStore.getState(),
+                source,
+                normSymbol,
+                intervalCandidates,
+            ).candles.length;
+
+            if (cachedCount >= MIN_CANDLES_THRESHOLD) {
+                completeHistoryRequest(historyRequestKey);
+                return;
+            }
+
+            if (!tryStartHistoryRequest(historyRequestKey)) return;
+        }
+
         if (sourceText === 'BINANCE') {
             const nowSec = Math.floor(Date.now() / 1000);
             const secondsPerBar = parseIntervalSeconds(interval);
@@ -96,7 +119,14 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
         sendMessage({ topic: "mt5_command", command: "get_candles", symbol, interval, count: 300 });
         sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
-    }, [symbol, interval, source, sendMessage]);
+    }, [symbol, interval, source, normSymbol, intervalCandidates, historyRequestKey, sendMessage]);
+
+    useEffect(() => {
+        if (isVietnamGoldSource) return;
+        if (candlesCount >= MIN_CANDLES_THRESHOLD) {
+            completeHistoryRequest(historyRequestKey);
+        }
+    }, [candlesCount, historyRequestKey, isVietnamGoldSource]);
 
     useEffect(() => {
         if (!isReady || !symbol || !interval || !isConnected) return;
