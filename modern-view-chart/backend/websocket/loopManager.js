@@ -2,7 +2,7 @@ import { broadcastPricesToSubscribers, broadcastChartCandles } from "./services/
 import { binanceSimulator } from "../services/binanceSimulator.js";
 import { collectInterestSymbolsFromIndex } from "./subscriptionIndex.js";
 import { safeSend } from "./wsSend.js";
-import { recordBroadcastLoopDuration } from "../runtime-state.js";
+import { recordBroadcastLoopDuration, recordBroadcastStageDuration } from "../runtime-state.js";
 import { isRecipientForMt5Owner, resolveBridgeOwnerUserId } from "./mt5Scope.js";
 
 function broadcastBinanceState(clients) {
@@ -21,6 +21,15 @@ function broadcastBinanceState(clients) {
     }
 }
 
+async function measureBroadcastStage(stage, task) {
+    const startAt = performance.now();
+    try {
+        return await task();
+    } finally {
+        recordBroadcastStageDuration(stage, performance.now() - startAt);
+    }
+}
+
 function startPriceBroadcast({ clients, mt5Prices, subscriptionIndex }, intervalMs) {
     let running = false;
     return setInterval(() => {
@@ -31,8 +40,12 @@ function startPriceBroadcast({ clients, mt5Prices, subscriptionIndex }, interval
         Promise.resolve()
             .then(async () => {
                 await Promise.all([
-                    broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }),
-                    broadcastChartCandles({ clients, mt5Prices, subscriptionIndex }),
+                    measureBroadcastStage("price", () =>
+                        broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex })
+                    ),
+                    measureBroadcastStage("candle", () =>
+                        broadcastChartCandles({ clients, mt5Prices, subscriptionIndex })
+                    ),
                 ]);
             })
             .finally(() => {
