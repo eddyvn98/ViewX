@@ -23,7 +23,7 @@ export function useChartData(
 ) {
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store
-    const { candles } = useChartHistory({
+    useChartHistory({
         chartId: id,
         symbol, interval, source, chartType,
         chartRef, subchartRef, seriesRef, markerSeriesRef,
