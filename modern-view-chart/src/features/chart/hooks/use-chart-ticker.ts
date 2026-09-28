@@ -381,7 +381,7 @@ export function useChartTicker({
             pendingByBar.clear();
             if (tickRafId !== null) cancelAnimationFrame(tickRafId);
         };
-    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
+    }, [symbol, source, dataSource, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
 }
