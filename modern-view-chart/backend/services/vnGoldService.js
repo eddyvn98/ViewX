@@ -179,6 +179,15 @@ function refreshVietnamGoldQuotes() {
     return inflightPromise;
 }
 
+export function getCachedVietnamGoldQuotes({ refresh = true } = {}) {
+    const now = Date.now();
+    const stale = cache.quotes.length === 0 || now - cache.updatedAt >= CACHE_TTL_MS;
+    if (refresh && stale) {
+        void refreshVietnamGoldQuotes();
+    }
+    return cache.quotes;
+}
+
 export async function getVietnamGoldQuotes({ force = false, nonBlocking = false } = {}) {
     const now = Date.now();
     if (!force && cache.quotes.length > 0 && now - cache.updatedAt < CACHE_TTL_MS) {
