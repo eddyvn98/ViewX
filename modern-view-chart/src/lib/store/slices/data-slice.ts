@@ -3,6 +3,7 @@ import { Candle } from '../types';
 import { debugLog } from '@/lib/debug';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { scheduleCandleCacheWrite } from '@/features/chart/cache/candle-history-cache';
+import { buildMt5DataSourceKey, readStoredMt5Scope } from '@/lib/mt5/account-scope';
 
 export interface DataSlice {
     candleData: Record<string, Candle[]>;
@@ -12,6 +13,7 @@ export interface DataSlice {
     syncCrosshair: (point: unknown) => void;
     setCandles: (source: string, symbol: string, interval: string, data: Candle[]) => void;
     updateLastCandle: (source: string, symbol: string, interval: string, candle: Candle) => void;
+    clearMt5CandleRuntime: () => void;
 }
 
 // Normalize time to seconds for consistent comparison (supports numeric and date-string input)
@@ -56,11 +58,26 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
     setCrosshairSync: (enabled) => set({ isCrosshairSyncEnabled: enabled }),
     syncCrosshair: () => { }, // Kept for compatibility; no state update to avoid global re-renders.
 
+    clearMt5CandleRuntime: () => set((state) => {
+        const candleData = { ...state.candleData };
+        const candleHistoryRevision = { ...state.candleHistoryRevision };
+        for (const key of Object.keys(candleData)) {
+            if (String(key).toUpperCase().startsWith('MT5:')) delete candleData[key];
+        }
+        for (const key of Object.keys(candleHistoryRevision)) {
+            if (String(key).toUpperCase().startsWith('MT5:')) delete candleHistoryRevision[key];
+        }
+        return { candleData, candleHistoryRevision };
+    }),
+
     setCandles: (source, symbol, interval, data) => set((state) => {
         const normSymbol = normalizeSymbol(symbol);
         const key = `${source}:${normSymbol}:${interval}`;
         const current = state.candleData[key] || [];
         const sourceUpper = String(source || '').toUpperCase();
+        const cacheSource = sourceUpper === 'MT5'
+            ? buildMt5DataSourceKey(readStoredMt5Scope())
+            : sourceUpper;
         const normalized = (Array.isArray(data) ? data : [])
             .map(normalizeCandle)
             .filter((c): c is Candle => c !== null);
@@ -80,7 +97,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
             const nextCandles = normalized.length > MAX_CANDLES
                 ? normalized.slice(normalized.length - MAX_CANDLES)
                 : normalized;
-            scheduleCandleCacheWrite(sourceUpper, normSymbol, interval, nextCandles);
+            scheduleCandleCacheWrite(cacheSource, normSymbol, interval, nextCandles);
             return {
                 candleData: { ...state.candleData, [key]: nextCandles },
                 candleHistoryRevision: {
@@ -108,7 +125,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
 
         const MAX_CANDLES = 5000;
         const nextCandles = merged.length > MAX_CANDLES ? merged.slice(merged.length - MAX_CANDLES) : merged;
-        scheduleCandleCacheWrite(sourceUpper, normSymbol, interval, nextCandles);
+        scheduleCandleCacheWrite(cacheSource, normSymbol, interval, nextCandles);
 
         return {
             candleData: { ...state.candleData, [key]: nextCandles },
@@ -121,6 +138,10 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
 
     updateLastCandle: (source, symbol, interval, candle) => set((state) => {
         const normSymbol = normalizeSymbol(symbol);
+        const sourceUpper = String(source || '').toUpperCase();
+        const cacheSource = sourceUpper === 'MT5'
+            ? buildMt5DataSourceKey(readStoredMt5Scope())
+            : sourceUpper;
         const key = `${source}:${normSymbol}:${interval}`;
         const currentCandles = state.candleData[key] || [];
         const normalizedCandle = normalizeCandle(candle);
@@ -131,7 +152,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         if (last && toSeconds(last.time) === toSeconds(normalizedCandle.time)) {
             const newCandles = [...currentCandles];
             newCandles[newCandles.length - 1] = normalizedCandle;
-            scheduleCandleCacheWrite(String(source || '').toUpperCase(), normSymbol, interval, newCandles);
+            scheduleCandleCacheWrite(cacheSource, normSymbol, interval, newCandles);
             return { candleData: { ...state.candleData, [key]: newCandles } };
         }
 
@@ -139,7 +160,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set) => ({
         const newCandles = currentCandles.length >= MAX_CANDLES
             ? [...currentCandles.slice(1), normalizedCandle]
             : [...currentCandles, normalizedCandle];
-        scheduleCandleCacheWrite(String(source || '').toUpperCase(), normSymbol, interval, newCandles);
+        scheduleCandleCacheWrite(cacheSource, normSymbol, interval, newCandles);
 
         return { candleData: { ...state.candleData, [key]: newCandles } };
     }),
