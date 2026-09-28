@@ -6,7 +6,7 @@ import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { getAvailableMt5Symbol } from './symbol-message-utils';
-import { buildMt5AuthFields, buildMt5DataSourceKey, normalizeMt5AccountScope, sameMt5Scope } from '@/lib/mt5/account-scope';
+import { buildMt5AuthFields, buildMt5DataSourceKey, buildTickerStoreKeys, normalizeMt5AccountScope, sameMt5Scope } from '@/lib/mt5/account-scope';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -34,13 +34,6 @@ function getMt5FrameSource(frame: Record<string, unknown>): string {
         return buildMt5DataSourceKey(normalizeMt5AccountScope(frame.mt5_scope || frame));
     }
     return rawSource || 'MT5';
-}
-
-export function buildTickerUpdateKeys(source: string, symbol: string): string[] {
-    const normalizedSymbol = normalizeSymbol(symbol);
-    if (!normalizedSymbol) return [];
-    const normalizedSource = String(source || '').trim() || 'MT5';
-    return [`${normalizedSource}:${normalizedSymbol}`, normalizedSymbol];
 }
 
 export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps: MessageHandlerDeps) {
@@ -99,7 +92,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                         displayName: item?.displayName ? String(item.displayName) : undefined,
                         serverTime: Number(item?.serverTime || item?.time || 0) || undefined,
                     };
-                    for (const key of buildTickerUpdateKeys(source, symbol)) {
+                    for (const key of buildTickerStoreKeys(source, symbol)) {
                         wsRuntime.tickerUpdateBuffer[key] = ticker;
                     }
                     usefulUpdate = true;
