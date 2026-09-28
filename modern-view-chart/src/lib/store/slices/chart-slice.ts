@@ -88,11 +88,27 @@ export const createChartSlice: StateCreator<
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab || !activeTab.charts[id]) return state;
 
+        const currentChart = activeTab.charts[id];
+        const nextSymbol = patch.symbol !== undefined ? normalizeSymbol(patch.symbol) : currentChart.symbol;
+        const nextSource = patch.source ?? currentChart.source;
+        const nextInterval = patch.interval ?? currentChart.interval;
+        const contextChanged =
+            nextSymbol !== currentChart.symbol
+            || nextSource !== currentChart.source
+            || nextInterval !== currentChart.interval;
+        const normalizedPatch = patch.symbol !== undefined
+            ? { ...patch, symbol: nextSymbol }
+            : patch;
+
         const updatedTab = {
             ...activeTab,
             charts: {
                 ...activeTab.charts,
-                [id]: { ...activeTab.charts[id], ...patch } as ChartInstance
+                [id]: {
+                    ...currentChart,
+                    ...(contextChanged ? { forecast: undefined } : {}),
+                    ...normalizedPatch,
+                } as ChartInstance
             }
         };
 
@@ -123,7 +139,7 @@ export const createChartSlice: StateCreator<
             Object.values(newCharts).forEach(chart => {
                 if (chart.group === sourceChart.group) {
                     if (chart.symbol === normSymbol && chart.source === symbolSource) return;
-                    newCharts[chart.id] = { ...chart, symbol: normSymbol, source: symbolSource };
+                    newCharts[chart.id] = { ...chart, symbol: normSymbol, source: symbolSource, forecast: undefined };
                     hasChanges = true;
                 }
             });
@@ -131,7 +147,7 @@ export const createChartSlice: StateCreator<
             if (sourceChart.symbol === normSymbol && sourceChart.source === symbolSource) {
                 return state;
             }
-            newCharts[id] = { ...sourceChart, symbol: normSymbol, source: symbolSource };
+            newCharts[id] = { ...sourceChart, symbol: normSymbol, source: symbolSource, forecast: undefined };
             hasChanges = true;
         }
 
@@ -150,7 +166,7 @@ export const createChartSlice: StateCreator<
             ...activeTab,
             charts: {
                 ...activeTab.charts,
-                [id]: { ...activeTab.charts[id], interval }
+                [id]: { ...activeTab.charts[id], interval, forecast: undefined }
             }
         };
 
