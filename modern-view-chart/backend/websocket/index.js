@@ -5,6 +5,7 @@ import { emergencyConfig } from "../config/emergency.js";
 import {
     incrementWsDroppedRateLimit,
     setBridgeOnline,
+    setBridgeRegistered,
     setWsClients,
 } from "../runtime-state.js";
 import { safeSend } from "./wsSend.js";
@@ -14,6 +15,7 @@ import { BRIDGE_TOPICS, resolveQueryAuthPolicy } from "./config.js";
 import { emitWsError, resolveAuthContext } from "./auth.js";
 import { startPeriodicTasks } from "./loopManager.js";
 import { getDefaultClientMode, isBridgeClientMode } from "./clientMode.js";
+import { createBridgeRegistry } from "./bridgeRegistry.js";
 import {
     clearScopedMt5Prices,
     clearScopedMt5State,
@@ -41,6 +43,7 @@ export default function initWebSocket(server) {
         maxPayload: 10 * 1024 * 1024,
     });
     const subscriptionIndex = createSubscriptionIndex();
+    const bridgeRegistry = createBridgeRegistry();
 
     startBinanceTickerStream();
     if (emergencyConfig.enabled) {
@@ -63,7 +66,7 @@ export default function initWebSocket(server) {
         heartbeatIntervalMs,
     });
 
-    const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex);
+    const router = setupMessageRouter(clients, mt5Prices, subscriptionIndex, bridgeRegistry);
 
     wss.on("connection", async (ws, request) => {
         const authContext = await resolveAuthContext(request, queryAuthPolicy);
@@ -101,18 +104,20 @@ export default function initWebSocket(server) {
                 ws,
                 JSON.stringify({
                     topic: "bridgeStatus",
-                    online: hasBridgeForOwner(clients, clients.get(ws)?.userId || null),
+                    online: bridgeRegistry.hasForUser(clients.get(ws)?.userId || null),
                 })
             );
         }
 
         ws.on("pong", () => {
             ws.isAlive = true;
+            bridgeRegistry.touch(ws);
         });
 
         ws.on("message", (msg) => {
             const meta = clients.get(ws);
             if (!meta) return;
+            bridgeRegistry.touch(ws);
 
             try {
                 const parsed = JSON.parse(msg.toString());
@@ -135,10 +140,20 @@ export default function initWebSocket(server) {
                         meta.isBridgeAuthenticated = true;
                         ws.isBridgeAuthenticated = true;
                         removeClientFromIndexes(subscriptionIndex, ws);
+                        const registration = bridgeRegistry.register(ws, meta);
+                        setBridgeRegistered(bridgeRegistry.size());
+                        setBridgeOnline(bridgeRegistry.size() > 0);
+                        const ownerUserId = resolveBridgeOwnerUserId(meta);
+                        meta.bridgeStatusAnnounced = true;
+                        broadcastBridgeStatus(ownerUserId, true);
                         logInfo("ws.bridge.authenticated", {
                             via: meta.authVia || "unknown",
                             client_mode: meta.clientMode || null,
                             account_tier: meta.accountTier || null,
+                            owner_user_id: ownerUserId,
+                            account_login: registration?.record?.accountLogin || null,
+                            terminal_id: registration?.record?.terminalId || null,
+                            replaced_existing: Boolean(registration?.replaced),
                         });
                     }
                 }
@@ -174,13 +189,23 @@ export default function initWebSocket(server) {
             const closedMeta = clients.get(ws);
             if (closedMeta?.isBridgeAuthenticated) {
                 const ownerUserId = resolveBridgeOwnerUserId(closedMeta);
+                bridgeRegistry.unregister(ws);
+                const ownerStillOnline = bridgeRegistry.hasForUser(ownerUserId);
+                setBridgeRegistered(bridgeRegistry.size());
+                setBridgeOnline(bridgeRegistry.size() > 0);
                 const reasonText = typeof reason === "string" ? reason : Buffer.from(reason || []).toString();
-                logInfo("ws.bridge.disconnected", { code, reason: reasonText || "n/a" });
-                setBridgeOnline(false);
-                clearScopedMt5Prices(mt5Prices, ownerUserId);
-                clearScopedMt5State(ownerUserId);
-                clearScopedMt5Symbols(ownerUserId);
-                broadcastBridgeStatus(ownerUserId, false);
+                logInfo("ws.bridge.disconnected", {
+                    code,
+                    reason: reasonText || "n/a",
+                    owner_user_id: ownerUserId,
+                    owner_still_online: ownerStillOnline,
+                });
+                if (!ownerStillOnline) {
+                    clearScopedMt5Prices(mt5Prices, ownerUserId);
+                    clearScopedMt5State(ownerUserId);
+                    clearScopedMt5Symbols(ownerUserId);
+                }
+                broadcastBridgeStatus(ownerUserId, ownerStillOnline);
             }
             clients.delete(ws);
             removeClientFromIndexes(subscriptionIndex, ws);
@@ -203,14 +228,4 @@ function broadcastBridgeStatus(ownerUserId, online) {
             safeSend(clientWs, payload);
         }
     }
-}
-
-function hasBridgeForOwner(clientsMap, ownerUserId) {
-    for (const [, meta] of clientsMap.entries()) {
-        if (!meta?.isBridgeAuthenticated) continue;
-        if (resolveBridgeOwnerUserId(meta) === (ownerUserId ? String(ownerUserId) : null)) {
-            return true;
-        }
-    }
-    return false;
 }
