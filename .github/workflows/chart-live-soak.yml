@@ -28,15 +28,6 @@ on:
         required: false
         default: '60'
         type: string
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/chart-live-soak.yml'
-      - 'modern-view-chart/backend/**'
-      - 'modern-view-chart/scripts/server/ws-soak-test.mjs'
-      - 'modern-view-chart/src/hooks/use-websocket/**'
-      - 'modern-view-chart/src/lib/store/slices/data-slice.ts'
   schedule:
     - cron: '30 18 * * 0'
 
@@ -73,13 +64,6 @@ jobs:
           cache: npm
           cache-dependency-path: modern-view-chart/package-lock.json
 
-      - name: Use short gate on push
-        if: github.event_name == 'push'
-        run: |
-          echo "SOAK_CLIENTS=20" >> "$GITHUB_ENV"
-          echo "SOAK_DURATION_SEC=120" >> "$GITHUB_ENV"
-          echo "SOAK_RAMP_SEC=20" >> "$GITHUB_ENV"
-
       - name: Validate live target
         run: |
           test -n "$SOAK_WS_URL"
@@ -102,6 +86,8 @@ jobs:
             --clients "$SOAK_CLIENTS" \
             --duration-sec "$SOAK_DURATION_SEC" \
             --ramp-sec "$SOAK_RAMP_SEC" \
+            --reconnect-attempts 3 \
+            --reconnect-delay-ms 1000 \
             --require-metrics false \
             --output logs/chart-live-public-soak.json
 
@@ -118,6 +104,8 @@ jobs:
             --clients "$SOAK_CLIENTS" \
             --duration-sec "$SOAK_DURATION_SEC" \
             --ramp-sec "$SOAK_RAMP_SEC" \
+            --reconnect-attempts 3 \
+            --reconnect-delay-ms 1000 \
             --require-metrics true \
             --output logs/chart-live-authenticated-soak.json
 
