@@ -54,7 +54,7 @@
     "desktop:start": "cd desktop && npm start",
     "desktop:build": "cd desktop && npm run dist",
     "android:build": "powershell -ExecutionPolicy Bypass -File .\\android\\build-apk.ps1",
-    "test:backend-runtime": "node --test backend/runtime-state.test.js backend/services/realtime-gold-cache.test.js backend/websocket/services/binanceTickerService.test.js backend/auth/accountTier.test.js backend/auth/accessTicket.test.js backend/websocket/clientMode.test.js"
+    "test:backend-runtime": "node --test backend/runtime-state.test.js backend/services/realtime-gold-cache.test.js backend/websocket/services/binanceTickerService.test.js backend/auth/accountTier.test.js backend/auth/accessTicket.test.js backend/websocket/clientMode.test.js backend/websocket/bridgeRegistry.test.js"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
