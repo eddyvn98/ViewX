@@ -103,7 +103,7 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
         : (confidence >= 75 ? "**High confidence**" : confidence >= 55 ? "**Medium confidence**" : "**Low confidence**");
 
     const isTimesfm = String(result?.engine || "").toLowerCase() === "timesfm";
-    const engineTag = isTimesfm ? "TimesFM AI" : (isVi ? "TimesFM Heuristic" : "TimesFM Heuristic");
+    const engineTag = isTimesfm ? "TimesFM AI" : (isVi ? "Dự báo heuristic" : "Heuristic fallback");
 
     const lines = [
         `### 📊 ${isVi ? `Dự báo ${symbol} (${timeframe})` : `Forecast ${symbol} (${timeframe})`}`,
