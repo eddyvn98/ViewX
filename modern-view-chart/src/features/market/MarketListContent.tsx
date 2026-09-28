@@ -14,6 +14,8 @@ import { useBinanceUniverse } from './use-binance-universe';
 import { useVangTodaySymbols } from './use-vangtoday-symbols';
 import { buildSymbolList } from './build-symbol-list';
 import { RowData, VirtualRow } from './VirtualRow';
+import type { SymbolDescriptor } from '@/lib/store/types';
+import { buildSymbolIdentityKey, createLegacySymbolDescriptor } from '@/lib/market/symbol-catalog';
 
 interface MarketListContentProps {
     mode: 'discovery' | 'watchlist';
@@ -35,12 +37,27 @@ export function MarketListContent({
     addToWatchlistOnSelect = true,
 }: MarketListContentProps) {
     const watchlist = useMarketStore((state) => state.watchlist);
-    const addToWatchlist = useMarketStore((state) => state.addToWatchlist);
-    const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);
+    const watchlistItems = useMarketStore((state) => state.watchlistItems);
+    const addSymbolToWatchlist = useMarketStore((state) => state.addSymbolToWatchlist);
+    const removeSymbolFromWatchlist = useMarketStore((state) => state.removeSymbolFromWatchlist);
     const isMarketListDialogOpen = useMarketStore((state) => state.isMarketListDialogOpen);
     const setMarketListDialogOpen = useMarketStore((state) => state.setMarketListDialogOpen);
 
-    const allSymbols = useMarketStore(useShallow((state) => Object.keys(state.tickers)));
+    const tickerItems = useMarketStore(useShallow((state) => {
+        const seen = new Set<string>();
+        const items: SymbolDescriptor[] = [];
+        Object.values(state.tickers).forEach((ticker) => {
+            if (!ticker?.symbol) return;
+            const source = ticker.source || createLegacySymbolDescriptor(ticker.symbol).source;
+            if (source === 'MT5_PERSONAL') return;
+            const item: SymbolDescriptor = { symbol: ticker.symbol, source };
+            const key = buildSymbolIdentityKey(item);
+            if (seen.has(key)) return;
+            seen.add(key);
+            items.push(item);
+        });
+        return items;
+    }));
     const availableSymbols = useMarketStore((state) => state.availableSymbols);
     const activeTabId = useMarketStore((state) => state.activeTabId);
     const activeTab = useMarketStore(useShallow((state) => (activeTabId ? state.tabs[activeTabId] : null)));
@@ -55,7 +72,17 @@ export function MarketListContent({
         return Object.keys(activeTab.charts || {})[0] || null;
     }, [activeTab]);
     const charts = useMemo(() => activeTab?.charts || {}, [activeTab?.charts]);
-    const activeChartSymbol = activeChartId && charts[activeChartId] ? charts[activeChartId].symbol : null;
+    const activeChartKey = useMemo(() => {
+        if (!activeChartId) return null;
+        const chart = charts[activeChartId];
+        if (!chart) return null;
+        return buildSymbolIdentityKey({
+            symbol: chart.symbol,
+            source: chart.source,
+            accountLogin: chart.accountLogin,
+            terminalId: chart.terminalId,
+        });
+    }, [activeChartId, charts]);
 
     const search = useMarketStore((state) => state.marketListSearchQuery);
     const setSearch = useMarketStore((state) => state.setMarketListSearchQuery);
@@ -72,9 +99,10 @@ export function MarketListContent({
         () =>
             buildSymbolList({
                 mode,
-                watchlist,
+                legacyWatchlist: watchlist,
+                watchlistItems,
                 availableSymbols,
-                allSymbols,
+                tickerItems,
                 deferredSearch,
                 sourceTab,
                 binanceUniverse,
@@ -85,8 +113,9 @@ export function MarketListContent({
         [
             mode,
             watchlist,
+            watchlistItems,
             availableSymbols,
-            allSymbols,
+            tickerItems,
             deferredSearch,
             sourceTab,
             binanceUniverse,
@@ -96,34 +125,35 @@ export function MarketListContent({
         ],
     );
 
-    const handledWatchlist = useMemo(() => new Set(watchlist), [watchlist]);
+    const handledWatchlist = useMemo(
+        () => new Set(watchlistItems.map(buildSymbolIdentityKey)),
+        [watchlistItems],
+    );
 
     const handleSymbolSelect = useCallback(
-        (symbol: string, source: 'BINANCE' | 'MT5' | 'VN_GOLD') => {
-            if (activeChartId) {
-                const chart = charts[activeChartId];
-                setChartSymbol(activeChartId, symbol, source);
+        (item: SymbolDescriptor) => {
+            if (!activeChartId) return;
+            const chart = charts[activeChartId];
+            setChartSymbol(activeChartId, item.symbol, item.source, item);
 
-                if (chart?.group && chart.group !== 'none') {
-                    broadcastGroupSymbolChange(chart.group, symbol, source);
-                } else {
-                    broadcastSymbolChange(activeChartId, symbol, source);
-                }
+            if (chart?.group && chart.group !== 'none') {
+                broadcastGroupSymbolChange(chart.group, item);
+            } else {
+                broadcastSymbolChange(activeChartId, item);
+            }
 
-                if (addToWatchlistOnSelect && !watchlist.includes(symbol)) {
-                    addToWatchlist(symbol);
-                }
-                if (closeDialogOnSelect && isMarketListDialogOpen) {
-                    setMarketListDialogOpen(false);
-                }
+            if (addToWatchlistOnSelect) {
+                addSymbolToWatchlist(item);
+            }
+            if (closeDialogOnSelect && isMarketListDialogOpen) {
+                setMarketListDialogOpen(false);
             }
         },
         [
             activeChartId,
             charts,
             setChartSymbol,
-            watchlist,
-            addToWatchlist,
+            addSymbolToWatchlist,
             broadcastGroupSymbolChange,
             broadcastSymbolChange,
             addToWatchlistOnSelect,
@@ -137,13 +167,13 @@ export function MarketListContent({
         () => ({
             items: symbolList,
             mode,
-            activeChartSymbol,
+            activeChartKey,
             watchedSet: handledWatchlist,
             onSelect: handleSymbolSelect,
-            onAdd: addToWatchlist,
-            onRemove: removeFromWatchlist,
+            onAdd: addSymbolToWatchlist,
+            onRemove: removeSymbolFromWatchlist,
         }),
-        [symbolList, mode, activeChartSymbol, handledWatchlist, handleSymbolSelect, addToWatchlist, removeFromWatchlist],
+        [symbolList, mode, activeChartKey, handledWatchlist, handleSymbolSelect, addSymbolToWatchlist, removeSymbolFromWatchlist],
     );
 
     return (
