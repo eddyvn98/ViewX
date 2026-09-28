@@ -216,9 +216,11 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
 export async function broadcastChartCandles({ clients, mt5Prices, subscriptionIndex }) {
     const uniqueSymbols = new Set(Array.from(subscriptionIndex.chartSubscribers.keys()).map((k) => String(k).split("|")[0]));
 
-    for (const symbol of uniqueSymbols) {
-        await broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbol);
-    }
+    await Promise.all(
+        Array.from(uniqueSymbols, (symbol) =>
+            broadcastCandleForSymbol({ clients, mt5Prices, subscriptionIndex }, symbol)
+        )
+    );
 }
 
 export function broadcastToAll(clients, payload) {
