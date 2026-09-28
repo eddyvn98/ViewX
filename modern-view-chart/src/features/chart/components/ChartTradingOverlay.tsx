@@ -4,21 +4,31 @@ import { cn } from '@/lib/utils';
 import { Zap, Check, X } from 'lucide-react';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface ChartTradingOverlayProps {
     symbol: string | undefined;
     source?: string;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
 }
 
 /**
  * ChartTradingOverlay with DOM-based price updates
  * Only subscribes to non-ticker state, uses RAF for realtime prices
  */
-export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
+export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, source, accountLogin, terminalId, broker }: ChartTradingOverlayProps) {
     // Only subscribe to non-ticker state
     const draftOrder = useMarketStore(state => state.draftOrder);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const { sendMessage } = useWebSocket();
+    const identity = React.useMemo<Mt5TradingIdentity>(() => ({
+        source,
+        accountLogin,
+        terminalId,
+        broker,
+    }), [source, accountLogin, terminalId, broker]);
 
     // Get initial price for draft (computed once when needed)
     const getCurrentPrice = useCallback(() => {
@@ -36,9 +46,10 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
         else if (symbol.includes('XAU')) distance = 10.0;
         else if (symbol.includes('BTC')) distance = 100.0;
 
-        const normSym = normalizeSymbol(symbol);
         setDraftOrder({
-            symbol: normSym,
+            // Keep the exact broker symbol for execution. Normalization is only
+            // for lookup/display and must never rewrite a trading transport ID.
+            symbol,
             type,
             volume: 0.1,
             price: price,
@@ -91,7 +102,8 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
             symbol: draftOrder.symbol,
             type: draftOrder.type,
             volume: draftOrder.volume,
-            is_market: draftOrder.isMarket
+            is_market: draftOrder.isMarket,
+            ...buildMt5WriteFields(identity),
         };
 
         const normSym = normalizeSymbol(draftOrder.symbol);
