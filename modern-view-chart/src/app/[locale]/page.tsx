@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Link, useRouter } from '@/i18n/routing';
+import { Link } from '@/i18n/routing';
 import {
     ArrowRight,
     BellRing,
@@ -17,8 +16,6 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/layout/Logo';
 import { LanguageSwitcher } from '@/features/landing/components/LanguageSwitcher';
-import { getStoredLastPath } from '@/components/layout/LastRouteTracker';
-import { readStoredAccessToken } from '@/lib/auth/session';
 import dynamic from 'next/dynamic';
 
 const Workflow = dynamic(() => import('@/features/landing/components/Workflow').then((m) => ({ default: m.Workflow })), { ssr: true });
@@ -97,16 +94,6 @@ function ChartMockup() {
 export default function LandingPage() {
     const t = useTranslations('HomePage');
     const navT = useTranslations('Navigation');
-    const router = useRouter();
-
-    // Reopening the app/PWA should resume where the user left off (e.g. /chart)
-    // instead of always showing the marketing landing page.
-    useEffect(() => {
-        if (!readStoredAccessToken()) return;
-        const lastPath = getStoredLastPath();
-        if (lastPath) router.replace(lastPath as Parameters<typeof router.replace>[0]);
-    }, [router]);
-
     return (
         <div className="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.05),_transparent_40%)] bg-slate-50 text-slate-900">
             <header className="fixed top-4 left-1/2 z-50 w-[calc(100%-2.5rem)] max-w-7xl -translate-x-1/2 rounded-2xl border border-white/40 bg-white/60 backdrop-blur-2xl transition-all shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
