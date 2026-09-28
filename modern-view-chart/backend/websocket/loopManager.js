@@ -30,8 +30,10 @@ function startPriceBroadcast({ clients, mt5Prices, subscriptionIndex }, interval
 
         Promise.resolve()
             .then(async () => {
-                await broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex });
-                await broadcastChartCandles({ clients, mt5Prices, subscriptionIndex });
+                await Promise.all([
+                    broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }),
+                    broadcastChartCandles({ clients, mt5Prices, subscriptionIndex }),
+                ]);
             })
             .finally(() => {
                 recordBroadcastLoopDuration(Date.now() - startAt);
