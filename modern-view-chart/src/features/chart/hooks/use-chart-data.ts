@@ -23,8 +23,16 @@ export function useChartData(
     candleDownColor: string,
     contextKey?: string
 ) {
-    // Shared reference to the trusted "Current Candle" (from Store/History)
+    // Shared reference to the trusted "Current Candle" (from Store/History).
+    // It must never survive a symbol/source/timeframe switch: otherwise the
+    // new symbol's ticker can reuse the previous symbol's OHLC as its base.
     const lastCandleRef = useRef<Candle | null>(null);
+    const lastCandleContextRef = useRef(contextKey || `${source || ''}:${symbol || ''}:${interval || ''}`);
+    const candleContext = contextKey || `${source || ''}:${symbol || ''}:${interval || ''}`;
+    if (lastCandleContextRef.current !== candleContext) {
+        lastCandleContextRef.current = candleContext;
+        lastCandleRef.current = null;
+    }
 
     // 1. History & Synchronization Hook
     // Manages initial load, chart resets, and full candle updates from Store
@@ -46,8 +54,10 @@ export function useChartData(
     useEffect(() => {
         if (candles.length > 0) {
             lastCandleRef.current = candles[candles.length - 1];
+        } else {
+            lastCandleRef.current = null;
         }
-    }, [candles]);
+    }, [candles, candleContext]);
 
     // 2. Real-time Ticker Hook
     // Manages high-frequency visual price updates (Tick-by-Tick)
