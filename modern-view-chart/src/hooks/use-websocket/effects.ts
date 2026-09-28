@@ -177,6 +177,9 @@ export function useBackfillEventEffect(isConnected: boolean) {
             requestChartBackfill(source, symbol, interval, 'event_request', count, {
                 anchorTimeSec,
                 direction,
+                accountLogin: detail.accountLogin ?? detail.account_login ?? null,
+                terminalId: detail.terminalId ?? detail.terminal_id ?? null,
+                broker: detail.broker ?? null,
             });
         };
 
