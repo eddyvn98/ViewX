@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildIntervalCandidates, parseIntervalSeconds, resolveCandles } from './use-chart-history.helpers';
+import { buildIntervalCandidates, parseIntervalSeconds, resolveCandles, updateSyncData } from './use-chart-history.helpers';
 
 describe('chart history interval helpers', () => {
     it('converts canonical minute intervals to seconds', () => {
@@ -34,5 +34,21 @@ describe('chart history interval helpers', () => {
 
         assert.equal(resolved.key, 'MT5:XAUUSDm:10080');
         assert.equal(resolved.candles, candles);
+    });
+});
+
+
+describe('chart history sync helpers', () => {
+    it('clears sync series safely when the destination context has no candles yet', () => {
+        const subCalls: unknown[] = [];
+        const timeCalls: unknown[] = [];
+        updateSyncData(
+            [],
+            { current: { setData: (data) => subCalls.push(data) } },
+            { current: { setData: (data) => timeCalls.push(data) } },
+        );
+
+        assert.deepEqual(subCalls, [[]]);
+        assert.deepEqual(timeCalls, [[]]);
     });
 });
