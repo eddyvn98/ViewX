@@ -43,10 +43,11 @@ export function MarketListContent({
     const isMarketListDialogOpen = useMarketStore((state) => state.isMarketListDialogOpen);
     const setMarketListDialogOpen = useMarketStore((state) => state.setMarketListDialogOpen);
 
-    const tickerItems = useMarketStore(useShallow((state) => {
+    const tickers = useMarketStore((state) => state.tickers);
+    const tickerItems = useMemo(() => {
         const seen = new Set<string>();
         const items: SymbolDescriptor[] = [];
-        Object.values(state.tickers).forEach((ticker) => {
+        Object.values(tickers).forEach((ticker) => {
             if (!ticker?.symbol) return;
             const source = ticker.source || createLegacySymbolDescriptor(ticker.symbol).source;
             if (source === 'MT5_PERSONAL') return;
@@ -57,7 +58,7 @@ export function MarketListContent({
             items.push(item);
         });
         return items;
-    }));
+    }, [tickers]);
     const availableSymbols = useMarketStore((state) => state.availableSymbols);
     const activeTabId = useMarketStore((state) => state.activeTabId);
     const activeTab = useMarketStore(useShallow((state) => (activeTabId ? state.tabs[activeTabId] : null)));
