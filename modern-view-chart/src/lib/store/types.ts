@@ -1,5 +1,8 @@
 export interface ForecastData {
     timestamp: number;
+    symbol: string;
+    interval: string;
+    source: 'BINANCE' | 'MT5' | 'VN_GOLD';
     points: number[];
     lower_band: number[];
     upper_band: number[];
