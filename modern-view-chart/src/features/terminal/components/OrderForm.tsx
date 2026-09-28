@@ -4,6 +4,7 @@ import React, { useState, useMemo, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { cn } from '@/lib/utils';
+import { buildMt5AuthFields, buildMt5DataSourceKey, normalizeMt5AccountScope } from '@/lib/mt5/account-scope';
 // Sub-components
 import { OrderTypeTabs } from './OrderForm/OrderTypeTabs';
 import { SideButtons } from './OrderForm/SideButtons';
@@ -13,6 +14,13 @@ import { SentimentBar } from './OrderForm/SentimentBar';
 
 type OrderType = 'market' | 'pending';
 type Side = 'buy' | 'sell';
+
+function createMt5RequestId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `mt5-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 /**
  * Mobile-specific order logic hook
@@ -26,6 +34,8 @@ export function useOrderFormLogic() {
     const setOrderForm = useMarketStore((state) => state.setOrderForm);
     const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
     const [isDrafting, setIsDrafting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const pendingRequestIdRef = React.useRef<string | null>(null);
 
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const setInputFocused = useMarketStore(state => state.setInputFocused);
@@ -36,7 +46,18 @@ export function useOrderFormLogic() {
     const activeChartId = activeTab?.activeChartId;
     const activeChart = activeChartId ? activeTab.charts[activeChartId] : null;
     const symbol = activeChart?.symbol || 'BTCUSDm';
-    const ticker = useMarketStore(state => state.tickers[symbol]);
+    const mt5Scope = useMemo(() => normalizeMt5AccountScope({
+        source: activeChart?.source === 'MT5_PERSONAL' ? 'MT5_PERSONAL' : 'MT5',
+        accountLogin: activeChart?.accountLogin,
+        terminalId: activeChart?.terminalId,
+        broker: activeChart?.broker,
+    }), [activeChart?.source, activeChart?.accountLogin, activeChart?.terminalId, activeChart?.broker]);
+    const tickerSourceKey = activeChart?.source === 'MT5_PERSONAL'
+        ? buildMt5DataSourceKey(mt5Scope)
+        : String(activeChart?.source || 'MT5').toUpperCase();
+    const ticker = useMarketStore(state =>
+        state.tickers[`${tickerSourceKey}:${symbol}`] || state.tickers[symbol]
+    );
 
     const isCrypto = activeChart?.source === 'BINANCE';
     const bid = ticker?.price || 0;
@@ -60,10 +81,30 @@ export function useOrderFormLogic() {
     const setTp = (value: string) => setOrderForm({ tp: value });
 
     const resetForm = () => {
+        if (isSubmitting) return;
         resetOrderForm();
         setIsDrafting(false);
         setDraftOrder(null);
     };
+
+    React.useEffect(() => {
+        const handleMt5OrderResult = (event: Event) => {
+            const detail = (event as CustomEvent<Record<string, unknown>>).detail || {};
+            const requestId = String(detail.request_id || '');
+            if (!requestId || requestId !== pendingRequestIdRef.current) return;
+
+            pendingRequestIdRef.current = null;
+            setIsSubmitting(false);
+            if (detail.success === true) {
+                resetOrderForm();
+                setIsDrafting(false);
+                setDraftOrder(null);
+            }
+        };
+
+        window.addEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+        return () => window.removeEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+    }, [resetOrderForm, setDraftOrder]);
 
     const adjustValue = (val: string, step: number, isSL: boolean) => {
         let current = parseFloat(val);
@@ -82,16 +123,49 @@ export function useOrderFormLogic() {
     };
 
     const handleSubmit = () => {
+        if (isSubmitting) return;
+
+        const parsedVolume = parseFloat(volume);
+        if (!Number.isFinite(parsedVolume) || parsedVolume <= 0) {
+            useMarketStore.getState().addNotification('Khối lượng giao dịch không hợp lệ', 'warning');
+            return;
+        }
+
+        if (isCrypto) {
+            sendMessage({
+                topic: 'binance_command',
+                command: side,
+                symbol,
+                order_type: side,
+                volume: parsedVolume,
+                quantity: parsedVolume,
+                price: orderType === 'pending' ? (side === 'buy' ? ask : bid) : 0,
+                sl: parseFloat(sl) || 0,
+                tp: parseFloat(tp) || 0,
+                is_market: orderType === 'market',
+            });
+            resetForm();
+            return;
+        }
+
+        const requestId = createMt5RequestId();
+        pendingRequestIdRef.current = requestId;
+        setIsSubmitting(true);
         sendMessage({
-            topic: isCrypto ? 'binance_command' : 'mt5_command',
-            command: isCrypto ? side : 'place_order',
-            symbol, order_type: side,
-            volume: parseFloat(volume), quantity: parseFloat(volume),
+            topic: 'mt5_command',
+            command: 'place_order',
+            request_id: requestId,
+            symbol,
+            order_type: side,
+            volume: parsedVolume,
+            quantity: parsedVolume,
             price: orderType === 'pending' ? (side === 'buy' ? ask : bid) : 0,
-            sl: parseFloat(sl) || 0, tp: parseFloat(tp) || 0,
-            is_market: orderType === 'market'
+            sl: parseFloat(sl) || 0,
+            tp: parseFloat(tp) || 0,
+            is_market: orderType === 'market',
+            ...buildMt5AuthFields(mt5Scope),
+            broker: mt5Scope.broker,
         });
-        resetForm();
     };
 
     const formatPrice = (p: number) => p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -117,7 +191,8 @@ export function useOrderFormLogic() {
     return {
         symbol, side, setSide, orderType, setOrderType, volume, setVolume,
         sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
-        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl
+        handleSubmit, setIsDrafting, setInputFocused, formatPrice, calculatePnl,
+        isSubmitting, isCrypto
     };
 }
 
@@ -125,7 +200,8 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
     const {
         symbol, side, setSide, orderType, setOrderType, volume, setVolume,
         sl, setSl, tp, setTp, bid, ask, spread, adjustValue, adjustVolume,
-        handleSubmit, setIsDrafting, formatPrice, calculatePnl
+        handleSubmit, setIsDrafting, formatPrice, calculatePnl,
+        isSubmitting, isCrypto
     } = useOrderFormLogic();
     const resetOrderForm = useMarketStore((state) => state.resetOrderForm);
 
@@ -138,8 +214,6 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
         resetOrderForm();
         setIsDrafting(false);
     };
-
-    const isCrypto = symbol.includes('BTC') || symbol.includes('ETH'); // Simplified check for display
 
     return (
         <div className="flex-1 bg-background flex flex-col overflow-hidden select-none">
@@ -174,10 +248,23 @@ export const OrderForm = memo(function OrderForm({ forceInline = false }: { forc
                 />
 
                 <div className="pt-0 space-y-1.5 shrink-0">
-                    <button onClick={handleSubmit} className={cn("w-full py-2 rounded-md text-[11px] font-black shadow-lg active:scale-95 transition-all uppercase tracking-widest", side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white")}>
-                        {side === 'buy' ? 'BUY' : 'SELL'} {volume} LOTS
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className={cn(
+                            "w-full py-2 rounded-md text-[11px] font-black shadow-lg active:scale-95 transition-all uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100",
+                            side === 'buy' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white" : "bg-red-600 hover:bg-red-500 shadow-red-900/40 text-white"
+                        )}
+                    >
+                        {isSubmitting ? 'ĐANG GỬI...' : `${side === 'buy' ? 'BUY' : 'SELL'} ${volume} LOTS`}
                     </button>
-                    <button onClick={resetForm} className="w-full py-1.5 rounded-md text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all uppercase tracking-tight">Thoát</button>
+                    <button
+                        onClick={resetForm}
+                        disabled={isSubmitting}
+                        className="w-full py-1.5 rounded-md text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Thoát
+                    </button>
                 </div>
 
                 <OrderDetails
