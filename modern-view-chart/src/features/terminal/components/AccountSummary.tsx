@@ -5,13 +5,14 @@ import { calculatePnL } from "@/lib/utils/pnl";
 
 interface AccountSummaryProps {
     account: AccountInfo | null;
+    sourceKey: string;
 }
 
 /**
  * Optimized AccountSummary - Uses RAF + DOM manipulation for real-time profit updates
  * This prevents React re-renders when tickers change (which happens ~30fps)
  */
-export const AccountSummary = memo(function AccountSummary({ account }: AccountSummaryProps) {
+export const AccountSummary = memo(function AccountSummary({ account, sourceKey }: AccountSummaryProps) {
     const profitRef = useRef<HTMLSpanElement>(null);
     const equityRef = useRef<HTMLSpanElement>(null);
     const rafIdRef = useRef<number | null>(null);
@@ -23,7 +24,7 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
         if (!account) return;
 
         const state = useMarketStore.getState();
-        const positions = state.positions;
+        const positions = state.positions.filter((position) => String(position.source || 'MT5') === sourceKey);
         const tickers = state.tickers;
         const symbolInfoMap = state.symbolInfo;
 
@@ -59,7 +60,7 @@ export const AccountSummary = memo(function AccountSummary({ account }: AccountS
             equityRef.current.textContent = equityStr;
             equityRef.current.className = `font-semibold ${realTimeEquity >= (account.balance ?? 0) ? 'text-foreground' : 'text-red-400'}`;
         }
-    }, [account]);
+    }, [account, sourceKey]);
 
     // Subscribe to store changes via RAF loop (not React re-renders)
     useEffect(() => {
