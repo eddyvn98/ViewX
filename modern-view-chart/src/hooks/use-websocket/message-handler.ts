@@ -55,6 +55,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             useMarketStore.getState().setMt5AccountsAvailable(accounts);
             const after = useMarketStore.getState().selectedMt5Scope;
 
+            if (!sameMt5Scope(before, after)) {
+                useMarketStore.getState().clearMt5CandleRuntime();
+            }
             if (!sameMt5Scope(before, after) && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     topic: 'auth',
@@ -115,7 +118,8 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 close: c.close ?? c.c ?? c.close_price ?? c.price_close,
                 volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
             }));
-            const source = getMt5FrameSource(msg);
+            const frameSource = String(msg.source || 'MT5').toUpperCase();
+            const source = frameSource.startsWith('MT5') ? 'MT5' : frameSource;
             if (!targetInterval && targetSymbol) {
                 const state = useMarketStore.getState();
                 const wantedSymbol = normalizeSymbol(targetSymbol);
@@ -144,7 +148,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const interval = String(c.interval || '');
             const rawSource = String(c.source || '').toUpperCase();
             const source = rawSource.startsWith('MT5')
-                ? getMt5FrameSource(c)
+                ? 'MT5'
                 : rawSource || (symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
