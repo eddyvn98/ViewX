@@ -171,7 +171,7 @@ test("rejects reuse of one request_id across MT5 account scopes", () => {
     assert.equal(clientWs.sent.at(-1)?.detail, "mt5_request_id_scope_mismatch");
 });
 
-test("ignores an execution result emitted by the wrong personal bridge scope", () => {
+test("accepts execution results only from the exact bridge socket that received the write", () => {
     const { clientWs, bridgeWs, clients, bridgeRegistry } = setup();
 
     handleMt5Command({ ws: clientWs, clients, bridgeRegistry }, {
@@ -183,18 +183,19 @@ test("ignores an execution result emitted by the wrong personal bridge scope", (
         ticket: 99,
     });
 
-    const wrongBridge = makeSocket();
-    clients.set(wrongBridge, {
+    const replacementBridge = makeSocket();
+    clients.set(replacementBridge, {
         userId: "user-1",
         authType: "user",
         isBridgeAuthenticated: true,
         clientMode: "pro_extension",
-        bridgeAccountLogin: "10002",
-        bridgeTerminalId: "terminal-b",
+        bridgeAccountLogin: "10001",
+        bridgeTerminalId: "terminal-a",
+        bridgeBroker: "Broker A",
     });
 
     const before = clientWs.sent.length;
-    handleMt5OrderResult({ ws: wrongBridge, clients }, {
+    handleMt5OrderResult({ ws: replacementBridge, clients }, {
         topic: "mt5_order_result",
         request_id: "req-wrong-bridge",
         command: "close",
