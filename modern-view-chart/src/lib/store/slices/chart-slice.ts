@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { ChartInstance } from '../types';
+import { ChartInstance, SymbolDescriptor } from '../types';
 import { TabSlice } from './tab-slice';
 import { MarketSlice } from './market-slice';
 
@@ -7,7 +7,12 @@ export interface ChartSlice {
     addChart: (symbol: string, interval: string, source: ChartInstance['source']) => void;
     removeChart: (id: string) => void;
     updateChart: (id: string, patch: Partial<ChartInstance>) => void;
-    setChartSymbol: (id: string, symbol: string, source?: ChartInstance['source']) => void;
+    setChartSymbol: (
+        id: string,
+        symbol: string,
+        source?: ChartInstance['source'],
+        identity?: Pick<SymbolDescriptor, 'accountLogin' | 'terminalId' | 'broker'>,
+    ) => void;
     setChartTimeframe: (id: string, interval: string) => void;
     setActiveChart: (id: string) => void;
     toggleMaximizeChart: (id: string | null) => void;
@@ -24,6 +29,7 @@ export interface ChartSlice {
 
 // Internal helper for symbol normalization
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { normalizeTransportSymbol } from '@/lib/market/symbol-catalog';
 
 export const createChartSlice: StateCreator<
     TabSlice & MarketSlice & ChartSlice,
@@ -36,7 +42,7 @@ export const createChartSlice: StateCreator<
         if (!activeTab) return state;
 
         const id = Math.random().toString(36).substr(2, 9);
-        const normSymbol = normalizeSymbol(symbol);
+        const normSymbol = normalizeTransportSymbol(symbol, source);
 
         const newChart: ChartInstance = {
             id,
@@ -89,8 +95,10 @@ export const createChartSlice: StateCreator<
         if (!activeTab || !activeTab.charts[id]) return state;
 
         const currentChart = activeTab.charts[id];
-        const nextSymbol = patch.symbol !== undefined ? normalizeSymbol(patch.symbol) : currentChart.symbol;
         const nextSource = patch.source ?? currentChart.source;
+        const nextSymbol = patch.symbol !== undefined
+            ? normalizeTransportSymbol(patch.symbol, nextSource)
+            : currentChart.symbol;
         const nextInterval = patch.interval ?? currentChart.interval;
         const contextChanged =
             nextSymbol !== currentChart.symbol
@@ -115,22 +123,28 @@ export const createChartSlice: StateCreator<
         return { tabs: { ...state.tabs, [state.activeTabId]: updatedTab } };
     }),
 
-    setChartSymbol: (id, symbol, source) => set((state) => {
+    setChartSymbol: (id, symbol, source, identity) => set((state) => {
         const activeTab = state.tabs[state.activeTabId];
         if (!activeTab) return state;
 
         const sourceChart = activeTab.charts[id];
         if (!sourceChart) return state;
 
-        const normSymbol = normalizeSymbol(symbol);
+        const legacySymbol = normalizeSymbol(symbol);
         const symbolSource =
             source
-            || state.tickers[normSymbol]?.source
-            || (normSymbol.toUpperCase() === 'SJCVN' || normSymbol.toUpperCase() === 'DOJIVN'
+            || state.tickers[legacySymbol]?.source
+            || (legacySymbol.toUpperCase() === 'SJCVN' || legacySymbol.toUpperCase() === 'DOJIVN'
                 ? 'VN_GOLD'
-                : normSymbol.toUpperCase().includes('USDT')
+                : legacySymbol.toUpperCase().includes('USDT')
                     ? 'BINANCE'
                     : 'MT5');
+        const normSymbol = normalizeTransportSymbol(symbol, symbolSource);
+        const accountPatch = {
+            accountLogin: identity?.accountLogin ?? null,
+            terminalId: identity?.terminalId ?? null,
+            broker: identity?.broker ?? null,
+        };
 
         const newCharts = { ...activeTab.charts };
         let hasChanges = false;
@@ -138,16 +152,38 @@ export const createChartSlice: StateCreator<
         if (sourceChart.group && sourceChart.group !== 'none') {
             Object.values(newCharts).forEach(chart => {
                 if (chart.group === sourceChart.group) {
-                    if (chart.symbol === normSymbol && chart.source === symbolSource) return;
-                    newCharts[chart.id] = { ...chart, symbol: normSymbol, source: symbolSource, forecast: undefined };
+                    if (
+                        chart.symbol === normSymbol
+                        && chart.source === symbolSource
+                        && (chart.accountLogin ?? null) === accountPatch.accountLogin
+                        && (chart.terminalId ?? null) === accountPatch.terminalId
+                    ) return;
+                    newCharts[chart.id] = {
+                        ...chart,
+                        symbol: normSymbol,
+                        source: symbolSource,
+                        ...accountPatch,
+                        forecast: undefined,
+                    };
                     hasChanges = true;
                 }
             });
         } else {
-            if (sourceChart.symbol === normSymbol && sourceChart.source === symbolSource) {
+            if (
+                sourceChart.symbol === normSymbol
+                && sourceChart.source === symbolSource
+                && (sourceChart.accountLogin ?? null) === accountPatch.accountLogin
+                && (sourceChart.terminalId ?? null) === accountPatch.terminalId
+            ) {
                 return state;
             }
-            newCharts[id] = { ...sourceChart, symbol: normSymbol, source: symbolSource, forecast: undefined };
+            newCharts[id] = {
+                ...sourceChart,
+                symbol: normSymbol,
+                source: symbolSource,
+                ...accountPatch,
+                forecast: undefined,
+            };
             hasChanges = true;
         }
 
