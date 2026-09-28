@@ -75,18 +75,18 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const historyRequestKey = buildHistoryRequestKey(dataSource, normSymbol, interval);
     const isCacheReady = hydratedCacheKey === historyRequestKey;
 
-    const key = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).key);
-    const candlesCount = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).candles.length);
+    const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
+    const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
     const historyRevision = useMarketStore((state) => state.candleHistoryRevision[key] || 0);
 
-    const getCandles = () => resolveCandles(useMarketStore.getState(), dataSource, normSymbol, intervalCandidates).candles;
+    const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
     const requestHistory = useCallback(() => {
         if (!symbol || !interval || !isCacheReady) return;
         const sourceText = String(source || '').toUpperCase();
         const resolved = resolveCandles(
             useMarketStore.getState(),
-            dataSource,
+            source,
             normSymbol,
             intervalCandidates,
         );
@@ -156,7 +156,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         void loadCachedCandles(dataSource, normSymbol, interval).then((cached) => {
             if (cancelled) return;
             if (cached.length > 0) {
-                useMarketStore.getState().setCandles(dataSource, normSymbol, interval, cached);
+                useMarketStore.getState().setCandles(source, normSymbol, interval, cached);
             }
             setHydratedCacheKey(targetKey);
         });
