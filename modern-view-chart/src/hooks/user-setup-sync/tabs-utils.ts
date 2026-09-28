@@ -87,7 +87,7 @@ export function mapLocalChartIdsByContext(tabs: RootState['tabs']): Map<string, 
     for (const tab of Object.values(tabs || {})) {
         for (const chart of Object.values(tab.charts || {})) {
             const key = buildChartContextKey(chart);
-            if (!key || key === '||') continue;
+            if (!key || key === '||||') continue;
             const current = map.get(key) || [];
             if (!current.includes(chart.id)) current.push(chart.id);
             map.set(key, current);
@@ -178,7 +178,7 @@ export function remapRemoteDrawingsToLocalCharts(
                     interval: rawDrawing.interval,
                     source: rawDrawing.source,
                 });
-                if (!contextKey || contextKey === '||') continue;
+                if (!contextKey || contextKey === '||||') continue;
                 const localIds = localIdsByContext.get(contextKey) || [];
                 if (localIds.length === 0) continue;
 
