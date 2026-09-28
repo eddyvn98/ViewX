@@ -2,6 +2,7 @@ import { memo, useRef, useEffect, useCallback } from 'react';
 import { AccountInfo } from "@/lib/store/types";
 import { useMarketStore } from "@/lib/store";
 import { calculatePnL } from "@/lib/utils/pnl";
+import { normalizeSymbol } from "@/lib/utils/symbol";
 
 interface AccountSummaryProps {
     account: AccountInfo | null;
@@ -30,11 +31,20 @@ export const AccountSummary = memo(function AccountSummary({ account, sourceKey 
 
         // Calculate real-time profit
         const realTimeProfit = positions.reduce((sum, pos) => {
-            const scopedTicker = tickers[`${sourceKey}:${pos.symbol}`];
-            const sharedTicker = sourceKey === 'MT5' ? tickers[pos.symbol] : undefined;
+            const normalizedSymbol = normalizeSymbol(pos.symbol);
+            const scopedTicker =
+                tickers[`${sourceKey}:${pos.symbol}`] ??
+                tickers[`${sourceKey}:${normalizedSymbol}`];
+            const sharedTicker = sourceKey === 'MT5'
+                ? (tickers[pos.symbol] ?? tickers[normalizedSymbol])
+                : undefined;
             const livePrice = scopedTicker?.price ?? sharedTicker?.price ?? pos.current_price;
-            const scopedSymbolInfo = symbolInfoMap[`${sourceKey}:${pos.symbol}`];
-            const sharedSymbolInfo = sourceKey === 'MT5' ? symbolInfoMap[pos.symbol] : undefined;
+            const scopedSymbolInfo =
+                symbolInfoMap[`${sourceKey}:${pos.symbol}`] ??
+                symbolInfoMap[`${sourceKey}:${normalizedSymbol}`];
+            const sharedSymbolInfo = sourceKey === 'MT5'
+                ? (symbolInfoMap[pos.symbol] ?? symbolInfoMap[normalizedSymbol])
+                : undefined;
             const symbolInfo = scopedSymbolInfo ?? sharedSymbolInfo;
             const pnl = calculatePnL({
                 type: pos.type,
