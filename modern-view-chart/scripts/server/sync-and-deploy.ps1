@@ -110,6 +110,19 @@ try {
     Write-Host "[Deploy] Running live WebSocket auth smoke..." -ForegroundColor Cyan
     & node scripts/server/ws-auth-smoke.mjs --ws-url "wss://api.vivutrade.io.vn"
     Assert-LastExitCode "WebSocket auth smoke"
+
+    Write-Host "[Deploy] Running short post-deploy WebSocket soak..." -ForegroundColor Cyan
+    & node scripts/server/ws-soak-test.mjs `
+        --ws-url "wss://api.vivutrade.io.vn" `
+        --api-url "https://api.vivutrade.io.vn" `
+        --clients 20 `
+        --duration-sec 120 `
+        --ramp-sec 20 `
+        --reconnect-attempts 3 `
+        --reconnect-delay-ms 1000 `
+        --require-metrics false `
+        --output "logs/post-deploy-live-soak.json"
+    Assert-LastExitCode "post-deploy WebSocket soak"
 }
 finally {
     Pop-Location
