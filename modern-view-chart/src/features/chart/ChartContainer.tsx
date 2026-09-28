@@ -38,6 +38,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         symbol,
         interval,
         source,
+        accountLogin,
+        terminalId,
+        broker,
         timezone,
         chartType,
         candles,
@@ -141,6 +144,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     } = useChartContextActions({
         symbol,
         source,
+        mt5Identity: { source, accountLogin, terminalId, broker },
         priceChartRef,
         priceContainerRef,
         seriesRef,
@@ -243,6 +247,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
                     sendMessage={sendMessage}
                     source={source}
                     interval={interval}
+                    accountLogin={accountLogin}
+                    terminalId={terminalId}
+                    broker={broker}
                 />
 
                 <AlertLineTags
