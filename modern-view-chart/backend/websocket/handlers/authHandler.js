@@ -2,7 +2,7 @@ import { getBinancePrices } from "../services/binanceTickerService.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol, setClientSymbolSubscriptions } from "../subscriptionIndex.js";
 import { getScopedMt5Prices, getScopedMt5State, getScopedMt5Symbols } from "../mt5Scope.js";
-import { resolveRequestedClientMode } from "../clientMode.js";
+import { resolveRequestedClientMode, WS_CLIENT_MODES } from "../clientMode.js";
 
 export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) {
     const clientData = clients.get(ws);
@@ -19,6 +19,23 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) 
                 return;
             }
             clientData.clientMode = clientMode;
+
+            if (clientMode === WS_CLIENT_MODES.PRO_EXTENSION) {
+                const accountLogin = String(data.account_login || data.accountLogin || "").trim();
+                const terminalId = String(data.terminal_id || data.terminalId || "").trim();
+                const broker = String(data.broker || "").trim();
+                if (!accountLogin || !terminalId) {
+                    safeSend(ws, JSON.stringify({
+                        topic: "error",
+                        code: "invalid_request",
+                        detail: "pro_extension_requires_account_login_and_terminal_id",
+                    }));
+                    return;
+                }
+                clientData.bridgeAccountLogin = accountLogin;
+                clientData.bridgeTerminalId = terminalId;
+                clientData.bridgeBroker = broker || null;
+            }
         }
         if (Array.isArray(data.symbols)) {
             const normalized = data.symbols.map((s) => normalizeSymbol(s)).filter(Boolean).slice(0, 300);
