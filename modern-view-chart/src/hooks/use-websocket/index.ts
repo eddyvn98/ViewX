@@ -4,6 +4,7 @@ import { debugLog } from '@/lib/debug';
 import { connectSocket } from './connection';
 import { useBackfillEventEffect, useInitialHistoryAndForegroundResyncEffect, useSymbolInterestEffect } from './effects';
 import { wsRuntime } from './runtime';
+import { buildMt5AuthFields } from '@/lib/mt5/account-scope';
 
 type WsMessage = Record<string, unknown>;
 
@@ -99,14 +100,23 @@ export function useWebSocket(): { sendMessage: (data: WsMessage) => void } {
     const sendMessage = useCallback((data: WsMessage) => {
         const socket = wsRuntime.globalSocket;
         if (socket?.readyState === WebSocket.OPEN) {
-            if (data?.command === 'get_candles') {
+            let outbound: WsMessage = data;
+            if (data?.topic === 'mt5_command' && data?.account_login === undefined && data?.accountLogin === undefined) {
+                const selectedMt5Scope = useMarketStore.getState().selectedMt5Scope;
+                outbound = {
+                    ...data,
+                    ...buildMt5AuthFields(selectedMt5Scope),
+                };
+            }
+
+            if (outbound?.command === 'get_candles') {
                 debugLog('[WS][send get_candles]', {
-                    symbol: data.symbol,
-                    interval: data.interval,
-                    count: data.count,
+                    symbol: outbound.symbol,
+                    interval: outbound.interval,
+                    count: outbound.count,
                 });
             }
-            socket.send(JSON.stringify(data));
+            socket.send(JSON.stringify(outbound));
         }
     }, []);
 
