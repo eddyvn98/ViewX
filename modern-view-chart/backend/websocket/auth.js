@@ -1,24 +1,68 @@
 import { extractBearerCredential, isAuthorizedWithCredential } from "../auth/credential.js";
-import { resolveUserAuthFromAccessToken } from "../auth/userSession.js";
+import { readAccessTicket } from "../auth/accessTicket.js";
+import {
+    resolveUserAuthFromAccessToken,
+    resolveUserAuthFromSessionClaims,
+} from "../auth/userSession.js";
 import { logWarn } from "../logger.js";
 
 export function emitWsError(ws, payload) {
     ws.send(JSON.stringify({ topic: "error", ...payload }));
 }
 
+async function resolveCredentialContext(credential, expectedToken, via) {
+    if (!credential) return null;
+
+    const userAuth = await resolveUserAuthFromAccessToken(credential);
+    if (userAuth?.userId) {
+        return {
+            type: "user",
+            userId: userAuth.userId,
+            role: userAuth.role,
+            accountTier: userAuth.accountTier,
+            via,
+        };
+    }
+
+    const ticketPayload = expectedToken ? readAccessTicket(credential, expectedToken) : null;
+    if (ticketPayload?.auth_type === "user" && ticketPayload?.sub) {
+        const ticketUserAuth = await resolveUserAuthFromSessionClaims({
+            userId: ticketPayload.sub,
+            sessionVersion: ticketPayload.sv,
+        });
+        if (!ticketUserAuth?.userId) return null;
+        return {
+            type: "user",
+            userId: ticketUserAuth.userId,
+            role: ticketUserAuth.role,
+            accountTier: ticketUserAuth.accountTier,
+            via,
+        };
+    }
+
+    if (
+        expectedToken &&
+        isAuthorizedWithCredential({
+            expectedToken,
+            bearerCredential: credential,
+        })
+    ) {
+        return { type: "service", via };
+    }
+
+    return null;
+}
+
 export async function resolveAuthContext(request, queryAuthPolicy) {
     const expectedToken = (process.env.ACCESS_TOKEN || "").trim();
 
     const bearerCredential = extractBearerCredential(request.headers?.authorization || "");
-    const bearerUserAuth = await resolveUserAuthFromAccessToken(bearerCredential);
-    if (bearerUserAuth?.userId) {
-        return {
-            type: "user",
-            userId: bearerUserAuth.userId,
-            role: bearerUserAuth.role,
-            via: "authorization_header",
-        };
-    }
+    const bearerContext = await resolveCredentialContext(
+        bearerCredential,
+        expectedToken,
+        "authorization_header",
+    );
+    if (bearerContext) return bearerContext;
 
     const protocolHeader = request.headers?.["sec-websocket-protocol"] || "";
     const protocolTokens = String(protocolHeader)
@@ -26,43 +70,15 @@ export async function resolveAuthContext(request, queryAuthPolicy) {
         .map((entry) => entry.trim())
         .filter(Boolean);
 
-    const protocolBearerCredentials = [];
     for (const protocolToken of protocolTokens) {
-        if (protocolToken.startsWith("bearer.")) {
-            const protocolValue = protocolToken.slice("bearer.".length);
-            protocolBearerCredentials.push(protocolValue);
-            const protocolUserAuth = await resolveUserAuthFromAccessToken(protocolValue);
-            if (protocolUserAuth?.userId) {
-                return {
-                    type: "user",
-                    userId: protocolUserAuth.userId,
-                    role: protocolUserAuth.role,
-                    via: "sec_websocket_protocol",
-                };
-            }
-        }
-    }
-
-    if (!expectedToken) return null;
-
-    if (
-        isAuthorizedWithCredential({
+        if (!protocolToken.startsWith("bearer.")) continue;
+        const protocolValue = protocolToken.slice("bearer.".length);
+        const protocolContext = await resolveCredentialContext(
+            protocolValue,
             expectedToken,
-            bearerCredential,
-        })
-    ) {
-        return { type: "service", via: "authorization_header" };
-    }
-
-    for (const credential of protocolBearerCredentials) {
-        if (
-            isAuthorizedWithCredential({
-                expectedToken,
-                bearerCredential: credential,
-            })
-        ) {
-            return { type: "service", via: "sec_websocket_protocol" };
-        }
+            "sec_websocket_protocol",
+        );
+        if (protocolContext) return protocolContext;
     }
 
     const parsed = new URL(request.url || "/", "http://localhost");
@@ -74,5 +90,10 @@ export async function resolveAuthContext(request, queryAuthPolicy) {
         });
     }
 
-    return { type: "guest", role: "viewer", via: "anonymous" };
+    return {
+        type: "guest",
+        role: "viewer",
+        accountTier: "free",
+        via: "anonymous",
+    };
 }
