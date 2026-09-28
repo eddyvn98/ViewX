@@ -31,11 +31,9 @@ function parseBoolean(value, fallback = false) {
 
 function createWebSocket(wsUrl, token) {
     if (!token) return new WebSocket(wsUrl);
-    return new WebSocket(wsUrl, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+    // Production WebSocket service auth travels reliably through Cloudflare
+    // via Sec-WebSocket-Protocol. HTTP metrics still use Authorization.
+    return new WebSocket(wsUrl, [`bearer.${token}`]);
 }
 
 function sleep(ms) {
@@ -216,7 +214,7 @@ async function main() {
             health_poll_sec: healthPollSec,
             ws_url: wsBaseUrl,
             api_url: apiBaseUrl,
-            auth_mode: token ? "authorization_header" : "guest",
+            auth_mode: token ? "sec_websocket_protocol" : "guest",
             require_metrics: requireMetrics,
         },
         summary: {
