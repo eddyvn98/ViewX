@@ -579,6 +579,13 @@ export function AIChatView() {
             return;
         }
 
+        const requestChart = {
+            id: marketData.activeChart.id,
+            symbol: marketData.activeChart.symbol,
+            interval: marketData.activeChart.interval,
+            source: marketData.activeChart.source,
+        };
+
         setFriendlyError(null);
         setIsSending(true);
         setPendingPrompt(question);
@@ -609,10 +616,10 @@ export function AIChatView() {
             } = {
                 question,
                 chart: {
-                    chartId: marketData.activeChart.id,
-                    symbol: marketData.activeChart.symbol,
-                    timeframe: marketData.activeChart.interval,
-                    source: marketData.activeChart.source,
+                    chartId: requestChart.id,
+                    symbol: requestChart.symbol,
+                    timeframe: requestChart.interval,
+                    source: requestChart.source,
                 },
                 candles: recentCandles,
                 source: 'chat',
@@ -632,23 +639,45 @@ export function AIChatView() {
             if (!response.ok || !data) throw new Error(String(data?.user_message || data?.msg || data?.error || `request_failed_${response.status}`));
             if (typeof data?.remainingCredits === 'number') setRemainingCredits(data.remainingCredits);
 
-            // Save to store for chart visualization
-            if (marketData.activeChart?.id && data?.result) {
-                const res = data.result;
-                const lastCandle = recentCandles[recentCandles.length - 1];
-                const anchorTs = lastCandle ? lastCandle.time * 1000 : nowTs;
-
-                updateChart(marketData.activeChart.id, {
-                    forecast: {
-                        timestamp: anchorTs,
-                        points: res.forecast || [],
-                        lower_band: res.lower_band || [],
-                        upper_band: res.upper_band || [],
-                        engine: res.engine || 'heuristic',
-                        confidence: res.confidence || 0,
-                        horizon: res.horizon || 0
+            // Save only if the chart still represents the exact context that requested
+            // this forecast. A slow AI response must never land on a newly-selected symbol.
+            if (data?.result) {
+                const state = useMarketStore.getState();
+                let liveChart: ChartInstance | null = null;
+                for (const tab of Object.values(state.tabs)) {
+                    if (tab.charts[requestChart.id]) {
+                        liveChart = tab.charts[requestChart.id];
+                        break;
                     }
-                });
+                }
+
+                const contextStillMatches = Boolean(
+                    liveChart
+                    && normalizeSymbol(liveChart.symbol) === normalizeSymbol(requestChart.symbol)
+                    && liveChart.interval === requestChart.interval
+                    && liveChart.source === requestChart.source
+                );
+
+                if (contextStillMatches) {
+                    const res = data.result;
+                    const lastCandle = recentCandles[recentCandles.length - 1];
+                    const anchorTs = lastCandle ? lastCandle.time * 1000 : nowTs;
+
+                    updateChart(requestChart.id, {
+                        forecast: {
+                            timestamp: anchorTs,
+                            symbol: requestChart.symbol,
+                            interval: requestChart.interval,
+                            source: requestChart.source,
+                            points: res.forecast || [],
+                            lower_band: res.lower_band || [],
+                            upper_band: res.upper_band || [],
+                            engine: res.engine || 'heuristic',
+                            confidence: res.confidence || 0,
+                            horizon: res.horizon || 0
+                        }
+                    });
+                }
             }
 
             const savedId = String(data?.id || clientMsgId);
