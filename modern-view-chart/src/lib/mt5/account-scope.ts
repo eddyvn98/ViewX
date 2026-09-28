@@ -1,3 +1,5 @@
+import { normalizeSymbol } from '@/lib/utils/symbol';
+
 export type Mt5AccountScope = {
     source: 'MT5' | 'MT5_PERSONAL';
     accountLogin: string | null;
@@ -49,6 +51,13 @@ export function resolveChartDataSource(source: string | undefined, scopeInput: u
     const normalized = String(source || '').trim().toUpperCase();
     if (normalized !== 'MT5') return normalized || String(source || '');
     return buildMt5DataSourceKey(scopeInput);
+}
+
+export function buildTickerStoreKeys(source: string, symbol: string): string[] {
+    const normalizedSymbol = normalizeSymbol(symbol);
+    if (!normalizedSymbol) return [];
+    const normalizedSource = String(source || '').trim() || 'MT5';
+    return [`${normalizedSource}:${normalizedSymbol}`, normalizedSymbol];
 }
 
 export function buildMt5AuthFields(scopeInput: unknown): Record<string, string | null> {
