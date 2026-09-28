@@ -96,12 +96,12 @@ export interface TerminalSlice {
     setAccount: (source: string, data: AccountInfo) => void;
     setMt5AccountsAvailable: (accounts: Mt5AccountScope[]) => void;
     setSelectedMt5Scope: (scope: Mt5AccountScope) => void;
-    setPositions: (data: Position[] | ((prev: Position[]) => Position[])) => void;
-    setOrders: (data: Order[] | ((prev: Order[]) => Order[])) => void;
+    setPositions: (data: Position[] | ((prev: Position[]) => Position[]), sourceOverride?: string) => void;
+    setOrders: (data: Order[] | ((prev: Order[]) => Order[]), sourceOverride?: string) => void;
     addPendingModification: (ticket: number, field: 'sl' | 'tp' | 'open_price' | 'price_open', price: number) => void;
     addPendingDeletion: (ticket: number) => void;
     setHistory: (data: HistoryDeal[] | ((prev: HistoryDeal[]) => HistoryDeal[])) => void;
-    appendHistory: (newData: HistoryDeal[], isReset?: boolean) => void;
+    appendHistory: (newData: HistoryDeal[], isReset?: boolean, sourceOverride?: string) => void;
     setAnalysisResult: (ticket: number, result: AnalysisResult) => void;
     setOptimizationResult: (result: OptimizationResult | null) => void;
     setTerminalVisible: (visible: boolean) => void;
@@ -185,12 +185,9 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         selectedMt5Scope: persistMt5Scope(scope),
     }),
 
-    setPositions: (data) => set((state) => {
+    setPositions: (data, sourceOverride) => set((state) => {
         const payload = typeof data === 'function' ? data(state.positions) : data;
-        const source = payload[0]?.source;
-        if (!source && payload.length === 0) return {};
-
-        const finalSource = source || 'MT5';
+        const finalSource = sourceOverride || payload[0]?.source || 'MT5';
         const otherPositions = state.positions.filter((p) => String(p.source || 'MT5') !== finalSource);
         const positionKey = (position: Position) => `${String(position.source || 'MT5')}:${position.ticket}`;
         const prevMap = new Map(state.positions.map((p) => [positionKey(p), p]));
@@ -227,9 +224,9 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         return { positions: newPositions };
     }),
 
-    setOrders: (data) => set((state) => {
+    setOrders: (data, sourceOverride) => set((state) => {
         const payload = typeof data === 'function' ? data(state.orders) : data;
-        const finalSource = payload[0]?.source || 'MT5';
+        const finalSource = sourceOverride || payload[0]?.source || 'MT5';
         const orderKey = (order: Order) => `${String(order.source || 'MT5')}:${order.ticket}`;
         const prevMap = new Map(state.orders.map((order) => [orderKey(order), order]));
         const otherOrders = state.orders.filter((order) => String(order.source || 'MT5') !== finalSource);
@@ -250,8 +247,8 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         history: typeof data === 'function' ? data(state.history) : data
     })),
 
-    appendHistory: (newData, isReset = false) => set((state) => {
-        const source = newData[0]?.source || 'MT5';
+    appendHistory: (newData, isReset = false, sourceOverride) => set((state) => {
+        const source = sourceOverride || newData[0]?.source || 'MT5';
         const baseHistory = isReset ? state.history.filter((h) => h.source !== source) : state.history;
         const historyKey = (deal: HistoryDeal) => `${String(deal.source || 'MT5')}:${deal.ticket}`;
         const map = new Map(baseHistory.map((deal) => [historyKey(deal), deal]));
