@@ -53,7 +53,8 @@
     "desktop:install": "cd desktop && npm install",
     "desktop:start": "cd desktop && npm start",
     "desktop:build": "cd desktop && npm run dist",
-    "android:build": "powershell -ExecutionPolicy Bypass -File .\\android\\build-apk.ps1"
+    "android:build": "powershell -ExecutionPolicy Bypass -File .\\android\\build-apk.ps1",
+    "test:backend-runtime": "node --test backend/runtime-state.test.js"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
