@@ -7,6 +7,7 @@ import { useWebSocket } from '@/hooks/use-websocket';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminalResize } from './hooks/use-terminal-resize';
 import { buildMt5AuthFields, buildMt5DataSourceKey, Mt5AccountScope } from '@/lib/mt5/account-scope';
+import { buildMt5WriteFields } from '@/lib/mt5/trading-request';
 
 type TerminalTab = 'positions' | 'orders' | 'history';
 
@@ -22,13 +23,6 @@ type Mt5ModifyPayload = {
     sl?: number;
     tp?: number;
 };
-
-function createMt5RequestId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    return `mt5-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
 
 export function useTerminalState(forceExpanded: boolean) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
@@ -117,9 +111,7 @@ export function useTerminalState(forceExpanded: boolean) {
                 topic: 'mt5_command',
                 command: 'close',
                 ticket,
-                request_id: createMt5RequestId(),
-                ...buildMt5AuthFields(selectedMt5Scope),
-                broker: selectedMt5Scope.broker,
+                ...buildMt5WriteFields(selectedMt5Scope),
             });
         }
     }, [positions, activeChartSource, selectedMt5Scope, sendMessage]);
@@ -129,9 +121,7 @@ export function useTerminalState(forceExpanded: boolean) {
             topic: 'mt5_command',
             command: 'modify',
             ticket,
-            request_id: createMt5RequestId(),
-            ...buildMt5AuthFields(selectedMt5Scope),
-            broker: selectedMt5Scope.broker,
+            ...buildMt5WriteFields(selectedMt5Scope),
         };
 
         if (sl !== undefined && !isNaN(sl)) payload.sl = sl;
