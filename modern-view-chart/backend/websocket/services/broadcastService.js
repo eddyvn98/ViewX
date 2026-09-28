@@ -38,14 +38,33 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
         const subscribers = subscriptionIndex.chartSubscribers.get(key);
         if (!subscribers || subscribers.size === 0) continue;
 
+        // Subscribers in the same MT5 scope receive identical candle data.
+        // Group them so candle lookup + RSI/Bollinger + JSON serialization happen once
+        // per scope instead of once per socket.
+        const groups = new Map();
         for (const ws of subscribers) {
             const meta = clients.get(ws);
             if (!meta || !isRecipientForMt5Owner(meta, ownerUserId)) continue;
-            const data = await fetchLatestCandle(mt5Prices, symbol, interval, meta.userId || null);
+            if (ws.readyState !== ws.OPEN) continue;
+
+            const scopeKey = meta.userId ? `user:${meta.userId}` : "__global__";
+            let group = groups.get(scopeKey);
+            if (!group) {
+                group = {
+                    userId: meta.userId || null,
+                    sockets: [],
+                };
+                groups.set(scopeKey, group);
+            }
+            group.sockets.push(ws);
+        }
+
+        for (const [scopeKey, group] of groups.entries()) {
+            const data = await fetchLatestCandle(mt5Prices, symbol, interval, group.userId);
             if (!data) continue;
 
             const candle = data.candle;
-            const bufferKey = `${meta.userId || "__global__"}|${key}`;
+            const bufferKey = `${scopeKey}|${key}`;
             if (!candleBuffers[bufferKey]) candleBuffers[bufferKey] = [];
             const buffer = candleBuffers[bufferKey];
 
@@ -87,7 +106,7 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
                 },
             });
 
-            if (ws.readyState === ws.OPEN) {
+            for (const ws of group.sockets) {
                 safeSend(ws, payload, { nonCritical: true });
             }
         }
@@ -123,18 +142,29 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
         }
 
         const payloadCache = new Map();
-        for (const [ws, meta] of clients.entries()) {
-            if (ws.readyState !== ws.OPEN) continue;
-            if (!meta || meta.isBridgeAuthenticated) continue;
+        const latestByScopeCache = new Map();
+
+        const getLatestByScope = (userId) => {
+            const scopeKey = userId ? `user:${userId}` : "__global__";
+            const cached = latestByScopeCache.get(scopeKey);
+            if (cached) return cached;
 
             const latestBySymbol = new Map(binanceBySymbol);
-            for (const item of getScopedMt5Prices(mt5Prices, meta.userId || null)) {
+            for (const item of getScopedMt5Prices(mt5Prices, userId || null)) {
                 const symbol = normalizeSymbol(item?.symbol);
                 if (symbol && !isVietnamGoldSymbol(symbol)) {
                     latestBySymbol.set(symbol, { ...item, symbol });
                 }
             }
+            latestByScopeCache.set(scopeKey, latestBySymbol);
+            return latestBySymbol;
+        };
 
+        for (const [ws, meta] of clients.entries()) {
+            if (ws.readyState !== ws.OPEN) continue;
+            if (!meta || meta.isBridgeAuthenticated) continue;
+
+            const latestBySymbol = getLatestByScope(meta.userId || null);
             const orderedSymbols = Array.isArray(meta.symbols) ? meta.symbols : [];
             const data = orderedSymbols.map((s) => latestBySymbol.get(normalizeSymbol(s))).filter(Boolean);
             if (data.length === 0) continue;
@@ -154,13 +184,7 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             const meta = clients.get(ws);
             if (!meta || meta.isBridgeAuthenticated) continue;
 
-            const latestBySymbol = new Map(binanceBySymbol);
-            for (const item of getScopedMt5Prices(mt5Prices, meta.userId || null)) {
-                const symbol = normalizeSymbol(item?.symbol);
-                if (symbol && !isVietnamGoldSymbol(symbol)) {
-                    latestBySymbol.set(symbol, { ...item, symbol });
-                }
-            }
+            const latestBySymbol = getLatestByScope(meta.userId || null);
             const data = coreSymbols.map((s) => latestBySymbol.get(s)).filter(Boolean);
             if (data.length === 0) continue;
 
