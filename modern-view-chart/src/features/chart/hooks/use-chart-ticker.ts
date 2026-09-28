@@ -21,7 +21,6 @@ interface UseChartTickerProps {
     source: string | undefined;
     seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
-    lastCandleRef: React.MutableRefObject<Candle | null>;
     isAutoScrollEnabledRef?: React.RefObject<boolean>;
     chartRef?: React.RefObject<IChartApi | null>;
     theme?: string;
@@ -31,7 +30,7 @@ interface UseChartTickerProps {
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, lastCandleRef, isAutoScrollEnabledRef, chartRef, contextKey, candleUpColor, candleDownColor,
+    symbol, interval, source, seriesRef, chartType, isAutoScrollEnabledRef, chartRef, contextKey, candleUpColor, candleDownColor,
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<RealtimeCandle | null>(null);
@@ -379,7 +378,7 @@ export function useChartTicker({
             pendingByBar.clear();
             if (tickRafId !== null) cancelAnimationFrame(tickRafId);
         };
-    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, lastCandleRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
+    }, [symbol, source, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
 }
