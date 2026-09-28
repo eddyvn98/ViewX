@@ -1,4 +1,5 @@
 import { RootState, useMarketStore } from '@/lib/store';
+import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 type SendMessage = ((data: unknown) => void) | undefined;
 type StoreWithTransport = RootState & { sendMessage?: (data: unknown) => void };
@@ -12,7 +13,7 @@ export interface TagEditState {
     x?: number;
 }
 
-export function dispatchTagRemoveAction(tag: { ticket: string | number; type: string }, sendMessage?: SendMessage) {
+export function dispatchTagRemoveAction(tag: { ticket: string | number; type: string }, sendMessage?: SendMessage, identity?: Mt5TradingIdentity) {
     if (typeof tag.ticket === 'string' && tag.ticket.startsWith('web:')) {
         return;
     }
@@ -25,14 +26,16 @@ export function dispatchTagRemoveAction(tag: { ticket: string | number; type: st
         command = {
             topic: 'mt5_command',
             command: isPos ? 'close' : 'delete',
-            ticket: String(tag.ticket)
+            ticket: String(tag.ticket),
+            ...buildMt5WriteFields(identity),
         };
     } else if (tag.type === 'sl' || tag.type === 'tp') {
         command = {
             topic: 'mt5_command',
             command: 'modify',
             ticket: String(tag.ticket),
-            [tag.type === 'sl' ? 'sl' : 'tp']: 0
+            [tag.type === 'sl' ? 'sl' : 'tp']: 0,
+            ...buildMt5WriteFields(identity),
         };
     }
 
@@ -50,7 +53,7 @@ export function dispatchTagRemoveAction(tag: { ticket: string | number; type: st
     store.sendMessage?.(command);
 }
 
-export function dispatchTagEditSaveAction(state: TagEditState, val: number, sendMessage?: SendMessage) {
+export function dispatchTagEditSaveAction(state: TagEditState, val: number, sendMessage?: SendMessage, identity?: Mt5TradingIdentity) {
     const { ticket, type } = state;
 
     if (ticket === 'draft') {
@@ -75,7 +78,7 @@ export function dispatchTagEditSaveAction(state: TagEditState, val: number, send
     }
 
     const mappedType = type === 'entry' ? 'price' : type;
-    const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: val };
+    const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: val, ...buildMt5WriteFields(identity) };
 
     if (sendMessage) {
         sendMessage(command);
@@ -86,7 +89,7 @@ export function dispatchTagEditSaveAction(state: TagEditState, val: number, send
     store.sendMessage?.(command);
 }
 
-export function dispatchTagDeleteAction(state: TagEditState, sendMessage?: SendMessage) {
+export function dispatchTagDeleteAction(state: TagEditState, sendMessage?: SendMessage, identity?: Mt5TradingIdentity) {
     const { ticket, type } = state;
     const store = useMarketStore.getState() as StoreWithTransport;
 
@@ -108,7 +111,8 @@ export function dispatchTagDeleteAction(state: TagEditState, sendMessage?: SendM
         topic: 'mt5_command',
         command: (type === 'entry' ? (isPos ? 'close' : 'delete') : 'modify'),
         ticket,
-        [type === 'entry' ? 'price' : type]: 0
+        [type === 'entry' ? 'price' : type]: 0,
+        ...buildMt5WriteFields(identity),
     };
 
     if (type === 'entry' && store.addPendingDeletion) {

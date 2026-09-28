@@ -310,14 +310,121 @@ class MT5Service:
         else:
             return mt5.ORDER_FILLING_RETURN
 
+    def _trade_result(self, result=None, requested_symbol=None, resolved_symbol=None, message=None, retcode=None):
+        if result is None:
+            last_error = mt5.last_error()
+            fallback_retcode = retcode
+            fallback_message = message
+            if fallback_retcode is None and isinstance(last_error, tuple) and len(last_error) > 0:
+                fallback_retcode = last_error[0]
+            if not fallback_message and isinstance(last_error, tuple) and len(last_error) > 1:
+                fallback_message = str(last_error[1])
+            return {
+                "success": False,
+                "retcode": fallback_retcode,
+                "comment": fallback_message or "mt5_order_send_failed",
+                "message": fallback_message or "mt5_order_send_failed",
+                "order": None,
+                "deal": None,
+                "requested_symbol": requested_symbol,
+                "resolved_symbol": resolved_symbol,
+            }
+
+        done_codes = {mt5.TRADE_RETCODE_DONE}
+        if hasattr(mt5, "TRADE_RETCODE_PLACED"):
+            done_codes.add(mt5.TRADE_RETCODE_PLACED)
+        if hasattr(mt5, "TRADE_RETCODE_DONE_PARTIAL"):
+            done_codes.add(mt5.TRADE_RETCODE_DONE_PARTIAL)
+        success = result.retcode in done_codes
+        comment = str(getattr(result, "comment", "") or "")
+        return {
+            "success": success,
+            "retcode": int(result.retcode),
+            "comment": comment,
+            "message": comment or ("order_executed" if success else "order_failed"),
+            "order": int(getattr(result, "order", 0) or 0) or None,
+            "deal": int(getattr(result, "deal", 0) or 0) or None,
+            "requested_symbol": requested_symbol,
+            "resolved_symbol": resolved_symbol,
+        }
+
+    def _validation_error(self, message, requested_symbol=None, resolved_symbol=None):
+        return {
+            "success": False,
+            "retcode": None,
+            "comment": message,
+            "message": message,
+            "order": None,
+            "deal": None,
+            "requested_symbol": requested_symbol,
+            "resolved_symbol": resolved_symbol,
+        }
+
+    def _validate_volume(self, info, volume):
+        try:
+            value = float(volume)
+        except (TypeError, ValueError):
+            return None, "invalid_volume"
+
+        minimum = float(getattr(info, "volume_min", 0.0) or 0.0)
+        maximum = float(getattr(info, "volume_max", 0.0) or 0.0)
+        step = float(getattr(info, "volume_step", 0.0) or 0.0)
+
+        if value <= 0:
+            return None, "invalid_volume"
+        if minimum > 0 and value < minimum - 1e-12:
+            return None, f"volume_below_min:{minimum}"
+        if maximum > 0 and value > maximum + 1e-12:
+            return None, f"volume_above_max:{maximum}"
+        if step > 0:
+            base = minimum if minimum > 0 else 0.0
+            steps = (value - base) / step
+            if abs(steps - round(steps)) > 1e-8:
+                return None, f"volume_invalid_step:{step}"
+
+        return value, None
+
+    def _validate_market_stops(self, info, tick, order_type_str, sl, tp):
+        point = float(getattr(info, "point", 0.0) or 0.0)
+        stops_level = float(getattr(info, "trade_stops_level", 0.0) or 0.0)
+        minimum_distance = point * stops_level
+        if minimum_distance <= 0:
+            return None
+
+        try:
+            sl_value = float(sl or 0.0)
+        except (TypeError, ValueError):
+            return "invalid_sl"
+        try:
+            tp_value = float(tp or 0.0)
+        except (TypeError, ValueError):
+            return "invalid_tp"
+        is_buy = "buy" in order_type_str
+        reference = float(tick.bid if is_buy else tick.ask)
+
+        if is_buy:
+            if sl_value > 0 and reference - sl_value < minimum_distance:
+                return f"sl_too_close:min_distance={minimum_distance}"
+            if tp_value > 0 and tp_value - reference < minimum_distance:
+                return f"tp_too_close:min_distance={minimum_distance}"
+        else:
+            if sl_value > 0 and sl_value - reference < minimum_distance:
+                return f"sl_too_close:min_distance={minimum_distance}"
+            if tp_value > 0 and reference - tp_value < minimum_distance:
+                return f"tp_too_close:min_distance={minimum_distance}"
+
+        return None
+
     def close_position(self, ticket):
         positions = mt5.positions_get(ticket=ticket)
         if positions:
             pos = positions[0]
             tick = mt5.symbol_info_tick(pos.symbol)
+            if not tick:
+                return self._validation_error("tick_not_found", resolved_symbol=pos.symbol)
+
             price = tick.bid if pos.type == mt5.ORDER_TYPE_BUY else tick.ask
             order_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
-            
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
                 "symbol": pos.symbol,
@@ -330,35 +437,36 @@ class MT5Service:
                 "type_filling": self._get_filling_mode(pos.symbol),
             }
             result = mt5.order_send(request)
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
-                print(f"[ERROR] Close position failed: {result.retcode} - {result.comment}")
-            return result.retcode == mt5.TRADE_RETCODE_DONE
+            trade_result = self._trade_result(result, resolved_symbol=pos.symbol)
+            if not trade_result["success"]:
+                print(f"[ERROR] Close position failed: {trade_result['retcode']} - {trade_result['comment']}")
+            return trade_result
 
         orders = mt5.orders_get(ticket=ticket)
         if orders:
-            request = { "action": mt5.TRADE_ACTION_REMOVE, "order": ticket }
+            order = orders[0]
+            request = {"action": mt5.TRADE_ACTION_REMOVE, "order": ticket}
             result = mt5.order_send(request)
-            return result.retcode == mt5.TRADE_RETCODE_DONE
-        return False
+            return self._trade_result(result, resolved_symbol=str(order.symbol))
+
+        return self._validation_error("ticket_not_found")
 
     def close_by_magic(self, symbol, magic):
         """Close all positions and cancel all orders for a specific symbol/magic."""
         success = True
-        
-        # 1. Close Market Positions
+
         positions = mt5.positions_get(symbol=symbol, magic=magic)
         if positions:
-            for p in positions:
-                if not self.close_position(p.ticket):
+            for position in positions:
+                if not self.close_position(position.ticket).get("success"):
                     success = False
-        
-        # 2. Cancel Pending Orders
+
         orders = mt5.orders_get(symbol=symbol, magic=magic)
         if orders:
-            for o in orders:
-                if not self.close_position(o.ticket): # close_position handles orders via TRADE_ACTION_REMOVE
+            for order in orders:
+                if not self.close_position(order.ticket).get("success"):
                     success = False
-                    
+
         return success
 
     def modify_position(self, ticket, sl=None, tp=None, price=None):
@@ -373,84 +481,175 @@ class MT5Service:
                 "tp": float(tp) if tp is not None else pos.tp,
             }
             result = mt5.order_send(request)
-            return result.retcode == mt5.TRADE_RETCODE_DONE
+            return self._trade_result(result, resolved_symbol=str(pos.symbol))
 
         orders = mt5.orders_get(ticket=ticket)
         if orders:
-            ord = orders[0]
+            order = orders[0]
             request = {
                 "action": mt5.TRADE_ACTION_MODIFY,
                 "order": ticket,
-                "price": float(price) if price is not None else ord.price_open,
-                "sl": float(sl) if sl is not None else ord.sl,
-                "tp": float(tp) if tp is not None else ord.tp,
-                "type_time": getattr(ord, 'type_time', mt5.ORDER_TIME_GTC),
-                "expiration": getattr(ord, 'expiration', 0)
+                "price": float(price) if price is not None else order.price_open,
+                "sl": float(sl) if sl is not None else order.sl,
+                "tp": float(tp) if tp is not None else order.tp,
+                "type_time": getattr(order, "type_time", mt5.ORDER_TIME_GTC),
+                "expiration": getattr(order, "expiration", 0),
             }
             result = mt5.order_send(request)
-            return result.retcode == mt5.TRADE_RETCODE_DONE
-        return False
+            return self._trade_result(result, resolved_symbol=str(order.symbol))
+
+        return self._validation_error("ticket_not_found")
 
     def place_order(self, symbol, order_type, volume, sl=0.0, tp=0.0, price=0.0, is_market=True, magic=None, comment=None):
-        tick = mt5.symbol_info_tick(symbol)
-        if not tick: 
-            print(f"[ERROR] Tick not found for {symbol}")
-            return False
+        requested_symbol = str(symbol or "").strip()
+        if not requested_symbol:
+            return self._validation_error("symbol_required")
+
+        # Trading writes intentionally require the exact broker symbol. Read-only
+        # chart/search paths may use tolerant aliases, but execution must not.
+        info = mt5.symbol_info(requested_symbol)
+        if info is None:
+            return self._validation_error("exact_broker_symbol_not_found", requested_symbol=requested_symbol)
+
+        if getattr(info, "trade_mode", mt5.SYMBOL_TRADE_MODE_DISABLED) == mt5.SYMBOL_TRADE_MODE_DISABLED:
+            return self._validation_error(
+                "symbol_trading_disabled",
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
+
+        if not info.visible and not mt5.symbol_select(info.name, True):
+            return self._validation_error(
+                "symbol_select_failed",
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
+
+        volume_value, volume_error = self._validate_volume(info, volume)
+        if volume_error:
+            return self._validation_error(
+                volume_error,
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
+
+        tick = mt5.symbol_info_tick(info.name)
+        if not tick:
+            return self._validation_error(
+                "tick_not_found",
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
+
+        order_type_str = str(order_type or "").lower()
+        if "buy" not in order_type_str and "sell" not in order_type_str:
+            return self._validation_error(
+                "invalid_order_type",
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
+
+        if is_market:
+            stops_error = self._validate_market_stops(info, tick, order_type_str, sl, tp)
+            if stops_error:
+                return self._validation_error(
+                    stops_error,
+                    requested_symbol=requested_symbol,
+                    resolved_symbol=info.name,
+                )
+
+        try:
+            sl_value = float(sl) if sl else 0.0
+            tp_value = float(tp) if tp else 0.0
+        except (TypeError, ValueError):
+            return self._validation_error(
+                "invalid_sl_or_tp",
+                requested_symbol=requested_symbol,
+                resolved_symbol=info.name,
+            )
 
         request = {
-            "symbol": symbol,
-            "volume": float(volume),
-            "sl": float(sl) if sl else 0.0,
-            "tp": float(tp) if tp else 0.0,
+            "symbol": info.name,
+            "volume": volume_value,
+            "sl": sl_value,
+            "tp": tp_value,
             "magic": int(magic) if magic is not None else 234000,
-            "comment": str(comment) if comment is not None else "ViewChart Web",
+            "comment": str(comment) if comment is not None else "VivuTrade Web",
             "type_time": mt5.ORDER_TIME_GTC,
         }
-
-        # Normalize Order Type
-        order_type_str = str(order_type).lower()
 
         if is_market:
             request["action"] = mt5.TRADE_ACTION_DEAL
             request["price"] = tick.ask if "buy" in order_type_str else tick.bid
             request["type"] = mt5.ORDER_TYPE_BUY if "buy" in order_type_str else mt5.ORDER_TYPE_SELL
-            request["type_filling"] = self._get_filling_mode(symbol)
+            request["type_filling"] = self._get_filling_mode(info.name)
         else:
+            try:
+                pending_price = float(price)
+            except (TypeError, ValueError):
+                pending_price = 0.0
+            if pending_price <= 0:
+                return self._validation_error(
+                    "pending_price_required",
+                    requested_symbol=requested_symbol,
+                    resolved_symbol=info.name,
+                )
             request["action"] = mt5.TRADE_ACTION_PENDING
-            request["price"] = float(price)
+            request["price"] = pending_price
             request["type_filling"] = mt5.ORDER_FILLING_RETURN
-            
-            # Use explicit mapping if provided as buy_stop, sell_limit, etc.
-            if order_type_str == "buy_stop": request["type"] = mt5.ORDER_TYPE_BUY_STOP
-            elif order_type_str == "sell_stop": request["type"] = mt5.ORDER_TYPE_SELL_STOP
-            elif order_type_str == "buy_limit": request["type"] = mt5.ORDER_TYPE_BUY_LIMIT
-            elif order_type_str == "sell_limit": request["type"] = mt5.ORDER_TYPE_SELL_LIMIT
+
+            if order_type_str == "buy_stop":
+                request["type"] = mt5.ORDER_TYPE_BUY_STOP
+            elif order_type_str == "sell_stop":
+                request["type"] = mt5.ORDER_TYPE_SELL_STOP
+            elif order_type_str == "buy_limit":
+                request["type"] = mt5.ORDER_TYPE_BUY_LIMIT
+            elif order_type_str == "sell_limit":
+                request["type"] = mt5.ORDER_TYPE_SELL_LIMIT
             elif "buy" in order_type_str:
-                request["type"] = mt5.ORDER_TYPE_BUY_LIMIT if request["price"] < tick.ask else mt5.ORDER_TYPE_BUY_STOP
+                request["type"] = mt5.ORDER_TYPE_BUY_LIMIT if pending_price < tick.ask else mt5.ORDER_TYPE_BUY_STOP
             else:
-                request["type"] = mt5.ORDER_TYPE_SELL_LIMIT if request["price"] > tick.bid else mt5.ORDER_TYPE_SELL_STOP
+                request["type"] = mt5.ORDER_TYPE_SELL_LIMIT if pending_price > tick.bid else mt5.ORDER_TYPE_SELL_STOP
 
         print(f"[DEBUG] Sending Order: {request}")
         result = mt5.order_send(request)
-        if result.retcode != mt5.TRADE_RETCODE_DONE:
-             print(f"[ERROR] Order send failed: {result.retcode} - {result.comment}")
-             return False
-        
-        print(f"[ORDER] Sent {request['action']} {order_type} {volume} {symbol} @ {request['price']} (Ticket: {result.order})")
-        return True
+        trade_result = self._trade_result(
+            result,
+            requested_symbol=requested_symbol,
+            resolved_symbol=info.name,
+        )
+        if not trade_result["success"]:
+            print(f"[ERROR] Order send failed: {trade_result['retcode']} - {trade_result['comment']}")
+            return trade_result
+
+        print(
+            f"[ORDER] Sent {request['action']} {order_type} {volume_value} {info.name}"
+            f" @ {request['price']} (Ticket: {trade_result['order']})"
+        )
+        return trade_result
 
     def get_symbol_specification(self, symbol):
-        info = mt5.symbol_info(symbol)
-        if not info: return None
+        requested_symbol = str(symbol or "").strip()
+        info = mt5.symbol_info(requested_symbol)
+        if not info:
+            return None
         return {
             "symbol": info.name,
-            "contract_size": info.trade_contract_size,
-            "tick_value": info.trade_tick_value,
-            "tick_size": info.trade_tick_size,
-            "digits": info.digits,
-            "swap_long": info.swap_long,
-            "swap_short": info.swap_short,
-            "currency_margin": info.currency_margin
+            "contract_size": float(info.trade_contract_size),
+            "tick_value": float(info.trade_tick_value),
+            "tick_size": float(info.trade_tick_size),
+            "point": float(info.point),
+            "digits": int(info.digits),
+            "volume_min": float(info.volume_min),
+            "volume_max": float(info.volume_max),
+            "volume_step": float(info.volume_step),
+            "trade_stops_level": int(info.trade_stops_level),
+            "trade_freeze_level": int(info.trade_freeze_level),
+            "filling_mode": int(info.filling_mode),
+            "trade_mode": int(info.trade_mode),
+            "swap_long": float(info.swap_long),
+            "swap_short": float(info.swap_short),
+            "currency_margin": str(info.currency_margin),
         }
 
     def get_history_deals(self, from_date=None, to_date=None, limit=None):

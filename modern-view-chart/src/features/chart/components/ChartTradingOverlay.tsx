@@ -1,24 +1,34 @@
-import React, { useRef, useEffect, useCallback, memo } from 'react';
+import React, { useCallback, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Zap, Check, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface ChartTradingOverlayProps {
     symbol: string | undefined;
     source?: string;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
 }
 
 /**
  * ChartTradingOverlay with DOM-based price updates
  * Only subscribes to non-ticker state, uses RAF for realtime prices
  */
-export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }: ChartTradingOverlayProps) {
+export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, source, accountLogin, terminalId, broker }: ChartTradingOverlayProps) {
     // Only subscribe to non-ticker state
     const draftOrder = useMarketStore(state => state.draftOrder);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const { sendMessage } = useWebSocket();
+    const identity = React.useMemo<Mt5TradingIdentity>(() => ({
+        source,
+        accountLogin,
+        terminalId,
+        broker,
+    }), [source, accountLogin, terminalId, broker]);
 
     // Get initial price for draft (computed once when needed)
     const getCurrentPrice = useCallback(() => {
@@ -31,14 +41,10 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
         const price = getCurrentPrice();
         if (!price || !symbol) return;
 
-        let distance = 0.00500;
-        if (symbol.includes('JPY')) distance = 0.50;
-        else if (symbol.includes('XAU')) distance = 10.0;
-        else if (symbol.includes('BTC')) distance = 100.0;
-
-        const normSym = normalizeSymbol(symbol);
         setDraftOrder({
-            symbol: normSym,
+            // Keep the exact broker symbol for execution. Normalization is only
+            // for lookup/display and must never rewrite a trading transport ID.
+            symbol,
             type,
             volume: 0.1,
             price: price,
@@ -72,9 +78,9 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
         if (errorMsg) {
             useMarketStore.getState().addNotification(errorMsg, 'error');
             // Play error sound
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
+            const AudioContextCtor = window.AudioContext;
+            if (AudioContextCtor) {
+                const ctx = new AudioContextCtor();
                 const osc = ctx.createOscillator();
                 osc.frequency.setValueAtTime(150, ctx.currentTime);
                 osc.type = 'sawtooth';
@@ -85,13 +91,14 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
             return;
         }
 
-        const payload: any = {
+        const payload: Record<string, unknown> = {
             topic: 'mt5_command',
             command: 'order',
             symbol: draftOrder.symbol,
             type: draftOrder.type,
             volume: draftOrder.volume,
-            is_market: draftOrder.isMarket
+            is_market: draftOrder.isMarket,
+            ...buildMt5WriteFields(identity),
         };
 
         const normSym = normalizeSymbol(draftOrder.symbol);
@@ -106,18 +113,16 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol }:
         if (draftOrder.sl && draftOrder.sl > 0) payload.sl = Number(draftOrder.sl.toFixed(digits));
         if (draftOrder.tp && draftOrder.tp > 0) payload.tp = Number(draftOrder.tp.toFixed(digits));
 
-        sendMessage(payload);
+        sendMessage(payload as Parameters<typeof sendMessage>[0]);
         setDraftOrder(null);
     };
 
     const handleCancel = () => setDraftOrder(null);
-    const toggleMarket = () => {
-        if (!draftOrder) return;
-        setDraftOrder({ ...draftOrder, isMarket: !draftOrder.isMarket });
-    };
 
-    // Don't render if no symbol
-    if (!symbol) return null;
+    // This overlay executes MT5 writes. Do not expose it on Binance or
+    // other sources, where a click must never fall through to shared MT5.
+    const normalizedSource = String(source || '').trim().toUpperCase();
+    if (!symbol || (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL')) return null;
 
     return (
         <div className="absolute top-1 left-2 z-[100] flex items-center gap-1.5">

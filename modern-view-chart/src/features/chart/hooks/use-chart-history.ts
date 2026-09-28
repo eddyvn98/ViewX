@@ -314,6 +314,11 @@ export function useChartHistory(props: UseChartHistoryProps) {
                     // Ignore transient teardown races while the chart is rebuilding.
                 }
             }
+            // The empty destination is a valid structural state for this revision.
+            // Without recording revision 0 here, a later readiness/render pass sees
+            // 0 !== -1 and schedules a second redundant setData([]) batch.
+            lastHistoryRevisionRef.current = historyRevision;
+            lastDataLength.current = 0;
             return;
         }
 

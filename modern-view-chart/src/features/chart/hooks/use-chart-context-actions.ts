@@ -2,10 +2,12 @@ import React from 'react';
 import { Alert, useMarketStore } from '@/lib/store';
 import { getNearElement } from '../logic/chart-hit-test';
 import { useChartContextMenu } from './use-chart-context-menu';
+import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface ContextDeps {
     symbol: string | undefined;
     source: string | undefined;
+    mt5Identity?: Mt5TradingIdentity;
     priceChartRef: React.RefObject<import('lightweight-charts').IChartApi | null>;
     priceContainerRef: React.RefObject<HTMLDivElement | null>;
     seriesRef: React.RefObject<import('lightweight-charts').ISeriesApi<'Candlestick'> | null>;
@@ -19,6 +21,7 @@ interface ContextDeps {
 export function useChartContextActions({
     symbol,
     source,
+    mt5Identity,
     priceChartRef,
     priceContainerRef,
     seriesRef,
@@ -58,12 +61,16 @@ export function useChartContextActions({
     );
 
     const onCancelOrder = React.useCallback((ticket: string | number) => {
-        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket), target: source || 'MT5' });
-    }, [sendMessage, source]);
+        const normalizedSource = String(source || '').trim().toUpperCase();
+        if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') return;
+        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
+    }, [sendMessage, source, mt5Identity]);
 
     const onClosePosition = React.useCallback((ticket: string | number) => {
-        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5' });
-    }, [sendMessage, source]);
+        const normalizedSource = String(source || '').trim().toUpperCase();
+        if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') return;
+        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
+    }, [sendMessage, source, mt5Identity]);
 
     const onCancelDraft = React.useCallback(() => {
         useMarketStore.getState().setDraftOrder(null);

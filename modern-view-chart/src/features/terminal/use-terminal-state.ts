@@ -7,6 +7,7 @@ import { useWebSocket } from '@/hooks/use-websocket';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminalResize } from './hooks/use-terminal-resize';
 import { buildMt5AuthFields, buildMt5DataSourceKey, Mt5AccountScope } from '@/lib/mt5/account-scope';
+import { buildMt5WriteFields } from '@/lib/mt5/trading-request';
 
 type TerminalTab = 'positions' | 'orders' | 'history';
 
@@ -14,6 +15,11 @@ type Mt5ModifyPayload = {
     topic: 'mt5_command';
     command: 'modify';
     ticket: number;
+    request_id: string;
+    account_login?: string | null;
+    terminal_id?: string | null;
+    mt5_source?: string | null;
+    broker?: string | null;
     sl?: number;
     tp?: number;
 };
@@ -92,19 +98,30 @@ export function useTerminalState(forceExpanded: boolean) {
         const source = pos?.source || (activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5');
 
         if (confirm(`Do you want to close position ${ticket}?`)) {
+            if (source === 'BINANCE_DEMO') {
+                sendMessage({
+                    topic: 'binance_command',
+                    command: 'close',
+                    ticket,
+                });
+                return;
+            }
+
             sendMessage({
-                topic: source === 'BINANCE_DEMO' ? 'binance_command' : 'mt5_command',
+                topic: 'mt5_command',
                 command: 'close',
                 ticket,
+                ...buildMt5WriteFields(selectedMt5Scope),
             });
         }
-    }, [positions, activeChartSource, sendMessage]);
+    }, [positions, activeChartSource, selectedMt5Scope, sendMessage]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
         const payload: Mt5ModifyPayload = {
             topic: 'mt5_command',
             command: 'modify',
             ticket,
+            ...buildMt5WriteFields(selectedMt5Scope),
         };
 
         if (sl !== undefined && !isNaN(sl)) payload.sl = sl;
@@ -113,7 +130,7 @@ export function useTerminalState(forceExpanded: boolean) {
         if (Object.keys(payload).length > 3) {
             sendMessage(payload);
         }
-    }, [sendMessage]);
+    }, [selectedMt5Scope, sendMessage]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();

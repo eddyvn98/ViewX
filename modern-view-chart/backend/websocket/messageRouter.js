@@ -5,7 +5,7 @@ import { handleMt5Positions } from "./handlers/mt5PositionsHandler.js";
 import { handleMt5Candles } from "./handlers/mt5CandlesHandler.js";
 import { handleMt5History } from "./handlers/mt5HistoryHandler.js";
 import { handleMt5SymbolInfo } from "./handlers/mt5SymbolInfoHandler.js";
-import { handleMt5Command } from "./handlers/mt5CommandHandler.js";
+import { handleMt5Command, handleMt5OrderResult } from "./handlers/mt5CommandHandler.js";
 import { handleBinanceHistory } from "./handlers/binanceHistoryHandler.js";
 import { handleBinanceCommand } from "./handlers/binanceCommandHandler.js";
 import { handleAlertCommand } from "./handlers/alertCommandHandler.js";
@@ -110,6 +110,9 @@ export function setupMessageRouter(clients, mt5Prices, subscriptionIndex, bridge
                     break;
                 case "mt5_symbol_info":
                     handleMt5SymbolInfo(context, data);
+                    break;
+                case "mt5_order_result":
+                    handleMt5OrderResult(context, data);
                     break;
                 case "request_analysis":
                 case "request_optimization": {
