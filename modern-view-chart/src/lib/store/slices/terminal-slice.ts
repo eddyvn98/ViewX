@@ -202,7 +202,7 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         if (state.positions.length === newPositions.length) {
             let hasStructuralChange = false;
             for (const nextPos of newPositions) {
-                if (hasPositionStructuralChange(prevMap.get(nextPos.ticket), nextPos)) {
+                if (hasPositionStructuralChange(prevMap.get(positionKey(nextPos)), nextPos)) {
                     hasStructuralChange = true;
                     break;
                 }
