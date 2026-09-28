@@ -15,6 +15,7 @@ type TerminalHeaderProps = {
     handleDragStart: MouseEventHandler<HTMLDivElement>;
     toggleCollapse: () => void;
     visibleAccount: AccountInfo | null;
+    accountSource: string;
     mt5AccountsAvailable: Mt5AccountScope[];
     selectedMt5Scope: Mt5AccountScope;
     onSelectMt5Scope: (scope: Mt5AccountScope) => void;
@@ -27,6 +28,7 @@ export function TerminalHeader({
     handleDragStart,
     toggleCollapse,
     visibleAccount,
+    accountSource,
     mt5AccountsAvailable,
     selectedMt5Scope,
     onSelectMt5Scope,
@@ -64,7 +66,7 @@ export function TerminalHeader({
                             {forceExpanded ? (
                                 <MobileAccountSummary account={visibleAccount} />
                             ) : (
-                                <AccountSummary account={visibleAccount} />
+                                <AccountSummary account={visibleAccount} sourceKey={accountSource} />
                             )}
                         </div>
                         {mt5AccountsAvailable.length > 1 && (
