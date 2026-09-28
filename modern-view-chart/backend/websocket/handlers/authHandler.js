@@ -9,7 +9,7 @@ import {
     scopeMetadata,
 } from "../mt5Scope.js";
 import { resolveRequestedClientMode, WS_CLIENT_MODES } from "../clientMode.js";
-import { buildAvailableMt5Accounts } from "../mt5AccountCatalog.js";
+import { buildAvailableMt5Accounts, resolveClientMt5Bridge } from "../mt5AccountCatalog.js";
 
 function normalizeOptional(value) {
     const text = String(value || "").trim();
@@ -105,10 +105,16 @@ export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex, bridgeRe
         }
 
         if (!clientData.isBridgeAuthenticated) {
+            const selectedScope = resolveClientMt5Scope(clientData);
             safeSend(ws, JSON.stringify({
                 topic: "mt5_accounts_available",
                 accounts: buildAvailableMt5Accounts(clientData, bridgeRegistry),
-                selected: scopeMetadata(resolveClientMt5Scope(clientData)),
+                selected: scopeMetadata(selectedScope),
+            }));
+            safeSend(ws, JSON.stringify({
+                topic: "bridgeStatus",
+                online: Boolean(resolveClientMt5Bridge(clientData, bridgeRegistry).record),
+                mt5_scope: scopeMetadata(selectedScope),
             }));
         }
     }
