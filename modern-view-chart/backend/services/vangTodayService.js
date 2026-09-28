@@ -82,11 +82,7 @@ async function fetchFromVangToday() {
     return normalizeQuotes(payload);
 }
 
-export async function getVangTodayLatestQuotes({ force = false } = {}) {
-    const now = Date.now();
-    if (!force && latestCache.quotes.length > 0 && now - latestCache.updatedAt < CACHE_TTL_MS) {
-        return latestCache.quotes;
-    }
+function refreshVangTodayQuotes() {
     if (inflight) return inflight;
 
     inflight = fetchFromVangToday()
@@ -108,6 +104,20 @@ export async function getVangTodayLatestQuotes({ force = false } = {}) {
         });
 
     return inflight;
+}
+
+export async function getVangTodayLatestQuotes({ force = false, nonBlocking = false } = {}) {
+    const now = Date.now();
+    if (!force && latestCache.quotes.length > 0 && now - latestCache.updatedAt < CACHE_TTL_MS) {
+        return latestCache.quotes;
+    }
+
+    const refreshPromise = refreshVangTodayQuotes();
+    if (nonBlocking && !force) {
+        return latestCache.quotes;
+    }
+
+    return refreshPromise;
 }
 
 export async function persistVangTodaySnapshots(quotes) {
