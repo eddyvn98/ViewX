@@ -258,6 +258,40 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             useMarketStore.getState().addNotification(`Binance Order ${msg.status}: ${msg.message || ''}`, status);
         }
 
+        if (msgType === 'mt5_order_result') {
+            const status = String(msg.status || '').toLowerCase();
+            const success = msg.success === true;
+            const comment = String(msg.comment || msg.message || '').trim();
+            const requestId = String(msg.request_id || '').trim();
+
+            if (status !== 'pending') {
+                useMarketStore.getState().addNotification(
+                    success
+                        ? `MT5: Lệnh đã thực hiện${msg.order ? ` #${String(msg.order)}` : ''}`
+                        : `MT5: Lệnh thất bại${comment ? ` - ${comment}` : ''}`,
+                    success ? 'success' : 'error',
+                );
+            }
+
+            if (typeof window !== 'undefined' && status !== 'pending') {
+                window.dispatchEvent(new CustomEvent('vivutrade:mt5-order-result', {
+                    detail: msg,
+                }));
+            }
+
+            if (success && socket.readyState === WebSocket.OPEN) {
+                const scope = normalizeMt5AccountScope(msg.mt5_scope || msg);
+                socket.send(JSON.stringify({
+                    topic: 'mt5_command',
+                    command: 'get_positions',
+                    reason: 'post_trade_refresh',
+                    ...(requestId ? { parent_request_id: requestId } : {}),
+                    ...buildMt5AuthFields(scope),
+                    broker: scope.broker,
+                }));
+            }
+        }
+
         if (msgType === 'mt5_history_deals') {
             const mt5Source = getMt5FrameSource(msg);
             const dealData = Array.isArray(msg.data)
