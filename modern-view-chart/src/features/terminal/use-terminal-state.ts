@@ -15,10 +15,10 @@ type Mt5ModifyPayload = {
     command: 'modify';
     ticket: number;
     request_id: string;
-    account_login: string | null;
-    terminal_id: string | null;
-    mt5_source: string | null;
-    broker: string | null;
+    account_login?: string | null;
+    terminal_id?: string | null;
+    mt5_source?: string | null;
+    broker?: string | null;
     sl?: number;
     tp?: number;
 };
