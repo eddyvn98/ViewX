@@ -394,19 +394,50 @@ router.get("/history", async (req, res) => {
 router.delete("/history", async (req, res) => {
     try {
         const actorKey = getActorKey(req, req.body, req.query);
-        const conversationId = typeof req.query?.conversationId === "string" ? req.query.conversationId.trim() : null;
+        const rawConversationId = req.body?.conversationId ?? req.query?.conversationId;
+        const conversationId = typeof rawConversationId === "string" ? rawConversationId.trim() : "";
+        const messageIds = Array.isArray(req.body?.messageIds)
+            ? req.body.messageIds.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 200)
+            : [];
 
         if (conversationId) {
-            await aiChatLogModel.deleteMany({ actorKey, conversationId });
+            const result = await aiChatLogModel.deleteMany({ actorKey, conversationId });
             const memHistory = getHistory(actorKey);
             const filtered = memHistory.filter((item) => item.conversationId !== conversationId);
             aiHistoryByActor.set(actorKey, filtered);
-            return res.json({ status: "ok", deleted: "conversation", conversationId });
-        } else {
-            await aiChatLogModel.deleteMany({ actorKey });
-            aiHistoryByActor.set(actorKey, []);
-            return res.json({ status: "ok", deleted: "all" });
+            return res.json({
+                status: "ok",
+                deleted: "conversation",
+                conversationId,
+                deletedCount: Number(result?.deletedCount || 0),
+            });
         }
+
+        if (messageIds.length > 0) {
+            const messageIdSet = new Set(messageIds);
+            const result = await aiChatLogModel.deleteMany({
+                actorKey,
+                messageId: { $in: messageIds },
+            });
+            const memHistory = getHistory(actorKey);
+            aiHistoryByActor.set(
+                actorKey,
+                memHistory.filter((item) => !messageIdSet.has(String(item?.id || ""))),
+            );
+            return res.json({
+                status: "ok",
+                deleted: "messages",
+                deletedCount: Number(result?.deletedCount || 0),
+            });
+        }
+
+        const result = await aiChatLogModel.deleteMany({ actorKey });
+        aiHistoryByActor.set(actorKey, []);
+        return res.json({
+            status: "ok",
+            deleted: "all",
+            deletedCount: Number(result?.deletedCount || 0),
+        });
     } catch (error) {
         console.error("[AI History] delete failed:", error?.message || error);
         return res.status(500).json({ status: "error", msg: "history_delete_failed" });
