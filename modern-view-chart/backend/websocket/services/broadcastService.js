@@ -97,8 +97,10 @@ export async function broadcastCandleForSymbol({ clients, mt5Prices, subscriptio
 export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscriptionIndex }) {
     try {
         const allPrices = getBinancePrices();
-        const vnGoldQuotes = await getVietnamGoldQuotes();
-        const vangTodayQuotes = await getVangTodayLatestQuotes();
+        const [vnGoldQuotes, vangTodayQuotes] = await Promise.all([
+            getVietnamGoldQuotes({ nonBlocking: true }),
+            getVangTodayLatestQuotes({ nonBlocking: true }),
+        ]);
         const mappedVangTodayQuotes = vangTodayQuotes.map((item) => ({
             symbol: item.symbol,
             price: Number(item.buy) || Number(item.sell) || 0,

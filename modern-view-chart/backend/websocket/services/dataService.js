@@ -21,7 +21,7 @@ export async function fetchLatestCandle(mt5Prices, symbol, interval, ownerUserId
     const isMt5 = symbolLower.endsWith('m') || symbolLower.endsWith('.m') || Boolean(scopedMt5Price);
 
     if (isVietnamGold) {
-        const quotes = await getVietnamGoldQuotes();
+        const quotes = await getVietnamGoldQuotes({ nonBlocking: true });
         const quote = quotes.find((item) => String(item?.symbol || "").toLowerCase() === symbolLower);
         if (!quote?.price) return null;
 
@@ -158,8 +158,10 @@ export async function fetchPrices(symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "B
         });
     }
 
-    const vnGoldQuotes = await getVietnamGoldQuotes();
-    const vangTodayQuotes = await getVangTodayLatestQuotes();
+    const [vnGoldQuotes, vangTodayQuotes] = await Promise.all([
+        getVietnamGoldQuotes({ nonBlocking: true }),
+        getVangTodayLatestQuotes({ nonBlocking: true }),
+    ]);
 
     return [
         ...results.map((item) => ({

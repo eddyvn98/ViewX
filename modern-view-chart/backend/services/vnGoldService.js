@@ -155,12 +155,7 @@ async function fetchFreshQuotes() {
     return quotes;
 }
 
-export async function getVietnamGoldQuotes({ force = false } = {}) {
-    const now = Date.now();
-    if (!force && cache.quotes.length > 0 && now - cache.updatedAt < CACHE_TTL_MS) {
-        return cache.quotes;
-    }
-
+function refreshVietnamGoldQuotes() {
     if (inflightPromise) return inflightPromise;
 
     inflightPromise = fetchFreshQuotes()
@@ -170,8 +165,11 @@ export async function getVietnamGoldQuotes({ force = false } = {}) {
                     updatedAt: Date.now(),
                     quotes,
                 };
-                return cache.quotes;
             }
+            return cache.quotes;
+        })
+        .catch((error) => {
+            logWarn("vn_gold.refresh_failed", { error: error?.message || String(error) });
             return cache.quotes;
         })
         .finally(() => {
@@ -179,6 +177,20 @@ export async function getVietnamGoldQuotes({ force = false } = {}) {
         });
 
     return inflightPromise;
+}
+
+export async function getVietnamGoldQuotes({ force = false, nonBlocking = false } = {}) {
+    const now = Date.now();
+    if (!force && cache.quotes.length > 0 && now - cache.updatedAt < CACHE_TTL_MS) {
+        return cache.quotes;
+    }
+
+    const refreshPromise = refreshVietnamGoldQuotes();
+    if (nonBlocking && !force) {
+        return cache.quotes;
+    }
+
+    return refreshPromise;
 }
 
 export function getVietnamGoldSymbols() {
