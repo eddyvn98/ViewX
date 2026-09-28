@@ -4,8 +4,9 @@ import { dispatchTagRemoveAction } from '../../logic/tag-command-dispatcher';
 import { TagData } from '../../logic/order-tag-utils';
 import { TagElements } from '../../logic/tag-renderer';
 import { normalizeSymbol } from '@/lib/utils/symbol';
+import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
-function setupDraftGroupInteractions(elements: TagElements, sendMessage?: (data: any) => void) {
+function setupDraftGroupInteractions(elements: TagElements, sendMessage?: (data: any) => void, identity?: Mt5TradingIdentity) {
     elements.el.querySelector('.cancel-btn')?.addEventListener('pointerdown', (e) => {
         (e as PointerEvent).stopPropagation();
         (e as PointerEvent).preventDefault();
@@ -94,6 +95,7 @@ function setupDraftGroupInteractions(elements: TagElements, sendMessage?: (data:
             volume: draft.volume,
             is_market: draft.isMarket,
             price: draft.isMarket ? 0 : Number((draft.price ?? 0).toFixed(digits)),
+            ...buildMt5WriteFields(identity),
         };
 
         if (draft.sl && draft.sl > 0) payload.sl = Number(draft.sl.toFixed(digits));
@@ -131,17 +133,17 @@ function setupDraftTagInteractions(elements: TagElements, tag: TagData) {
     }
 }
 
-function setupRealTagInteractions(elements: TagElements, tag: TagData, sendMessage?: (data: any) => void) {
+function setupRealTagInteractions(elements: TagElements, tag: TagData, sendMessage?: (data: any) => void, identity?: Mt5TradingIdentity) {
     elements.el.querySelector('.cancel-btn')?.addEventListener('pointerdown', (e) => {
-        dispatchTagRemoveAction({ ticket: tag.ticket, type: tag.type }, sendMessage);
+        dispatchTagRemoveAction({ ticket: tag.ticket, type: tag.type }, sendMessage, identity);
         (e as PointerEvent).stopPropagation();
         (e as PointerEvent).preventDefault();
     });
 }
 
-export function setupTagInteractions(elements: TagElements, tag: TagData, sendMessage?: (data: any) => void) {
+export function setupTagInteractions(elements: TagElements, tag: TagData, sendMessage?: (data: any) => void, identity?: Mt5TradingIdentity) {
     if (tag.type === 'draft_group') {
-        setupDraftGroupInteractions(elements, sendMessage);
+        setupDraftGroupInteractions(elements, sendMessage, identity);
         return;
     }
 
@@ -150,5 +152,5 @@ export function setupTagInteractions(elements: TagElements, tag: TagData, sendMe
         return;
     }
 
-    setupRealTagInteractions(elements, tag, sendMessage);
+    setupRealTagInteractions(elements, tag, sendMessage, identity);
 }
