@@ -57,3 +57,14 @@ test('stores personal realtime tickers under an account scoped key and legacy sy
         ['MT5_PERSONAL@10001@terminal-a:XAUUSDm', 'XAUUSDm'],
     );
 });
+
+
+test('malformed personal scope without account login falls back to shared MT5', () => {
+    assert.deepEqual(
+        normalizeMt5AccountScope({
+            source: 'MT5_PERSONAL',
+            terminal_id: 'terminal-a',
+        }),
+        SHARED_MT5_SCOPE,
+    );
+});
