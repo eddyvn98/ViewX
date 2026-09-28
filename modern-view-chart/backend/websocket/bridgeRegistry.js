@@ -145,8 +145,12 @@ export function createBridgeRegistry() {
         return { record: null, reason: "ambiguous", candidateCount: candidates.length };
     }
 
+    function hasDirectForUser(userId) {
+        return listForUser(userId).length > 0;
+    }
+
     function hasForUser(userId) {
-        if (listForUser(userId).length > 0) return true;
+        if (hasDirectForUser(userId)) return true;
         if (!userId) return false;
         return listForUser(null).some((record) =>
             record.clientMode === "service_bridge" &&
@@ -164,6 +168,7 @@ export function createBridgeRegistry() {
         unregister,
         touch,
         resolve,
+        hasDirectForUser,
         hasForUser,
         listForUser,
         size,
