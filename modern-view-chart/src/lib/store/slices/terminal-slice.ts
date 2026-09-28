@@ -172,9 +172,12 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         if (selectedStillExists) {
             return { mt5AccountsAvailable: normalized };
         }
+        const fallback = normalized.find((scope) => scope.source === 'MT5')
+            || normalized[0]
+            || SHARED_MT5_SCOPE;
         return {
             mt5AccountsAvailable: normalized,
-            selectedMt5Scope: persistMt5Scope(SHARED_MT5_SCOPE),
+            selectedMt5Scope: persistMt5Scope(fallback),
         };
     }),
 
