@@ -119,8 +119,10 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
 
     const handleCancel = () => setDraftOrder(null);
 
-    // Don't render if no symbol
-    if (!symbol) return null;
+    // This overlay executes MT5 writes. Do not expose it on Binance or
+    // other sources, where a click must never fall through to shared MT5.
+    const normalizedSource = String(source || '').trim().toUpperCase();
+    if (!symbol || (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL')) return null;
 
     return (
         <div className="absolute top-1 left-2 z-[100] flex items-center gap-1.5">
