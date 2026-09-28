@@ -106,6 +106,21 @@ export function createBridgeRegistry() {
         if (candidates.length === 1) {
             return { record: candidates[0], reason: "matched", candidateCount: 1 };
         }
+        if (candidates.length === 0 && userId && !normalizedAccount && !normalizedTerminal) {
+            const globalService = listForUser(null).filter((record) =>
+                record.clientMode === "service_bridge" &&
+                !record.accountLogin &&
+                !record.terminalId
+            );
+            if (globalService.length > 0) {
+                return {
+                    record: globalService[0],
+                    reason: "global_service_fallback",
+                    candidateCount: globalService.length,
+                };
+            }
+        }
+
         if (candidates.length === 0) {
             return { record: null, reason: "not_found", candidateCount: 0 };
         }
