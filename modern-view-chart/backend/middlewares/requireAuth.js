@@ -10,6 +10,7 @@ export default async function requireAuth(req, res, next) {
             userId: userAuth.userId,
             role: userAuth.role,
             sessionVersion: userAuth.sessionVersion,
+            accountTier: userAuth.accountTier,
             tokenType: "access",
         };
         return next();

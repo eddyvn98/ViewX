@@ -4,6 +4,7 @@ import Users from "../../../model/user.js";
 import { userModel } from "../../../model/user.js";
 import { issueAuthTokens } from "../../../auth/userJwt.js";
 import { normalizeUserRole } from "../../../auth/roles.js";
+import { resolveUserAccountTier } from "../../../auth/accountTier.js";
 import { logError } from "../../../logger.js";
 import { getGoogleClientId, parseJwtPayload, toAuthResponse } from "../token-utils.js";
 import { setRefreshCookie } from "../cookie-utils.js";
@@ -33,6 +34,7 @@ export async function login(req, res) {
             userId: user._id,
             role: normalizedRole,
             sessionVersion,
+            accountTier: resolveUserAccountTier(user),
         });
         setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
         if (normalizedRole !== user.role) {
@@ -111,6 +113,7 @@ export async function googleLogin(req, res) {
             userId: user._id,
             role: normalizedRole,
             sessionVersion,
+            accountTier: resolveUserAccountTier(user),
         });
         setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
 

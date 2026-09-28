@@ -2,11 +2,24 @@ import { getBinancePrices } from "../services/binanceTickerService.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol, setClientSymbolSubscriptions } from "../subscriptionIndex.js";
 import { getScopedMt5Prices, getScopedMt5State, getScopedMt5Symbols } from "../mt5Scope.js";
+import { resolveRequestedClientMode } from "../clientMode.js";
 
 export function handleAuth({ ws, clients, mt5Prices, subscriptionIndex }, data) {
     const clientData = clients.get(ws);
     let requestedSymbols = [];
     if (clientData) {
+        if (data.client_mode) {
+            const clientMode = resolveRequestedClientMode(data.client_mode, clientData);
+            if (!clientMode) {
+                safeSend(ws, JSON.stringify({
+                    topic: "error",
+                    code: "forbidden",
+                    detail: "client_mode_not_allowed",
+                }));
+                return;
+            }
+            clientData.clientMode = clientMode;
+        }
         if (Array.isArray(data.symbols)) {
             const normalized = data.symbols.map((s) => normalizeSymbol(s)).filter(Boolean).slice(0, 300);
             clientData.symbols = setClientSymbolSubscriptions(subscriptionIndex, ws, normalized);
