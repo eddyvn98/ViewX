@@ -79,7 +79,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const candlesCount = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).candles.length);
     const historyRevision = useMarketStore((state) => state.candleHistoryRevision[key] || 0);
 
-    const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
+    const getCandles = () => resolveCandles(useMarketStore.getState(), dataSource, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
     const requestHistory = useCallback(() => {
         if (!symbol || !interval || !isCacheReady) return;
@@ -139,6 +139,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         symbol,
         interval,
         source,
+        dataSource,
         normSymbol,
         intervalCandidates,
         historyRequestKey,
