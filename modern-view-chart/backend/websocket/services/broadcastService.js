@@ -1,7 +1,7 @@
 import { RSI } from "technicalindicators";
 import { calcBollingerBands } from "../../services/indicators.js";
 import { fetchLatestCandle, fetchPrices } from "./dataService.js";
-import { getBinancePrices } from "./binanceTickerService.js";
+import { getBinancePrices, mergeBinancePrices } from "./binanceTickerService.js";
 import { candleBuffers } from "../handlers/subscribeHandler.js";
 import { safeSend } from "../wsSend.js";
 import { normalizeSymbol } from "../subscriptionIndex.js";
@@ -134,9 +134,13 @@ export async function broadcastPricesToSubscribers({ clients, mt5Prices, subscri
             .map((symbol) => normalizeSymbol(symbol))
             .filter((symbol) => String(symbol || "").toUpperCase().endsWith("USDT"));
 
-        let binancePrices = getBinancePrices(requestedBinanceSymbols);
+        const binancePrices = getBinancePrices(requestedBinanceSymbols);
         if (requestedBinanceSymbols.length > 0 && binancePrices.length === 0) {
-            binancePrices = await fetchPrices(requestedBinanceSymbols, { includeGold: false });
+            void fetchPrices(requestedBinanceSymbols, { includeGold: false })
+                .then((prices) => mergeBinancePrices(prices))
+                .catch((error) => warnBroadcast("ws.binance_rest_warm.failed", {
+                    error: error?.message || error,
+                }));
         }
 
         // Realtime price broadcasts must never wait for external gold refresh work.
