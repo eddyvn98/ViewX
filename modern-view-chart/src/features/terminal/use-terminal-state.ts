@@ -35,6 +35,7 @@ export function useTerminalState(forceExpanded: boolean) {
     const mt5AccountsAvailable = useMarketStore((state) => state.mt5AccountsAvailable);
     const selectedMt5Scope = useMarketStore((state) => state.selectedMt5Scope);
     const setSelectedMt5Scope = useMarketStore((state) => state.setSelectedMt5Scope);
+    const activateSymbolCatalog = useMarketStore((state) => state.activateSymbolCatalog);
 
     const selectedMt5Source = buildMt5DataSourceKey(selectedMt5Scope);
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : selectedMt5Source;
@@ -54,12 +55,13 @@ export function useTerminalState(forceExpanded: boolean) {
 
     const handleSelectMt5Scope = useCallback((scope: Mt5AccountScope) => {
         setSelectedMt5Scope(scope);
+        activateSymbolCatalog(buildMt5DataSourceKey(scope));
         useMarketStore.getState().clearMt5CandleRuntime();
         sendMessage({
             topic: 'auth',
             ...buildMt5AuthFields(scope),
         });
-    }, [sendMessage, setSelectedMt5Scope]);
+    }, [activateSymbolCatalog, sendMessage, setSelectedMt5Scope]);
     const [
         terminalTab,
         setTerminalTab,
@@ -117,9 +119,9 @@ export function useTerminalState(forceExpanded: boolean) {
         const state = useMarketStore.getState();
         const activeTab = state.tabs[state.activeTabId];
         if (activeTab && activeTab.activeChartId) {
-            setChartSymbol(activeTab.activeChartId, symbol);
+            setChartSymbol(activeTab.activeChartId, symbol, selectedMt5Scope.source, selectedMt5Scope);
         }
-    }, [setChartSymbol]);
+    }, [selectedMt5Scope, setChartSymbol]);
 
     const handleAnalyze = useCallback((deal: unknown) => {
         debugLog('[TERMINAL][analyze]', deal);

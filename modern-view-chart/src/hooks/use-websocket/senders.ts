@@ -7,12 +7,15 @@ import { wsRuntime } from './runtime';
 import { parseIntervalSeconds } from './socket-config';
 import { collectActiveSymbolsFromStore, normalizeSymbol } from './symbol-utils';
 import { getIncrementalHistoryCount } from '@/features/chart/hooks/history-sync';
-import { buildMt5AuthFields, resolveChartDataSource } from '@/lib/mt5/account-scope';
+import { buildMt5AuthFields, normalizeMt5AccountScope, resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 type ChartLike = {
     source?: string;
     symbol?: string;
     interval?: string;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
 };
 
 type TabLike = {
@@ -61,6 +64,9 @@ export function clearForegroundResyncTimer() {
 type BackfillOptions = {
     anchorTimeSec?: number;
     direction?: 'older' | 'latest';
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
 };
 
 export function getMatrixCandleRequests(scanners: MatrixScannerConfig[]) {
@@ -81,9 +87,16 @@ export function requestChartBackfill(
     const socket = wsRuntime.globalSocket;
     if (!source || !symbol || !interval || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-    const selectedMt5Scope = useMarketStore.getState().selectedMt5Scope;
-    const scopedSource = resolveChartDataSource(source, selectedMt5Scope);
-    const mt5ScopeFields = source === 'MT5' ? buildMt5AuthFields(selectedMt5Scope) : {};
+    const mt5Scope = normalizeMt5AccountScope({
+        source: source === 'MT5_PERSONAL' ? 'MT5_PERSONAL' : 'MT5',
+        accountLogin: options?.accountLogin,
+        terminalId: options?.terminalId,
+        broker: options?.broker,
+    });
+    const scopedSource = resolveChartIdentityDataSource(source, options);
+    const mt5ScopeFields = source === 'MT5' || source === 'MT5_PERSONAL'
+        ? buildMt5AuthFields(mt5Scope)
+        : {};
     const direction = options?.direction === 'older' ? 'older' : 'latest';
     const anchorTimeSec = Number(options?.anchorTimeSec);
     const intervalSec = Math.max(60, parseIntervalSeconds(interval));
@@ -96,7 +109,7 @@ export function requestChartBackfill(
     if (nowMs - lastRequestedAt < BACKFILL_THROTTLE_MS) return;
     wsRuntime.lastForegroundResyncAtByKey[throttleKey] = nowMs;
 
-    if (source === 'MT5') {
+    if (source === 'MT5' || source === 'MT5_PERSONAL') {
         if (direction === 'older' && Number.isFinite(anchorTimeSec) && anchorTimeSec > 0) {
             socket.send(
                 JSON.stringify({
@@ -173,16 +186,22 @@ export function syncForegroundCharts(force: boolean, reason: string) {
             const interval = String(chart?.interval || '').trim();
             if (!source || !symbol || !interval) return;
 
-            const key = `${source}:${normalizeSymbol(symbol)}:${interval}`;
+            const scopedSource = resolveChartIdentityDataSource(source, chart);
+            const key = `${scopedSource}:${normalizeSymbol(symbol)}:${interval}`;
             const candles = state.candleData[key] || [];
+            const identity = {
+                accountLogin: chart.accountLogin,
+                terminalId: chart.terminalId,
+                broker: chart.broker,
+            };
             if (candles.length === 0) {
-                requestChartBackfill(source, symbol, interval, reason);
+                requestChartBackfill(source, symbol, interval, reason, 300, identity);
                 return;
             }
 
             const lastTime = Number(candles[candles.length - 1]?.time);
             if (!Number.isFinite(lastTime)) {
-                requestChartBackfill(source, symbol, interval, reason);
+                requestChartBackfill(source, symbol, interval, reason, 300, identity);
                 return;
             }
 
@@ -192,7 +211,7 @@ export function syncForegroundCharts(force: boolean, reason: string) {
             // Even forced foreground resyncs should only request bars that can
             // actually be missing. Realtime ticks cover the current open bar.
             if (requestCount > 0) {
-                requestChartBackfill(source, symbol, interval, reason, requestCount);
+                requestChartBackfill(source, symbol, interval, reason, requestCount, identity);
             }
         });
     });

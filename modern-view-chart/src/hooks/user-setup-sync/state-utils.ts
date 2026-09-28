@@ -33,6 +33,7 @@ export function fitPersistedSetupStateToBudget(snapshot: PersistedSetupState): P
         ...aggressive,
         chartIndicators: {},
         watchlist: aggressive.watchlist.slice(0, 30),
+        watchlistItems: aggressive.watchlistItems.slice(0, 30),
         favoriteTimeframes: aggressive.favoriteTimeframes.slice(0, 12),
         favoriteChartTypes: aggressive.favoriteChartTypes.slice(0, 3),
         alerts: [],
@@ -65,6 +66,7 @@ export function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 
     const strategyState = useStrategyStore.getState();
     return {
         watchlist: state.watchlist,
+        watchlistItems: state.watchlistItems,
         tabs: sanitizeTabsForPersistence(state.tabs),
         activeTabId: state.activeTabId,
         favoriteTimeframes: state.favoriteTimeframes,
@@ -118,6 +120,7 @@ export function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 
 export function selectPersistableMarketState(state: RootState) {
     return {
         watchlist: state.watchlist,
+        watchlistItems: state.watchlistItems,
         tabs: sanitizeTabsForPersistence(state.tabs),
         activeTabId: state.activeTabId,
         favoriteTimeframes: state.favoriteTimeframes,

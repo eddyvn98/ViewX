@@ -5,7 +5,7 @@ import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { Candle } from '@/lib/store/types';
 import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
-import { resolveChartDataSource } from '@/lib/mt5/account-scope';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 type RealtimeCandle = Candle & {
     rawOpen?: number;
@@ -20,6 +20,11 @@ interface UseChartTickerProps {
     symbol: string | undefined;
     interval: string | undefined;
     source: string | undefined;
+    mt5Identity: {
+        accountLogin?: string | null;
+        terminalId?: string | null;
+        broker?: string | null;
+    };
     seriesRef: React.MutableRefObject<ISeriesApi<'Candlestick'> | null>;
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     isAutoScrollEnabledRef?: React.RefObject<boolean>;
@@ -31,7 +36,7 @@ interface UseChartTickerProps {
 }
 
 export function useChartTicker({
-    symbol, interval, source, seriesRef, chartType, isAutoScrollEnabledRef, chartRef, contextKey, candleUpColor, candleDownColor,
+    symbol, interval, source, mt5Identity, seriesRef, chartType, isAutoScrollEnabledRef, chartRef, contextKey, candleUpColor, candleDownColor,
 }: UseChartTickerProps) {
 
     const realTimeCandleRef = useRef<RealtimeCandle | null>(null);
@@ -43,8 +48,7 @@ export function useChartTicker({
     // when the user switches symbol or timeframe faster than React can re-run the effect.
     const intervalRef = useRef(interval);
     const sourceRef = useRef(source);
-    const selectedMt5Scope = useMarketStore(state => state.selectedMt5Scope);
-    const dataSource = resolveChartDataSource(source, selectedMt5Scope);
+    const dataSource = resolveChartIdentityDataSource(source, mt5Identity);
 
     const normSymbol = normalizeSymbol(symbol);
     const tickerKey = `${dataSource}:${normSymbol}`;
@@ -61,7 +65,7 @@ export function useChartTicker({
             /^\d+$/.test(intervalLower) ? `${intervalLower}m` : intervalLower,
             intervalLower.endsWith('m') ? intervalLower.slice(0, -1) : intervalLower,
         ]));
-        const sourceVariants = Array.from(new Set([source, source.toUpperCase(), source.toLowerCase()]));
+        const sourceVariants = Array.from(new Set([dataSource, dataSource.toUpperCase(), dataSource.toLowerCase()]));
         for (const src of sourceVariants) {
             for (const itv of intervalCandidates) {
                 const key = `${src}:${normSymbol}:${itv}`;
@@ -70,7 +74,7 @@ export function useChartTicker({
             }
         }
         return [];
-    }, [source, normSymbol, interval]);
+    }, [source, dataSource, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
         const raw = String(intv || '').trim();
@@ -143,7 +147,7 @@ export function useChartTicker({
             if (!force && now - lastStoreSync < 250) return;
             lastStoreSync = now;
             // BUG #4 fix: use sourceRef.current to get the always-current source value
-            updateLastCandle(sourceRef.current ?? source!, symbol!, intervalRef.current ?? interval!, {
+            updateLastCandle(dataSource, symbol!, intervalRef.current ?? interval!, {
                 time: toSec(candle.time),
                 open: candle.rawOpen ?? candle.open,
                 high: candle.rawHigh ?? candle.high,
@@ -202,6 +206,9 @@ export function useChartTicker({
                                 source,
                                 symbol,
                                 interval,
+                                accountLogin: mt5Identity.accountLogin,
+                                terminalId: mt5Identity.terminalId,
+                                broker: mt5Identity.broker,
                                 count: 300,
                                 reason: 'gap_detected',
                             },
@@ -381,7 +388,7 @@ export function useChartTicker({
             pendingByBar.clear();
             if (tickRafId !== null) cancelAnimationFrame(tickRafId);
         };
-    }, [symbol, source, dataSource, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
+    }, [symbol, source, mt5Identity, dataSource, interval, chartType, contextKey, tickerKey, normSymbol, chartRef, isAutoScrollEnabledRef, getStoreCandles, seriesRef, candleUpColor, candleDownColor, isAtRealtimeEdge]);
 
     return realTimeCandleRef;
 }

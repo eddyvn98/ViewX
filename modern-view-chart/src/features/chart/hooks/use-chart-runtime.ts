@@ -5,6 +5,7 @@ import { useWebSocket } from '@/hooks/use-websocket';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useChartInit } from './use-chart-init';
 import { useChartData } from './use-chart-data';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 const EMPTY_CANDLES: unknown[] = [];
 const DEFAULT_CANDLE_UP_COLOR = '#22c55e';
@@ -35,6 +36,27 @@ export function useChartRuntime(chartId: string) {
             if (chart) return chart.source;
         }
         return undefined;
+    });
+    const accountLogin = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.accountLogin ?? null;
+        }
+        return null;
+    });
+    const terminalId = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.terminalId ?? null;
+        }
+        return null;
+    });
+    const broker = useMarketStore((state) => {
+        for (const tab of Object.values(state.tabs)) {
+            const chart = tab.charts[chartId];
+            if (chart) return chart.broker ?? null;
+        }
+        return null;
     });
     const timezone = useMarketStore((state) => {
         for (const tab of Object.values(state.tabs)) {
@@ -72,7 +94,8 @@ export function useChartRuntime(chartId: string) {
     });
 
     const normSymbol = normalizeSymbol(symbol);
-    const key = source && normSymbol && interval ? `${source}:${normSymbol}:${interval}` : '';
+    const dataSource = resolveChartIdentityDataSource(source, { accountLogin, terminalId, broker });
+    const key = dataSource && normSymbol && interval ? `${dataSource}:${normSymbol}:${interval}` : '';
 
     // Keep subscription by candle count to preserve current update behavior.
     const candlesCount = useMarketStore(state => (state.candleData[key] || EMPTY_CANDLES).length);
@@ -114,6 +137,7 @@ export function useChartRuntime(chartId: string) {
         symbol,
         interval,
         source,
+        { accountLogin, terminalId, broker },
         chartType,
         priceChartRef,
         subchartChartRef,
@@ -130,12 +154,12 @@ export function useChartRuntime(chartId: string) {
     );
 
     const filteredPositions = useMemo(
-        () => positions.filter(p => !source || ((p as { source?: string }).source || 'MT5') === source),
-        [positions, source]
+        () => positions.filter(p => !dataSource || ((p as { source?: string }).source || 'MT5') === dataSource),
+        [positions, dataSource]
     );
     const filteredOrders = useMemo(
-        () => orders.filter(o => !source || ((o as { source?: string }).source || 'MT5') === source),
-        [orders, source]
+        () => orders.filter(o => !dataSource || ((o as { source?: string }).source || 'MT5') === dataSource),
+        [orders, dataSource]
     );
 
     const chartInstance = useMemo(() => {
@@ -145,18 +169,25 @@ export function useChartRuntime(chartId: string) {
             symbol,
             interval,
             source,
+            accountLogin,
+            terminalId,
+            broker,
             timezone,
             chartType,
             candleUpColor,
             candleDownColor,
         };
-    }, [chartId, symbol, interval, source, timezone, chartType, candleUpColor, candleDownColor]);
+    }, [chartId, symbol, interval, source, accountLogin, terminalId, broker, timezone, chartType, candleUpColor, candleDownColor]);
 
     return {
         chartInstance,
         symbol,
         interval,
         source,
+        dataSource,
+        accountLogin,
+        terminalId,
+        broker,
         timezone,
         chartType,
         candleUpColor,

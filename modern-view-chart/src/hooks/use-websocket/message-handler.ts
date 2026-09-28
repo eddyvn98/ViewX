@@ -5,8 +5,9 @@ import { STRATEGY_ENGINE_ENABLED, CANDLE_BUFFER_MS, POSITION_BUFFER_MS, TICKER_B
 import { wsRuntime } from './runtime';
 import { buildActiveSymbolSet } from './symbol-utils';
 import { normalizeSymbol } from '@/lib/utils/symbol';
-import { getAvailableMt5Symbol } from './symbol-message-utils';
 import { buildMt5AuthFields, buildMt5DataSourceKey, buildTickerStoreKeys, normalizeMt5AccountScope, sameMt5Scope } from '@/lib/mt5/account-scope';
+import { createSymbolDescriptor } from '@/lib/market/symbol-catalog';
+import type { SymbolDescriptor } from '@/lib/store/types';
 
 export interface MessageHandlerDeps {
     updateTickers: (tickers: Record<string, unknown>) => void;
@@ -18,7 +19,7 @@ export interface MessageHandlerDeps {
     setOrders: (orders: Array<Record<string, unknown>>, source?: string) => void;
     appendHistory: (items: Array<Record<string, unknown>>, isReset: boolean, source?: string) => void;
     setSymbolInfo: (info: Record<string, unknown>, keyOverride?: string) => void;
-    setAvailableSymbols: (symbols: string[]) => void;
+    setAvailableSymbols: (symbols: SymbolDescriptor[], scopeKey?: string) => void;
 }
 
 type CandleBufferItem = {
@@ -56,6 +57,7 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
 
             if (!sameMt5Scope(before, after)) {
                 useMarketStore.getState().clearMt5CandleRuntime();
+                useMarketStore.getState().activateSymbolCatalog(buildMt5DataSourceKey(after));
             }
             if (!sameMt5Scope(before, after) && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
@@ -79,20 +81,23 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             incomingData.forEach((item) => {
                 const symbol = String(item?.symbol || '');
                 if (activeSymbols.has(symbol)) {
-                    const source = getMt5FrameSource(item);
+                    const sourceKey = getMt5FrameSource(item);
+                    const logicalSource = sourceKey.startsWith('MT5_PERSONAL@')
+                        ? 'MT5_PERSONAL'
+                        : sourceKey;
                     const ticker = {
                         symbol,
                         price: Number(item?.price || 0),
                         change: Number(item?.change || 0),
                         changeValue: Number(item?.changeValue || 0),
                         volume: 0,
-                        source,
+                        source: logicalSource,
                         bid: item?.bid !== undefined ? Number(item.bid || 0) : undefined,
                         ask: item?.ask !== undefined ? Number(item.ask || 0) : undefined,
                         displayName: item?.displayName ? String(item.displayName) : undefined,
                         serverTime: Number(item?.serverTime || item?.time || 0) || undefined,
                     };
-                    for (const key of buildTickerStoreKeys(source, symbol)) {
+                    for (const key of buildTickerStoreKeys(sourceKey, symbol)) {
                         wsRuntime.tickerUpdateBuffer[key] = ticker;
                     }
                     usefulUpdate = true;
@@ -121,7 +126,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 volume: c.volume ?? c.v ?? c.tick_volume ?? c.real_volume ?? 0,
             }));
             const frameSource = String(msg.source || 'MT5').toUpperCase();
-            const source = frameSource.startsWith('MT5') ? 'MT5' : frameSource;
+            const source = frameSource.startsWith('MT5') || msg.mt5_scope
+                ? getMt5FrameSource(msg)
+                : frameSource;
             if (!targetInterval && targetSymbol) {
                 const state = useMarketStore.getState();
                 const wantedSymbol = normalizeSymbol(targetSymbol);
@@ -149,9 +156,9 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const symbol = String(c.symbol || '');
             const interval = String(c.interval || '');
             const rawSource = String(c.source || '').toUpperCase();
-            const source = rawSource.startsWith('MT5')
-                ? 'MT5'
-                : rawSource || (symbol.toUpperCase().includes('USDT') ? 'BINANCE' : 'MT5');
+            const source = rawSource.startsWith('MT5') || c.mt5_scope
+                ? getMt5FrameSource(c)
+                : rawSource || String(useMarketStore.getState().tickers[symbol]?.source || 'MT5').toUpperCase();
             const key = `${source}:${symbol}:${interval}`;
             wsRuntime.candleUpdateBuffer[key] = { source, symbol, interval, candle: c };
 
@@ -265,17 +272,31 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
 
         if (msgType === 'mt5_symbol_info') {
             const info = msg.data as Record<string, unknown>;
-            const symbol = normalizeSymbol(String(info?.symbol || ''));
+            const exactSymbol = String(info?.symbol || '').trim();
+            const normalized = normalizeSymbol(exactSymbol);
             const mt5Source = getMt5FrameSource(msg);
-            const scopedKey = symbol ? `${mt5Source}:${symbol}` : undefined;
-            deps.setSymbolInfo(info, scopedKey);
+            const exactScopedKey = exactSymbol ? `${mt5Source}:${exactSymbol}` : undefined;
+            deps.setSymbolInfo(info, exactScopedKey);
+            if (normalized && normalized !== exactSymbol) {
+                deps.setSymbolInfo(info, `${mt5Source}:${normalized}`);
+            }
         }
 
         if (msgType === 'mt5_available_symbols') {
+            const scope = normalizeMt5AccountScope(msg.mt5_scope || msg);
+            const scopeKey = buildMt5DataSourceKey(scope);
+            const source = scope.source === 'MT5_PERSONAL' ? 'MT5_PERSONAL' : 'MT5';
             const symbols = Array.isArray(msg.symbols)
-                ? msg.symbols.map(getAvailableMt5Symbol).filter(Boolean)
+                ? msg.symbols
+                    .map((item) => createSymbolDescriptor(item, {
+                        source,
+                        accountLogin: scope.accountLogin,
+                        terminalId: scope.terminalId,
+                        broker: scope.broker,
+                    }))
+                    .filter((item): item is SymbolDescriptor => Boolean(item))
                 : [];
-            deps.setAvailableSymbols(symbols);
+            deps.setAvailableSymbols(symbols, scopeKey);
         }
 
         if (msgType === 'alert_triggered') {

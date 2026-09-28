@@ -1,8 +1,22 @@
+export type MarketDataSource = 'BINANCE' | 'MT5' | 'MT5_PERSONAL' | 'VN_GOLD';
+
+export interface SymbolDescriptor {
+    symbol: string;
+    source: MarketDataSource;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
+    description?: string;
+    path?: string;
+    digits?: number;
+    type?: string;
+}
+
 export interface ForecastData {
     timestamp: number;
     symbol: string;
     interval: string;
-    source: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    source: MarketDataSource;
     points: number[];
     lower_band: number[];
     upper_band: number[];
@@ -17,7 +31,7 @@ export interface Ticker {
     change: number;
     changeValue: number;
     volume: number;
-    source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    source?: MarketDataSource;
     bid?: number;
     ask?: number;
     displayName?: string;
@@ -102,7 +116,10 @@ export interface ChartInstance {
     id: string;
     symbol: string;
     interval: string;
-    source: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    source: MarketDataSource;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
     group?: 'A' | 'B' | 'C' | 'D' | 'none'; // Symbol Linking Group
     timezone?: string; // e.g., "Asia/Ho_Chi_Minh"
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
@@ -189,7 +206,7 @@ export interface DrawingConfig {
     points: DrawingPoint[];
     symbol?: string;
     interval?: string;
-    source?: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    source?: MarketDataSource;
     color: string;
     visible: boolean;
     locked?: boolean;

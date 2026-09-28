@@ -1,4 +1,6 @@
-export type DataSource = 'BINANCE' | 'MT5' | 'VN_GOLD';
+import type { MarketDataSource } from '@/lib/store/types';
+
+export type DataSource = MarketDataSource;
 export type SourceTab = 'ALL' | 'BINANCE' | 'MT5' | 'VN_GOLD';
 
 export const SOURCE_TABS: SourceTab[] = ['ALL', 'BINANCE', 'MT5', 'VN_GOLD'];

@@ -5,23 +5,24 @@ import { cn } from '@/lib/utils';
 import { SymbolIcon } from '@/features/chart/components/SymbolIcon';
 import { Star, Trash2 } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import type { SymbolDescriptor } from '@/lib/store/types';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 export type TickerRowMode = 'discovery' | 'watchlist';
 
 export interface TickerRowProps {
-    symbol: string;
-    source: 'BINANCE' | 'MT5' | 'VN_GOLD';
+    item: SymbolDescriptor;
     isActive: boolean;
     isWatched: boolean;
-    onSelect: (symbol: string, source: 'BINANCE' | 'MT5' | 'VN_GOLD') => void;
-    onRemove: (symbol: string) => void;
-    onAdd: (symbol: string) => void;
+    onSelect: (item: SymbolDescriptor) => void;
+    onRemove: (item: SymbolDescriptor) => void;
+    onAdd: (item: SymbolDescriptor) => void;
     mode: TickerRowMode;
 }
 
 export const TickerRow = memo(function TickerRow({
-    symbol,
-    source,
+    item,
     isActive,
     isWatched,
     onSelect,
@@ -29,7 +30,9 @@ export const TickerRow = memo(function TickerRow({
     onAdd,
     mode,
 }: TickerRowProps) {
-    const removeFromWatchlist = useMarketStore((state) => state.removeFromWatchlist);
+    const { symbol, source } = item;
+    const dataSource = resolveChartIdentityDataSource(source, item);
+    const tickerKey = `${dataSource}:${normalizeSymbol(symbol)}`;
     const priceRef = useRef<HTMLSpanElement>(null);
     const changeRef = useRef<HTMLDivElement>(null);
     const rafIdRef = useRef<number | null>(null);
@@ -39,7 +42,7 @@ export const TickerRow = memo(function TickerRow({
 
     const updateDOM = useCallback(() => {
         const state = useMarketStore.getState();
-        const ticker = state.tickers[symbol];
+        const ticker = state.tickers[tickerKey] || state.tickers[symbol];
         if (!ticker) return;
 
         const price = ticker.price || 0;
@@ -83,7 +86,7 @@ export const TickerRow = memo(function TickerRow({
                 );
             }
         }
-    }, [symbol, mode, source]);
+    }, [symbol, mode, source, tickerKey]);
 
     useEffect(() => {
         if (mode !== 'watchlist') return;
@@ -142,7 +145,14 @@ export const TickerRow = memo(function TickerRow({
         touchRef.current.swiping = false;
     }, [mode, swipeOffset]);
 
-    const displayName = useMarketStore((state) => state.tickers[symbol]?.displayName || symbol);
+    const displayName = useMarketStore((state) =>
+        state.tickers[tickerKey]?.displayName || state.tickers[symbol]?.displayName || item.description || symbol
+    );
+    const sourceLabel = source === 'VN_GOLD'
+        ? 'VN GOLD'
+        : source === 'MT5_PERSONAL'
+            ? [item.broker || 'MT5', item.accountLogin].filter(Boolean).join(' · ')
+            : source;
 
     return (
         <div
@@ -150,13 +160,13 @@ export const TickerRow = memo(function TickerRow({
             tabIndex={0}
             onClick={() => {
                 if (mode === 'watchlist' && swipeOffset > 0) return;
-                onSelect(symbol, source);
+                onSelect(item);
             }}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     if (mode === 'watchlist' && swipeOffset > 0) return;
-                    onSelect(symbol, source);
+                    onSelect(item);
                 }
             }}
             onTouchStart={handleTouchStart}
@@ -181,7 +191,7 @@ export const TickerRow = memo(function TickerRow({
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            removeFromWatchlist(symbol);
+                            onRemove(item);
                             setSwipeOffset(0);
                         }}
                         aria-label={`Remove ${symbol} from watchlist`}
@@ -215,7 +225,7 @@ export const TickerRow = memo(function TickerRow({
                             {displayName.replace('USDT', '').replace('USDTm', '')}
                         </span>
                         <span className="text-[11px] font-medium text-muted-foreground uppercase leading-none mt-0.5 group-hover:text-foreground dark:group-hover:text-white/40 transition-colors">
-                            {source === 'VN_GOLD' ? 'VN GOLD' : source}
+                            {sourceLabel}
                         </span>
                     </div>
                 </div>
@@ -237,8 +247,8 @@ export const TickerRow = memo(function TickerRow({
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (isWatched) onRemove(symbol);
-                                else onAdd(symbol);
+                                if (isWatched) onRemove(item);
+                                else onAdd(item);
                             }}
                             className={cn(
                                 "p-1.5 rounded-xl transition-all border",

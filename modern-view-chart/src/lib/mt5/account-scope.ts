@@ -57,11 +57,39 @@ export function resolveChartDataSource(source: string | undefined, scopeInput: u
     return buildMt5DataSourceKey(scopeInput);
 }
 
+export function resolveChartIdentityDataSource(
+    source: string | undefined,
+    identity?: {
+        accountLogin?: string | null;
+        terminalId?: string | null;
+        broker?: string | null;
+    },
+): string {
+    const normalized = String(source || '').trim().toUpperCase();
+    if (normalized === 'MT5_PERSONAL') {
+        return buildMt5DataSourceKey({
+            source: 'MT5_PERSONAL',
+            accountLogin: identity?.accountLogin,
+            terminalId: identity?.terminalId,
+            broker: identity?.broker,
+        });
+    }
+    if (normalized === 'MT5') return 'MT5';
+    return normalized || String(source || '');
+}
+
 export function buildTickerStoreKeys(source: string, symbol: string): string[] {
-    const normalizedSymbol = normalizeSymbol(symbol);
-    if (!normalizedSymbol) return [];
+    const exactSymbol = String(symbol || '').trim();
+    const normalizedSymbol = normalizeSymbol(exactSymbol);
+    if (!exactSymbol && !normalizedSymbol) return [];
+
     const normalizedSource = String(source || '').trim() || 'MT5';
-    return [`${normalizedSource}:${normalizedSymbol}`, normalizedSymbol];
+    const keys = new Set<string>();
+    if (exactSymbol) keys.add(`${normalizedSource}:${exactSymbol}`);
+    if (normalizedSymbol) keys.add(`${normalizedSource}:${normalizedSymbol}`);
+    if (exactSymbol) keys.add(exactSymbol);
+    if (normalizedSymbol) keys.add(normalizedSymbol);
+    return Array.from(keys);
 }
 
 export function buildMt5AuthFields(scopeInput: unknown): Record<string, string | null> {

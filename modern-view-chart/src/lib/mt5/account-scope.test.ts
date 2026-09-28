@@ -51,10 +51,15 @@ test('auth fields retain selected account and terminal identity', () => {
 });
 
 
-test('stores personal realtime tickers under an account scoped key and legacy symbol alias', () => {
+test('stores personal realtime tickers under exact and normalized scoped keys', () => {
     assert.deepEqual(
-        buildTickerStoreKeys('MT5_PERSONAL@10001@terminal-a', 'XAUUSDm'),
-        ['MT5_PERSONAL@10001@terminal-a:XAUUSDm', 'XAUUSDm'],
+        buildTickerStoreKeys('MT5_PERSONAL@10001@terminal-a', 'XAUUSD.m'),
+        [
+            'MT5_PERSONAL@10001@terminal-a:XAUUSD.m',
+            'MT5_PERSONAL@10001@terminal-a:XAUUSDm',
+            'XAUUSD.m',
+            'XAUUSDm',
+        ],
     );
 });
 

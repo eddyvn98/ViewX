@@ -5,6 +5,8 @@ import { ChartContainer } from '@/features/chart/ChartContainer';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useMarketStore } from '@/lib/store';
 import { useEffect } from 'react';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 function resolvePriceDigits(symbol?: string, digits?: number): number {
     if (Number.isFinite(digits)) return Number(digits);
@@ -23,7 +25,7 @@ function formatTabPrice(price: number, digits: number): string {
     });
 }
 
-const VALID_SOURCES = ['MT5', 'BINANCE'] as const;
+const VALID_SOURCES = ['MT5', 'MT5_PERSONAL', 'BINANCE', 'VN_GOLD'] as const;
 type ChartSource = (typeof VALID_SOURCES)[number];
 
 const parseChartSource = (value: string | null): ChartSource => {
@@ -42,6 +44,9 @@ export default function StandaloneChartPage() {
     const symbol = searchParams.get('symbol') || 'XAUUSDm';
     const interval = searchParams.get('interval') || '1';
     const source = parseChartSource(searchParams.get('source'));
+    const accountLogin = searchParams.get('accountLogin');
+    const terminalId = searchParams.get('terminalId');
+    const broker = searchParams.get('broker');
 
     const chart = useMarketStore((state) => {
         for (const tab of Object.values(state.tabs)) {
@@ -53,8 +58,22 @@ export default function StandaloneChartPage() {
     const activeSymbol = chart?.symbol || symbol;
     const activeInterval = chart?.interval || interval;
     const activeSource = chart?.source || source;
-    const activeTicker = useMarketStore((state) => state.tickers[activeSymbol]);
-    const activeDigits = useMarketStore((state) => state.symbolInfo[activeSymbol]?.digits);
+    const activeAccountLogin = chart?.accountLogin ?? accountLogin;
+    const activeTerminalId = chart?.terminalId ?? terminalId;
+    const activeBroker = chart?.broker ?? broker;
+    const activeDataSource = resolveChartIdentityDataSource(activeSource, {
+        accountLogin: activeAccountLogin,
+        terminalId: activeTerminalId,
+        broker: activeBroker,
+    });
+    const normalizedActiveSymbol = normalizeSymbol(activeSymbol);
+    const activeTicker = useMarketStore((state) =>
+        state.tickers[`${activeDataSource}:${normalizedActiveSymbol}`] || state.tickers[activeSymbol]
+    );
+    const activeDigits = useMarketStore((state) =>
+        state.symbolInfo[`${activeDataSource}:${normalizedActiveSymbol}`]?.digits
+        ?? state.symbolInfo[activeSymbol]?.digits
+    );
 
     // Update document title dynamically
     useEffect(() => {
@@ -95,7 +114,17 @@ export default function StandaloneChartPage() {
                         name: 'Standalone',
                         charts: {
                             ...s.tabs['standalone-tab']?.charts,
-                            [chartId]: { id: chartId, symbol: activeSymbol, interval: activeInterval, source: activeSource, group: 'A', chartType: 'candles' }
+                            [chartId]: {
+                                id: chartId,
+                                symbol: activeSymbol,
+                                interval: activeInterval,
+                                source: activeSource,
+                                accountLogin: activeAccountLogin,
+                                terminalId: activeTerminalId,
+                                broker: activeBroker,
+                                group: 'A',
+                                chartType: 'candles',
+                            }
                         },
                         activeChartId: chartId,
                         maximizedChartId: null,
@@ -106,7 +135,7 @@ export default function StandaloneChartPage() {
                 }
             }));
         }
-    }, [chartId, activeSymbol, activeInterval, activeSource]);
+    }, [chartId, activeSymbol, activeInterval, activeSource, activeAccountLogin, activeTerminalId, activeBroker]);
 
     // Connect WebSocket
     useWebSocket();

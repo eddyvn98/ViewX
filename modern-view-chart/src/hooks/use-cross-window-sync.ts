@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from 'react';
 import { useMarketStore } from '@/lib/store';
+import type { SymbolDescriptor } from '@/lib/store/types';
 
 const CHANNEL_NAME = 'market_sync_channel';
 
 type SyncMessage =
-    | { type: 'SYMBOL_CHANGE'; chartId: string; symbol: string; source: string }
-    | { type: 'GROUP_SYMBOL_CHANGE'; group: string; symbol: string; source: string }
+    | { type: 'SYMBOL_CHANGE'; chartId: string; item: SymbolDescriptor }
+    | { type: 'GROUP_SYMBOL_CHANGE'; group: string; item: SymbolDescriptor }
     | { type: 'CROSSHAIR_SYNC'; point: { time: number | null; price: number | null; sourceId: string | null } | null };
 
 type CrosshairPoint = Extract<SyncMessage, { type: 'CROSSHAIR_SYNC' }>['point'];
@@ -30,14 +31,14 @@ export function useCrossWindowSync() {
 
                     switch (msg.type) {
                         case 'SYMBOL_CHANGE':
-                            setChartSymbol(msg.chartId, msg.symbol, msg.source as 'BINANCE' | 'MT5' | 'VN_GOLD');
+                            setChartSymbol(msg.chartId, msg.item.symbol, msg.item.source, msg.item);
                             break;
                         case 'GROUP_SYMBOL_CHANGE':
                             const state = useMarketStore.getState();
                             Object.values(state.tabs).forEach(tab => {
                                 Object.values(tab.charts).forEach(chart => {
                                     if (chart.group === msg.group) {
-                                        setChartSymbol(chart.id, msg.symbol, msg.source as 'BINANCE' | 'MT5' | 'VN_GOLD');
+                                        setChartSymbol(chart.id, msg.item.symbol, msg.item.source, msg.item);
                                     }
                                 });
                             });
@@ -63,22 +64,20 @@ export function useCrossWindowSync() {
     }, [setChartSymbol, syncCrosshair, isCrosshairSyncEnabled]);
 
     // Function to broadcast symbol changes
-    const broadcastSymbolChange = (chartId: string, symbol: string, source: string) => {
+    const broadcastSymbolChange = (chartId: string, item: SymbolDescriptor) => {
         channelRef.current?.postMessage({
             type: 'SYMBOL_CHANGE',
             chartId,
-            symbol,
-            source
+            item,
         });
     };
 
     // Function to broadcast symbol changes for a group
-    const broadcastGroupSymbolChange = (group: string, symbol: string, source: string) => {
+    const broadcastGroupSymbolChange = (group: string, item: SymbolDescriptor) => {
         channelRef.current?.postMessage({
             type: 'GROUP_SYMBOL_CHANGE',
             group,
-            symbol,
-            source
+            item,
         });
     };
 

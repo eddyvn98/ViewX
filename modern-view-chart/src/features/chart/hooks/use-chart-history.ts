@@ -23,7 +23,7 @@ import {
 } from './history-request-gate';
 import { loadCachedCandles } from '../cache/candle-history-cache';
 import { getIncrementalHistoryCount, INITIAL_HISTORY_COUNT } from './history-sync';
-import { resolveChartDataSource } from '@/lib/mt5/account-scope';
+import { buildMt5AuthFields, normalizeMt5AccountScope, resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
 
@@ -32,6 +32,11 @@ interface UseChartHistoryProps {
     symbol: string | undefined;
     interval: string | undefined;
     source: string | undefined;
+    mt5Identity: {
+        accountLogin?: string | null;
+        terminalId?: string | null;
+        broker?: string | null;
+    };
     chartType: 'candles' | 'heikin_ashi' | 'smart_candles';
     chartRef: React.RefObject<IChartApi | null>;
     subchartRef: React.RefObject<IChartApi | null>;
@@ -49,7 +54,7 @@ interface UseChartHistoryProps {
 }
 
 export function useChartHistory(props: UseChartHistoryProps) {
-    const { chartId, symbol, interval, source, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, candleUpColor, candleDownColor, contextKey, isAutoScrollEnabledRef, onHistoryLoaded } = props;
+    const { chartId, symbol, interval, source, mt5Identity, chartType, chartRef, seriesRef, markerSeriesRef, subSyncRef, timescaleSyncRef, isReady, theme, candleUpColor, candleDownColor, contextKey, isAutoScrollEnabledRef, onHistoryLoaded } = props;
     const isInitialMount = useRef(true);
     const lastDataLength = useRef(0);
     const lastKeyRef = useRef('');
@@ -67,27 +72,26 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
-    const selectedMt5Scope = useMarketStore(state => state.selectedMt5Scope);
-    const dataSource = resolveChartDataSource(source, selectedMt5Scope);
+    const dataSource = resolveChartIdentityDataSource(source, mt5Identity);
     const isVietnamGoldSource = String(source || '').toUpperCase() === 'VN_GOLD';
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
     const historyRequestKey = buildHistoryRequestKey(dataSource, normSymbol, interval);
     const isCacheReady = hydratedCacheKey === historyRequestKey;
 
-    const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
-    const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
+    const key = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).key);
+    const candlesCount = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).candles.length);
     const historyRevision = useMarketStore((state) => state.candleHistoryRevision[key] || 0);
     const scopedContextKey = `${dataSource}|${key}`;
 
-    const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
+    const getCandles = () => resolveCandles(useMarketStore.getState(), dataSource, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
     const requestHistory = useCallback(() => {
         if (!symbol || !interval || !isCacheReady) return;
         const sourceText = String(source || '').toUpperCase();
         const resolved = resolveCandles(
             useMarketStore.getState(),
-            source,
+            dataSource,
             normSymbol,
             intervalCandidates,
         );
@@ -128,18 +132,33 @@ export function useChartHistory(props: UseChartHistoryProps) {
             return;
         }
 
+        const mt5Scope = normalizeMt5AccountScope({
+            source: sourceText === 'MT5_PERSONAL' ? 'MT5_PERSONAL' : 'MT5',
+            accountLogin: mt5Identity.accountLogin,
+            terminalId: mt5Identity.terminalId,
+            broker: mt5Identity.broker,
+        });
+        const authFields = buildMt5AuthFields(mt5Scope);
         sendMessage({
             topic: "mt5_command",
             command: "get_candles",
             symbol,
             interval,
             count: requestCount,
+            ...authFields,
         });
-        sendMessage({ topic: "mt5_command", command: "get_symbol_info", symbol });
+        sendMessage({
+            topic: "mt5_command",
+            command: "get_symbol_info",
+            symbol,
+            ...authFields,
+        });
     }, [
         symbol,
         interval,
         source,
+        mt5Identity,
+        dataSource,
         normSymbol,
         intervalCandidates,
         historyRequestKey,
@@ -156,7 +175,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         void loadCachedCandles(dataSource, normSymbol, interval).then((cached) => {
             if (cancelled) return;
             if (cached.length > 0) {
-                useMarketStore.getState().setCandles(source, normSymbol, interval, cached);
+                useMarketStore.getState().setCandles(dataSource, normSymbol, interval, cached);
             }
             setHydratedCacheKey(targetKey);
         });

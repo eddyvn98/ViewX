@@ -135,6 +135,12 @@ export const updateSyncData = (
     subRef: { current: { setData: (data: Array<{ time: Time; value: number }>) => void } | null },
     timeRef: { current: { setData: (data: Array<{ time: Time; value: number }>) => void } | null }
 ) => {
+    if (formatted.length === 0) {
+        subRef.current?.setData([]);
+        timeRef.current?.setData([]);
+        return;
+    }
+
     const lastT = Number(formatted[formatted.length - 1].time);
     const timeStep = formatted.length > 1 ? lastT - Number(formatted[formatted.length - 2].time) : 60;
     const syncData = formatted
