@@ -851,20 +851,45 @@ export function AIChatView() {
         e?.stopPropagation();
         const { accessToken, hasAccessToken } = getAuthContext();
         if (!hasAccessToken) return;
+
+        const group = conversations.find((item) => item.id === convId);
+        const explicitConversation = Boolean(group?.items.some((item) => item.conversationId === convId));
+        const legacyMessageIds = explicitConversation
+            ? []
+            : (group?.items || []).map((item) => item.id).filter(Boolean);
+
         try {
-            await fetch(`/api/ai/bridge/history?conversationId=${encodeURIComponent(convId)}`, {
+            const response = await fetch('/api/ai/bridge/history', {
                 method: 'DELETE',
-                headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
+                headers: {
+                    'content-type': 'application/json',
+                    ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+                },
                 credentials: 'include',
+                body: JSON.stringify(
+                    explicitConversation
+                        ? { conversationId: convId }
+                        : legacyMessageIds.length > 0
+                            ? { messageIds: legacyMessageIds }
+                            : { conversationId: convId },
+                ),
             });
-            setMessages((prev) => prev.filter((m) => m.conversationId !== convId && !convId.includes(String(m.timestamp))));
+            if (!response.ok) {
+                throw new Error(`history_delete_failed_${response.status}`);
+            }
+
+            const legacyIdSet = new Set(legacyMessageIds);
+            setMessages((prev) => prev.filter((m) => {
+                if (explicitConversation) return m.conversationId !== convId;
+                return !legacyIdSet.has(m.id);
+            }));
             if (selectedConversationId === convId) {
                 handleNewConversation();
             }
         } catch (err) {
             console.error('Delete conversation failed:', err);
         }
-    }, [handleNewConversation, selectedConversationId]);
+    }, [conversations, handleNewConversation, selectedConversationId]);
 
     const handleClearAllHistory = useCallback(async () => {
         const confirmMsg = isVi ? 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?' : 'Are you sure you want to clear all chat history?';
