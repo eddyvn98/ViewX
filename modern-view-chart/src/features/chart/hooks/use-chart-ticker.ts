@@ -5,6 +5,7 @@ import { toSec } from './use-chart-history';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import type { Candle } from '@/lib/store/types';
 import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
+import { resolveChartDataSource } from '@/lib/mt5/account-scope';
 
 type RealtimeCandle = Candle & {
     rawOpen?: number;
@@ -42,9 +43,12 @@ export function useChartTicker({
     // when the user switches symbol or timeframe faster than React can re-run the effect.
     const intervalRef = useRef(interval);
     const sourceRef = useRef(source);
+    const selectedMt5Scope = useMarketStore(state => state.selectedMt5Scope);
+    const dataSource = resolveChartDataSource(source, selectedMt5Scope);
+    const dataSourceRef = useRef(dataSource);
 
     const normSymbol = normalizeSymbol(symbol);
-    const tickerKey = `${source}:${normSymbol}`;
+    const tickerKey = `${dataSource}:${normSymbol}`;
 
     const getStoreCandles = useCallback(() => {
         if (!source || !normSymbol || !interval) return [];
@@ -58,7 +62,7 @@ export function useChartTicker({
             /^\d+$/.test(intervalLower) ? `${intervalLower}m` : intervalLower,
             intervalLower.endsWith('m') ? intervalLower.slice(0, -1) : intervalLower,
         ]));
-        const sourceVariants = Array.from(new Set([source, source.toUpperCase(), source.toLowerCase()]));
+        const sourceVariants = Array.from(new Set([dataSource, dataSource.toUpperCase(), dataSource.toLowerCase()]));
         for (const src of sourceVariants) {
             for (const itv of intervalCandidates) {
                 const key = `${src}:${normSymbol}:${itv}`;
@@ -67,7 +71,7 @@ export function useChartTicker({
             }
         }
         return [];
-    }, [source, normSymbol, interval]);
+    }, [dataSource, normSymbol, interval]);
 
     const getIntervalSeconds = (intv: string) => {
         const raw = String(intv || '').trim();
@@ -104,6 +108,7 @@ export function useChartTicker({
     useEffect(() => {
         intervalRef.current = interval;
         sourceRef.current = source;
+        dataSourceRef.current = dataSource;
     });
 
     // Reset local state when context changes
@@ -113,7 +118,7 @@ export function useChartTicker({
 
     useEffect(() => {
         realTimeCandleRef.current = null;
-    }, [symbol, interval, source, contextKey]);
+    }, [symbol, interval, source, dataSource, contextKey]);
 
     // Seed visualized candle strictly from the CURRENT store context.
     // Never copy the shared ref on a context switch: that ref may still belong
@@ -140,7 +145,7 @@ export function useChartTicker({
             if (!force && now - lastStoreSync < 250) return;
             lastStoreSync = now;
             // BUG #4 fix: use sourceRef.current to get the always-current source value
-            updateLastCandle(sourceRef.current ?? source!, symbol!, intervalRef.current ?? interval!, {
+            updateLastCandle(dataSourceRef.current, symbol!, intervalRef.current ?? interval!, {
                 time: toSec(candle.time),
                 open: candle.rawOpen ?? candle.open,
                 high: candle.rawHigh ?? candle.high,
@@ -188,7 +193,7 @@ export function useChartTicker({
 
             // TradingView-style guard:
             if (lagBars >= 2) {
-                const backfillKey = `${source}:${normSymbol}:${interval}`;
+                const backfillKey = `${dataSource}:${normSymbol}:${interval}`;
                 const nowMs = Date.now();
                 const lastRequestedAt = lastBackfillRequestAtRef.current[backfillKey] || 0;
                 if (nowMs - lastRequestedAt > 5000) {
