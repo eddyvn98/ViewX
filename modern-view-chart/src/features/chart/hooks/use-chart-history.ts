@@ -78,6 +78,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
     const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
     const historyRevision = useMarketStore((state) => state.candleHistoryRevision[key] || 0);
+    const scopedContextKey = `${dataSource}|${key}`;
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
     const { handleSwitch } = useSeriesSwitcher({ chartRef, seriesRef, chartType, candleUpColor, candleDownColor });
@@ -252,7 +253,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
             intervalCandidates,
             count: currentCandles.length,
         });
-        const isContextChange = key !== lastKeyRef.current;
+        const isContextChange = scopedContextKey !== lastKeyRef.current;
 
         if (isCacheReady && (isVietnamGoldSource || currentCandles.length < MIN_CANDLES_THRESHOLD) && isConnected) {
             const now = Date.now();
@@ -273,7 +274,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
             }
             applyDataGenerationRef.current++;
             chartStateRef.current = 'loading';
-            lastKeyRef.current = key;
+            lastKeyRef.current = scopedContextKey;
             isInitialMount.current = true;
             lastDataLength.current = 0;
             autoFitProgressRef.current = null;
@@ -283,8 +284,8 @@ export function useChartHistory(props: UseChartHistoryProps) {
         }
 
         if (isContextChange && currentCandles.length === 0) {
-            if (clearedForKeyRef.current !== key) {
-                clearedForKeyRef.current = key;
+            if (clearedForKeyRef.current !== scopedContextKey) {
+                clearedForKeyRef.current = scopedContextKey;
                 try {
                     bumpChartPerfCounter('historySetDataBatches');
                     seriesRef.current?.setData([]);
@@ -306,7 +307,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 applyDataRafRef.current = null;
             }
 
-            const nextKey = key;
+            const nextKey = scopedContextKey;
             const nextCandles = currentCandles;
             const previousChartType = lastChartTypeRef.current;
             const nextChartType = chartType;
@@ -384,7 +385,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
                 lastHistoryRevisionRef.current = historyRevision;
             });
         }
-    }, [isReady, candlesCount, historyRevision, key, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource, isCacheReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isReady, candlesCount, historyRevision, key, scopedContextKey, chartType, isConnected, candleUpColor, candleDownColor, isVietnamGoldSource, isCacheReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         return () => {
