@@ -14,9 +14,21 @@ type Mt5ModifyPayload = {
     topic: 'mt5_command';
     command: 'modify';
     ticket: number;
+    request_id: string;
+    account_login: string | null;
+    terminal_id: string | null;
+    mt5_source: string | null;
+    broker: string | null;
     sl?: number;
     tp?: number;
 };
+
+function createMt5RequestId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `mt5-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export function useTerminalState(forceExpanded: boolean) {
     const strategyEngineEnabled = process.env.NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED === 'true';
@@ -92,19 +104,34 @@ export function useTerminalState(forceExpanded: boolean) {
         const source = pos?.source || (activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5');
 
         if (confirm(`Do you want to close position ${ticket}?`)) {
+            if (source === 'BINANCE_DEMO') {
+                sendMessage({
+                    topic: 'binance_command',
+                    command: 'close',
+                    ticket,
+                });
+                return;
+            }
+
             sendMessage({
-                topic: source === 'BINANCE_DEMO' ? 'binance_command' : 'mt5_command',
+                topic: 'mt5_command',
                 command: 'close',
                 ticket,
+                request_id: createMt5RequestId(),
+                ...buildMt5AuthFields(selectedMt5Scope),
+                broker: selectedMt5Scope.broker,
             });
         }
-    }, [positions, activeChartSource, sendMessage]);
+    }, [positions, activeChartSource, selectedMt5Scope, sendMessage]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
         const payload: Mt5ModifyPayload = {
             topic: 'mt5_command',
             command: 'modify',
             ticket,
+            request_id: createMt5RequestId(),
+            ...buildMt5AuthFields(selectedMt5Scope),
+            broker: selectedMt5Scope.broker,
         };
 
         if (sl !== undefined && !isNaN(sl)) payload.sl = sl;
@@ -113,7 +140,7 @@ export function useTerminalState(forceExpanded: boolean) {
         if (Object.keys(payload).length > 3) {
             sendMessage(payload);
         }
-    }, [sendMessage]);
+    }, [selectedMt5Scope, sendMessage]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();
