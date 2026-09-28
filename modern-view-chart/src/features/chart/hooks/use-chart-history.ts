@@ -23,6 +23,7 @@ import {
 } from './history-request-gate';
 import { loadCachedCandles } from '../cache/candle-history-cache';
 import { getIncrementalHistoryCount, INITIAL_HISTORY_COUNT } from './history-sync';
+import { resolveChartDataSource } from '@/lib/mt5/account-scope';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
 
@@ -66,14 +67,16 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
     const { sendMessage } = useWebSocket();
     const isConnected = useMarketStore(state => state.isConnected);
+    const selectedMt5Scope = useMarketStore(state => state.selectedMt5Scope);
+    const dataSource = resolveChartDataSource(source, selectedMt5Scope);
     const isVietnamGoldSource = String(source || '').toUpperCase() === 'VN_GOLD';
     const normSymbol = getNormalizedSymbol(symbol);
     const intervalCandidates = buildIntervalCandidates(interval);
-    const historyRequestKey = buildHistoryRequestKey(source, normSymbol, interval);
+    const historyRequestKey = buildHistoryRequestKey(dataSource, normSymbol, interval);
     const isCacheReady = hydratedCacheKey === historyRequestKey;
 
-    const key = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).key);
-    const candlesCount = useMarketStore((state) => resolveCandles(state, source, normSymbol, intervalCandidates).candles.length);
+    const key = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).key);
+    const candlesCount = useMarketStore((state) => resolveCandles(state, dataSource, normSymbol, intervalCandidates).candles.length);
     const historyRevision = useMarketStore((state) => state.candleHistoryRevision[key] || 0);
 
     const getCandles = () => resolveCandles(useMarketStore.getState(), source, normSymbol, intervalCandidates).candles;
@@ -83,7 +86,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         const sourceText = String(source || '').toUpperCase();
         const resolved = resolveCandles(
             useMarketStore.getState(),
-            source,
+            dataSource,
             normSymbol,
             intervalCandidates,
         );
@@ -149,10 +152,10 @@ export function useChartHistory(props: UseChartHistoryProps) {
         let cancelled = false;
         const targetKey = historyRequestKey;
 
-        void loadCachedCandles(source, normSymbol, interval).then((cached) => {
+        void loadCachedCandles(dataSource, normSymbol, interval).then((cached) => {
             if (cancelled) return;
             if (cached.length > 0) {
-                useMarketStore.getState().setCandles(source, normSymbol, interval, cached);
+                useMarketStore.getState().setCandles(dataSource, normSymbol, interval, cached);
             }
             setHydratedCacheKey(targetKey);
         });
@@ -160,7 +163,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         return () => {
             cancelled = true;
         };
-    }, [historyRequestKey, source, normSymbol, interval]);
+    }, [historyRequestKey, dataSource, normSymbol, interval]);
 
     useEffect(() => {
         if (isVietnamGoldSource) return;
@@ -244,7 +247,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
         debugLog('[ChartHistory][candles]', {
             symbol,
             interval,
-            source,
+            source: dataSource,
             intervalCandidates,
             count: currentCandles.length,
         });
