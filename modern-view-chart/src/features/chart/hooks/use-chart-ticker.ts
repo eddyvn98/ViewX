@@ -116,12 +116,14 @@ export function useChartTicker({
         realTimeCandleRef.current = null;
     }, [symbol, interval, source, contextKey]);
 
-    // Sync visualized candle with store (base truth)
+    // Seed visualized candle strictly from the CURRENT store context.
+    // Never copy the shared ref on a context switch: that ref may still belong
+    // to the previous symbol during the render/effect transition.
     useEffect(() => {
-        if (lastCandleRef.current) {
-            realTimeCandleRef.current = { ...lastCandleRef.current };
-        }
-    }, [lastCandleRef, symbol, interval, source, contextKey]);
+        const currentCandles = getStoreCandles();
+        const currentLast = currentCandles[currentCandles.length - 1];
+        realTimeCandleRef.current = currentLast ? { ...currentLast } : null;
+    }, [getStoreCandles, symbol, interval, source, contextKey]);
 
     // Ticker Subscription
     useEffect(() => {
