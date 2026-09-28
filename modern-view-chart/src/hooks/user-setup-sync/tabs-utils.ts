@@ -57,11 +57,29 @@ export function sanitizeTabsForPersistence(tabs: RootState['tabs']): RootState['
     return sanitizedTabs;
 }
 
-export function buildChartContextKey(input: { symbol?: unknown; interval?: unknown; source?: unknown }): string {
+export function buildChartContextKey(input: {
+    symbol?: unknown;
+    interval?: unknown;
+    source?: unknown;
+    accountLogin?: unknown;
+    terminalId?: unknown;
+}): string {
     const symbol = typeof input.symbol === 'string' ? input.symbol.trim() : '';
     const interval = typeof input.interval === 'string' ? input.interval.trim() : '';
-    const source = input.source === 'BINANCE' || input.source === 'MT5' || input.source === 'VN_GOLD' ? input.source : '';
-    return `${symbol}|${interval}|${source}`;
+    const source =
+        input.source === 'BINANCE' ||
+        input.source === 'MT5' ||
+        input.source === 'MT5_PERSONAL' ||
+        input.source === 'VN_GOLD'
+            ? input.source
+            : '';
+    const accountLogin = source === 'MT5_PERSONAL' && typeof input.accountLogin === 'string'
+        ? input.accountLogin.trim()
+        : '';
+    const terminalId = source === 'MT5_PERSONAL' && typeof input.terminalId === 'string'
+        ? input.terminalId.trim()
+        : '';
+    return `${symbol}|${interval}|${source}|${accountLogin}|${terminalId}`;
 }
 
 export function mapLocalChartIdsByContext(tabs: RootState['tabs']): Map<string, string[]> {
@@ -80,8 +98,20 @@ export function mapLocalChartIdsByContext(tabs: RootState['tabs']): Map<string, 
 
 export function resolveRemoteChartContextById(
     tabsInput: unknown,
-): Map<string, { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' | 'VN_GOLD' }> {
-    const map = new Map<string, { symbol?: string; interval?: string; source?: 'BINANCE' | 'MT5' | 'VN_GOLD' }>();
+): Map<string, {
+    symbol?: string;
+    interval?: string;
+    source?: 'BINANCE' | 'MT5' | 'MT5_PERSONAL' | 'VN_GOLD';
+    accountLogin?: string;
+    terminalId?: string;
+}> {
+    const map = new Map<string, {
+        symbol?: string;
+        interval?: string;
+        source?: 'BINANCE' | 'MT5' | 'MT5_PERSONAL' | 'VN_GOLD';
+        accountLogin?: string;
+        terminalId?: string;
+    }>();
     if (!isPlainObject(tabsInput)) return map;
 
     for (const rawTab of Object.values(tabsInput)) {
@@ -91,8 +121,16 @@ export function resolveRemoteChartContextById(
             if (!isPlainObject(rawChart)) continue;
             const symbol = typeof rawChart.symbol === 'string' ? rawChart.symbol : undefined;
             const interval = typeof rawChart.interval === 'string' ? rawChart.interval : undefined;
-            const source = rawChart.source === 'BINANCE' || rawChart.source === 'MT5' || rawChart.source === 'VN_GOLD' ? rawChart.source : undefined;
-            map.set(remoteChartId, { symbol, interval, source });
+            const source =
+                rawChart.source === 'BINANCE' ||
+                rawChart.source === 'MT5' ||
+                rawChart.source === 'MT5_PERSONAL' ||
+                rawChart.source === 'VN_GOLD'
+                    ? rawChart.source
+                    : undefined;
+            const accountLogin = typeof rawChart.accountLogin === 'string' ? rawChart.accountLogin : undefined;
+            const terminalId = typeof rawChart.terminalId === 'string' ? rawChart.terminalId : undefined;
+            map.set(remoteChartId, { symbol, interval, source, accountLogin, terminalId });
         }
     }
     return map;
@@ -236,7 +274,13 @@ export function sanitizeTabsInput(input: unknown): RootState['tabs'] | null {
             const chart = rawChart as Record<string, unknown>;
             const symbol = typeof chart.symbol === 'string' && chart.symbol.trim() ? chart.symbol : 'XAUUSDm';
             const interval = typeof chart.interval === 'string' && chart.interval.trim() ? chart.interval : '1';
-            const source = chart.source === 'BINANCE' || chart.source === 'MT5' || chart.source === 'VN_GOLD' ? chart.source : 'MT5';
+            const source =
+                chart.source === 'BINANCE' ||
+                chart.source === 'MT5' ||
+                chart.source === 'MT5_PERSONAL' ||
+                chart.source === 'VN_GOLD'
+                    ? chart.source
+                    : 'MT5';
             const chartType =
                 chart.chartType === 'candles' || chart.chartType === 'heikin_ashi' || chart.chartType === 'smart_candles'
                     ? chart.chartType
