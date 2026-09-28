@@ -171,6 +171,53 @@ test.describe('chart interaction stability', () => {
         await attachDiagnostics(page, testInfo);
     });
 
+    test('switching to an uncached symbol cannot reuse the previous symbol candle', async ({ page }, testInfo) => {
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.setChartSymbol('BTCUSDm', 'MT5');
+            window.__VIEWX_E2E__?.setChartTimeframe('1');
+        });
+
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle())
+        ).not.toBeNull();
+
+        const btcLast = await page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle());
+        expect(Number(btcLast?.close || 0)).toBeGreaterThan(10000);
+
+        await page.evaluate(() => window.__VIEWX_E2E__?.resetPerfCounters());
+        await page.evaluate(() => {
+            window.__VIEWX_E2E__?.setChartSymbol('UNSEEDEDUSDm', 'MT5');
+        });
+
+        await expect(page.getByTestId('chart-container-e2e-chart')).toHaveAttribute('data-symbol', 'UNSEEDEDUSDm');
+
+        // A ticker can arrive before history for the new symbol. It must NOT use
+        // BTC's last candle as the base and must not create a corrupted new buffer.
+        await page.evaluate(() => window.__VIEWX_E2E__?.burstTicks(120));
+        await page.evaluate(() => new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        ));
+
+        const targetLast = await page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle());
+        expect(targetLast).toBeNull();
+
+        const counters = await page.evaluate(() => window.__VIEWX_E2E__?.getPerfCounters());
+        expect(counters?.realtimeSeriesUpdates ?? 0).toBe(0);
+        expect(counters?.historySetDataBatches ?? 0).toBeLessThanOrEqual(1);
+
+        // Verify the chart can still recover immediately when switching back to
+        // a context with valid history.
+        await page.evaluate(() => window.__VIEWX_E2E__?.setChartSymbol('XAUUSDm', 'MT5'));
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle())
+        ).not.toBeNull();
+
+        const goldLast = await page.evaluate(() => window.__VIEWX_E2E__?.getLastCandle());
+        expect(Number(goldLast?.close || 0)).toBeLessThan(10000);
+
+        await attachDiagnostics(page, testInfo);
+    });
+
     test('pan zoom pointer and tick burst keep chart responsive', async ({ page }, testInfo) => {
         const center = await chartPoint(page, 0.55, 0.45);
 
