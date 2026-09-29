@@ -94,19 +94,17 @@ export function useTerminalState(forceExpanded: boolean) {
     const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
     const handleClosePosition = useCallback((ticket: number) => {
-        const pos = positions.find((p) => p.ticket === ticket);
-        const source = pos?.source || (activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5');
+        const pos = visiblePositions.find((item) => item.ticket === ticket);
+        if (!pos) {
+            useMarketStore.getState().addNotification('Ticket không thuộc account terminal hiện tại', 'error');
+            return;
+        }
 
         if (confirm(`Do you want to close position ${ticket}?`)) {
-            if (source === 'BINANCE_DEMO') {
-                sendMessage({
-                    topic: 'binance_command',
-                    command: 'close',
-                    ticket,
-                });
+            if (String(pos.source || '') === 'BINANCE_DEMO') {
+                sendMessage({ topic: 'binance_command', command: 'close', symbol: pos.symbol, ticket });
                 return;
             }
-
             sendMessage({
                 topic: 'mt5_command',
                 command: 'close',
@@ -114,9 +112,36 @@ export function useTerminalState(forceExpanded: boolean) {
                 ...buildMt5WriteFields(selectedMt5Scope),
             });
         }
-    }, [positions, activeChartSource, selectedMt5Scope, sendMessage]);
+    }, [visiblePositions, selectedMt5Scope, sendMessage]);
+
+    const handleCancelOrder = useCallback((ticket: number) => {
+        const order = visibleOrders.find((item) => item.ticket === ticket);
+        if (!order) {
+            useMarketStore.getState().addNotification('Order không thuộc account terminal hiện tại', 'error');
+            return;
+        }
+        if (String(order.source || '') === 'BINANCE_DEMO') {
+            sendMessage({ topic: 'binance_command', command: 'close', symbol: order.symbol, ticket });
+            return;
+        }
+        sendMessage({
+            topic: 'mt5_command',
+            command: 'delete',
+            ticket,
+            ...buildMt5WriteFields(selectedMt5Scope),
+        });
+    }, [visibleOrders, selectedMt5Scope, sendMessage]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
+        const pos = visiblePositions.find((item) => item.ticket === ticket);
+        if (!pos) {
+            useMarketStore.getState().addNotification('Ticket không thuộc account terminal hiện tại', 'error');
+            return;
+        }
+        if (String(pos.source || '') === 'BINANCE_DEMO') {
+            useMarketStore.getState().addNotification('Chỉnh SL/TP không áp dụng cho Binance spot', 'warning');
+            return;
+        }
         const payload: Mt5ModifyPayload = {
             topic: 'mt5_command',
             command: 'modify',
@@ -130,7 +155,7 @@ export function useTerminalState(forceExpanded: boolean) {
         if (Object.keys(payload).length > 3) {
             sendMessage(payload);
         }
-    }, [selectedMt5Scope, sendMessage]);
+    }, [visiblePositions, selectedMt5Scope, sendMessage]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();
@@ -183,6 +208,7 @@ export function useTerminalState(forceExpanded: boolean) {
         toggleCollapse,
         handleScroll,
         handleClosePosition,
+        handleCancelOrder,
         handleUpdatePosition,
         handleSymbolClick,
         handleAnalyze,
