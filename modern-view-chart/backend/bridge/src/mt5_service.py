@@ -473,12 +473,35 @@ class MT5Service:
         positions = mt5.positions_get(ticket=ticket)
         if positions:
             pos = positions[0]
+            try:
+                next_sl = float(sl) if sl is not None else float(pos.sl)
+                next_tp = float(tp) if tp is not None else float(pos.tp)
+            except (TypeError, ValueError):
+                return self._validation_error("invalid_sl_or_tp", resolved_symbol=str(pos.symbol))
+
+            info = mt5.symbol_info(pos.symbol)
+            tick = mt5.symbol_info_tick(pos.symbol)
+            if info is None:
+                return self._validation_error("symbol_info_not_found", resolved_symbol=str(pos.symbol))
+            if tick is None:
+                return self._validation_error("tick_not_found", resolved_symbol=str(pos.symbol))
+
+            buy_type = getattr(mt5, "POSITION_TYPE_BUY", mt5.ORDER_TYPE_BUY)
+            side = "buy" if pos.type == buy_type else "sell"
+            stops_error = self._validate_market_stops(info, tick, side, next_sl, next_tp)
+            if stops_error:
+                return self._validation_error(
+                    stops_error,
+                    requested_symbol=str(pos.symbol),
+                    resolved_symbol=str(pos.symbol),
+                )
+
             request = {
                 "action": mt5.TRADE_ACTION_SLTP,
                 "symbol": pos.symbol,
                 "position": ticket,
-                "sl": float(sl) if sl is not None else pos.sl,
-                "tp": float(tp) if tp is not None else pos.tp,
+                "sl": next_sl,
+                "tp": next_tp,
             }
             result = mt5.order_send(request)
             return self._trade_result(result, resolved_symbol=str(pos.symbol))
@@ -486,12 +509,19 @@ class MT5Service:
         orders = mt5.orders_get(ticket=ticket)
         if orders:
             order = orders[0]
+            try:
+                next_price = float(price) if price is not None else float(order.price_open)
+                next_sl = float(sl) if sl is not None else float(order.sl)
+                next_tp = float(tp) if tp is not None else float(order.tp)
+            except (TypeError, ValueError):
+                return self._validation_error("invalid_order_modification", resolved_symbol=str(order.symbol))
+
             request = {
                 "action": mt5.TRADE_ACTION_MODIFY,
                 "order": ticket,
-                "price": float(price) if price is not None else order.price_open,
-                "sl": float(sl) if sl is not None else order.sl,
-                "tp": float(tp) if tp is not None else order.tp,
+                "price": next_price,
+                "sl": next_sl,
+                "tp": next_tp,
                 "type_time": getattr(order, "type_time", mt5.ORDER_TIME_GTC),
                 "expiration": getattr(order, "expiration", 0),
             }
