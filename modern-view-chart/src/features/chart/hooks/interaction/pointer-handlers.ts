@@ -162,7 +162,13 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
                 longPressTimer.current = setTimeout(() => {
                     if (dragState.current && !isDragging.current) {
                         window.dispatchEvent(new CustomEvent('start-tag-edit', {
-                            detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: dragState.current.price, x: mouseDownPos.current?.x },
+                            detail: {
+                                ticket: dragState.current.ticket,
+                                type: dragState.current.type,
+                                price: dragState.current.price,
+                                x: mouseDownPos.current?.x,
+                                dataSource,
+                            },
                         }));
                         if (navigator.vibrate) navigator.vibrate(50);
                     }
@@ -361,7 +367,13 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
             const isDraftTap = ticket === 'draft';
             if (e.pointerType === 'mouse' && !isDraftTap) {
                 window.dispatchEvent(new CustomEvent('start-tag-edit', {
-                    detail: { ticket: dragState.current.ticket, type: dragState.current.type, price: dragState.current.price, x: mouseDownPos.current?.x },
+                    detail: {
+                        ticket: dragState.current.ticket,
+                        type: dragState.current.type,
+                        price: dragState.current.price,
+                        x: mouseDownPos.current?.x,
+                        dataSource,
+                    },
                 }));
             }
         } else {
