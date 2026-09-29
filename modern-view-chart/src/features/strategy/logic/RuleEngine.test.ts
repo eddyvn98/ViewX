@@ -63,6 +63,56 @@ describe('RuleEngine strategy consistency', () => {
         }
     });
 
+    it('does not emit SELL when SELL is disabled even if SELL conditions are ready', () => {
+        const readyLeg = {
+            entry: { operator: 'AND' as const, conditions: [{ id: 'ready', left: { type: 'Price', params: [] }, comparator: '>' as const, right: 100 }] },
+            trigger: { operator: 'AND' as const, conditions: [] },
+            risk: { trailing: false, lotSize: 0.1 },
+            entryType: 'market' as const,
+        };
+        const blockedLeg = {
+            ...readyLeg,
+            entry: { operator: 'AND' as const, conditions: [{ id: 'blocked', left: { type: 'Price', params: [] }, comparator: '<' as const, right: 0 }] },
+        };
+        const strategy = makeStrategy({
+            side: 'BUY',
+            buy: blockedLeg,
+            sell: readyLeg,
+            enabledDirections: ['BUY'],
+        });
+
+        const signal = RuleEngine.run(strategy, candles, {
+            activePositions: [],
+            currentPrice: 101,
+            symbol: 'XAUUSDm',
+        });
+
+        assert.equal(signal, null);
+    });
+
+    it('emits SELL when explicit direction enablement selects SELL only', () => {
+        const readyLeg = {
+            entry: { operator: 'AND' as const, conditions: [{ id: 'ready', left: { type: 'Price', params: [] }, comparator: '>' as const, right: 100 }] },
+            trigger: { operator: 'AND' as const, conditions: [] },
+            risk: { trailing: false, lotSize: 0.1 },
+            entryType: 'market' as const,
+        };
+        const strategy = makeStrategy({
+            side: 'BUY',
+            buy: readyLeg,
+            sell: readyLeg,
+            enabledDirections: ['SELL'],
+        });
+
+        const signal = RuleEngine.run(strategy, candles, {
+            activePositions: [],
+            currentPrice: 101,
+            symbol: 'XAUUSDm',
+        });
+
+        assert.equal(signal?.type, 'SELL');
+    });
+
     it('uses per-direction scale-in mode instead of the top-level BUY fallback', () => {
         const strategy = makeStrategy({
             positionMode: 'single_position',
