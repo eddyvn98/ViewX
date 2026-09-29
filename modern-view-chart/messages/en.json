@@ -103,22 +103,10 @@
       "trust": "Trusted by traders running MT5, Binance & Telegram"
     },
     "stats": {
-      "latency": {
-        "value": "<50ms",
-        "label": "Chart update latency"
-      },
-      "sources": {
-        "value": "MT5 + Binance",
-        "label": "Live data sources"
-      },
-      "indicators": {
-        "value": "Unlimited",
-        "label": "Indicators & alerts"
-      },
-      "aiMonitor": {
-        "value": "24/7",
-        "label": "AI trade monitoring"
-      }
+      "latency": { "value": "<50ms", "label": "Chart update latency" },
+      "sources": { "value": "MT5 + Binance", "label": "Live data sources" },
+      "indicators": { "value": "Unlimited", "label": "Indicators & alerts" },
+      "aiMonitor": { "value": "24/7", "label": "AI trade monitoring" }
     },
     "featuresSection": {
       "title": "Professional Grade Tools",
@@ -298,8 +286,8 @@
     "scanning": "Scanning signals...",
     "aiAuditComplete": "AI audit completed: {confidence}% confidence",
     "exit": "EXIT",
-    "virtualBalance": "Virtual trading",
-    "cancel": "CANCEL"
+    "cancel": "CANCEL",
+    "virtualBalance": "Virtual trading"
   },
   "ChartPanel": {
     "history": {
