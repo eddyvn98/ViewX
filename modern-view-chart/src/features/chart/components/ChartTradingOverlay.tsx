@@ -38,6 +38,33 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
         [source, identity],
     );
 
+    React.useEffect(() => {
+        const handleMt5OrderResult = (event: Event) => {
+            const detail = (event as CustomEvent<Record<string, unknown>>).detail || {};
+            const requestId = String(detail.request_id || '');
+            if (!requestId || requestId !== pendingRequestIdRef.current) return;
+
+            pendingRequestIdRef.current = null;
+            if (pendingTimeoutRef.current) {
+                clearTimeout(pendingTimeoutRef.current);
+                pendingTimeoutRef.current = null;
+            }
+            setIsSubmitting(false);
+            if (detail.success === true) {
+                setDraftOrder(null);
+            }
+        };
+
+        window.addEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+        return () => {
+            window.removeEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+            if (pendingTimeoutRef.current) {
+                clearTimeout(pendingTimeoutRef.current);
+                pendingTimeoutRef.current = null;
+            }
+        };
+    }, [setDraftOrder]);
+
     // Trading prices must come from the chart-owned source/account. Never
     // fall back to another personal MT5 account that happens to share a symbol.
     const getCurrentPrice = useCallback(() => {
