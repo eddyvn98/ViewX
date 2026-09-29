@@ -12,6 +12,7 @@ interface SignalHistoryListProps {
     buyLabel: string;
     sellLabel: string;
     exitLabel: string;
+    cancelLabel: string;
     onManualAnalyze: (signalIndex: number, signal: StrategySignal) => void;
 }
 
@@ -24,6 +25,7 @@ export function SignalHistoryList({
     buyLabel,
     sellLabel,
     exitLabel,
+    cancelLabel,
     onManualAnalyze,
 }: SignalHistoryListProps) {
     if (filteredSignals.length === 0) {
@@ -59,6 +61,7 @@ export function SignalHistoryList({
                         buyLabel={buyLabel}
                         sellLabel={sellLabel}
                         exitLabel={exitLabel}
+                        cancelLabel={cancelLabel}
                         onManualAnalyze={onManualAnalyze}
                     />
                 );
