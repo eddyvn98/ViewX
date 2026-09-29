@@ -3,6 +3,7 @@ import json
 import time
 import websockets
 from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit
+from .mt5_write_guard import build_write_fingerprint
 
 
 def mask_url_for_log(url):
@@ -135,6 +136,7 @@ class BridgeClient:
         if request_id and not duplicate:
             self.execution_results[request_id] = {
                 "payload": payload,
+                "fingerprint": build_write_fingerprint(data),
                 "expires_at": time.time() + self.EXECUTION_RESULT_TTL_SEC,
             }
         return payload
@@ -216,6 +218,21 @@ class BridgeClient:
         if cmd in self.WRITE_COMMANDS and request_id:
             cached = self.execution_results.get(request_id)
             if cached:
+                fingerprint = build_write_fingerprint(data)
+                if cached.get("fingerprint") != fingerprint:
+                    await self.send_json({
+                        "topic": "mt5_order_result",
+                        "request_id": request_id,
+                        "command": cmd,
+                        **self._scope_fields(data),
+                        "success": False,
+                        "retcode": None,
+                        "comment": "request_id_payload_mismatch",
+                        "message": "request_id_payload_mismatch",
+                        "duplicate": True,
+                        "cached": False,
+                    })
+                    return
                 await self.send_json({
                     **cached["payload"],
                     "duplicate": True,
