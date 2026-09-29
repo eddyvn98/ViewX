@@ -5,6 +5,7 @@ import { TagData } from '../../logic/order-tag-utils';
 import { TagElements } from '../../logic/tag-renderer';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 function setupDraftGroupInteractions(elements: TagElements, sendMessage?: (data: any) => void, identity?: Mt5TradingIdentity) {
     elements.el.querySelector('.cancel-btn')?.addEventListener('pointerdown', (e) => {
@@ -75,8 +76,18 @@ function setupDraftGroupInteractions(elements: TagElements, sendMessage?: (data:
         if (!draft) return;
 
         const normSym = normalizeSymbol(draft.symbol);
-        const digits = store.symbolInfo?.[normSym]?.digits || 5;
-        const currentPrice = store.tickers?.[normSym]?.price || draft.price || 0;
+        const dataSource = resolveChartIdentityDataSource(identity?.source, identity);
+        const scopedInfo = store.symbolInfo?.[`${dataSource}:${draft.symbol}`]
+            || store.symbolInfo?.[`${dataSource}:${normSym}`];
+        const personalMt5 = String(identity?.source || '').toUpperCase() === 'MT5_PERSONAL';
+        const digits = (personalMt5 ? scopedInfo : (scopedInfo || store.symbolInfo?.[normSym]))?.digits || 5;
+        const scopedTicker = store.tickers?.[`${dataSource}:${draft.symbol}`]
+            || store.tickers?.[`${dataSource}:${normSym}`];
+        const currentPrice = (
+            personalMt5
+                ? scopedTicker?.price
+                : (scopedTicker?.price || store.tickers?.[draft.symbol]?.price || store.tickers?.[normSym]?.price)
+        ) || draft.price || 0;
         const entryPrice = draft.isMarket ? currentPrice : (draft.price || currentPrice);
         const isBuy = String(draft.type).toLowerCase() === 'buy';
 
