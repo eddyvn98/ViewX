@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 interface ChartTradingOverlayProps {
     symbol: string | undefined;
@@ -29,13 +30,24 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
         terminalId,
         broker,
     }), [source, accountLogin, terminalId, broker]);
+    const dataSource = React.useMemo(
+        () => resolveChartIdentityDataSource(source, identity),
+        [source, identity],
+    );
 
-    // Get initial price for draft (computed once when needed)
+    // Trading prices must come from the chart-owned source/account. Never
+    // fall back to another personal MT5 account that happens to share a symbol.
     const getCurrentPrice = useCallback(() => {
         if (!symbol) return 0;
+        const state = useMarketStore.getState();
         const normSym = normalizeSymbol(symbol);
-        return useMarketStore.getState().tickers[normSym]?.price || 0;
-    }, [symbol]);
+        const scoped = state.tickers[`${dataSource}:${symbol}`]
+            || state.tickers[`${dataSource}:${normSym}`];
+        if (String(source || '').toUpperCase() === 'MT5_PERSONAL') {
+            return scoped?.price || 0;
+        }
+        return scoped?.price || state.tickers[symbol]?.price || state.tickers[normSym]?.price || 0;
+    }, [symbol, source, dataSource]);
 
     const handleStartDraft = (type: 'buy' | 'sell') => {
         const price = getCurrentPrice();
@@ -51,6 +63,10 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
             isMarket: true,
             sl: 0,
             tp: 0,
+            source,
+            accountLogin,
+            terminalId,
+            broker,
             slTouched: false,
             tpTouched: false
         });
@@ -101,8 +117,14 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
             ...buildMt5WriteFields(identity),
         };
 
+        const state = useMarketStore.getState();
         const normSym = normalizeSymbol(draftOrder.symbol);
-        const digits = useMarketStore.getState().symbolInfo?.[normSym]?.digits || 5;
+        const scopedInfo = state.symbolInfo?.[`${dataSource}:${draftOrder.symbol}`]
+            || state.symbolInfo?.[`${dataSource}:${normSym}`];
+        const symbolInfo = String(source || '').toUpperCase() === 'MT5_PERSONAL'
+            ? scopedInfo
+            : (scopedInfo || state.symbolInfo?.[normSym]);
+        const digits = symbolInfo?.digits || 5;
 
         if (draftOrder.isMarket) {
             payload.price = 0;
