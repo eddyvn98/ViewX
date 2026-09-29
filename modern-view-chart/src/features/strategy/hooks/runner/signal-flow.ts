@@ -66,6 +66,14 @@ export function processStrategySignal(
         );
         if (pending) {
             store.cancelVirtualPosition(strategy.id, symbol, finalSignal.direction, matrixScopeKey);
+            store.addSignal({
+                ...finalSignal,
+                barTime: lastTime,
+                timeframe,
+                source,
+                matrixScopeKey,
+            });
+            if (typeof lastTime === 'number') store.updateLastSignalTime(strategy.id, lastTime, matrixScopeKey);
             void notifyTelegramSignal({
                 strategyName: strategy.name,
                 symbol,
