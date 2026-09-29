@@ -96,7 +96,7 @@ export function useStrategyRunner() {
                     if (!candles || candles.length < 50) return;
 
                     const strategy = strategies.find((item) => item.id === config.strategyId);
-                    if (!strategy) return;
+                    if (!strategy || !strategy.active) return;
 
                     const lastRun = backtestRunRef.current[scopeKey] || 0;
                     const hasActivePos = currentVirtualPositions.some((p) => p.matrixScopeKey === scopeKey && p.status !== 'closed' && !p.isHistorical);
@@ -220,24 +220,31 @@ export function useStrategyRunner() {
                         const latestStore = useStrategyStore.getState();
                         const latestVirtualPositions = latestStore.virtualPositions;
 
+                        if (!strategy.active) {
+                            capturePostExitContexts(strategy, symbol, candles, latestVirtualPositions, latestStore.updateVirtualPosition);
+                            continue;
+                        }
+
                         if (!isNewBar) {
                             capturePostExitContexts(strategy, symbol, candles, latestVirtualPositions, latestStore.updateVirtualPosition);
                             continue;
                         }
 
+                        const scopedLastSignalTime = scopeKey
+                            ? latestStore.scopedLastSignalTimes[scopeKey]
+                            : strategy.lastSignalTime;
                         const engineCtx: EngineContext = {
                             activePositions: latestVirtualPositions,
                             currentPrice: lastCandle.close,
                             symbol,
-                            lastSignalTime: strategy.lastSignalTime
+                            lastSignalTime: scopedLastSignalTime
                         };
 
                         const signal = RuleEngine.run(strategy, candles, engineCtx);
                         if (!signal) continue;
                         
                         // Scoped Signal Guard: Prevent duplicate signals for the same bar/scope
-                        const lastSignalTime = scopeKey ? latestStore.scopedLastSignalTimes[scopeKey] : strategy.lastSignalTime;
-                        if (typeof lastSignalTime === 'number' && lastTime <= lastSignalTime) continue;
+                        if (typeof scopedLastSignalTime === 'number' && lastTime <= scopedLastSignalTime) continue;
 
                         processStrategySignal(
                             strategy,
