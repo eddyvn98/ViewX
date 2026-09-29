@@ -57,10 +57,13 @@ export function strategySupportsDirection(strategy: Strategy, direction: Strateg
     if (Array.isArray(strategy.enabledDirections)) {
         return strategy.enabledDirections.includes(direction);
     }
+    // Older My Bot saves always wrote side='BUY' even though both leg objects
+    // existed. Honor that explicit legacy side before inferring from leg presence.
+    if (strategy.side) return strategy.side === direction;
     if (direction === 'BUY' && strategy.buy) return true;
     if (direction === 'SELL' && strategy.sell) return true;
     if (strategy.buy || strategy.sell) return false;
-    return !strategy.side || strategy.side === direction;
+    return true;
 }
 
 export function getStrategyDirections(strategy: Strategy): StrategyDirection[] {
