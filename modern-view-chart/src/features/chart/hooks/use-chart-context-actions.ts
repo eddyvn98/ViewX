@@ -3,6 +3,8 @@ import { Alert, useMarketStore } from '@/lib/store';
 import { getNearElement } from '../logic/chart-hit-test';
 import { useChartContextMenu } from './use-chart-context-menu';
 import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 
 interface ContextDeps {
     symbol: string | undefined;
@@ -31,15 +33,33 @@ export function useChartContextActions({
     handleRemoveAlert,
     sendMessage
 }: ContextDeps) {
+    const dataSource = React.useMemo(
+        () => resolveChartIdentityDataSource(source, mt5Identity),
+        [source, mt5Identity],
+    );
+    const personalMt5 = String(source || '').trim().toUpperCase() === 'MT5_PERSONAL';
+
     const contextMenuHitTest = React.useCallback((y: number, x: number) => {
         const store = useMarketStore.getState();
+        const normSymbol = normalizeSymbol(symbol);
+        const scopedTicker = symbol
+            ? store.tickers[`${dataSource}:${symbol}`] || store.tickers[`${dataSource}:${normSymbol}`]
+            : undefined;
+        const scopedInfo = symbol
+            ? store.symbolInfo[`${dataSource}:${symbol}`] || store.symbolInfo[`${dataSource}:${normSymbol}`]
+            : undefined;
+        const draftSource = store.draftOrder?.source
+            ? resolveChartIdentityDataSource(store.draftOrder.source || undefined, store.draftOrder)
+            : dataSource;
         const state = {
-            positions: store.positions,
-            orders: store.orders,
-            draftOrder: store.draftOrder,
-            symbolInfo: symbol ? store.symbolInfo[symbol] : undefined,
+            positions: store.positions.filter((item) => String(item.source || 'MT5') === dataSource),
+            orders: store.orders.filter((item) => String(item.source || 'MT5') === dataSource),
+            draftOrder: draftSource === dataSource ? store.draftOrder : null,
+            symbolInfo: personalMt5 ? scopedInfo : (scopedInfo || (symbol ? store.symbolInfo[normSymbol] : undefined)),
             alerts,
-            currentPrice: symbol ? (store.tickers[`${source}:${symbol}`]?.price || store.tickers[symbol]?.price || 0) : 0
+            currentPrice: personalMt5
+                ? (scopedTicker?.price || 0)
+                : (scopedTicker?.price || (symbol ? store.tickers[symbol]?.price || store.tickers[normSymbol]?.price : 0) || 0),
         };
 
         return getNearElement(
@@ -50,7 +70,7 @@ export function useChartContextActions({
             symbol,
             state
         );
-    }, [alerts, mainContainerRef, seriesRef, source, symbol]);
+    }, [alerts, dataSource, mainContainerRef, personalMt5, seriesRef, symbol]);
 
     const { contextMenu, handleContextMenu, closeContextMenu } = useChartContextMenu(
         priceChartRef,
