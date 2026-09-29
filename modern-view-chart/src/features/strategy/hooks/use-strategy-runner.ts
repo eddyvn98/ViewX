@@ -240,7 +240,10 @@ export function useStrategyRunner() {
                             lastSignalTime: scopedLastSignalTime
                         };
 
-                        const signal = RuleEngine.run(strategy, candles, engineCtx);
+                        const evaluationCandles = candles.slice(0, -1);
+                        if (evaluationCandles.length < 2) continue;
+
+                        const signal = RuleEngine.run(strategy, evaluationCandles, engineCtx);
                         if (!signal) continue;
                         
                         // Scoped Signal Guard: Prevent duplicate signals for the same bar/scope
