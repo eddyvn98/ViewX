@@ -161,7 +161,7 @@ export function buildMatrixRunnerConfigs(scanners: MatrixScannerConfig[]): Matri
                 if (!tf) continue;
                 const interval = timeframeToChartInterval(tf);
                 const source = inferMatrixSymbolSource(symbol);
-                const key = `${scanner.id}:${scanner.strategyId}:${source}:${symbol}:${interval}`;
+                const key = `${scanner.strategyId}:${source}:${symbol}:${interval}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
                 list.push({
