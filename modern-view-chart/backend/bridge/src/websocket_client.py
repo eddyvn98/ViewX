@@ -225,6 +225,7 @@ class BridgeClient:
                         "topic": "mt5_order_result",
                         "request_id": request_id,
                         "command": cmd,
+                        "ticket": data.get("ticket"),
                         **self._scope_fields(data),
                         "success": False,
                         "retcode": None,
