@@ -233,6 +233,7 @@ export function SignalsView({ showVirtualBalanceCard = true, showMatrix = true }
                                     buyLabel={t('matrix.buy')}
                                     sellLabel={t('matrix.sell')}
                                     exitLabel={t('exit')}
+                                    cancelLabel={t('cancel')}
                                     onManualAnalyze={handleManualAnalyze}
                                 />
                             </div>
