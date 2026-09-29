@@ -96,6 +96,12 @@ export function ScannerCard({
                 </div>
             )}
 
+            {selectedStrategy && !selectedStrategy.active && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-500">
+                    {t('botPaused')}
+                </div>
+            )}
+
             {selectedStrategy && (
                 <ScannerMatrixTable
                     scannerId={scanner.id}

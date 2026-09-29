@@ -60,6 +60,8 @@ export interface StrategyBuilderDraft {
     editingStrategyId: string | null;
     name: string;
     activeDirection: StrategyDirection;
+    buyEnabled: boolean;
+    sellEnabled: boolean;
     buy: StrategyLeg;
     sell: StrategyLeg;
     executionMode: 'virtual' | 'real';

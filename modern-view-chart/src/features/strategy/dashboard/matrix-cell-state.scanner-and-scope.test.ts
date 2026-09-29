@@ -7,7 +7,7 @@ import type { MatrixScannerConfig } from './matrix-types';
 import { baseStrategy, cfg, makeCandles } from './matrix-cell-state.test.helpers';
 
 describe('matrix-cell-state - scanner and scope', () => {
-    it('does not invent a cross-timeframe signal when the strategy timeframe does not match the cell', () => {
+    it('uses scanner timeframe in matrix mode instead of hiding cells by the bot default timeframe', () => {
         const m1OnlyStrategy: Strategy = {
             ...baseStrategy,
             timeframe: '1m',
@@ -24,6 +24,51 @@ describe('matrix-cell-state - scanner and scope', () => {
             virtualPositions: [],
             matrixConfig: cfg,
             getCandles: () => makeCandles(50),
+        });
+
+        assert.equal(cell.signal, 'BUY');
+    });
+
+    it('does not paint entry readiness while the selected bot is paused', () => {
+        const paused: Strategy = {
+            ...baseStrategy,
+            active: false,
+            side: 'BUY',
+            entry: { operator: 'AND', conditions: [{ id: 'buy-ready', left: { type: 'Price', params: [] }, comparator: '>', right: 0 }] },
+        };
+
+        const cell = buildMatrixCellState({
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            strategyId: 's1',
+            strategies: [paused],
+            signals: [],
+            virtualPositions: [],
+            matrixConfig: cfg,
+            getCandles: () => makeCandles(30),
+        });
+
+        assert.equal(cell.signal, 'NO_TRADE');
+        assert.equal(cell.badge, null);
+    });
+
+    it('requires Entry Setup trigger when it is configured', () => {
+        const strategy: Strategy = {
+            ...baseStrategy,
+            side: 'BUY',
+            entry: { operator: 'AND', conditions: [{ id: 'entry-ready', left: { type: 'Price', params: [] }, comparator: '>', right: 0 }] },
+            trigger: { operator: 'AND', conditions: [{ id: 'trigger-blocked', left: { type: 'Price', params: [] }, comparator: '<', right: 0 }] },
+        };
+
+        const cell = buildMatrixCellState({
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            strategyId: 's1',
+            strategies: [strategy],
+            signals: [],
+            virtualPositions: [],
+            matrixConfig: cfg,
+            getCandles: () => makeCandles(30),
         });
 
         assert.equal(cell.signal, 'NO_TRADE');

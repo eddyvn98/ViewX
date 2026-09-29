@@ -130,6 +130,7 @@ export interface Strategy {
     risk?: StrategyRisk;
     buy?: StrategyLeg;
     sell?: StrategyLeg;
+    enabledDirections?: StrategyDirection[];
     active: boolean;
     aiGuard?: boolean; // AI Monitoring for live signals
     symbol?: string;
