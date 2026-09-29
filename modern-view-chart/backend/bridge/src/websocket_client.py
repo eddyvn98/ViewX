@@ -3,7 +3,7 @@ import json
 import time
 import websockets
 from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit
-from .mt5_write_guard import build_write_fingerprint
+from mt5_write_guard import build_write_fingerprint
 
 
 def mask_url_for_log(url):
