@@ -18,6 +18,10 @@ export interface DraftOrder {
     sl?: number;
     tp?: number;
     isMarket: boolean;
+    source?: string | null;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
     slTouched?: boolean;
     tpTouched?: boolean;
 }
