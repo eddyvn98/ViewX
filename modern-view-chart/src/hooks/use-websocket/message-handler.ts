@@ -73,6 +73,12 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
         }
 
         if (msgType === 'error' && msg.request_id) {
+            const errorScope = normalizeMt5AccountScope(msg.mt5_scope || msg);
+            const errorSource = buildMt5DataSourceKey(errorScope);
+            const errorTicket = Number(msg.ticket);
+            if (Number.isFinite(errorTicket)) {
+                useMarketStore.getState().clearPendingWrite(errorTicket, errorSource);
+            }
             const tradeError = {
                 ...msg,
                 topic: 'mt5_order_result',
@@ -283,6 +289,13 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
             const success = msg.success === true;
             const comment = String(msg.comment || msg.message || '').trim();
             const requestId = String(msg.request_id || '').trim();
+            const scope = normalizeMt5AccountScope(msg.mt5_scope || msg);
+            const sourceKey = buildMt5DataSourceKey(scope);
+            const ticket = Number(msg.ticket);
+
+            if (status !== 'pending' && Number.isFinite(ticket)) {
+                useMarketStore.getState().clearPendingWrite(ticket, sourceKey);
+            }
 
             if (status !== 'pending') {
                 useMarketStore.getState().addNotification(
@@ -299,12 +312,11 @@ export function handleSocketMessage(event: MessageEvent, socket: WebSocket, deps
                 }));
             }
 
-            if (success && socket.readyState === WebSocket.OPEN) {
-                const scope = normalizeMt5AccountScope(msg.mt5_scope || msg);
+            if (status !== 'pending' && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     topic: 'mt5_command',
                     command: 'get_positions',
-                    reason: 'post_trade_refresh',
+                    reason: success ? 'post_trade_refresh' : 'post_trade_failure_reconcile',
                     ...(requestId ? { parent_request_id: requestId } : {}),
                     ...buildMt5AuthFields(scope),
                     broker: scope.broker,
