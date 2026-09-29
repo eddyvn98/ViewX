@@ -19,7 +19,7 @@ interface BuildCellStateInput {
     nowMs?: number;
 }
 
-function matchesCellStrategy(strategy: Strategy, _symbol: string, _timeframe: string): boolean {
+function matchesCellStrategy(strategy: Strategy): boolean {
     // In matrix mode, the scanner owns symbol/timeframe. My Bot's timeframe is
     // only a legacy/default context and must not hide cells the runner executes.
     return strategy.active;
@@ -60,7 +60,7 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
         };
     }
     const candidateStrategies = input.strategies.filter((s) => s.id === input.strategyId);
-    const exactMatchingStrategies = candidateStrategies.filter((s) => matchesCellStrategy(s, symbol, timeframe));
+    const exactMatchingStrategies = candidateStrategies.filter(matchesCellStrategy);
     const strategiesForEntry = exactMatchingStrategies;
     const strategyIds = new Set(strategiesForEntry.map((s) => s.id));
     const positionStrategyIds = new Set(candidateStrategies.map((s) => s.id));
