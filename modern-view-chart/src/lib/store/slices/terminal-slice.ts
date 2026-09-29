@@ -171,11 +171,19 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     addPendingModification: (ticket, field, price, source = 'MT5') => set((state) => {
         const sourceKey = String(source || 'MT5');
         const key = `${sourceKey}:${ticket}-${field}`;
+        const matches = (item: { ticket: number; source?: string }) =>
+            item.ticket === ticket && String(item.source || 'MT5') === sourceKey;
         return {
             pendingModifications: {
                 ...state.pendingModifications,
                 [key]: { ticket, field, price, source: sourceKey, timestamp: Date.now() },
             },
+            positions: field === 'price_open'
+                ? state.positions
+                : state.positions.map((item) => matches(item) ? { ...item, [field]: price } : item),
+            orders: field === 'open_price'
+                ? state.orders
+                : state.orders.map((item) => matches(item) ? { ...item, [field]: price } : item),
         };
     }),
 
