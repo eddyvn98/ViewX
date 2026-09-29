@@ -24,8 +24,9 @@ if (tests.length === 0) {
 console.log(`[test:unit] Running ${tests.length} test file(s)`);
 const args = ['--yes', 'tsx', '--import', './tests/unit.setup.ts', '--test', ...tests];
 
-const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const result = spawnSync(npxCommand, args, { stdio: 'inherit' });
+const result = process.platform === 'win32'
+  ? spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'npx.cmd', ...args], { stdio: 'inherit' })
+  : spawnSync('npx', args, { stdio: 'inherit' });
 
 if (result.error) {
   console.error(result.error);
