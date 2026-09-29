@@ -1,7 +1,11 @@
 param(
     [switch]$ForceBuild = $false,
     [switch]$SkipTests = $false,
-    [switch]$SkipGitNexus = $false
+    [switch]$SkipGitNexus = $false,
+    [switch]$SkipSoak = $false,
+    [int]$SoakClients = 20,
+    [int]$SoakDurationSec = 120,
+    [int]$SoakRampSec = 20
 )
 
 Set-StrictMode -Version Latest
@@ -111,18 +115,22 @@ try {
     & node scripts/server/ws-auth-smoke.mjs --ws-url "wss://api.vivutrade.io.vn"
     Assert-LastExitCode "WebSocket auth smoke"
 
-    Write-Host "[Deploy] Running short post-deploy WebSocket soak..." -ForegroundColor Cyan
-    & node scripts/server/ws-soak-test.mjs `
-        --ws-url "wss://api.vivutrade.io.vn" `
-        --api-url "https://api.vivutrade.io.vn" `
-        --clients 20 `
-        --duration-sec 120 `
-        --ramp-sec 20 `
-        --reconnect-attempts 3 `
-        --reconnect-delay-ms 1000 `
-        --require-metrics false `
-        --output "logs/post-deploy-live-soak.json"
-    Assert-LastExitCode "post-deploy WebSocket soak"
+    if (-not $SkipSoak) {
+        Write-Host "[Deploy] Running $SoakClients-client live soak test (${SoakDurationSec}s)..." -ForegroundColor Cyan
+        & node scripts/server/ws-soak-test.mjs `
+            --ws-url "wss://api.vivutrade.io.vn" `
+            --api-url "https://api.vivutrade.io.vn" `
+            --clients $SoakClients `
+            --duration-sec $SoakDurationSec `
+            --ramp-sec $SoakRampSec `
+            --reconnect-attempts 3 `
+            --reconnect-delay-ms 1000 `
+            --require-metrics false `
+            --output "logs/post-deploy-live-soak.json"
+        Assert-LastExitCode "$SoakClients-client live soak"
+    } else {
+        Write-Warning "[Deploy] Post-deploy live soak skipped by -SkipSoak."
+    }
 }
 finally {
     Pop-Location
