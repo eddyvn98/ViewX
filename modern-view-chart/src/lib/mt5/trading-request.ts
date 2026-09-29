@@ -14,7 +14,10 @@ export function createMt5RequestId(): string {
     return `mt5-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function buildMt5WriteFields(identity?: Mt5TradingIdentity): Record<string, string | null> & { request_id: string } {
+export function buildMt5WriteFields(
+    identity?: Mt5TradingIdentity,
+    requestId: string = createMt5RequestId(),
+): Record<string, string | null> & { request_id: string } {
     const source = String(identity?.source || '').trim().toUpperCase();
     const scope = normalizeMt5AccountScope({
         source: source === 'MT5_PERSONAL' ? 'MT5_PERSONAL' : 'MT5',
@@ -24,7 +27,7 @@ export function buildMt5WriteFields(identity?: Mt5TradingIdentity): Record<strin
     });
 
     return {
-        request_id: createMt5RequestId(),
+        request_id: requestId,
         ...buildMt5AuthFields(scope),
         broker: scope.broker,
     };

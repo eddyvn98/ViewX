@@ -32,6 +32,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
         toggleCollapse,
         handleScroll,
         handleClosePosition,
+        handleCancelOrder,
         handleUpdatePosition,
         handleSymbolClick,
         handleAnalyze,
@@ -69,6 +70,7 @@ export const Terminal = memo(function Terminal({ forceExpanded = false }: { forc
                         visibleHistory={visibleHistory}
                         handleScroll={handleScroll}
                         handleClosePosition={handleClosePosition}
+                        handleCancelOrder={handleCancelOrder}
                         handleUpdatePosition={handleUpdatePosition}
                         handleSymbolClick={handleSymbolClick}
                         handleAnalyze={handleAnalyze}

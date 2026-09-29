@@ -7,7 +7,9 @@ import {
     applyPendingPositionLocks,
     filterPendingDeletions,
     hasPositionStructuralChange,
-    patchRealtimePositionFields
+    patchRealtimePositionFields,
+    pendingDeletionKey,
+    pendingModificationKey,
 } from './terminal/reconcile-utils';
 
 export interface DraftOrder {
@@ -18,6 +20,10 @@ export interface DraftOrder {
     sl?: number;
     tp?: number;
     isMarket: boolean;
+    source?: string | null;
+    accountLogin?: string | null;
+    terminalId?: string | null;
+    broker?: string | null;
     slTouched?: boolean;
     tpTouched?: boolean;
 }
@@ -40,6 +46,7 @@ export interface PendingModification {
     ticket: number;
     field: 'sl' | 'tp' | 'open_price' | 'price_open';
     price: number;
+    source: string;
     timestamp: number;
 }
 
@@ -92,14 +99,20 @@ export interface TerminalSlice {
     terminalHeight: number;
     hoveredTicket: number | null;
     pendingModifications: Record<string, PendingModification>;
-    pendingDeletions: Record<number, number>;
+    pendingDeletions: Record<string, number>;
     setAccount: (source: string, data: AccountInfo) => void;
     setMt5AccountsAvailable: (accounts: Mt5AccountScope[]) => void;
     setSelectedMt5Scope: (scope: Mt5AccountScope) => void;
     setPositions: (data: Position[] | ((prev: Position[]) => Position[]), sourceOverride?: string) => void;
     setOrders: (data: Order[] | ((prev: Order[]) => Order[]), sourceOverride?: string) => void;
-    addPendingModification: (ticket: number, field: 'sl' | 'tp' | 'open_price' | 'price_open', price: number) => void;
-    addPendingDeletion: (ticket: number) => void;
+    addPendingModification: (
+        ticket: number,
+        field: 'sl' | 'tp' | 'open_price' | 'price_open',
+        price: number,
+        source?: string,
+    ) => void;
+    addPendingDeletion: (ticket: number, source?: string) => void;
+    clearPendingWrite: (ticket: number | string, source?: string) => void;
     setHistory: (data: HistoryDeal[] | ((prev: HistoryDeal[]) => HistoryDeal[])) => void;
     appendHistory: (newData: HistoryDeal[], isReset?: boolean, sourceOverride?: string) => void;
     setAnalysisResult: (ticket: number, result: AnalysisResult) => void;
@@ -141,25 +154,54 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
     pendingModifications: {},
     pendingDeletions: {},
 
-    addPendingDeletion: (ticket) => set((state) => {
+    addPendingDeletion: (ticket, source = 'MT5') => set((state) => {
         const ticketNum = typeof ticket === 'string' ? parseInt(ticket, 10) : ticket;
         if (Number.isNaN(ticketNum)) return state;
+        const sourceKey = String(source || 'MT5');
+        const key = pendingDeletionKey(sourceKey, ticketNum);
 
         return {
-            pendingDeletions: { ...state.pendingDeletions, [ticketNum]: Date.now() },
-            positions: state.positions.filter((p) => Number(p.ticket) !== ticketNum),
-            orders: state.orders.filter((o) => Number(o.ticket) !== ticketNum)
+            pendingDeletions: { ...state.pendingDeletions, [key]: Date.now() },
+            positions: state.positions.filter(
+                (p) => String(p.source || 'MT5') !== sourceKey || Number(p.ticket) !== ticketNum,
+            ),
+            orders: state.orders.filter(
+                (o) => String(o.source || 'MT5') !== sourceKey || Number(o.ticket) !== ticketNum,
+            ),
         };
     }),
 
-    addPendingModification: (ticket, field, price) => set((state) => {
-        const key = `${ticket}-${field}`;
+    addPendingModification: (ticket, field, price, source = 'MT5') => set((state) => {
+        const sourceKey = String(source || 'MT5');
+        const key = pendingModificationKey(sourceKey, ticket, field);
+        const matches = (item: { ticket: number; source?: string }) =>
+            item.ticket === ticket && String(item.source || 'MT5') === sourceKey;
         return {
             pendingModifications: {
                 ...state.pendingModifications,
-                [key]: { ticket, field, price, timestamp: Date.now() }
-            }
+                [key]: { ticket, field, price, source: sourceKey, timestamp: Date.now() },
+            },
+            positions: field === 'price_open'
+                ? state.positions
+                : state.positions.map((item) => matches(item) ? { ...item, [field]: price } : item),
+            orders: field === 'open_price'
+                ? state.orders
+                : state.orders.map((item) => matches(item) ? { ...item, [field]: price } : item),
         };
+    }),
+
+    clearPendingWrite: (ticket, source = 'MT5') => set((state) => {
+        const sourceKey = String(source || 'MT5');
+        const deletionKey = pendingDeletionKey(sourceKey, ticket);
+        const pendingDeletions = { ...state.pendingDeletions };
+        delete pendingDeletions[deletionKey];
+
+        const prefix = `${deletionKey}-`;
+        const pendingModifications = Object.fromEntries(
+            Object.entries(state.pendingModifications)
+                .filter(([key]) => !key.startsWith(prefix)),
+        );
+        return { pendingDeletions, pendingModifications };
     }),
 
     setAccount: (source, data) => set((state) => ({

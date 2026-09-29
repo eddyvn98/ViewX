@@ -52,8 +52,8 @@ describe('filterPendingDeletions', () => {
         try {
             const items = [{ ticket: 1 }, { ticket: 2 }, { ticket: 3 }];
             const pendingDeletions = {
-                1: FIXED_NOW_MS - 1000,
-                2: FIXED_NOW_MS - 15000
+                'MT5:1': FIXED_NOW_MS - 1000,
+                'MT5:2': FIXED_NOW_MS - 15000
             };
 
             const filtered = filterPendingDeletions(items, pendingDeletions, 10000);
@@ -72,9 +72,9 @@ describe('applyPendingPositionLocks', () => {
         try {
             const position = makePosition({ ticket: 99, sl: 1.08, tp: 1.13, open_price: 1.2 });
             const locked = applyPendingPositionLocks(position, {
-                '99-sl': { price: 1.09, timestamp: FIXED_NOW_MS - 500 },
-                '99-tp': { price: 1.14, timestamp: FIXED_NOW_MS - 500 },
-                '99-open_price': { price: 1.21, timestamp: FIXED_NOW_MS - 500 }
+                'MT5:99-sl': { price: 1.09, timestamp: FIXED_NOW_MS - 500 },
+                'MT5:99-tp': { price: 1.14, timestamp: FIXED_NOW_MS - 500 },
+                'MT5:99-open_price': { price: 1.21, timestamp: FIXED_NOW_MS - 500 }
             }, 3000);
 
             assert.equal(locked.sl, 1.09);
@@ -94,7 +94,7 @@ describe('applyPendingOrderLocks', () => {
         try {
             const order = makeOrder({ ticket: 77, sl: 1.08 });
             const next = applyPendingOrderLocks(order, {
-                '77-sl': { price: 1.09, timestamp: FIXED_NOW_MS - 5000 }
+                'MT5:77-sl': { price: 1.09, timestamp: FIXED_NOW_MS - 5000 }
             }, 3000);
 
             assert.equal(next.sl, 1.08);
@@ -125,5 +125,56 @@ describe('position reconcile helpers', () => {
 
         const unchanged = patchRealtimePositionFields(previous, previous);
         assert.equal(unchanged, false);
+    });
+});
+
+
+describe('account-scoped reconcile isolation', () => {
+    it('does not hide the same ticket on another MT5 account', () => {
+        const originalNow = Date.now;
+        Date.now = () => FIXED_NOW_MS;
+        try {
+            const items = [
+                { ticket: 42, source: 'MT5_PERSONAL@10001@terminal-a' },
+                { ticket: 42, source: 'MT5_PERSONAL@10002@terminal-b' },
+            ];
+            const filtered = filterPendingDeletions(items, {
+                'MT5_PERSONAL@10001@terminal-a:42': FIXED_NOW_MS - 100,
+            }, 10000);
+
+            assert.deepEqual(filtered, [
+                { ticket: 42, source: 'MT5_PERSONAL@10002@terminal-b' },
+            ]);
+        } finally {
+            Date.now = originalNow;
+        }
+    });
+
+    it('applies pending SL only to the matching MT5 source', () => {
+        const originalNow = Date.now;
+        Date.now = () => FIXED_NOW_MS;
+        try {
+            const locks = {
+                'MT5_PERSONAL@10001@terminal-a:99-sl': {
+                    price: 1.09,
+                    timestamp: FIXED_NOW_MS - 100,
+                },
+            };
+            const accountA = applyPendingPositionLocks(
+                makePosition({ ticket: 99, source: 'MT5_PERSONAL@10001@terminal-a', sl: 1.08 }),
+                locks,
+                3000,
+            );
+            const accountB = applyPendingPositionLocks(
+                makePosition({ ticket: 99, source: 'MT5_PERSONAL@10002@terminal-b', sl: 1.07 }),
+                locks,
+                3000,
+            );
+
+            assert.equal(accountA.sl, 1.09);
+            assert.equal(accountB.sl, 1.07);
+        } finally {
+            Date.now = originalNow;
+        }
     });
 });

@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable react-hooks/refs */
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useChartPositions } from './hooks/use-chart-positions';
 import { useChartOrders } from './hooks/use-chart-orders';
@@ -65,6 +65,10 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     const sendMessageUnknown = useCallback((data: unknown) => {
         sendMessage(data as Parameters<typeof sendMessage>[0]);
     }, [sendMessage]);
+    const mt5Identity = useMemo(
+        () => ({ source, accountLogin, terminalId, broker }),
+        [source, accountLogin, terminalId, broker],
+    );
 
     useChartPositions(symbol, seriesRef, filteredPositions, priceChartRef);
     useChartOrders(symbol, seriesRef, filteredOrders);
@@ -112,6 +116,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
         seriesRef,
         markerSeriesRef,
         symbol,
+        source,
+        mt5Identity,
         mainContainerRef,
         priceContainerRef,
         isReady,
@@ -144,7 +150,7 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     } = useChartContextActions({
         symbol,
         source,
-        mt5Identity: { source, accountLogin, terminalId, broker },
+        mt5Identity,
         priceChartRef,
         priceContainerRef,
         seriesRef,

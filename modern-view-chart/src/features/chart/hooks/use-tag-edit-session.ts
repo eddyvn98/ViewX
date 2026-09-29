@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { dispatchTagEditSaveAction, TagEditState } from '../logic/tag-command-dispatcher';
 import type { Mt5TradingIdentity } from '@/lib/mt5/trading-request';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 interface StartTagEditEventDetail {
     ticket: string | number;
     type: string;
     price: number;
     x?: number;
+    dataSource?: string;
 }
 
 interface UseTagEditSessionInput {
@@ -16,6 +18,7 @@ interface UseTagEditSessionInput {
 }
 
 export function useTagEditSession({ sendMessage, identity }: UseTagEditSessionInput) {
+    const dataSource = resolveChartIdentityDataSource(identity?.source || undefined, identity);
     const [editingState, setEditingState] = useState<TagEditState | null>(null);
     const isDeletingRef = useRef(false);
     const editingStateRef = useRef<TagEditState | null>(editingState);
@@ -41,6 +44,7 @@ export function useTagEditSession({ sendMessage, identity }: UseTagEditSessionIn
             const detail = customEvent.detail;
             if (!detail) return;
 
+            if (detail.dataSource && detail.dataSource !== dataSource) return;
             const { ticket, type, price, x } = detail;
             let value = price;
             isDeletingRef.current = false;
@@ -61,7 +65,7 @@ export function useTagEditSession({ sendMessage, identity }: UseTagEditSessionIn
 
         window.addEventListener('start-tag-edit', handleStartEdit as EventListener);
         return () => window.removeEventListener('start-tag-edit', handleStartEdit as EventListener);
-    }, []);
+    }, [dataSource]);
 
     return {
         editingState,

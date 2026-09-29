@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useMarketStore } from "@/lib/store";
 import { calculatePnL } from "@/lib/utils/pnl";
+import { normalizeSymbol } from "@/lib/utils/symbol";
 
 interface PositionsTableProps {
     positions: Position[];
@@ -147,8 +148,19 @@ const PositionRow = memo(function PositionRow({ pos, onClosePosition, onSymbolCl
     // DOM update loop - bypasses React
     const updateDOM = useCallback(() => {
         const state = useMarketStore.getState();
-        const tickerPrice = state.tickers[pos.symbol]?.price;
-        const symbolInfo = state.symbolInfo[pos.symbol];
+        const sourceKey = String(pos.source || 'MT5');
+        const normalized = normalizeSymbol(pos.symbol);
+        const scopedTicker = state.tickers[`${sourceKey}:${pos.symbol}`]
+            || state.tickers[`${sourceKey}:${normalized}`];
+        const scopedInfo = state.symbolInfo[`${sourceKey}:${pos.symbol}`]
+            || state.symbolInfo[`${sourceKey}:${normalized}`];
+        const personalMt5 = sourceKey.startsWith('MT5_PERSONAL@');
+        const tickerPrice = personalMt5
+            ? scopedTicker?.price
+            : (scopedTicker?.price || state.tickers[pos.symbol]?.price || state.tickers[normalized]?.price);
+        const symbolInfo = personalMt5
+            ? scopedInfo
+            : (scopedInfo || state.symbolInfo[pos.symbol] || state.symbolInfo[normalized]);
 
         const livePrice = tickerPrice || pos.current_price;
         const liveProfit = calculatePnL({

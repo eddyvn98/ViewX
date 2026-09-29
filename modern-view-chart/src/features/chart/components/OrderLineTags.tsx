@@ -43,7 +43,7 @@ export const OrderLineTags = memo(function OrderLineTags({ symbol, seriesRef, pr
         broker,
     }), [source, accountLogin, terminalId, broker]);
 
-    const { tags, currentPrice, symbolInfo, draftOrder } = useOrderTags(symbol);
+    const { tags, currentPrice, symbolInfo, draftOrder } = useOrderTags(symbol, source, identity);
     const symbolInfoRef = useRef(symbolInfo);
     const latestCandleTime = useMarketStore(state => {
         if (!symbol || !source || !interval) return undefined;

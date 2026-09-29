@@ -4,7 +4,8 @@ import React, { useState, useMemo, memo } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { cn } from '@/lib/utils';
-import { buildMt5DataSourceKey, normalizeMt5AccountScope } from '@/lib/mt5/account-scope';
+import { buildMt5AuthFields, buildMt5DataSourceKey, normalizeMt5AccountScope } from '@/lib/mt5/account-scope';
+import { normalizeSymbol } from '@/lib/utils/symbol';
 import { buildMt5WriteFields } from '@/lib/mt5/trading-request';
 // Sub-components
 import { OrderTypeTabs } from './OrderForm/OrderTypeTabs';
@@ -51,9 +52,13 @@ export function useOrderFormLogic() {
     const tickerSourceKey = activeChart?.source === 'MT5_PERSONAL'
         ? buildMt5DataSourceKey(mt5Scope)
         : String(activeChart?.source || 'MT5').toUpperCase();
-    const ticker = useMarketStore(state =>
-        state.tickers[`${tickerSourceKey}:${symbol}`] || state.tickers[symbol]
-    );
+    const normalizedSymbol = normalizeSymbol(symbol);
+    const ticker = useMarketStore(state => {
+        const scoped = state.tickers[`${tickerSourceKey}:${symbol}`]
+            || state.tickers[`${tickerSourceKey}:${normalizedSymbol}`];
+        if (activeChart?.source === 'MT5_PERSONAL') return scoped;
+        return scoped || state.tickers[symbol] || state.tickers[normalizedSymbol];
+    });
 
     const isCrypto = activeChart?.source === 'BINANCE';
     const bid = ticker?.price || 0;
@@ -66,9 +71,13 @@ export function useOrderFormLogic() {
         setDraftOrder({
             symbol, type: side, volume: parseFloat(volume) || 0,
             sl: parseFloat(sl) || undefined, tp: parseFloat(tp) || undefined,
-            isMarket: orderType === 'market'
+            isMarket: orderType === 'market',
+            source: mt5Scope.source,
+            accountLogin: mt5Scope.accountLogin,
+            terminalId: mt5Scope.terminalId,
+            broker: mt5Scope.broker,
         });
-    }, [symbol, side, volume, sl, tp, orderType, isDrafting, setDraftOrder]);
+    }, [symbol, side, volume, sl, tp, orderType, isDrafting, setDraftOrder, mt5Scope]);
 
     const setOrderType = (value: OrderType) => setOrderForm({ orderType: value });
     const setSide = (value: Side) => setOrderForm({ side: value });
@@ -78,6 +87,7 @@ export function useOrderFormLogic() {
 
     const resetForm = () => {
         if (isSubmitting) return;
+        pendingRequestIdRef.current = null;
         resetOrderForm();
         setIsDrafting(false);
         setDraftOrder(null);
@@ -159,17 +169,26 @@ export function useOrderFormLogic() {
             return;
         }
 
-        const writeFields = buildMt5WriteFields(mt5Scope);
+        const writeFields = buildMt5WriteFields(mt5Scope, pendingRequestIdRef.current || undefined);
         const requestId = writeFields.request_id;
         pendingRequestIdRef.current = requestId;
         setIsSubmitting(true);
         if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
         pendingTimeoutRef.current = setTimeout(() => {
             if (pendingRequestIdRef.current !== requestId) return;
-            pendingRequestIdRef.current = null;
             pendingTimeoutRef.current = null;
             setIsSubmitting(false);
-            useMarketStore.getState().addNotification('MT5: Hết thời gian chờ phản hồi lệnh', 'warning');
+            sendMessage({
+                topic: 'mt5_command',
+                command: 'get_positions',
+                reason: 'order_timeout_reconcile',
+                ...buildMt5AuthFields(mt5Scope),
+                broker: mt5Scope.broker,
+            });
+            useMarketStore.getState().addNotification(
+                'MT5: Chưa nhận được kết quả. Đã đồng bộ lại trạng thái; nếu gửi lại sẽ dùng cùng request ID để tránh nhân đôi lệnh.',
+                'warning',
+            );
         }, 20000);
         sendMessage({
             topic: 'mt5_command',

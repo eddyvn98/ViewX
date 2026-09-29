@@ -1,10 +1,11 @@
-import React, { useCallback, memo } from 'react';
+import React, { useCallback, memo, useRef, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { normalizeSymbol } from '@/lib/utils/symbol';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 interface ChartTradingOverlayProps {
     symbol: string | undefined;
@@ -23,19 +24,60 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
     const draftOrder = useMarketStore(state => state.draftOrder);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const { sendMessage } = useWebSocket();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const pendingRequestIdRef = useRef<string | null>(null);
+    const pendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const identity = React.useMemo<Mt5TradingIdentity>(() => ({
         source,
         accountLogin,
         terminalId,
         broker,
     }), [source, accountLogin, terminalId, broker]);
+    const dataSource = React.useMemo(
+        () => resolveChartIdentityDataSource(source, identity),
+        [source, identity],
+    );
 
-    // Get initial price for draft (computed once when needed)
+    React.useEffect(() => {
+        const handleMt5OrderResult = (event: Event) => {
+            const detail = (event as CustomEvent<Record<string, unknown>>).detail || {};
+            const requestId = String(detail.request_id || '');
+            if (!requestId || requestId !== pendingRequestIdRef.current) return;
+
+            pendingRequestIdRef.current = null;
+            if (pendingTimeoutRef.current) {
+                clearTimeout(pendingTimeoutRef.current);
+                pendingTimeoutRef.current = null;
+            }
+            setIsSubmitting(false);
+            if (detail.success === true) {
+                setDraftOrder(null);
+            }
+        };
+
+        window.addEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+        return () => {
+            window.removeEventListener('vivutrade:mt5-order-result', handleMt5OrderResult);
+            if (pendingTimeoutRef.current) {
+                clearTimeout(pendingTimeoutRef.current);
+                pendingTimeoutRef.current = null;
+            }
+        };
+    }, [setDraftOrder]);
+
+    // Trading prices must come from the chart-owned source/account. Never
+    // fall back to another personal MT5 account that happens to share a symbol.
     const getCurrentPrice = useCallback(() => {
         if (!symbol) return 0;
+        const state = useMarketStore.getState();
         const normSym = normalizeSymbol(symbol);
-        return useMarketStore.getState().tickers[normSym]?.price || 0;
-    }, [symbol]);
+        const scoped = state.tickers[`${dataSource}:${symbol}`]
+            || state.tickers[`${dataSource}:${normSym}`];
+        if (String(source || '').toUpperCase() === 'MT5_PERSONAL') {
+            return scoped?.price || 0;
+        }
+        return scoped?.price || state.tickers[symbol]?.price || state.tickers[normSym]?.price || 0;
+    }, [symbol, source, dataSource]);
 
     const handleStartDraft = (type: 'buy' | 'sell') => {
         const price = getCurrentPrice();
@@ -51,13 +93,17 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
             isMarket: true,
             sl: 0,
             tp: 0,
+            source,
+            accountLogin,
+            terminalId,
+            broker,
             slTouched: false,
             tpTouched: false
         });
     };
 
     const handleConfirm = () => {
-        if (!draftOrder) return;
+        if (!draftOrder || isSubmitting) return;
 
         // ðŸ›¡ï¸ Final Validation Logic (Front-end Gatekeeper)
         const isBuy = draftOrder.type === 'buy';
@@ -91,6 +137,8 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
             return;
         }
 
+        const writeFields = buildMt5WriteFields(identity, pendingRequestIdRef.current || undefined);
+        const requestId = writeFields.request_id;
         const payload: Record<string, unknown> = {
             topic: 'mt5_command',
             command: 'order',
@@ -98,11 +146,17 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
             type: draftOrder.type,
             volume: draftOrder.volume,
             is_market: draftOrder.isMarket,
-            ...buildMt5WriteFields(identity),
+            ...writeFields,
         };
 
+        const state = useMarketStore.getState();
         const normSym = normalizeSymbol(draftOrder.symbol);
-        const digits = useMarketStore.getState().symbolInfo?.[normSym]?.digits || 5;
+        const scopedInfo = state.symbolInfo?.[`${dataSource}:${draftOrder.symbol}`]
+            || state.symbolInfo?.[`${dataSource}:${normSym}`];
+        const symbolInfo = String(source || '').toUpperCase() === 'MT5_PERSONAL'
+            ? scopedInfo
+            : (scopedInfo || state.symbolInfo?.[normSym]);
+        const digits = symbolInfo?.digits || 5;
 
         if (draftOrder.isMarket) {
             payload.price = 0;
@@ -113,11 +167,26 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
         if (draftOrder.sl && draftOrder.sl > 0) payload.sl = Number(draftOrder.sl.toFixed(digits));
         if (draftOrder.tp && draftOrder.tp > 0) payload.tp = Number(draftOrder.tp.toFixed(digits));
 
+        pendingRequestIdRef.current = requestId;
+        setIsSubmitting(true);
+        if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
+        pendingTimeoutRef.current = setTimeout(() => {
+            if (pendingRequestIdRef.current !== requestId) return;
+            pendingTimeoutRef.current = null;
+            setIsSubmitting(false);
+            useMarketStore.getState().addNotification(
+                'MT5: Chưa nhận được kết quả lệnh chart. Gửi lại sẽ dùng cùng request ID để tránh nhân đôi.',
+                'warning',
+            );
+        }, 20000);
         sendMessage(payload as Parameters<typeof sendMessage>[0]);
-        setDraftOrder(null);
     };
 
-    const handleCancel = () => setDraftOrder(null);
+    const handleCancel = () => {
+        if (isSubmitting) return;
+        pendingRequestIdRef.current = null;
+        setDraftOrder(null);
+    };
 
     // This overlay executes MT5 writes. Do not expose it on Binance or
     // other sources, where a click must never fall through to shared MT5.
@@ -148,6 +217,7 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
                 <div className="flex items-center gap-1 p-0.5 w-[114px] bg-secondary/90 dark:bg-white/10 backdrop-blur-3xl border border-border dark:border-white/10 rounded-xl shadow-sm animate-in zoom-in-95 duration-200">
                     <button
                         onClick={handleCancel}
+                        disabled={isSubmitting}
                         className="w-6.5 h-6.5 flex-none flex items-center justify-center rounded-lg bg-white/5 text-muted-foreground/40 hover:text-foreground hover:bg-white/10 transition-all active:scale-90"
                     >
                         <X size={11} />
@@ -165,14 +235,15 @@ export const ChartTradingOverlay = memo(function ChartTradingOverlay({ symbol, s
 
                     <button
                         onClick={handleConfirm}
+                        disabled={isSubmitting}
                         className={cn(
-                            "h-6.5 px-3 flex-none rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 border",
+                            "h-6.5 px-3 flex-none rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95 border disabled:opacity-50 disabled:cursor-not-allowed",
                             draftOrder.type === 'buy'
                                 ? "bg-blue-500 text-white border-blue-400/20 hover:bg-blue-600"
                                 : "bg-rose-500 text-white border-rose-400/20 hover:bg-rose-600"
                         )}
                     >
-                        Confirm
+                        {isSubmitting ? 'Sending...' : 'Confirm'}
                     </button>
                 </div>
             )}

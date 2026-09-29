@@ -4,7 +4,7 @@ import { useMarketStore } from '@/lib/store';
 import { debugLog } from '@/lib/debug';
 import { getClientEntitlements } from '@/lib/auth/entitlements';
 import { useWebSocket } from '@/hooks/use-websocket';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTerminalResize } from './hooks/use-terminal-resize';
 import { buildMt5AuthFields, buildMt5DataSourceKey, Mt5AccountScope } from '@/lib/mt5/account-scope';
 import { buildMt5WriteFields } from '@/lib/mt5/trading-request';
@@ -47,15 +47,24 @@ export function useTerminalState(forceExpanded: boolean) {
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : selectedMt5Source;
     const account = useMarketStore((state) => state.accounts[accountSource] || null);
     const visibleAccount = hasYourMt5Module ? account : null;
-    const visiblePositions = hasYourMt5Module
-        ? positions.filter((position) => String(position.source || 'MT5') === accountSource)
-        : [];
-    const visibleOrders = hasYourMt5Module
-        ? orders.filter((order) => String(order.source || 'MT5') === accountSource)
-        : [];
-    const visibleHistory = hasYourMt5Module
-        ? history.filter((deal) => String(deal.source || 'MT5') === accountSource)
-        : [];
+    const visiblePositions = useMemo(
+        () => hasYourMt5Module
+            ? positions.filter((position) => String(position.source || 'MT5') === accountSource)
+            : [],
+        [hasYourMt5Module, positions, accountSource],
+    );
+    const visibleOrders = useMemo(
+        () => hasYourMt5Module
+            ? orders.filter((order) => String(order.source || 'MT5') === accountSource)
+            : [],
+        [hasYourMt5Module, orders, accountSource],
+    );
+    const visibleHistory = useMemo(
+        () => hasYourMt5Module
+            ? history.filter((deal) => String(deal.source || 'MT5') === accountSource)
+            : [],
+        [hasYourMt5Module, history, accountSource],
+    );
 
     const { sendMessage } = useWebSocket();
 
@@ -94,19 +103,18 @@ export function useTerminalState(forceExpanded: boolean) {
     const effectiveCollapsed = forceExpanded ? false : isCollapsed;
 
     const handleClosePosition = useCallback((ticket: number) => {
-        const pos = positions.find((p) => p.ticket === ticket);
-        const source = pos?.source || (activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : 'MT5');
+        const pos = visiblePositions.find((item) => item.ticket === ticket);
+        if (!pos) {
+            useMarketStore.getState().addNotification('Ticket không thuộc account terminal hiện tại', 'error');
+            return;
+        }
 
         if (confirm(`Do you want to close position ${ticket}?`)) {
-            if (source === 'BINANCE_DEMO') {
-                sendMessage({
-                    topic: 'binance_command',
-                    command: 'close',
-                    ticket,
-                });
+            if (String(pos.source || '') === 'BINANCE_DEMO') {
+                sendMessage({ topic: 'binance_command', command: 'close', symbol: pos.symbol, ticket });
                 return;
             }
-
+            useMarketStore.getState().addPendingDeletion(ticket, accountSource);
             sendMessage({
                 topic: 'mt5_command',
                 command: 'close',
@@ -114,9 +122,37 @@ export function useTerminalState(forceExpanded: boolean) {
                 ...buildMt5WriteFields(selectedMt5Scope),
             });
         }
-    }, [positions, activeChartSource, selectedMt5Scope, sendMessage]);
+    }, [visiblePositions, selectedMt5Scope, accountSource, sendMessage]);
+
+    const handleCancelOrder = useCallback((ticket: number) => {
+        const order = visibleOrders.find((item) => item.ticket === ticket);
+        if (!order) {
+            useMarketStore.getState().addNotification('Order không thuộc account terminal hiện tại', 'error');
+            return;
+        }
+        if (String(order.source || '') === 'BINANCE_DEMO') {
+            sendMessage({ topic: 'binance_command', command: 'close', symbol: order.symbol, ticket });
+            return;
+        }
+        useMarketStore.getState().addPendingDeletion(ticket, accountSource);
+        sendMessage({
+            topic: 'mt5_command',
+            command: 'delete',
+            ticket,
+            ...buildMt5WriteFields(selectedMt5Scope),
+        });
+    }, [visibleOrders, selectedMt5Scope, accountSource, sendMessage]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
+        const pos = visiblePositions.find((item) => item.ticket === ticket);
+        if (!pos) {
+            useMarketStore.getState().addNotification('Ticket không thuộc account terminal hiện tại', 'error');
+            return;
+        }
+        if (String(pos.source || '') === 'BINANCE_DEMO') {
+            useMarketStore.getState().addNotification('Chỉnh SL/TP không áp dụng cho Binance spot', 'warning');
+            return;
+        }
         const payload: Mt5ModifyPayload = {
             topic: 'mt5_command',
             command: 'modify',
@@ -128,9 +164,16 @@ export function useTerminalState(forceExpanded: boolean) {
         if (tp !== undefined && !isNaN(tp)) payload.tp = tp;
 
         if (Object.keys(payload).length > 3) {
+            const store = useMarketStore.getState();
+            if (payload.sl !== undefined) {
+                store.addPendingModification(ticket, 'sl', payload.sl, accountSource);
+            }
+            if (payload.tp !== undefined) {
+                store.addPendingModification(ticket, 'tp', payload.tp, accountSource);
+            }
             sendMessage(payload);
         }
-    }, [selectedMt5Scope, sendMessage]);
+    }, [visiblePositions, selectedMt5Scope, accountSource, sendMessage]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();
@@ -183,6 +226,7 @@ export function useTerminalState(forceExpanded: boolean) {
         toggleCollapse,
         handleScroll,
         handleClosePosition,
+        handleCancelOrder,
         handleUpdatePosition,
         handleSymbolClick,
         handleAnalyze,
