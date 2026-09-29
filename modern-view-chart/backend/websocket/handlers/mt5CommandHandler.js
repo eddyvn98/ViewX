@@ -53,15 +53,27 @@ function emitCommandError(ws, {
     requestId = null,
     accountLogin = null,
     terminalId = null,
+    broker = null,
+    ticket = null,
 }) {
+    const source = accountLogin ? "MT5_PERSONAL" : "MT5";
     safeSend(ws, JSON.stringify({
         topic: "error",
         code,
         detail,
         command: command || null,
+        source,
         ...(requestId ? { request_id: requestId } : {}),
+        ...(ticket !== null && ticket !== undefined ? { ticket } : {}),
         ...(accountLogin ? { account_login: accountLogin } : {}),
         ...(terminalId ? { terminal_id: terminalId } : {}),
+        ...(broker ? { broker } : {}),
+        mt5_scope: {
+            source,
+            account_login: accountLogin,
+            terminal_id: terminalId,
+            broker,
+        },
     }));
 }
 
@@ -78,6 +90,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
     const terminalId = explicitTerminalId || normalizeOptional(senderMeta?.selectedMt5TerminalId);
     const ownerUserId = senderMeta?.userId ? String(senderMeta.userId) : null;
     const targetOwnerUserId = accountLogin && ownerUserId ? ownerUserId : null;
+    const requestBroker = normalizeOptional(data?.broker);
+    const requestTicket = data?.ticket ?? null;
     const requestFingerprint = writeCommand
         ? buildMt5WriteFingerprint({ ...data, command })
         : null;
@@ -89,6 +103,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
             command,
             accountLogin,
             terminalId,
+            broker: requestBroker,
+            ticket: requestTicket,
         });
         return;
     }
@@ -105,6 +121,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
                     requestId,
                     accountLogin,
                     terminalId,
+                    broker: requestBroker,
+                    ticket: requestTicket,
                 });
                 return;
             }
@@ -116,6 +134,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
                     requestId,
                     accountLogin,
                     terminalId,
+                    broker: requestBroker,
+                    ticket: requestTicket,
                 });
                 return;
             }
@@ -137,6 +157,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
                     requestId,
                     accountLogin,
                     terminalId,
+                    broker: requestBroker,
+                    ticket: requestTicket,
                 });
                 return;
             }
@@ -148,6 +170,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
                     requestId,
                     accountLogin,
                     terminalId,
+                    broker: requestBroker,
+                    ticket: requestTicket,
                 });
                 return;
             }
@@ -161,6 +185,14 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
                 message: "request_already_in_flight",
                 account_login: accountLogin,
                 terminal_id: terminalId,
+                ticket: requestTicket,
+                source: accountLogin ? "MT5_PERSONAL" : "MT5",
+                mt5_scope: {
+                    source: accountLogin ? "MT5_PERSONAL" : "MT5",
+                    account_login: accountLogin,
+                    terminal_id: terminalId,
+                    broker: requestBroker,
+                },
             }));
             return;
         }
@@ -190,6 +222,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
             requestId,
             accountLogin,
             terminalId,
+            broker: requestBroker,
+            ticket: requestTicket,
         });
         return;
     }
@@ -200,7 +234,7 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
         });
     }
 
-    const broker = normalizeOptional(data?.broker) || normalizeOptional(route.record.broker);
+    const broker = requestBroker || normalizeOptional(route.record.broker);
     const payload = {
         ...data,
         command,
@@ -219,6 +253,7 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
             terminalId,
             broker,
             command,
+            ticket: requestTicket,
             symbol: normalizeOptional(data?.symbol),
             fingerprint: requestFingerprint,
             expiresAt: Date.now() + WRITE_REQUEST_TTL_MS,
@@ -241,6 +276,8 @@ export function handleMt5Command({ ws, clients, bridgeRegistry }, data) {
             requestId,
             accountLogin,
             terminalId,
+            broker: requestBroker,
+            ticket: requestTicket,
         });
         return;
     }
@@ -354,6 +391,7 @@ export function handleMt5OrderResult({ ws, clients }, data) {
         message: data?.message ?? data?.comment ?? (success ? "order_executed" : "order_failed"),
         order: data?.order ?? null,
         deal: data?.deal ?? null,
+        ticket: data?.ticket ?? pending.ticket ?? null,
         symbol: data?.symbol ?? pending.symbol ?? null,
         resolved_symbol: data?.resolved_symbol ?? data?.resolvedSymbol ?? null,
         duplicate: Boolean(data?.duplicate),
