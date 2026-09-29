@@ -105,6 +105,7 @@ export function useTerminalState(forceExpanded: boolean) {
                 sendMessage({ topic: 'binance_command', command: 'close', symbol: pos.symbol, ticket });
                 return;
             }
+            useMarketStore.getState().addPendingDeletion(ticket, accountSource);
             sendMessage({
                 topic: 'mt5_command',
                 command: 'close',
@@ -112,7 +113,7 @@ export function useTerminalState(forceExpanded: boolean) {
                 ...buildMt5WriteFields(selectedMt5Scope),
             });
         }
-    }, [visiblePositions, selectedMt5Scope, sendMessage]);
+    }, [visiblePositions, selectedMt5Scope, accountSource, sendMessage]);
 
     const handleCancelOrder = useCallback((ticket: number) => {
         const order = visibleOrders.find((item) => item.ticket === ticket);
@@ -124,13 +125,14 @@ export function useTerminalState(forceExpanded: boolean) {
             sendMessage({ topic: 'binance_command', command: 'close', symbol: order.symbol, ticket });
             return;
         }
+        useMarketStore.getState().addPendingDeletion(ticket, accountSource);
         sendMessage({
             topic: 'mt5_command',
             command: 'delete',
             ticket,
             ...buildMt5WriteFields(selectedMt5Scope),
         });
-    }, [visibleOrders, selectedMt5Scope, sendMessage]);
+    }, [visibleOrders, selectedMt5Scope, accountSource, sendMessage]);
 
     const handleUpdatePosition = useCallback((ticket: number, sl?: number, tp?: number) => {
         const pos = visiblePositions.find((item) => item.ticket === ticket);
@@ -153,9 +155,16 @@ export function useTerminalState(forceExpanded: boolean) {
         if (tp !== undefined && !isNaN(tp)) payload.tp = tp;
 
         if (Object.keys(payload).length > 3) {
+            const store = useMarketStore.getState();
+            if (payload.sl !== undefined) {
+                store.addPendingModification(ticket, 'sl', payload.sl, accountSource);
+            }
+            if (payload.tp !== undefined) {
+                store.addPendingModification(ticket, 'tp', payload.tp, accountSource);
+            }
             sendMessage(payload);
         }
-    }, [visiblePositions, selectedMt5Scope, sendMessage]);
+    }, [visiblePositions, selectedMt5Scope, accountSource, sendMessage]);
 
     const handleSymbolClick = useCallback((symbol: string) => {
         const state = useMarketStore.getState();
