@@ -15,6 +15,7 @@ import type { Strategy } from '../types';
 import { buildMatrixRunnerConfigs } from '../dashboard/matrix-cell-state';
 import { chartIntervalToDashboardTf } from '../dashboard/matrix-utils';
 import { buildMatrixScopeKey } from '../utils/matrix-scope';
+import { holdStrategyRunnerLeadership, type RunnerLockManager } from './runner/runner-leader';
 
 type TabsLike = Record<string, { charts: Record<string, { symbol: string; interval?: string; source?: string }>; activeChartId?: string | null }>;
 
@@ -33,6 +34,7 @@ export function useStrategyRunner() {
     const lastBarTimeRef = useRef<Record<string, number>>({});
     const isRunningRef = useRef(false);
     const backtestRunRef = useRef<Record<string, number>>({});
+    const [hasRunnerLeadership, setHasRunnerLeadership] = useState(false);
     const [isStrategyStoreHydrated, setIsStrategyStoreHydrated] = useState<boolean>(() => {
         const persistApi = (useStrategyStore as unknown as { persist?: { hasHydrated?: () => boolean } }).persist;
         return persistApi?.hasHydrated?.() ?? true;
@@ -67,12 +69,36 @@ export function useStrategyRunner() {
     }, []);
 
     useEffect(() => {
+        if (typeof navigator === 'undefined' || !navigator.locks?.request) {
+            setHasRunnerLeadership(true);
+            return;
+        }
+
+        const controller = new AbortController();
+        setHasRunnerLeadership(false);
+
+        void holdStrategyRunnerLeadership(
+            navigator.locks as unknown as RunnerLockManager,
+            controller.signal,
+            () => setHasRunnerLeadership(true),
+        ).catch((error: unknown) => {
+            if (controller.signal.aborted) return;
+            console.warn('[Runner] Web Locks unavailable, falling back to local runner:', error);
+            setHasRunnerLeadership(true);
+        });
+
+        return () => {
+            controller.abort();
+        };
+    }, []);
+
+    useEffect(() => {
         backtestRunRef.current = {};
     }, [lastResetTime]);
 
     // 1. Effect for patches and warmups - Throttled or check-based
     useEffect(() => {
-        if (!isStrategyStoreHydrated) return;
+        if (!isStrategyStoreHydrated || !hasRunnerLeadership) return;
         const runWarmup = async () => {
             strategies.forEach((strategy: Strategy) => {
                 const patch = getLegacyStrategyPatch(strategy);
@@ -131,11 +157,11 @@ export function useStrategyRunner() {
         // Run warmup/patch check every 5 seconds instead of every candle update
         const timer = setInterval(runWarmup, 5000);
         return () => clearInterval(timer);
-    }, [isStrategyStoreHydrated, strategies, matrixScanners, activeTabId, lastResetTime, updateStrategy, runBacktest]);
+    }, [isStrategyStoreHydrated, hasRunnerLeadership, strategies, matrixScanners, activeTabId, lastResetTime, updateStrategy, runBacktest]);
 
     // 2. Effect for background service
     useEffect(() => {
-        if (!isStrategyStoreHydrated) return;
+        if (!isStrategyStoreHydrated || !hasRunnerLeadership) return;
         const activeCount = matrixScanners.filter((scanner) => scanner.active && scanner.strategyId).length;
         if (activeCount > 0) {
             backgroundService.init();
@@ -149,11 +175,11 @@ export function useStrategyRunner() {
             backgroundService.releaseWakeLock();
             soundService.disableKeepAlive();
         };
-    }, [isStrategyStoreHydrated, matrixScanners]);
+    }, [isStrategyStoreHydrated, hasRunnerLeadership, matrixScanners]);
 
     // 3. Main Strategy Runner Loop - Interval based (1s) to prevent UI flooding
     useEffect(() => {
-        if (!isStrategyStoreHydrated) return;
+        if (!isStrategyStoreHydrated || !hasRunnerLeadership) return;
         const runCycle = async () => {
             if (isRunningRef.current) return;
             isRunningRef.current = true;
@@ -275,5 +301,5 @@ export function useStrategyRunner() {
 
         const intervalId = setInterval(runCycle, 1000);
         return () => clearInterval(intervalId);
-    }, [isStrategyStoreHydrated, matrixScanners, strategies, positions, sendMessage]);
+    }, [isStrategyStoreHydrated, hasRunnerLeadership, matrixScanners, strategies, positions, sendMessage]);
 }

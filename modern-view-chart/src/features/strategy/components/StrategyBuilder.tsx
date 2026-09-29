@@ -9,6 +9,7 @@ import { getStrategyLeg, strategySupportsDirection } from '../strategy-helpers';
 import { StrategyPreview } from '@/features/strategy/components/StrategyPreview';
 import { useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
+import { buildStrategyForSave } from './strategy-builder-model';
 
 interface StrategyBuilderProps {
     editingStrategy?: Strategy | null;
@@ -105,36 +106,18 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
 
         setValidationError(null);
 
-        const primaryDirection: StrategyDirection = buyEnabled ? 'BUY' : 'SELL';
-        const primaryLeg = primaryDirection === 'BUY' ? buy : sell;
-        const enabledDirections: StrategyDirection[] = [
-            ...(buyEnabled ? ['BUY' as const] : []),
-            ...(sellEnabled ? ['SELL' as const] : []),
-        ];
-
-        const newStrategy: Strategy = {
-            id: editingStrategy?.id || Math.random().toString(36).substring(7),
-            name: name.trim(),
-            active: editingStrategy?.active ?? true,
+        const newStrategy = buildStrategyForSave({
+            editingStrategy,
+            name,
             buy,
             sell,
-            enabledDirections,
-            risk: primaryLeg.risk,
-            entry: primaryLeg.entry,
-            exit: primaryLeg.exit,
-            trigger: primaryLeg.trigger,
-            cancelConditions: primaryLeg.cancelConditions,
-            side: primaryDirection,
-            symbol: editingStrategy?.symbol || activeChart?.symbol || 'XAUUSDm',
-            timeframe: editingStrategy?.timeframe || activeChart?.interval || '5m',
-            positionMode: primaryLeg.positionMode || 'single_position',
+            buyEnabled,
+            sellEnabled,
             executionMode,
-            entryType: primaryLeg.entryType || 'stop',
-            entryPrice: primaryLeg.entryPrice,
             magic,
             comment,
-            sessions: ["London", "NewYork"]
-        };
+            activeChart,
+        });
 
         if (editingStrategy) updateStrategy(editingStrategy.id, newStrategy);
         else addStrategy(newStrategy);
