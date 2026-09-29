@@ -1,4 +1,4 @@
-import React, { useCallback, memo, useEffect, useRef, useState } from 'react';
+import React, { useCallback, memo, useRef, useState } from 'react';
 import { useMarketStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
