@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ISeriesApi } from 'lightweight-charts';
-import { useMarketStore, Order } from '@/lib/store';
+import { useMarketStore } from '@/lib/store';
 import { getNearElement } from '../../logic/chart-hit-test';
 import { calculatePnL, formatPnL } from '@/lib/utils/pnl';
+import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 interface PointerHandlerArgs {
     chart: any;
@@ -11,6 +12,9 @@ interface PointerHandlerArgs {
     series: ISeriesApi<'Candlestick'>;
     coordinateSeries: ISeriesApi<'Candlestick'>;
     symbol: string;
+    source?: string;
+    dataSource: string;
+    identity?: Mt5TradingIdentity;
     stateRef: React.MutableRefObject<any>;
     isDragging: React.MutableRefObject<boolean>;
     dragState: React.MutableRefObject<any>;
@@ -30,6 +34,9 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
         series,
         coordinateSeries,
         symbol,
+        source,
+        dataSource,
+        identity,
         stateRef,
         isDragging,
         dragState,
@@ -362,24 +369,38 @@ export function createPointerHandlers(args: PointerHandlerArgs) {
                 handleUpdateAlert(String(ticket), currentPrice);
                 setDraggingPosition(null);
             } else if (ticket && ticket !== 'draft') {
-                const mappedType = type === 'entry' ? 'price' : type;
-                const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: currentPrice };
-
                 const store = useMarketStore.getState();
-                const isPos = store.positions.some(p => p.ticket === ticket);
+                const normalizedSource = String(source || '').trim().toUpperCase();
+                const scopedPosition = stateRef.current.positions.find(
+                    (item: { ticket: number | string }) => Number(item.ticket) === Number(ticket),
+                );
+                const scopedOrder = stateRef.current.orders.find(
+                    (item: { ticket: number | string }) => Number(item.ticket) === Number(ticket),
+                );
 
-                if (isPos) {
-                    const field = type === 'entry' ? 'open_price' : type;
-                    store.addPendingModification(Number(ticket), field, currentPrice);
-                    store.setPositions(prev => prev.map(p => p.ticket === ticket ? { ...p, [field]: currentPrice } : p));
+                if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') {
+                    store.addNotification('Trading edit ignored: chart is not an MT5 source', 'warning');
+                } else if (!scopedPosition && !scopedOrder) {
+                    store.addNotification('MT5: Ticket không thuộc tài khoản của chart hiện tại', 'error');
+                } else if (scopedPosition && type === 'entry') {
+                    store.addNotification('MT5: Không thể sửa giá vào lệnh của position đã khớp', 'warning');
                 } else {
-                    const field = type === 'entry' ? 'price_open' : type;
-                    store.addPendingModification(Number(ticket), field, currentPrice);
-                    store.setOrders(prev => prev.map(o => o.ticket === ticket ? { ...o, [field as keyof Order]: currentPrice } : o));
-                }
+                    const mappedType = type === 'entry' ? 'price' : type;
+                    const command = {
+                        topic: 'mt5_command',
+                        command: 'modify',
+                        ticket,
+                        [mappedType]: currentPrice,
+                        ...buildMt5WriteFields(identity),
+                    };
+                    const field = scopedPosition
+                        ? (type as 'sl' | 'tp')
+                        : (type === 'entry' ? 'price_open' : type as 'sl' | 'tp');
+                    store.addPendingModification(Number(ticket), field, currentPrice, dataSource);
 
-                if (sendMessage) sendMessage(command);
-                else (store as any).sendMessage?.(command);
+                    if (sendMessage) sendMessage(command);
+                    else (store as any).sendMessage?.(command);
+                }
 
                 setDraggingPosition(null);
                 store.setFocusedTicket(null);
