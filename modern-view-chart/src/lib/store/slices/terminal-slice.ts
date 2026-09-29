@@ -7,7 +7,9 @@ import {
     applyPendingPositionLocks,
     filterPendingDeletions,
     hasPositionStructuralChange,
-    patchRealtimePositionFields
+    patchRealtimePositionFields,
+    pendingDeletionKey,
+    pendingModificationKey,
 } from './terminal/reconcile-utils';
 
 export interface DraftOrder {
@@ -110,6 +112,7 @@ export interface TerminalSlice {
         source?: string,
     ) => void;
     addPendingDeletion: (ticket: number, source?: string) => void;
+    clearPendingWrite: (ticket: number | string, source?: string) => void;
     setHistory: (data: HistoryDeal[] | ((prev: HistoryDeal[]) => HistoryDeal[])) => void;
     appendHistory: (newData: HistoryDeal[], isReset?: boolean, sourceOverride?: string) => void;
     setAnalysisResult: (ticket: number, result: AnalysisResult) => void;
@@ -155,7 +158,7 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
         const ticketNum = typeof ticket === 'string' ? parseInt(ticket, 10) : ticket;
         if (Number.isNaN(ticketNum)) return state;
         const sourceKey = String(source || 'MT5');
-        const key = `${sourceKey}:${ticketNum}`;
+        const key = pendingDeletionKey(sourceKey, ticketNum);
 
         return {
             pendingDeletions: { ...state.pendingDeletions, [key]: Date.now() },
@@ -170,7 +173,7 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
 
     addPendingModification: (ticket, field, price, source = 'MT5') => set((state) => {
         const sourceKey = String(source || 'MT5');
-        const key = `${sourceKey}:${ticket}-${field}`;
+        const key = pendingModificationKey(sourceKey, ticket, field);
         const matches = (item: { ticket: number; source?: string }) =>
             item.ticket === ticket && String(item.source || 'MT5') === sourceKey;
         return {
@@ -185,6 +188,20 @@ export const createTerminalSlice: StateCreator<TerminalSlice> = (set) => ({
                 ? state.orders
                 : state.orders.map((item) => matches(item) ? { ...item, [field]: price } : item),
         };
+    }),
+
+    clearPendingWrite: (ticket, source = 'MT5') => set((state) => {
+        const sourceKey = String(source || 'MT5');
+        const deletionKey = pendingDeletionKey(sourceKey, ticket);
+        const pendingDeletions = { ...state.pendingDeletions };
+        delete pendingDeletions[deletionKey];
+
+        const prefix = `${deletionKey}-`;
+        const pendingModifications = Object.fromEntries(
+            Object.entries(state.pendingModifications)
+                .filter(([key]) => !key.startsWith(prefix)),
+        );
+        return { pendingDeletions, pendingModifications };
     }),
 
     setAccount: (source, data) => set((state) => ({
