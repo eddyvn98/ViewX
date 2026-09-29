@@ -19,9 +19,10 @@ interface BuildCellStateInput {
     nowMs?: number;
 }
 
-function matchesCellStrategy(strategy: Strategy, _symbol: string, timeframe: string): boolean {
-    const strategyTimeframe = normalizeDashboardTf(strategy.timeframe);
-    return !strategyTimeframe || strategyTimeframe === timeframe;
+function matchesCellStrategy(strategy: Strategy, _symbol: string, _timeframe: string): boolean {
+    // In matrix mode, the scanner owns symbol/timeframe. My Bot's timeframe is
+    // only a legacy/default context and must not hide cells the runner executes.
+    return strategy.active;
 }
 
 function hasMatchingStrategyId(strategyId: string, strategyIds: Set<string>): boolean {
@@ -62,7 +63,7 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     const exactMatchingStrategies = candidateStrategies.filter((s) => matchesCellStrategy(s, symbol, timeframe));
     const strategiesForEntry = exactMatchingStrategies;
     const strategyIds = new Set(strategiesForEntry.map((s) => s.id));
-    const exactStrategyIds = new Set(exactMatchingStrategies.map((s) => s.id));
+    const positionStrategyIds = new Set(candidateStrategies.map((s) => s.id));
 
     const latestSignal = input.signals
         .filter((sig) =>
@@ -91,8 +92,8 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
 
     // Use evaluationCandles (closed only) for RuleEngine
     if (evaluationCandles.length >= 2 && !stale && exactMatchingStrategies.length > 0) {
-        const readyBuy = strategiesForEntry.some((s) => strategySupportsDirection(s, 'BUY') && RuleEngine.evaluateGroup(getStrategyLeg(s, 'BUY').entry, evaluationCandles));
-        const readySell = strategiesForEntry.some((s) => strategySupportsDirection(s, 'SELL') && RuleEngine.evaluateGroup(getStrategyLeg(s, 'SELL').entry, evaluationCandles));
+        const readyBuy = strategiesForEntry.some((s) => strategySupportsDirection(s, 'BUY') && RuleEngine.isEntryReady(s, 'BUY', evaluationCandles));
+        const readySell = strategiesForEntry.some((s) => strategySupportsDirection(s, 'SELL') && RuleEngine.isEntryReady(s, 'SELL', evaluationCandles));
         if (readyBuy && !readySell) signal = 'BUY';
         else if (readySell && !readyBuy) signal = 'SELL';
     } else if (latestSignal && !stale) {
@@ -104,7 +105,7 @@ export function buildMatrixCellState(input: BuildCellStateInput): MatrixCellStat
     // This supports "independent orders per timeframe".
     const matchingPositions = input.virtualPositions.filter((p) =>
         normalizeSymbol(p.symbol).toLowerCase() === symbol.toLowerCase() &&
-        hasMatchingStrategyId(p.strategyId, exactStrategyIds) &&
+        hasMatchingStrategyId(p.strategyId, positionStrategyIds) &&
         normalizeDashboardTf(p.timeframe) === timeframe
     );
 
