@@ -4,7 +4,7 @@ import { useMarketStore } from '@/lib/store';
 import { debugLog } from '@/lib/debug';
 import { getClientEntitlements } from '@/lib/auth/entitlements';
 import { useWebSocket } from '@/hooks/use-websocket';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTerminalResize } from './hooks/use-terminal-resize';
 import { buildMt5AuthFields, buildMt5DataSourceKey, Mt5AccountScope } from '@/lib/mt5/account-scope';
 import { buildMt5WriteFields } from '@/lib/mt5/trading-request';
@@ -47,15 +47,24 @@ export function useTerminalState(forceExpanded: boolean) {
     const accountSource = activeChartSource === 'BINANCE' ? 'BINANCE_DEMO' : selectedMt5Source;
     const account = useMarketStore((state) => state.accounts[accountSource] || null);
     const visibleAccount = hasYourMt5Module ? account : null;
-    const visiblePositions = hasYourMt5Module
-        ? positions.filter((position) => String(position.source || 'MT5') === accountSource)
-        : [];
-    const visibleOrders = hasYourMt5Module
-        ? orders.filter((order) => String(order.source || 'MT5') === accountSource)
-        : [];
-    const visibleHistory = hasYourMt5Module
-        ? history.filter((deal) => String(deal.source || 'MT5') === accountSource)
-        : [];
+    const visiblePositions = useMemo(
+        () => hasYourMt5Module
+            ? positions.filter((position) => String(position.source || 'MT5') === accountSource)
+            : [],
+        [hasYourMt5Module, positions, accountSource],
+    );
+    const visibleOrders = useMemo(
+        () => hasYourMt5Module
+            ? orders.filter((order) => String(order.source || 'MT5') === accountSource)
+            : [],
+        [hasYourMt5Module, orders, accountSource],
+    );
+    const visibleHistory = useMemo(
+        () => hasYourMt5Module
+            ? history.filter((deal) => String(deal.source || 'MT5') === accountSource)
+            : [],
+        [hasYourMt5Module, history, accountSource],
+    );
 
     const { sendMessage } = useWebSocket();
 
