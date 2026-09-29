@@ -1,13 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ISeriesApi } from 'lightweight-charts';
 import { useMarketStore, Alert } from '@/lib/store';
 import { createPointerHandlers } from './interaction/pointer-handlers';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
+import { normalizeSymbol } from '@/lib/utils/symbol';
+import type { Mt5TradingIdentity } from '@/lib/mt5/trading-request';
 
 export function useChartInteraction(
     chartRef: React.RefObject<import('lightweight-charts').IChartApi | null>,
     seriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     coordinateSeriesRef: React.RefObject<ISeriesApi<'Candlestick'> | null>,
     symbol: string | undefined,
+    source: string | undefined,
+    mt5Identity: Mt5TradingIdentity | undefined,
     containerRef: React.RefObject<HTMLDivElement | null>,
     coordinateContainerRef: React.RefObject<HTMLDivElement | null>,
     isReady: boolean,
@@ -18,13 +23,39 @@ export function useChartInteraction(
 ) {
     void handleRemoveAlert;
 
-    const positions = useMarketStore(state => state.positions);
-    const orders = useMarketStore(state => state.orders);
-    const draftOrder = useMarketStore(state => state.draftOrder);
+    const allPositions = useMarketStore(state => state.positions);
+    const allOrders = useMarketStore(state => state.orders);
+    const rawDraftOrder = useMarketStore(state => state.draftOrder);
+    const dataSource = useMemo(
+        () => resolveChartIdentityDataSource(source, mt5Identity),
+        [source, mt5Identity],
+    );
+    const positions = useMemo(
+        () => allPositions.filter((item) => String(item.source || 'MT5') === dataSource),
+        [allPositions, dataSource],
+    );
+    const orders = useMemo(
+        () => allOrders.filter((item) => String(item.source || 'MT5') === dataSource),
+        [allOrders, dataSource],
+    );
+    const draftOrder = useMemo(() => {
+        if (!rawDraftOrder) return null;
+        const draftSource = rawDraftOrder.source
+            ? resolveChartIdentityDataSource(rawDraftOrder.source || undefined, rawDraftOrder)
+            : dataSource;
+        return draftSource === dataSource ? rawDraftOrder : null;
+    }, [rawDraftOrder, dataSource]);
     const setDraftOrder = useMarketStore(state => state.setDraftOrder);
     const setDraggingPosition = useMarketStore(state => state.setDraggingPosition);
 
-    const symbolInfo = useMarketStore(state => symbol ? state.symbolInfo[symbol] : undefined);
+    const symbolInfo = useMarketStore(state => {
+        if (!symbol) return undefined;
+        const normalized = normalizeSymbol(symbol);
+        const scoped = state.symbolInfo[`${dataSource}:${symbol}`]
+            || state.symbolInfo[`${dataSource}:${normalized}`];
+        if (String(source || '').toUpperCase() === 'MT5_PERSONAL') return scoped;
+        return scoped || state.symbolInfo[normalized];
+    });
 
     const stateRef = useRef({ positions, orders, draftOrder, symbolInfo, alerts, currentPrice: 0 });
 
@@ -34,11 +65,20 @@ export function useChartInteraction(
 
     useEffect(() => {
         if (!symbol) return;
+        const normalized = normalizeSymbol(symbol);
+        const personalMt5 = String(source || '').toUpperCase() === 'MT5_PERSONAL';
         return useMarketStore.subscribe(
-            (state) => state.tickers[symbol]?.price,
-            (price: number) => { if (price) stateRef.current.currentPrice = price; },
+            (state) => {
+                const scoped = state.tickers[`${dataSource}:${symbol}`]
+                    || state.tickers[`${dataSource}:${normalized}`];
+                if (personalMt5) return scoped?.price;
+                return scoped?.price || state.tickers[symbol]?.price || state.tickers[normalized]?.price;
+            },
+            (price: number | undefined) => {
+                if (price) stateRef.current.currentPrice = price;
+            },
         );
-    }, [symbol]);
+    }, [dataSource, source, symbol]);
 
     const isDragging = useRef(false);
     const dragState = useRef<Record<string, unknown> | null>(null);
@@ -60,6 +100,9 @@ export function useChartInteraction(
             series,
             coordinateSeries,
             symbol,
+            source,
+            dataSource,
+            identity: mt5Identity,
             stateRef,
             isDragging,
             dragState,
@@ -141,5 +184,5 @@ export function useChartInteraction(
                 window.removeEventListener('touchcancel', handleTouchEnd);
             }
         };
-    }, [isReady, symbol, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage, chartRef, containerRef, coordinateContainerRef, seriesRef, coordinateSeriesRef]);
+    }, [isReady, symbol, source, dataSource, mt5Identity, setDraftOrder, setDraggingPosition, handleUpdateAlert, sendMessage, chartRef, containerRef, coordinateContainerRef, seriesRef, coordinateSeriesRef]);
 }
