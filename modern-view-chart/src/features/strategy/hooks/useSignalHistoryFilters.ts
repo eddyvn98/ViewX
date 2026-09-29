@@ -24,7 +24,10 @@ export function useSignalHistoryFilters({
     const [now, setNow] = React.useState(() => Date.now());
 
     React.useEffect(() => {
-        setNow(Date.now());
+        const refreshNow = () => setNow(Date.now());
+        refreshNow();
+        const timer = window.setInterval(refreshNow, 60_000);
+        return () => window.clearInterval(timer);
     }, [signals, matrixScanners]);
 
     const scannerStrategyIds = React.useMemo(
