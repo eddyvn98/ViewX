@@ -5,7 +5,7 @@ import { RiskPanel } from '@/features/strategy/components/RiskPanel';
 import { Plus, X as XIcon } from 'lucide-react';
 import { Strategy, ConditionGroup, StrategyRisk, SLTPConfig, StrategyDirection, StrategyLeg } from '@/features/strategy/types';
 import { PriceConfigRow } from '@/features/strategy/components/PriceConfigRow';
-import { getStrategyLeg } from '../strategy-helpers';
+import { getStrategyLeg, strategySupportsDirection } from '../strategy-helpers';
 import { StrategyPreview } from '@/features/strategy/components/StrategyPreview';
 import { useTranslations } from 'next-intl';
 import { useMarketStore } from '@/lib/store';
@@ -56,6 +56,12 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
     const setStrategyPanelView = useMarketStore((state) => state.setStrategyPanelView);
     const [name, setName] = useState(builderDraft?.name || editingStrategy?.name || 'Professional Scalper');
     const [activeDirection, setActiveDirection] = useState<StrategyDirection>(builderDraft?.activeDirection || 'BUY');
+    const [buyEnabled, setBuyEnabled] = useState(
+        builderDraft?.buyEnabled ?? (editingStrategy ? strategySupportsDirection(editingStrategy, 'BUY') : true)
+    );
+    const [sellEnabled, setSellEnabled] = useState(
+        builderDraft?.sellEnabled ?? (editingStrategy ? strategySupportsDirection(editingStrategy, 'SELL') : false)
+    );
 
     // Ensure editing strategy legs have positionMode if they don't from old version
     const initialBuy = editingStrategy ? getStrategyLeg(editingStrategy, 'BUY') : buildDefaultLeg('BUY');
@@ -87,31 +93,44 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             return;
         }
 
-        if (!buy.entry?.conditions?.length && !sell.entry?.conditions?.length) {
-            setValidationError('Add at least one entry condition before activating bot.');
+        if (!buyEnabled && !sellEnabled) {
+            setValidationError('Enable at least one trading direction.');
+            return;
+        }
+
+        if ((buyEnabled && !buy.entry?.conditions?.length) || (sellEnabled && !sell.entry?.conditions?.length)) {
+            setValidationError('Each enabled direction needs at least one market filter condition.');
             return;
         }
 
         setValidationError(null);
 
+        const primaryDirection: StrategyDirection = buyEnabled ? 'BUY' : 'SELL';
+        const primaryLeg = primaryDirection === 'BUY' ? buy : sell;
+        const enabledDirections: StrategyDirection[] = [
+            ...(buyEnabled ? ['BUY' as const] : []),
+            ...(sellEnabled ? ['SELL' as const] : []),
+        ];
+
         const newStrategy: Strategy = {
             id: editingStrategy?.id || Math.random().toString(36).substring(7),
             name: name.trim(),
-            active: true,
+            active: editingStrategy?.active ?? true,
             buy,
             sell,
-            risk: buy.risk,
-            entry: buy.entry,
-            exit: buy.exit,
-            trigger: buy.trigger,
-            cancelConditions: buy.cancelConditions,
-            side: 'BUY',
+            enabledDirections,
+            risk: primaryLeg.risk,
+            entry: primaryLeg.entry,
+            exit: primaryLeg.exit,
+            trigger: primaryLeg.trigger,
+            cancelConditions: primaryLeg.cancelConditions,
+            side: primaryDirection,
             symbol: editingStrategy?.symbol || activeChart?.symbol || 'XAUUSDm',
             timeframe: editingStrategy?.timeframe || activeChart?.interval || '5m',
-            positionMode: buy.positionMode || 'single_position',
+            positionMode: primaryLeg.positionMode || 'single_position',
             executionMode,
-            entryType: buy.entryType || 'stop',
-            entryPrice: buy.entryPrice,
+            entryType: primaryLeg.entryType || 'stop',
+            entryPrice: primaryLeg.entryPrice,
             magic,
             comment,
             sessions: ["London", "NewYork"]
@@ -130,13 +149,15 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
             editingStrategyId: editingStrategy?.id || null,
             name,
             activeDirection,
+            buyEnabled,
+            sellEnabled,
             buy,
             sell,
             executionMode,
             comment,
             magic,
         });
-    }, [activeDirection, buy, comment, editingStrategy?.id, executionMode, magic, name, sell, setBuilderDraft]);
+    }, [activeDirection, buy, buyEnabled, comment, editingStrategy?.id, executionMode, magic, name, sell, sellEnabled, setBuilderDraft]);
 
     const handleClose = () => {
         setBuilderDraft(null);
@@ -177,6 +198,22 @@ export function StrategyBuilder({ editingStrategy, onClose }: StrategyBuilderPro
                         <div className="flex bg-secondary/60 rounded p-0.5 border border-border h-7">
                             <button onClick={() => setActiveDirection('BUY')} className={`flex-1 rounded text-[11px] font-semibold ${activeDirection === 'BUY' ? 'bg-blue-600 text-white' : 'text-muted-foreground'}`}>BUY</button>
                             <button onClick={() => setActiveDirection('SELL')} className={`flex-1 rounded text-[11px] font-semibold ${activeDirection === 'SELL' ? 'bg-red-600 text-white' : 'text-muted-foreground'}`}>SELL</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 mt-1">
+                            <button
+                                type="button"
+                                onClick={() => setBuyEnabled((enabled) => !enabled)}
+                                className={`h-6 rounded border text-[10px] font-semibold transition-colors ${buyEnabled ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-border text-muted-foreground'}`}
+                            >
+                                {t('builder.enableBuy')}: {buyEnabled ? t('builder.on') : t('builder.off')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSellEnabled((enabled) => !enabled)}
+                                className={`h-6 rounded border text-[10px] font-semibold transition-colors ${sellEnabled ? 'border-rose-500/50 bg-rose-500/10 text-rose-500' : 'border-border text-muted-foreground'}`}
+                            >
+                                {t('builder.enableSell')}: {sellEnabled ? t('builder.on') : t('builder.off')}
+                            </button>
                         </div>
                     </div>
                     <div className="flex flex-col gap-1">
