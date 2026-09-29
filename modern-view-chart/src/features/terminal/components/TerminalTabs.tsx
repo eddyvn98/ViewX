@@ -29,6 +29,7 @@ type TerminalTabsProps = {
     visibleHistory: HistoryDeal[];
     handleScroll: () => void;
     handleClosePosition: (ticket: number) => void;
+    handleCancelOrder: (ticket: number) => void;
     handleUpdatePosition: (ticket: number, sl?: number, tp?: number) => void;
     handleSymbolClick: (symbol: string) => void;
     handleAnalyze: (deal: unknown) => void;
@@ -44,6 +45,7 @@ export function TerminalTabs({
     visibleHistory,
     handleScroll,
     handleClosePosition,
+    handleCancelOrder,
     handleUpdatePosition,
     handleSymbolClick,
     handleAnalyze,
@@ -148,13 +150,13 @@ export function TerminalTabs({
                     {forceExpanded ? (
                         <MobileOrdersTable
                             orders={visibleOrders}
-                            onCancelOrder={handleClosePosition}
+                            onCancelOrder={handleCancelOrder}
                             onSymbolClick={handleSymbolClick}
                         />
                     ) : (
                         <OrdersTable
                             orders={visibleOrders}
-                            onCancelOrder={handleClosePosition}
+                            onCancelOrder={handleCancelOrder}
                             onSymbolClick={handleSymbolClick}
                         />
                     )}
