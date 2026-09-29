@@ -60,6 +60,36 @@ describe('matrix-cell-state - signals and positions', () => {
         assert.equal(cell.badge, null);
     });
 
+    it('keeps an existing open position visible when the bot is paused', () => {
+        const now = Date.now();
+        const pausedStrategy: Strategy = { ...baseStrategy, active: false };
+        const positions: VirtualPosition[] = [{
+            id: 'p-paused-open',
+            strategyId: 's1',
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            type: 'SELL',
+            entryPrice: 1,
+            sl: 0,
+            tp: 0,
+            lotSize: 0.1,
+            timestamp: now,
+            status: 'open',
+        }];
+        const cell = buildMatrixCellState({
+            symbol: 'XAUUSDm',
+            timeframe: '1m',
+            strategyId: 's1',
+            strategies: [pausedStrategy],
+            signals: [],
+            virtualPositions: positions,
+            matrixConfig: cfg,
+            nowMs: now,
+        });
+        assert.equal(cell.signal, 'SELL');
+        assert.equal(cell.badge, 'OPEN');
+    });
+
     it('uses entry-condition readiness from candles when available', () => {
         const strategy: Strategy = { ...baseStrategy, side: 'BUY', entry: { operator: 'AND', conditions: [{ id: 'rsi-ready', left: { type: 'RSI', params: [14] }, comparator: '>', right: 0 }] } };
         const cell = buildMatrixCellState({ symbol: 'XAUUSDm', timeframe: '1m', strategyId: 's1', strategies: [strategy], signals: [], virtualPositions: [], matrixConfig: cfg, getCandles: () => makeCandles(30) });
