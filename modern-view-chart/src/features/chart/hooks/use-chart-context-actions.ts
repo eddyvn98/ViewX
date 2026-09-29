@@ -83,14 +83,46 @@ export function useChartContextActions({
     const onCancelOrder = React.useCallback((ticket: string | number) => {
         const normalizedSource = String(source || '').trim().toUpperCase();
         if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') return;
-        sendMessage({ topic: 'mt5_command', command: 'delete', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
-    }, [sendMessage, source, mt5Identity]);
+        const store = useMarketStore.getState();
+        const exists = store.orders.some(
+            (item) => Number(item.ticket) === Number(ticket)
+                && String(item.source || 'MT5') === dataSource,
+        );
+        if (!exists) {
+            store.addNotification('MT5: Order không còn thuộc account của chart hiện tại', 'error');
+            return;
+        }
+        store.addPendingDeletion(Number(ticket), dataSource);
+        sendMessage({
+            topic: 'mt5_command',
+            command: 'delete',
+            ticket: String(ticket),
+            target: source || 'MT5',
+            ...buildMt5WriteFields(mt5Identity),
+        });
+    }, [dataSource, sendMessage, source, mt5Identity]);
 
     const onClosePosition = React.useCallback((ticket: string | number) => {
         const normalizedSource = String(source || '').trim().toUpperCase();
         if (normalizedSource !== 'MT5' && normalizedSource !== 'MT5_PERSONAL') return;
-        sendMessage({ topic: 'mt5_command', command: 'close', ticket: String(ticket), target: source || 'MT5', ...buildMt5WriteFields(mt5Identity) });
-    }, [sendMessage, source, mt5Identity]);
+        const store = useMarketStore.getState();
+        const exists = store.positions.some(
+            (item) => Number(item.ticket) === Number(ticket)
+                && String(item.source || 'MT5') === dataSource,
+        );
+        if (!exists) {
+            store.addNotification('MT5: Position không còn thuộc account của chart hiện tại', 'error');
+            return;
+        }
+        store.addPendingDeletion(Number(ticket), dataSource);
+        sendMessage({
+            topic: 'mt5_command',
+            command: 'close',
+            ticket: String(ticket),
+            target: source || 'MT5',
+            ...buildMt5WriteFields(mt5Identity),
+        });
+    }, [dataSource, sendMessage, source, mt5Identity]);
 
     const onCancelDraft = React.useCallback(() => {
         useMarketStore.getState().setDraftOrder(null);
