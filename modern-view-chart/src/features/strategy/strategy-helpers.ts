@@ -54,6 +54,9 @@ export function getStrategyLeg(strategy: Strategy, direction: StrategyDirection)
 }
 
 export function strategySupportsDirection(strategy: Strategy, direction: StrategyDirection): boolean {
+    if (Array.isArray(strategy.enabledDirections)) {
+        return strategy.enabledDirections.includes(direction);
+    }
     if (direction === 'BUY' && strategy.buy) return true;
     if (direction === 'SELL' && strategy.sell) return true;
     if (strategy.buy || strategy.sell) return false;
