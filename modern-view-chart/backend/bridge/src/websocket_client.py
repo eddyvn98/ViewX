@@ -127,6 +127,7 @@ class BridgeClient:
             "topic": "mt5_order_result",
             "request_id": request_id,
             "command": data.get("command"),
+            "ticket": data.get("ticket"),
             "symbol": data.get("symbol"),
             **self._scope_fields(data),
             **(result or {}),
