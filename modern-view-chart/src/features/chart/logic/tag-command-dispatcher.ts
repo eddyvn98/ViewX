@@ -1,5 +1,6 @@
 import { RootState, useMarketStore } from '@/lib/store';
 import { buildMt5WriteFields, type Mt5TradingIdentity } from '@/lib/mt5/trading-request';
+import { resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 
 type SendMessage = ((data: unknown) => void) | undefined;
 type StoreWithTransport = RootState & { sendMessage?: (data: unknown) => void };
@@ -19,7 +20,11 @@ export function dispatchTagRemoveAction(tag: { ticket: string | number; type: st
     }
 
     const store = useMarketStore.getState() as StoreWithTransport;
-    const isPos = store.positions.some((p) => Number(p.ticket) === Number(tag.ticket));
+    const dataSource = resolveChartIdentityDataSource(identity?.source || undefined, identity);
+    const isPos = store.positions.some(
+        (p) => Number(p.ticket) === Number(tag.ticket)
+            && String(p.source || 'MT5') === dataSource,
+    );
 
     let command: Record<string, unknown> | null = null;
     if (tag.type === 'entry') {
@@ -42,7 +47,7 @@ export function dispatchTagRemoveAction(tag: { ticket: string | number; type: st
     if (!command) return;
 
     if (tag.type === 'entry' && store.addPendingDeletion) {
-        store.addPendingDeletion(Number(tag.ticket));
+        store.addPendingDeletion(Number(tag.ticket), dataSource);
     }
 
     if (sendMessage) {
@@ -77,6 +82,17 @@ export function dispatchTagEditSaveAction(state: TagEditState, val: number, send
         return;
     }
 
+    const store = useMarketStore.getState() as StoreWithTransport;
+    const dataSource = resolveChartIdentityDataSource(identity?.source || undefined, identity);
+    const isPos = store.positions.some(
+        (p) => Number(p.ticket) === Number(ticket)
+            && String(p.source || 'MT5') === dataSource,
+    );
+    if (type === 'entry' && isPos) {
+        store.addNotification('MT5: Không thể sửa giá vào lệnh của position đã khớp', 'warning');
+        return;
+    }
+
     const mappedType = type === 'entry' ? 'price' : type;
     const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: val, ...buildMt5WriteFields(identity) };
 
@@ -85,7 +101,6 @@ export function dispatchTagEditSaveAction(state: TagEditState, val: number, send
         return;
     }
 
-    const store = useMarketStore.getState() as StoreWithTransport;
     store.sendMessage?.(command);
 }
 
@@ -106,7 +121,11 @@ export function dispatchTagDeleteAction(state: TagEditState, sendMessage?: SendM
         return;
     }
 
-    const isPos = store.positions.some((p) => p.ticket === ticket);
+    const dataSource = resolveChartIdentityDataSource(identity?.source || undefined, identity);
+    const isPos = store.positions.some(
+        (p) => Number(p.ticket) === Number(ticket)
+            && String(p.source || 'MT5') === dataSource,
+    );
     const cmd = {
         topic: 'mt5_command',
         command: (type === 'entry' ? (isPos ? 'close' : 'delete') : 'modify'),
@@ -116,7 +135,7 @@ export function dispatchTagDeleteAction(state: TagEditState, sendMessage?: SendM
     };
 
     if (type === 'entry' && store.addPendingDeletion) {
-        store.addPendingDeletion(Number(ticket));
+        store.addPendingDeletion(Number(ticket), dataSource);
     }
 
     sendMessage?.(cmd);
