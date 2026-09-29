@@ -76,7 +76,7 @@ function setupDraftGroupInteractions(elements: TagElements, sendMessage?: (data:
         if (!draft) return;
 
         const normSym = normalizeSymbol(draft.symbol);
-        const dataSource = resolveChartIdentityDataSource(identity?.source, identity);
+        const dataSource = resolveChartIdentityDataSource(identity?.source || undefined, identity);
         const scopedInfo = store.symbolInfo?.[`${dataSource}:${draft.symbol}`]
             || store.symbolInfo?.[`${dataSource}:${normSym}`];
         const personalMt5 = String(identity?.source || '').toUpperCase() === 'MT5_PERSONAL';
