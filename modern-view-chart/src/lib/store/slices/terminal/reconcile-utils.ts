@@ -1,69 +1,70 @@
 import { Position, Order } from '../../types';
 
-export function filterPendingDeletions<T extends { ticket: number | string }>(
+type ScopedTicket = { ticket: number | string; source?: string };
+
+function sourceOf(item: { source?: string }): string {
+    return String(item.source || 'MT5');
+}
+
+export function pendingDeletionKey(source: string | undefined, ticket: number | string): string {
+    return `${String(source || 'MT5')}:${ticket}`;
+}
+
+export function pendingModificationKey(
+    source: string | undefined,
+    ticket: number | string,
+    field: string,
+): string {
+    return `${pendingDeletionKey(source, ticket)}-${field}`;
+}
+
+export function filterPendingDeletions<T extends ScopedTicket>(
     items: T[],
-    pendingDeletions: Record<number, number>,
-    ttlMs: number
+    pendingDeletions: Record<string, number>,
+    ttlMs: number,
 ): T[] {
     const now = Date.now();
     return items.filter((item) => {
-        const ticket = Number(item.ticket);
-        const deletionTime = pendingDeletions[ticket];
+        const deletionTime = pendingDeletions[pendingDeletionKey(sourceOf(item), item.ticket)];
         if (!deletionTime) return true;
-        // Keep if TTL expired
         return now - deletionTime > ttlMs;
     });
 }
 
 export function applyPendingPositionLocks(
     position: Position,
-    pendingModifications: Record<string, any>,
-    ttlMs: number
+    pendingModifications: Record<string, { price: number; timestamp: number }>,
+    ttlMs: number,
 ): Position {
     const now = Date.now();
     const next = { ...position };
-
-    const slKey = `${position.ticket}-sl`;
-    const slMod = pendingModifications[slKey];
-    if (slMod && now - slMod.timestamp < ttlMs) {
-        next.sl = slMod.price;
-    }
-
-    const tpKey = `${position.ticket}-tp`;
-    const tpMod = pendingModifications[tpKey];
-    if (tpMod && now - tpMod.timestamp < ttlMs) {
-        next.tp = tpMod.price;
-    }
-
-    const openKey = `${position.ticket}-open_price`;
-    const openMod = pendingModifications[openKey];
-    if (openMod && now - openMod.timestamp < ttlMs) {
-        next.open_price = openMod.price;
-    }
-
+    const apply = (field: 'sl' | 'tp' | 'open_price') => {
+        const mod = pendingModifications[
+            pendingModificationKey(sourceOf(position), position.ticket, field)
+        ];
+        if (mod && now - mod.timestamp < ttlMs) next[field] = mod.price;
+    };
+    apply('sl');
+    apply('tp');
+    apply('open_price');
     return next;
 }
 
 export function applyPendingOrderLocks(
     order: Order,
-    pendingModifications: Record<string, any>,
-    ttlMs: number
+    pendingModifications: Record<string, { price: number; timestamp: number }>,
+    ttlMs: number,
 ): Order {
     const now = Date.now();
     const next = { ...order };
-
-    const slKey = `${order.ticket}-sl`;
-    const slMod = pendingModifications[slKey];
-    if (slMod && now - slMod.timestamp < ttlMs) {
-        next.sl = slMod.price;
-    }
-
-    const tpKey = `${order.ticket}-tp`;
-    const tpMod = pendingModifications[tpKey];
-    if (tpMod && now - tpMod.timestamp < ttlMs) {
-        next.tp = tpMod.price;
-    }
-
+    const apply = (field: 'sl' | 'tp') => {
+        const mod = pendingModifications[
+            pendingModificationKey(sourceOf(order), order.ticket, field)
+        ];
+        if (mod && now - mod.timestamp < ttlMs) next[field] = mod.price;
+    };
+    apply('sl');
+    apply('tp');
     return next;
 }
 
