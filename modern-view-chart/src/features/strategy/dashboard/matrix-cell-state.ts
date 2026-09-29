@@ -4,7 +4,7 @@ import type { Strategy, StrategySignal, VirtualPosition } from '../types';
 import type { MatrixCellState, MatrixScannerConfig } from './matrix-types';
 import { inferMatrixSymbolSource, normalizeDashboardTf, resolveCellTTL, timeframeToChartInterval } from './matrix-utils';
 import { RuleEngine } from '../logic/RuleEngine';
-import { getStrategyLeg, strategySupportsDirection } from '../strategy-helpers';
+import { strategySupportsDirection } from '../strategy-helpers';
 import { buildMatrixScopeKey } from '../utils/matrix-scope';
 
 interface BuildCellStateInput {
