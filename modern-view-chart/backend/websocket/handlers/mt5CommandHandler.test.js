@@ -237,3 +237,80 @@ test("legacy shared MT5 writes remain compatible without request_id", () => {
     assert.equal(bridgeWs.sent.length, 1);
     assert.equal(bridgeWs.sent[0].command, "close");
 });
+
+
+test("rejects reuse of one request_id for a different write payload in the same scope", () => {
+    const { clientWs, bridgeWs, clients, bridgeRegistry } = setup();
+
+    handleMt5Command({ ws: clientWs, clients, bridgeRegistry }, {
+        topic: "mt5_command",
+        command: "modify",
+        request_id: "req-payload-conflict",
+        account_login: "10001",
+        terminal_id: "terminal-a",
+        ticket: 10,
+        sl: 100,
+    });
+
+    handleMt5Command({ ws: clientWs, clients, bridgeRegistry }, {
+        topic: "mt5_command",
+        command: "modify",
+        request_id: "req-payload-conflict",
+        account_login: "10001",
+        terminal_id: "terminal-a",
+        ticket: 10,
+        sl: 101,
+    });
+
+    assert.equal(bridgeWs.sent.length, 1);
+    assert.equal(clientWs.sent.at(-1)?.topic, "error");
+    assert.equal(clientWs.sent.at(-1)?.detail, "mt5_request_id_payload_mismatch");
+});
+
+test("ignores execution results whose command does not match the pending request", () => {
+    const { clientWs, bridgeWs, clients, bridgeRegistry } = setup();
+
+    handleMt5Command({ ws: clientWs, clients, bridgeRegistry }, {
+        topic: "mt5_command",
+        command: "close",
+        request_id: "req-command-mismatch",
+        account_login: "10001",
+        terminal_id: "terminal-a",
+        ticket: 99,
+    });
+
+    const before = clientWs.sent.length;
+    handleMt5OrderResult({ ws: bridgeWs, clients }, {
+        topic: "mt5_order_result",
+        request_id: "req-command-mismatch",
+        command: "modify",
+        success: true,
+    });
+
+    assert.equal(clientWs.sent.length, before);
+});
+
+test("ignores execution results from a bridge with a mismatched broker identity", () => {
+    const { clientWs, bridgeWs, clients, bridgeRegistry } = setup();
+
+    handleMt5Command({ ws: clientWs, clients, bridgeRegistry }, {
+        topic: "mt5_command",
+        command: "close",
+        request_id: "req-broker-mismatch",
+        account_login: "10001",
+        terminal_id: "terminal-a",
+        broker: "Broker A",
+        ticket: 100,
+    });
+
+    clients.get(bridgeWs).bridgeBroker = "Broker B";
+    const before = clientWs.sent.length;
+    handleMt5OrderResult({ ws: bridgeWs, clients }, {
+        topic: "mt5_order_result",
+        request_id: "req-broker-mismatch",
+        command: "close",
+        success: true,
+    });
+
+    assert.equal(clientWs.sent.length, before);
+});
