@@ -25,6 +25,14 @@ export function dispatchTagRemoveAction(tag: { ticket: string | number; type: st
         (p) => Number(p.ticket) === Number(tag.ticket)
             && String(p.source || 'MT5') === dataSource,
     );
+    const isOrder = store.orders.some(
+        (o) => Number(o.ticket) === Number(tag.ticket)
+            && String(o.source || 'MT5') === dataSource,
+    );
+    if (!isPos && !isOrder) {
+        store.addNotification('MT5: Ticket không thuộc account của chart hiện tại', 'error');
+        return;
+    }
 
     let command: Record<string, unknown> | null = null;
     if (tag.type === 'entry') {
@@ -88,6 +96,14 @@ export function dispatchTagEditSaveAction(state: TagEditState, val: number, send
         (p) => Number(p.ticket) === Number(ticket)
             && String(p.source || 'MT5') === dataSource,
     );
+    const isOrder = store.orders.some(
+        (o) => Number(o.ticket) === Number(ticket)
+            && String(o.source || 'MT5') === dataSource,
+    );
+    if (!isPos && !isOrder) {
+        store.addNotification('MT5: Ticket không thuộc account của chart hiện tại', 'error');
+        return;
+    }
     if (type === 'entry' && isPos) {
         store.addNotification('MT5: Không thể sửa giá vào lệnh của position đã khớp', 'warning');
         return;
@@ -95,6 +111,10 @@ export function dispatchTagEditSaveAction(state: TagEditState, val: number, send
 
     const mappedType = type === 'entry' ? 'price' : type;
     const command = { topic: 'mt5_command', command: 'modify', ticket, [mappedType]: val, ...buildMt5WriteFields(identity) };
+    const pendingField = isPos
+        ? (type as 'sl' | 'tp')
+        : (type === 'entry' ? 'price_open' : type as 'sl' | 'tp');
+    store.addPendingModification(Number(ticket), pendingField, val, dataSource);
 
     if (sendMessage) {
         sendMessage(command);
@@ -126,6 +146,14 @@ export function dispatchTagDeleteAction(state: TagEditState, sendMessage?: SendM
         (p) => Number(p.ticket) === Number(ticket)
             && String(p.source || 'MT5') === dataSource,
     );
+    const isOrder = store.orders.some(
+        (o) => Number(o.ticket) === Number(ticket)
+            && String(o.source || 'MT5') === dataSource,
+    );
+    if (!isPos && !isOrder) {
+        store.addNotification('MT5: Ticket không thuộc account của chart hiện tại', 'error');
+        return;
+    }
     const cmd = {
         topic: 'mt5_command',
         command: (type === 'entry' ? (isPos ? 'close' : 'delete') : 'modify'),
