@@ -12,6 +12,7 @@ interface SignalHistoryItemProps {
     buyLabel: string;
     sellLabel: string;
     exitLabel: string;
+    cancelLabel: string;
     onManualAnalyze: (signalIndex: number, signal: StrategySignal) => void;
 }
 
@@ -24,17 +25,20 @@ export function SignalHistoryItem({
     buyLabel,
     sellLabel,
     exitLabel,
+    cancelLabel,
     onManualAnalyze,
 }: SignalHistoryItemProps) {
     const isExit = signal.type === 'EXIT';
+    const isCancel = signal.type === 'CANCEL';
     const isSell = signal.type === 'SELL';
+    const isEntry = signal.type === 'BUY' || signal.type === 'SELL';
 
     return (
         <div className="p-2 rounded-lg border border-border/40 dark:border-white/5 bg-secondary/30 dark:bg-white/[0.01] transition-all hover:bg-secondary/50 dark:hover:bg-white/[0.03] group relative flex items-center justify-between gap-3 shadow-sm">
             <div
                 className={cn(
                     'absolute inset-y-0 left-0 w-0.5 opacity-30 group-hover:opacity-100 transition-all',
-                    isExit ? 'bg-orange-500 shadow-sm' : isSell ? 'bg-rose-500 shadow-sm' : 'bg-primary shadow-sm'
+                    isExit ? 'bg-orange-500 shadow-sm' : isCancel ? 'bg-amber-500 shadow-sm' : isSell ? 'bg-rose-500 shadow-sm' : 'bg-primary shadow-sm'
                 )}
             />
 
@@ -46,12 +50,14 @@ export function SignalHistoryItem({
                                 'font-black uppercase text-[11px] px-1 rounded-sm',
                                 isExit
                                     ? 'text-orange-500 bg-orange-400/10'
-                                    : isSell
-                                        ? 'text-rose-500 bg-rose-400/10'
-                                        : 'text-primary bg-primary/10'
+                                    : isCancel
+                                        ? 'text-amber-500 bg-amber-400/10'
+                                        : isSell
+                                            ? 'text-rose-500 bg-rose-400/10'
+                                            : 'text-primary bg-primary/10'
                             )}
                         >
-                            {isExit ? exitLabel : isSell ? sellLabel : buyLabel}
+                            {isExit ? exitLabel : isCancel ? cancelLabel : isSell ? sellLabel : buyLabel}
                         </span>
                         <span className="text-[12px] font-bold text-foreground leading-none">{signal.symbol}</span>
                         <span className="text-[11px] font-bold text-foreground/70 font-mono tracking-tighter">@{signal.price}</span>
@@ -97,7 +103,7 @@ export function SignalHistoryItem({
                         <BrainCircuit size={10} className="text-primary/50" />
                         <span className="text-[11px] font-black text-primary/70">{signal.aiAnalysis.confidence.toFixed(0)}%</span>
                     </div>
-                ) : !isExit ? (
+                ) : isEntry ? (
                     <button
                         onClick={() => onManualAnalyze(signalIndex, signal)}
                         disabled={isAnalyzing}

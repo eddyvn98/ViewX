@@ -1,5 +1,5 @@
 import { normalizeSymbol } from '@/lib/utils/symbol';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { buildMatrixCellState } from '@/features/strategy/dashboard/matrix-cell-state';
 import { compareTimeframe, inferMatrixSymbolSource, normalizeDashboardSymbol, sortSymbols, timeframeToChartInterval } from '@/features/strategy/dashboard/matrix-utils';
 import type { MatrixScannerConfig, MatrixCellState } from '@/features/strategy/dashboard/matrix-types';
@@ -26,17 +26,17 @@ export function useScannerViewModel(input: UseScannerViewModelInput) {
         return Array.from(new Set(input.watchlist.map((s) => normalizeDashboardSymbol(s)).filter(Boolean)));
     }, [input.watchlist]);
 
+    const [nowMs, setNowMs] = useState(() => Date.now());
+
+    useEffect(() => {
+        const refreshNow = () => setNowMs(Date.now());
+        refreshNow();
+        const timer = window.setInterval(refreshNow, 10_000);
+        return () => window.clearInterval(timer);
+    }, []);
+
     const scannerViewMap = useMemo(() => {
         const map = new Map<string, ScannerViewModel>();
-        const now = input.signals.reduce((latest, signal) => {
-            const candidates = [
-                Number((signal as unknown as { timestamp?: unknown }).timestamp),
-                Number((signal as unknown as { createdAt?: unknown }).createdAt),
-                Number((signal as unknown as { time?: unknown }).time),
-            ];
-            const best = candidates.find(Number.isFinite) ?? latest;
-            return Math.max(latest, best);
-        }, 0);
 
         // Optimization: Create a lookup for signals by symbol to avoid O(N) filtering per cell
         const signalsBySymbol = new Map<string, StrategySignal[]>();
@@ -79,7 +79,7 @@ export function useScannerViewModel(input: UseScannerViewModelInput) {
                             const key = `${source}:${s}:${interval}`;
                             return input.candleData[key] || [];
                         },
-                        nowMs: now,
+                        nowMs,
                     });
                     cells.set(`${symbol}__${timeframe}`, cell);
                 }
@@ -89,7 +89,7 @@ export function useScannerViewModel(input: UseScannerViewModelInput) {
         }
 
         return map;
-    }, [input.matrixScanners, input.strategies, input.signals, input.virtualPositions, input.candleData]);
+    }, [input.matrixScanners, input.strategies, input.signals, input.virtualPositions, input.candleData, nowMs]);
 
     return {
         symbolCandidates,

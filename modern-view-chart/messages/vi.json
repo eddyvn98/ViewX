@@ -286,6 +286,7 @@
     "scanning": "Đang quét tín hiệu...",
     "aiAuditComplete": "AI Audit hoàn tất: {confidence}% tin cậy",
     "exit": "THOÁT",
+    "cancel": "HỦY",
     "virtualBalance": "Giao dịch ảo"
   },
   "ChartPanel": {

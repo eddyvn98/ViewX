@@ -286,6 +286,7 @@
     "scanning": "Scanning signals...",
     "aiAuditComplete": "AI audit completed: {confidence}% confidence",
     "exit": "EXIT",
+    "cancel": "CANCEL",
     "virtualBalance": "Virtual trading"
   },
   "ChartPanel": {

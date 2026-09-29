@@ -103,16 +103,17 @@ describe('runner flow behavior - position and exits', () => {
             processStrategySignal(strategy, { ...baseSignal, type: 'CANCEL', timestamp: FIXED_NOW_MS, price: 1.1 }, 'EURUSD', '1m', candles, candles[0], store.virtualPositions, store, FIXED_NOW_MS, 'MT5', 's1:EURUSD:1m');
             assert.equal(calls.cancel, 1);
             assert.equal(calls.close, 0);
-            assert.equal(calls.addSignal, 0);
+            assert.equal(calls.addSignal, 1);
+            assert.equal(calls.updateLastSignalTime, 1);
 
             processStrategySignal(strategy, { ...baseSignal, type: 'EXIT', timestamp: FIXED_NOW_MS + 1, price: 1.099 }, 'EURUSD', '1m', candles, candles[0], [{ ...makeVirtualPosition({ id: 'pending-exit', status: 'pending' }) }], store, FIXED_NOW_MS, 'MT5', 's1:EURUSD:1m');
             assert.equal(calls.cancel, 2);
             assert.equal(calls.close, 0);
-            assert.equal(calls.addSignal, 1);
+            assert.equal(calls.addSignal, 2);
 
             processStrategySignal(strategy, { ...baseSignal, type: 'EXIT', timestamp: FIXED_NOW_MS + 2, price: 1.098 }, 'EURUSD', '1m', candles, candles[0], [{ ...makeVirtualPosition({ id: 'open-exit', status: 'open' }) }], store, FIXED_NOW_MS, 'MT5', 's1:EURUSD:1m');
             assert.equal(calls.close, 1);
-            assert.equal(calls.addSignal, 2);
+            assert.equal(calls.addSignal, 3);
         } finally {
             AiManager.processSignal = originalProcessSignal;
             TradeLogger.updateExit = originalUpdateExit;
