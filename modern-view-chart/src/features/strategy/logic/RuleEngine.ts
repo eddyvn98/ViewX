@@ -29,6 +29,14 @@ export class RuleEngine {
         }
     }
 
+    static isEntryReady(strategy: Strategy, direction: 'BUY' | 'SELL', candles: Candle[]): boolean {
+        const leg = getStrategyLeg(strategy, direction);
+        const entryOk = this.evaluateGroup(leg.entry, candles);
+        const triggerConfigured = Boolean(leg.trigger?.conditions?.length);
+        const triggerOk = !triggerConfigured || this.evaluateGroup(leg.trigger!, candles);
+        return entryOk && triggerOk;
+    }
+
     static run(strategy: Strategy, candles: Candle[], context: EngineContext): StrategySignal | null {
         if (candles.length < 2) return null;
 
@@ -71,9 +79,10 @@ export class RuleEngine {
                 }
             }
 
+            const currentMode = leg.positionMode || strategy.positionMode;
             const canEnter =
                 (!hasOpenPosition && !pendingPosition) ||
-                (strategy.positionMode === "scale_in" && strategyPositions.length < (leg.risk.maxTrades || 1));
+                (currentMode === "scale_in" && strategyPositions.length < (leg.risk.maxTrades || 1));
             if (!canEnter) continue;
 
             if (lastSignalTime && leg.risk.cooldownMinutes) {
@@ -81,9 +90,7 @@ export class RuleEngine {
                 if (elapsedMs < leg.risk.cooldownMinutes * 60000) continue;
             }
 
-            const triggerOk = !leg.trigger || this.evaluateGroup(leg.trigger, candles);
-            const entryOk = this.evaluateGroup(leg.entry, candles);
-            if (!triggerOk || !entryOk) continue;
+            if (!this.isEntryReady(strategy, direction, candles)) continue;
 
             const contextData = ContextCollector.captureEntryContext(strategy, candles, symbol);
             return {
