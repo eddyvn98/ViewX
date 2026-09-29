@@ -136,6 +136,33 @@ describe('strategy-store migration', () => {
         assert.equal(migrated.matrixScanners[0].strategyId, 'hull-ha-gold-scalper');
     });
 
+    it('preserves explicit enabledDirections when hydrating current persisted state', () => {
+        const migrated = migrateStrategyStoreState(
+            {
+                strategies: [{
+                    id: 'custom',
+                    name: 'Custom',
+                    side: 'BUY',
+                    enabledDirections: ['SELL'],
+                    active: false,
+                    positionMode: 'single_position',
+                    executionMode: 'virtual',
+                    entryType: 'market',
+                    entry: { operator: 'AND', conditions: [] },
+                    risk: { trailing: false, lotSize: 0.1 },
+                }],
+                matrixScanners: [{ id: 'scanner-1', name: 'Default', strategyId: 'custom', active: true, symbols: ['XAUUSDm'], timeframes: ['1m'] }],
+                signals: [],
+                virtualPositions: [],
+            },
+            6
+        ) as MigratedState & { strategies?: Array<{ id: string; enabledDirections?: string[]; active?: boolean }> };
+
+        const custom = migrated.strategies?.find((strategy) => strategy.id === 'custom');
+        assert.deepEqual(custom?.enabledDirections, ['SELL']);
+        assert.equal(custom?.active, false);
+    });
+
     it('rewrites duplicate virtual position ids during migration', () => {
         const migrated = migrateStrategyStoreState(
             {
@@ -261,6 +288,18 @@ describe('strategy-store actions', () => {
         store.getState().toggleMatrixScanner(scannerId);
 
         assert.equal(store.getState().matrixScanners[0].active, false);
+    });
+
+    it('tracks last signal time independently for each matrix scope', () => {
+        const store = createStore(createStrategyStoreState);
+
+        store.getState().updateLastSignalTime('test-trigger-rsi', 111, 'test-trigger-rsi:XAUUSDm:1m');
+        store.getState().updateLastSignalTime('test-trigger-rsi', 222, 'test-trigger-rsi:XAUUSDm:5m');
+        store.getState().updateLastSignalTime('test-trigger-rsi', 333, 'test-trigger-rsi:EURUSDm:1m');
+
+        assert.equal(store.getState().scopedLastSignalTimes['test-trigger-rsi:XAUUSDm:1m'], 111);
+        assert.equal(store.getState().scopedLastSignalTimes['test-trigger-rsi:XAUUSDm:5m'], 222);
+        assert.equal(store.getState().scopedLastSignalTimes['test-trigger-rsi:EURUSDm:1m'], 333);
     });
 
     it('addVirtualPosition ignores duplicate active positions for the same bar scope', () => {
