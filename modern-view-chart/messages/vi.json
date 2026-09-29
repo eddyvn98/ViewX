@@ -103,22 +103,10 @@
       "trust": "Được tin dùng bởi trader dùng MT5, Binance & Telegram"
     },
     "stats": {
-      "latency": {
-        "value": "<50ms",
-        "label": "Độ trễ cập nhật biểu đồ"
-      },
-      "sources": {
-        "value": "MT5 + Binance",
-        "label": "Nguồn dữ liệu trực tiếp"
-      },
-      "indicators": {
-        "value": "Không giới hạn",
-        "label": "Chỉ báo & cảnh báo"
-      },
-      "aiMonitor": {
-        "value": "24/7",
-        "label": "AI theo dõi lệnh"
-      }
+      "latency": { "value": "<50ms", "label": "Độ trễ cập nhật biểu đồ" },
+      "sources": { "value": "MT5 + Binance", "label": "Nguồn dữ liệu trực tiếp" },
+      "indicators": { "value": "Không giới hạn", "label": "Chỉ báo & cảnh báo" },
+      "aiMonitor": { "value": "24/7", "label": "AI theo dõi lệnh" }
     },
     "featuresSection": {
       "title": "Bộ Công Cụ Đẳng Cấp Chuyên Nghiệp",
@@ -298,8 +286,8 @@
     "scanning": "Đang quét tín hiệu...",
     "aiAuditComplete": "AI Audit hoàn tất: {confidence}% tin cậy",
     "exit": "THOÁT",
-    "virtualBalance": "Giao dịch ảo",
-    "cancel": "HỦY"
+    "cancel": "HỦY",
+    "virtualBalance": "Giao dịch ảo"
   },
   "ChartPanel": {
     "history": {
