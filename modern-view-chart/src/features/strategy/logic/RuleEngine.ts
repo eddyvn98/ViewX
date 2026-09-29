@@ -86,7 +86,8 @@ export class RuleEngine {
             if (!canEnter) continue;
 
             if (lastSignalTime && leg.risk.cooldownMinutes) {
-                const elapsedMs = Date.now() - lastSignalTime;
+                const lastSignalMs = lastSignalTime > 10_000_000_000 ? lastSignalTime : lastSignalTime * 1000;
+                const elapsedMs = Date.now() - lastSignalMs;
                 if (elapsedMs < leg.risk.cooldownMinutes * 60000) continue;
             }
 
