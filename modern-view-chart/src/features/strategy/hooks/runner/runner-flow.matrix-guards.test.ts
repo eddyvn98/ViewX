@@ -13,6 +13,7 @@ describe('runner flow behavior - matrix guards', () => {
 
         try {
             const canceled: string[] = [];
+            const recordedSignals: StrategySignal[] = [];
             const store = {
                 virtualPositions: [
                     makeVirtualPosition({ id: 'm1', status: 'pending', matrixScopeKey: 's1:EURUSD:1m', timeframe: '1m' }),
@@ -23,7 +24,7 @@ describe('runner flow behavior - matrix guards', () => {
                 addVirtualPosition: () => {},
                 closeVirtualPosition: () => {},
                 cancelVirtualPosition: (_strategyId: string, _symbol: string, _direction?: 'BUY' | 'SELL', scope?: string) => { if (scope) canceled.push(scope); },
-                addSignal: () => {},
+                addSignal: (signal: StrategySignal) => { recordedSignals.push(signal); },
                 updateLastSignalTime: () => {}
             };
 
@@ -31,6 +32,9 @@ describe('runner flow behavior - matrix guards', () => {
             const candles = [makeCandle()];
             processStrategySignal(strategy, { type: 'CANCEL', symbol: 'EURUSD', strategyId: 's1', timestamp: FIXED_NOW_MS, price: 1.1, risk: strategy.risk!, direction: 'BUY' }, 'EURUSD', '1m', candles, candles[0], store.virtualPositions, store, FIXED_NOW_MS, 'MT5', 's1:EURUSD:1m');
             assert.deepEqual(canceled, ['s1:EURUSD:1m']);
+            assert.equal(recordedSignals.length, 1);
+            assert.equal(recordedSignals[0]?.type, 'CANCEL');
+            assert.equal(recordedSignals[0]?.matrixScopeKey, 's1:EURUSD:1m');
         } finally {
             AiManager.processSignal = originalProcessSignal;
         }
