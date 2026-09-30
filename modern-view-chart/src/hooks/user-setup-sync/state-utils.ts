@@ -86,6 +86,8 @@ export function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 
             isDrawingToolbarVisible: state.isDrawingToolbarVisible,
             snapToCandle: state.snapToCandle,
             isChartLegendVisible: state.isChartLegendVisible,
+        isCrosshairSyncEnabled: state.isCrosshairSyncEnabled,
+            isCrosshairSyncEnabled: state.isCrosshairSyncEnabled,
             strategyPanelView: state.strategyPanelView,
             strategyEditingStrategyId: state.strategyEditingStrategyId,
             strategyBuilderDraft: state.strategyBuilderDraft,
