@@ -12,6 +12,11 @@ import type {
     UserStateApiResponse,
 } from '@/hooks/user-setup-sync/types';
 import type { RemoteSyncDeps } from './types';
+import {
+    deleteDurableUserSetupOutboxIfNotNewer,
+    readDurableUserSetupOutbox,
+    shouldPreferDurableOutbox,
+} from '@/hooks/user-setup-sync/durable-outbox';
 
 type FetchWithAuthRetry = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -30,6 +35,21 @@ export async function runInitialSync(
     fetchWithAuthRetry: FetchWithAuthRetry,
 ): Promise<void> {
     let shouldPersistCurrentSnapshot = false;
+    let preferredDurableClientUpdatedAt = 0;
+    const durablePending = await readDurableUserSetupOutbox(deps.outboxScopeKey);
+
+    const restoreDurablePending = () => {
+        if (!durablePending) return false;
+        applyPersistedSetupState(durablePending.snapshot);
+        preferredDurableClientUpdatedAt = durablePending.clientUpdatedAt;
+        deps.lastLocalMutationAtRef.current = Math.max(
+            deps.lastLocalMutationAtRef.current,
+            durablePending.clientUpdatedAt,
+        );
+        shouldPersistCurrentSnapshot = true;
+        return true;
+    };
+
     emitUserSetupSyncStatus('loading', deps.lastSavedAtRef.current);
     try {
         const response = await fetchWithAuthRetry(apiUrl, {
@@ -37,15 +57,15 @@ export async function runInitialSync(
             headers: getAuthHeaders(deps.clientId),
             credentials: 'include',
         });
-        if (!response.ok) {
-            deps.isReadyRef.current = true;
-            emitUserSetupSyncStatus('error', deps.lastSavedAtRef.current);
-            return;
-        }
 
-        const data = (await response.json()) as UserStateApiResponse;
-        if (!isActive()) return;
-        if (isPlainObject(data.state)) {
+        if (!response.ok) {
+            if (!restoreDurablePending()) {
+                emitUserSetupSyncStatus('error', deps.lastSavedAtRef.current);
+            }
+        } else {
+            const data = (await response.json()) as UserStateApiResponse;
+            if (!isActive()) return;
+
             const remoteUpdatedAt = Date.parse(String(data.updated_at || ''));
             if (Number.isFinite(remoteUpdatedAt)) {
                 deps.lastRemoteUpdatedAtRef.current = remoteUpdatedAt;
@@ -58,33 +78,58 @@ export async function runInitialSync(
             if (Number.isFinite(remoteClientUpdatedAt)) {
                 deps.lastAcceptedClientUpdatedAtRef.current = remoteClientUpdatedAt;
             }
-            const hasRemoteState = Object.keys(data.state).length > 0;
-            const persistedUi = getPersistedUiState(data.state);
-            const persistedThemeMode = persistedUi?.themeMode;
-            if (persistedThemeMode === 'light' || persistedThemeMode === 'dark' || persistedThemeMode === 'system') {
-                deps.setThemeRef.current(persistedThemeMode);
-            }
-            if (hasRemoteState) {
-                const hasNewerLocalMutation = deps.lastLocalMutationAtRef.current > (remoteClientUpdatedAt || 0);
-                if (!hasNewerLocalMutation) {
-                    applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
-                } else {
-                    shouldPersistCurrentSnapshot = true;
+
+            if (shouldPreferDurableOutbox(durablePending, remoteClientUpdatedAt)) {
+                restoreDurablePending();
+            } else {
+                if (durablePending && Number.isFinite(remoteClientUpdatedAt)) {
+                    await deleteDurableUserSetupOutboxIfNotNewer(
+                        deps.outboxScopeKey,
+                        remoteClientUpdatedAt,
+                    );
                 }
-            } else if (deps.isAuthenticated) {
-                shouldPersistCurrentSnapshot = true;
+
+                if (isPlainObject(data.state)) {
+                    const hasRemoteState = Object.keys(data.state).length > 0;
+                    const persistedUi = getPersistedUiState(data.state);
+                    const persistedThemeMode = persistedUi?.themeMode;
+                    if (persistedThemeMode === 'light' || persistedThemeMode === 'dark' || persistedThemeMode === 'system') {
+                        deps.setThemeRef.current(persistedThemeMode);
+                    }
+                    if (hasRemoteState) {
+                        const hasNewerLocalMutation = deps.lastLocalMutationAtRef.current > (remoteClientUpdatedAt || 0);
+                        if (!hasNewerLocalMutation) {
+                            applyPersistedSetupState(data.state as Partial<PersistedSetupState>);
+                        } else {
+                            shouldPersistCurrentSnapshot = true;
+                        }
+                    } else if (deps.isAuthenticated) {
+                        shouldPersistCurrentSnapshot = true;
+                    }
+                } else if (durablePending) {
+                    restoreDurablePending();
+                }
             }
         }
     } catch {
-        // Ignore initial sync errors to avoid blocking UI.
+        if (!restoreDurablePending()) {
+            emitUserSetupSyncStatus('error', deps.lastSavedAtRef.current);
+        }
     } finally {
         if (!isActive()) return;
         const initialSnapshot = buildSnapshot();
         deps.isReadyRef.current = true;
         if (shouldPersistCurrentSnapshot) {
             const serialized = JSON.stringify(initialSnapshot);
+            const clientUpdatedAt = preferredDurableClientUpdatedAt ||
+                deps.lastLocalMutationAtRef.current ||
+                Date.now();
             deps.lastSavedRef.current = '';
-            deps.pendingSaveRef.current = { snapshot: initialSnapshot, serialized };
+            deps.pendingSaveRef.current = {
+                snapshot: initialSnapshot,
+                serialized,
+                clientUpdatedAt,
+            };
             void flushSave();
         } else {
             deps.lastSavedRef.current = JSON.stringify(initialSnapshot);
