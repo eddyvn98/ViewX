@@ -54,7 +54,7 @@ export function setupRemoteSyncEffect(deps: RemoteSyncDeps): () => void {
 
     const flushBeforeLeave = () => {
         scheduleSave(0);
-        void flushSave();
+        void flushSave(true);
     };
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'hidden') flushBeforeLeave();
