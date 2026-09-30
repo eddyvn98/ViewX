@@ -41,6 +41,11 @@ export async function runInitialSync(
     const restoreDurablePending = () => {
         if (!durablePending) return false;
         applyPersistedSetupState(durablePending.snapshot);
+        const durableUi = getPersistedUiState(durablePending.snapshot);
+        const durableThemeMode = durableUi?.themeMode;
+        if (durableThemeMode === 'light' || durableThemeMode === 'dark' || durableThemeMode === 'system') {
+            deps.setThemeRef.current(durableThemeMode);
+        }
         preferredDurableClientUpdatedAt = durablePending.clientUpdatedAt;
         deps.lastLocalMutationAtRef.current = Math.max(
             deps.lastLocalMutationAtRef.current,
