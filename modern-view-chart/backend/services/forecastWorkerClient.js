@@ -9,17 +9,26 @@ const __dirname = path.dirname(__filename);
 const FORECAST_SCRIPT = path.resolve(__dirname, "../forecast/forecast_service.py");
 
 const DEFAULT_WORKER_TIMEOUT_MS = 15_000;
-const DEFAULT_WORKER_STARTUP_TIMEOUT_MS = 120_000;
+const DEFAULT_WORKER_STARTUP_TIMEOUT_MS = 180_000;
+const INITIAL_RESTART_DELAY_MS = 2_000;
+const MAX_RESTART_DELAY_MS = 15_000;
 
 let workerProcess = null;
 let workerReadyPromise = null;
 let workerReadyResolver = null;
 let workerRl = null;
 let isStopping = false;
+let restartTimer = null;
+let restartAttempts = 0;
 
 const pendingRequests = new Map();
 let requestIdCounter = 1;
 let workerQueue = Promise.resolve();
+
+function isAutoRestartEnabled() {
+    const val = process.env.FORECAST_WORKER_AUTO_RESTART;
+    return val !== "0" && val !== "false";
+}
 
 function settleWorkerReady(value) {
     if (!workerReadyResolver) return;
@@ -47,6 +56,30 @@ export function resolvePythonBin() {
     return "python";
 }
 
+function scheduleWorkerRestart() {
+    if (isStopping || restartTimer || !isAutoRestartEnabled()) return;
+
+    const delay = Math.min(
+        INITIAL_RESTART_DELAY_MS * Math.pow(1.5, restartAttempts),
+        MAX_RESTART_DELAY_MS
+    );
+    restartAttempts++;
+
+    restartTimer = setTimeout(() => {
+        restartTimer = null;
+        if (!isStopping && (!workerProcess || workerProcess.killed)) {
+            console.log(`[ForecastWorker] Auto-restarting background worker (attempt ${restartAttempts})...`);
+            startForecastWorker().catch((err) => {
+                console.warn("[ForecastWorker] Auto-restart failed:", err?.message || err);
+            });
+        }
+    }, delay);
+
+    if (typeof restartTimer.unref === "function") {
+        restartTimer.unref();
+    }
+}
+
 function handleWorkerExit(code, signal) {
     if (!isStopping) {
         console.warn(`[ForecastWorker] Worker exited unexpectedly (code: ${code}, signal: ${signal})`);
@@ -71,6 +104,10 @@ function handleWorkerExit(code, signal) {
 
     workerProcess = null;
     workerReadyPromise = null;
+
+    if (!isStopping) {
+        scheduleWorkerRestart();
+    }
 }
 
 function handleWorkerLine(rawLine) {
@@ -85,6 +122,7 @@ function handleWorkerLine(rawLine) {
     }
 
     if (parsed?.status === "ready") {
+        restartAttempts = 0;
         settleWorkerReady(true);
         return;
     }
@@ -99,6 +137,11 @@ function handleWorkerLine(rawLine) {
 }
 
 export function startForecastWorker() {
+    if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
+    }
+
     if (workerProcess && !workerProcess.killed) {
         return workerReadyPromise;
     }
@@ -216,6 +259,11 @@ export async function executeForecastOnWorker(payload, timeoutMs = DEFAULT_WORKE
 
 export function stopForecastWorker() {
     isStopping = true;
+    if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
+    }
+    restartAttempts = 0;
     if (workerProcess && !workerProcess.killed) {
         try {
             workerProcess.stdin.end();

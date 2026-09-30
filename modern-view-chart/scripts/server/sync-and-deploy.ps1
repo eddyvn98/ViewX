@@ -103,12 +103,23 @@ try {
     & pm2 restart viewx-backend-semi viewx-frontend-semi viewx-bridge-semi
     Assert-LastExitCode "pm2 restart"
 
-    Write-Host "[Deploy] Waiting for services to settle..." -ForegroundColor Cyan
-    Start-Sleep -Seconds 4
-
-    Write-Host "[Deploy] Checking backend health..." -ForegroundColor Cyan
-    & curl.exe -fsS http://localhost:18091/api/health
-    Assert-LastExitCode "backend health check"
+    Write-Host "[Deploy] Waiting for backend to become healthy..." -ForegroundColor Cyan
+    $backendHealthy = $false
+    for ($i = 1; $i -le 15; $i++) {
+        Start-Sleep -Seconds 2
+        try {
+            $healthResp = & curl.exe -fsS --max-time 3 http://localhost:18091/api/health 2>$null
+            if ($LASTEXITCODE -eq 0 -and $healthResp -match '"status":\s*"ok"') {
+                $backendHealthy = $true
+                Write-Host "[Deploy] Backend is healthy after $($i * 2)s." -ForegroundColor Green
+                break
+            }
+        } catch {}
+        Write-Host "  -> Waiting for port 18091 ready ($($i)/15)..." -ForegroundColor Yellow
+    }
+    if (-not $backendHealthy) {
+        throw "Backend health check failed after 30 seconds."
+    }
     Write-Host ""
 
     Write-Host "[Deploy] Running live WebSocket auth smoke..." -ForegroundColor Cyan
