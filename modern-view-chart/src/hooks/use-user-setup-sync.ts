@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { readStoredAccessToken } from '@/lib/auth/session';
 import { buildApiUrl, buildPublicApiUrl, getOrCreateClientId } from '@/hooks/user-setup-sync/sync-utils';
+import { buildUserSetupOutboxScopeKey } from '@/hooks/user-setup-sync/durable-outbox';
 import type { PersistedSetupState } from '@/hooks/user-setup-sync/types';
 import { setupAuthSyncEffect } from '@/hooks/user-setup-sync/effects/auth-sync-effect';
 import { setupBroadcastEffect } from '@/hooks/user-setup-sync/effects/broadcast-effect';
@@ -26,6 +27,10 @@ export function useUserSetupSync() {
         [fallbackTabId],
     );
     const isAuthenticated = authToken.length > 0;
+    const outboxScopeKey = useMemo(
+        () => buildUserSetupOutboxScopeKey(clientId, isAuthenticated),
+        [authToken, clientId, isAuthenticated],
+    );
     const apiUrl = useMemo(() => {
         if (typeof window === 'undefined') return '/api/user/state';
         if (!authResolved) return null;
@@ -77,6 +82,7 @@ export function useUserSetupSync() {
         apiUrl,
         clientId,
         isAuthenticated,
+        outboxScopeKey,
         tabSyncSourceId,
         setAuthToken,
         isReadyRef,
@@ -96,5 +102,5 @@ export function useUserSetupSync() {
         themeRef,
         setThemeRef,
         });
-    }, [apiUrl, clientId, isAuthenticated, tabSyncSourceId]);
+    }, [apiUrl, clientId, isAuthenticated, outboxScopeKey, tabSyncSourceId]);
 }
