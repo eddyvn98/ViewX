@@ -27,10 +27,7 @@ export function useUserSetupSync() {
         [fallbackTabId],
     );
     const isAuthenticated = authToken.length > 0;
-    const outboxScopeKey = useMemo(
-        () => buildUserSetupOutboxScopeKey(clientId, isAuthenticated),
-        [authToken, clientId, isAuthenticated],
-    );
+    const outboxScopeKey = buildUserSetupOutboxScopeKey(clientId, isAuthenticated);
     const apiUrl = useMemo(() => {
         if (typeof window === 'undefined') return '/api/user/state';
         if (!authResolved) return null;
