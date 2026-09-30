@@ -28,7 +28,7 @@ type FetchWithAuthRetry = (url: string, init: RequestInit) => Promise<Response>;
 export type SaveManager = {
     buildSnapshot: () => PersistedSetupState;
     scheduleSave: (delayMs?: number) => void;
-    flushSave: () => Promise<void>;
+    flushSave: (force?: boolean) => Promise<void>;
 };
 
 export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: FetchWithAuthRetry): SaveManager {
@@ -137,14 +137,14 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
         return false;
     };
 
-    const flushSave = async () => {
+    const flushSave = async (force = false) => {
         const pending = deps.pendingSaveRef.current;
         if (!pending || !deps.isReadyRef.current) return;
 
         const now = Date.now();
         const waitForRateLimit = Math.max(0, deps.retryAfterRef.current - now);
         const waitForMinInterval = Math.max(0, MIN_SAVE_INTERVAL_MS - (now - deps.lastSaveAttemptAtRef.current));
-        const delay = Math.max(waitForRateLimit, waitForMinInterval);
+        const delay = force ? 0 : Math.max(waitForRateLimit, waitForMinInterval);
 
         if (delay > 0) {
             if (deps.saveTimerRef.current) clearTimeout(deps.saveTimerRef.current);

@@ -207,27 +207,13 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
     setRightSidebarWidth: (width) => {
         const value = Math.max(280, Math.min(640, Math.round(width)));
         set({ rightSidebarWidth: value });
-        if (typeof window !== 'undefined') localStorage.setItem('right-sidebar-width', String(value));
     },
     setRightSidebarTabOrder: (order) => set({ rightSidebarTabOrder: order }),
     setThemeColor: (color) => {
         set({ themeColor: color });
         if (typeof window !== 'undefined') {
-            localStorage.setItem('theme-color', color);
             document.documentElement.classList.remove('theme-blue', 'theme-green', 'theme-amber', 'theme-red', 'theme-slate');
             document.documentElement.classList.add(`theme-${color}`);
-
-            const token = localStorage.getItem('auth_access_token');
-            if (token) {
-                fetch('/api/user/ui-preferences', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ themeColor: color })
-                }).catch(() => {});
-            }
         }
     },
     setChartLegendVisible: (visible) => set({ isChartLegendVisible: visible }),
@@ -298,12 +284,11 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
             if (response.ok) {
                 const data = await response.json();
                 if (data.uiPreferences) {
-                    const { voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio, themeColor } = data.uiPreferences;
+                    const { voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio } = data.uiPreferences;
 
                     set((state) => ({
                         voiceAlertsEnabled: typeof voiceAlertsEnabled === 'boolean' ? voiceAlertsEnabled : state.voiceAlertsEnabled,
-                        voiceAlertsUsePreGeneratedAudio: typeof voiceAlertsUsePreGeneratedAudio === 'boolean' ? voiceAlertsUsePreGeneratedAudio : state.voiceAlertsUsePreGeneratedAudio,
-                        themeColor: (themeColor && ['blue', 'green', 'amber', 'red', 'slate'].includes(themeColor)) ? themeColor : state.themeColor
+                        voiceAlertsUsePreGeneratedAudio: typeof voiceAlertsUsePreGeneratedAudio === 'boolean' ? voiceAlertsUsePreGeneratedAudio : state.voiceAlertsUsePreGeneratedAudio
                     }));
 
                     // Update localStorage and DOM to match server state
@@ -313,11 +298,6 @@ export const createUISlice: StateCreator<RootState, [], [], UISlice> = (set) => 
                         }
                         if (typeof voiceAlertsUsePreGeneratedAudio === 'boolean') {
                             localStorage.setItem(VOICE_ALERTS_PREGEN_STORAGE_KEY, String(voiceAlertsUsePreGeneratedAudio));
-                        }
-                        if (themeColor) {
-                            localStorage.setItem('theme-color', themeColor);
-                            document.documentElement.classList.remove('theme-blue', 'theme-green', 'theme-amber', 'theme-red', 'theme-slate');
-                            document.documentElement.classList.add(`theme-${themeColor}`);
                         }
                     }
                 }

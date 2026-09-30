@@ -60,14 +60,6 @@ export function useKeyboardDismissOnViewportReset(
   }, [isInputFocused, setInputFocused]);
 }
 
-export function useRightSidebarWidth(setRightSidebarWidth: (value: number) => void) {
-  React.useEffect(() => {
-    const raw = Number(window.localStorage.getItem("right-sidebar-width") || 320);
-    if (!Number.isFinite(raw)) return;
-    setRightSidebarWidth(raw);
-  }, [setRightSidebarWidth]);
-}
-
 export function useChartDocumentTitle(params: {
   symbol?: string;
   interval?: string;

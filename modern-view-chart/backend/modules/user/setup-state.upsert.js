@@ -200,7 +200,7 @@ export function createUpsertHandler({ resolveScope, requireDatabase = false }) {
         message: 'state_skipped_db_unavailable',
         scope_type: scope.scopeType,
         scope_id: scope.scopeId,
-        schema_version: 1,
+        schema_version: 2,
         updated_at: null,
         client_updated_at: null,
       });

@@ -47,13 +47,13 @@ export function isPlainObject(value) {
 }
 
 export function parseMaxStateBytes() {
-  const configured = Number.parseInt(process.env.USER_STATE_MAX_BYTES || "262144", 10);
-  return Number.isFinite(configured) && configured > 1024 ? configured : 262144;
+  const configured = Number.parseInt(process.env.USER_STATE_MAX_BYTES || "4194304", 10);
+  return Number.isFinite(configured) && configured > 1024 ? configured : 4194304;
 }
 
 export function parseMaxDrawingsBytes() {
-  const configured = Number.parseInt(process.env.USER_DRAWINGS_MAX_BYTES || "2097152", 10);
-  return Number.isFinite(configured) && configured > 1024 ? configured : 2097152;
+  const configured = Number.parseInt(process.env.USER_DRAWINGS_MAX_BYTES || "4194304", 10);
+  return Number.isFinite(configured) && configured > 1024 ? configured : 4194304;
 }
 
 export function isDatabaseReadyForUserState() {
@@ -65,7 +65,7 @@ export function buildEmptySetupStateResponse(scope) {
   return {
     scope_type: scope.scopeType,
     scope_id: scope.scopeId,
-    schema_version: 1,
+    schema_version: 2,
     revision: 0,
     updated_at: null,
     client_updated_at: null,

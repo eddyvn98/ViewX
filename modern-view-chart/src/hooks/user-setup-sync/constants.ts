@@ -1,4 +1,4 @@
-export const USER_STATE_SCHEMA_VERSION = 1;
+export const USER_STATE_SCHEMA_VERSION = 2;
 export const SAVE_DEBOUNCE_MS = 1500;
 export const MIN_SAVE_INTERVAL_MS = 5000;
 export const FALLBACK_SAVE_INTERVAL_MS = 15000;

@@ -14,6 +14,7 @@ export type PersistedUiState = {
     isDrawingToolbarVisible: boolean;
     snapToCandle: boolean;
     isChartLegendVisible: boolean;
+    isCrosshairSyncEnabled: boolean;
     strategyPanelView: RootState['strategyPanelView'];
     strategyEditingStrategyId: RootState['strategyEditingStrategyId'];
     strategyBuilderDraft: RootState['strategyBuilderDraft'];

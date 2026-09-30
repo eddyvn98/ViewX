@@ -38,8 +38,11 @@ export function setupBroadcastEffect({
         if (message.sourceId === tabSyncSourceId) return;
         if (!isPlainObject(message.state)) return;
 
+        // Never let another tab overwrite local edits that are still waiting to save.
+        // The normal server revision/conflict flow will reconcile once this tab flushes.
+        if (pendingSaveRef.current) return;
+
         lastSavedRef.current = message.serialized;
-        pendingSaveRef.current = null;
         lastAcceptedClientUpdatedAtRef.current = Math.max(
             lastAcceptedClientUpdatedAtRef.current,
             lastLocalMutationAtRef.current,

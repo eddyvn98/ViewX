@@ -27,7 +27,6 @@ import {
   useChartDocumentTitle,
   useKeyboardDismissOnViewportReset,
   usePanelScrollState,
-  useRightSidebarWidth,
   useViewportState,
 } from "./use-home-client-ui";
 
@@ -102,14 +101,10 @@ export default function Home() {
   );
 
   const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
-  const setLeftSidebarOpen = useMarketStore((state) => state.setLeftSidebarOpen);
-  const setRightSidebarOpen = useMarketStore((state) => state.setRightSidebarOpen);
-  const setSidebarTopHeight = useMarketStore((state) => state.setSidebarTopHeight);
   const setActiveMobileTab = useMarketStore((state) => state.setActiveMobileTab);
   const setStrategyPanelView = useMarketStore((state) => state.setStrategyPanelView);
   const setInputFocused = useMarketStore((state) => state.setInputFocused);
   const setIsScrollingPanel = useMarketStore((state) => state.setIsScrollingPanel);
-  const setRightSidebarWidth = useMarketStore((state) => state.setRightSidebarWidth);
   const activeChart = useMarketStore((state) => {
     const tab = state.tabs[state.activeTabId];
     if (!tab?.activeChartId) return null;
@@ -136,7 +131,6 @@ export default function Home() {
   const viewport = useViewportState();
   useKeyboardDismissOnViewportReset(isInputFocused, setInputFocused);
   const handleScroll = usePanelScrollState(setIsScrollingPanel);
-  useRightSidebarWidth(setRightSidebarWidth);
   useChartDocumentTitle({
     symbol: activeChart?.symbol,
     interval: activeChart?.interval,
@@ -162,19 +156,6 @@ export default function Home() {
     setInputFocused(false);
     (document.activeElement as HTMLElement | null)?.blur();
   };
-
-  React.useEffect(() => {
-    // Keep watchlist/search discoverable on chart route regardless of persisted sidebar state.
-    setLeftSidebarOpen(true);
-    setRightSidebarOpen(true);
-    setSidebarTopHeight(40);
-  }, [setLeftSidebarOpen, setRightSidebarOpen, setSidebarTopHeight]);
-
-  React.useEffect(() => {
-    if (activeMobileTab === "watchlist") {
-      setActiveMobileTab("chart");
-    }
-  }, [activeMobileTab, setActiveMobileTab]);
 
   const {
     isLandscape,

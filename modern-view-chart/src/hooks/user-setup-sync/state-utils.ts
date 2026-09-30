@@ -1,65 +1,18 @@
 import { RootState } from '@/lib/store';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
 import type { StrategyState } from '@/features/strategy/store/strategy-store.types';
-import { USER_STATE_TARGET_BYTES } from './constants';
 import type { PersistedSetupState } from './types';
 import { sanitizeTabsForPersistence } from './tabs-utils';
-import { trimStrategyState } from './strategy-utils';
 
 export function measureJsonBytes(value: unknown): number {
     return new TextEncoder().encode(JSON.stringify(value)).length;
 }
 
 export function fitPersistedSetupStateToBudget(snapshot: PersistedSetupState): PersistedSetupState {
-    if (measureJsonBytes(snapshot) <= USER_STATE_TARGET_BYTES) return snapshot;
-
-    // Never trim chartDrawings here to avoid silently dropping user drawings.
-    // Prefer reducing high-churn strategy/alert payloads first.
-    const compact: PersistedSetupState = {
-        ...snapshot,
-        alerts: snapshot.alerts.slice(-100),
-        strategy: trimStrategyState(snapshot.strategy, false),
-    };
-    if (measureJsonBytes(compact) <= USER_STATE_TARGET_BYTES) return compact;
-
-    const aggressive: PersistedSetupState = {
-        ...compact,
-        alerts: compact.alerts.slice(-20),
-        strategy: trimStrategyState(compact.strategy, true),
-    };
-    if (measureJsonBytes(aggressive) <= USER_STATE_TARGET_BYTES) return aggressive;
-
-    const keepDrawingsLastResort: PersistedSetupState = {
-        ...aggressive,
-        chartIndicators: {},
-        watchlist: aggressive.watchlist.slice(0, 30),
-        watchlistItems: aggressive.watchlistItems.slice(0, 30),
-        favoriteTimeframes: aggressive.favoriteTimeframes.slice(0, 12),
-        favoriteChartTypes: aggressive.favoriteChartTypes.slice(0, 3),
-        alerts: [],
-        strategy: {
-            ...aggressive.strategy,
-            strategies: [],
-            signals: [],
-            virtualPositions: aggressive.strategy.virtualPositions.filter((position) => position.status !== 'closed'),
-            matrixScanners: [],
-            focusedMatrixScannerId: null,
-            scopedLastSignalTimes: {},
-        },
-    };
-    if (measureJsonBytes(keepDrawingsLastResort) <= USER_STATE_TARGET_BYTES) return keepDrawingsLastResort;
-
-    // If still over budget, keep drawings intact and return the smallest snapshot we can
-    // without deleting them. Backend may still reject oversized payloads; this avoids data loss.
-    return {
-        ...keepDrawingsLastResort,
-        strategy: {
-            ...keepDrawingsLastResort.strategy,
-            signals: [],
-            virtualPositions: [],
-            scopedLastSignalTimes: {},
-        },
-    };
+    // Preserve the complete user snapshot. The backend stores chartDrawings separately
+    // and enforces explicit payload limits, so the client must never silently delete
+    // indicators, alerts, strategies, watchlists, or other user-owned configuration.
+    return snapshot;
 }
 
 export function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 'dark' | 'system'): PersistedSetupState {
@@ -86,6 +39,7 @@ export function pickPersistedSetupState(state: RootState, themeMode?: 'light' | 
             isDrawingToolbarVisible: state.isDrawingToolbarVisible,
             snapToCandle: state.snapToCandle,
             isChartLegendVisible: state.isChartLegendVisible,
+            isCrosshairSyncEnabled: state.isCrosshairSyncEnabled,
             strategyPanelView: state.strategyPanelView,
             strategyEditingStrategyId: state.strategyEditingStrategyId,
             strategyBuilderDraft: state.strategyBuilderDraft,
@@ -139,6 +93,7 @@ export function selectPersistableMarketState(state: RootState) {
         isDrawingToolbarVisible: state.isDrawingToolbarVisible,
         snapToCandle: state.snapToCandle,
         isChartLegendVisible: state.isChartLegendVisible,
+        isCrosshairSyncEnabled: state.isCrosshairSyncEnabled,
         strategyPanelView: state.strategyPanelView,
         strategyEditingStrategyId: state.strategyEditingStrategyId,
         strategyBuilderDraft: state.strategyBuilderDraft,
