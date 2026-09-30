@@ -5,13 +5,20 @@ import type { PersistedSetupState } from './types';
 const DB_NAME = 'vivutrade-user-state';
 const DB_VERSION = 1;
 const STORE_NAME = 'pending-setup-state';
+const SCOPE_INDEX = 'scope-key';
 
 export type DurableUserSetupOutboxRecord = {
+    id: string;
     scopeKey: string;
+    sourceId: string;
     clientUpdatedAt: number;
     schemaVersion: number;
     snapshot: PersistedSetupState;
 };
+
+function buildRecordId(scopeKey: string, sourceId: string): string {
+    return `${scopeKey}::${sourceId}`;
+}
 
 function readJsonIdentity(raw: string): string {
     if (!raw) return '';
@@ -66,7 +73,8 @@ function openDatabase(): Promise<IDBDatabase | null> {
         request.onupgradeneeded = () => {
             const db = request.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'scopeKey' });
+                const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                store.createIndex(SCOPE_INDEX, 'scopeKey', { unique: false });
             }
         };
         request.onsuccess = () => resolve(request.result);
@@ -83,10 +91,16 @@ export async function readDurableUserSetupOutbox(
 
     return new Promise((resolve) => {
         const tx = db.transaction(STORE_NAME, 'readonly');
-        const request = tx.objectStore(STORE_NAME).get(scopeKey);
+        const index = tx.objectStore(STORE_NAME).index(SCOPE_INDEX);
+        const request = index.getAll(scopeKey);
+
         request.onsuccess = () => {
-            const value = request.result as DurableUserSetupOutboxRecord | undefined;
-            resolve(value && value.scopeKey === scopeKey ? value : null);
+            const records = (request.result || []) as DurableUserSetupOutboxRecord[];
+            const latest = records.reduce<DurableUserSetupOutboxRecord | null>((best, record) => {
+                if (!best || Number(record.clientUpdatedAt) > Number(best.clientUpdatedAt)) return record;
+                return best;
+            }, null);
+            resolve(latest);
         };
         request.onerror = () => resolve(null);
         tx.oncomplete = () => db.close();
@@ -97,6 +111,7 @@ export async function readDurableUserSetupOutbox(
 
 export async function writeDurableUserSetupOutbox(
     scopeKey: string,
+    sourceId: string,
     snapshot: PersistedSetupState,
     clientUpdatedAt: number,
 ): Promise<boolean> {
@@ -106,14 +121,17 @@ export async function writeDurableUserSetupOutbox(
     return new Promise((resolve) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        const getRequest = store.get(scopeKey);
+        const id = buildRecordId(scopeKey, sourceId);
+        const getRequest = store.get(id);
         let wrote = false;
 
         getRequest.onsuccess = () => {
             const current = getRequest.result as DurableUserSetupOutboxRecord | undefined;
             if (current && Number(current.clientUpdatedAt) > clientUpdatedAt) return;
             store.put({
+                id,
                 scopeKey,
+                sourceId,
                 clientUpdatedAt,
                 schemaVersion: USER_STATE_SCHEMA_VERSION,
                 snapshot,
@@ -136,6 +154,31 @@ export async function writeDurableUserSetupOutbox(
     });
 }
 
+export async function deleteDurableUserSetupOutboxForSource(
+    scopeKey: string,
+    sourceId: string,
+): Promise<boolean> {
+    const db = await openDatabase();
+    if (!db) return false;
+
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(buildRecordId(scopeKey, sourceId));
+        tx.oncomplete = () => {
+            db.close();
+            resolve(true);
+        };
+        tx.onerror = () => {
+            db.close();
+            resolve(false);
+        };
+        tx.onabort = () => {
+            db.close();
+            resolve(false);
+        };
+    });
+}
+
 export async function deleteDurableUserSetupOutboxIfNotNewer(
     scopeKey: string,
     resolvedClientUpdatedAt: number,
@@ -145,17 +188,19 @@ export async function deleteDurableUserSetupOutboxIfNotNewer(
 
     return new Promise((resolve) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const getRequest = store.get(scopeKey);
+        const index = tx.objectStore(STORE_NAME).index(SCOPE_INDEX);
+        const request = index.openCursor(IDBKeyRange.only(scopeKey));
         let deleted = false;
 
-        getRequest.onsuccess = () => {
-            const current = getRequest.result as DurableUserSetupOutboxRecord | undefined;
-            if (!current) return;
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) return;
+            const current = cursor.value as DurableUserSetupOutboxRecord;
             if (Number(current.clientUpdatedAt) <= resolvedClientUpdatedAt) {
-                store.delete(scopeKey);
+                cursor.delete();
                 deleted = true;
             }
+            cursor.continue();
         };
 
         tx.oncomplete = () => {
