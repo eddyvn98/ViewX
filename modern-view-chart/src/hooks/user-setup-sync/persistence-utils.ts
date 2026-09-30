@@ -155,6 +155,7 @@ function applyPersistedSetupState(
             if (typeof ui.isDrawingToolbarVisible === 'boolean') next.isDrawingToolbarVisible = ui.isDrawingToolbarVisible;
             if (typeof ui.snapToCandle === 'boolean') next.snapToCandle = ui.snapToCandle;
             if (typeof ui.isChartLegendVisible === 'boolean') next.isChartLegendVisible = ui.isChartLegendVisible;
+            if (typeof ui.isCrosshairSyncEnabled === 'boolean') next.isCrosshairSyncEnabled = ui.isCrosshairSyncEnabled;
             if (
                 ui.strategyPanelView === 'build' ||
                 ui.strategyPanelView === 'list' ||
