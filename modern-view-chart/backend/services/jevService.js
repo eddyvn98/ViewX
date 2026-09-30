@@ -72,6 +72,7 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
             rsi: 50,
             returnPct: 0,
             volatilityPct: 0,
+            momentum5Bars: 0,
             timesfmDirection: timesfmResult?.direction || "sideways",
             timesfmConfidence: timesfmResult?.confidence || 50,
         };
@@ -80,7 +81,10 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
     const closes = candles.map((c) => Number(c.close || c.c || 0)).filter((v) => Number.isFinite(v) && v > 0);
     const currentPrice = closes[closes.length - 1] || 0;
     const prevPrice = closes[closes.length - 2] || currentPrice;
+    const price5BarsAgo = closes[closes.length - 6] || closes[0] || currentPrice;
+
     const returnPct = prevPrice > 0 ? Number((((currentPrice - prevPrice) / prevPrice) * 100).toFixed(2)) : 0;
+    const momentum5Bars = price5BarsAgo > 0 ? Number((((currentPrice - price5BarsAgo) / price5BarsAgo) * 100).toFixed(2)) : 0;
 
     const fastPeriod = Math.min(20, Math.max(5, Math.floor(closes.length * 0.4)));
     const slowPeriod = Math.min(50, Math.max(10, Math.floor(closes.length * 0.8)));
@@ -90,15 +94,23 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
     const ema200 = closes.length >= 200 ? calculateEMA(closes, 200) : null;
 
     let emaTrend = "neutral";
-    if (emaFast && emaSlow) {
-        if (currentPrice > emaFast && emaFast >= emaSlow) {
-            emaTrend = "strong_bullish";
-        } else if (currentPrice < emaFast && emaFast <= emaSlow) {
-            emaTrend = "strong_bearish";
-        } else if (emaFast > emaSlow || currentPrice > emaSlow) {
-            emaTrend = "bullish";
-        } else if (emaFast < emaSlow || currentPrice < emaSlow) {
-            emaTrend = "bearish";
+    if (emaFast && emaSlow && currentPrice > 0) {
+        const emaDiffPct = (Math.abs(emaFast - emaSlow) / currentPrice) * 100;
+        // If EMA fast and slow are essentially intertwined (< 0.08%), market is neutral / consolidating
+        if (emaDiffPct < 0.08) {
+            emaTrend = "neutral";
+        } else if (emaFast > emaSlow) {
+            emaTrend = currentPrice >= emaFast
+                ? "strong_bullish"
+                : currentPrice >= emaSlow
+                ? "pullback_bullish"
+                : "reversal_bearish";
+        } else if (emaFast < emaSlow) {
+            emaTrend = currentPrice <= emaFast
+                ? "strong_bearish"
+                : currentPrice <= emaSlow
+                ? "pullback_bearish"
+                : "reversal_bullish";
         }
     }
 
@@ -120,10 +132,11 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
         emaTrend,
         rsi,
         returnPct,
+        momentum5Bars,
         volatilityPct,
-        timesfmDirection: timesfmResult?.direction || "sideways",
-        timesfmConfidence: Number(timesfmResult?.confidence || 50),
-        timesfmDeltaPct: Number(timesfmResult?.delta_pct || 0),
+        timesfmDirection: timesfmResult?.direction || null,
+        timesfmConfidence: timesfmResult ? Number(timesfmResult.confidence || 50) : null,
+        timesfmDeltaPct: timesfmResult ? Number(timesfmResult.delta_pct || 0) : null,
     };
 }
 
@@ -135,46 +148,61 @@ export function evaluateLocally(features) {
     const {
         emaTrend,
         rsi,
+        volatilityPct,
+        momentum5Bars = 0,
         timesfmDirection,
         timesfmConfidence,
-        timesfmDeltaPct,
-        volatilityPct,
     } = features;
 
-    // 1. Calculate Trend Probabilities (bullish, sideways, bearish)
-    let bullishWeight = 1.0;
-    let bearishWeight = 1.0;
-    let sidewaysWeight = 1.0;
+    // 1. Calculate Trend Probabilities (bullish, sideways, bearish) from market structure
+    let bullishWeight = 0.5;
+    let bearishWeight = 0.5;
+    let sidewaysWeight = 0.5;
 
-    if (emaTrend === "strong_bullish") bullishWeight += 2.0;
-    else if (emaTrend === "bullish") bullishWeight += 1.2;
-    else if (emaTrend === "strong_bearish") bearishWeight += 2.0;
-    else if (emaTrend === "bearish") bearishWeight += 1.2;
-    else sidewaysWeight += 1.0;
-
-    // TimesFM influence
-    const tfmConfFactor = Math.min(Math.max(timesfmConfidence / 100, 0.2), 0.95);
-    if (timesfmDirection === "bullish") {
-        bullishWeight += 2.5 * tfmConfFactor;
-        if (timesfmDeltaPct > 0.3) bullishWeight += 0.8;
-    } else if (timesfmDirection === "bearish") {
-        bearishWeight += 2.5 * tfmConfFactor;
-        if (timesfmDeltaPct < -0.3) bearishWeight += 0.8;
+    if (emaTrend === "strong_bullish") {
+        bullishWeight += 3.2;
+    } else if (emaTrend === "bullish" || emaTrend === "pullback_bullish") {
+        bullishWeight += 2.4;
+    } else if (emaTrend === "strong_bearish") {
+        bearishWeight += 3.2;
+    } else if (emaTrend === "bearish" || emaTrend === "pullback_bearish") {
+        bearishWeight += 2.4;
+    } else if (emaTrend === "reversal_bearish") {
+        bearishWeight += 1.2;
+        sidewaysWeight += 1.5;
+    } else if (emaTrend === "reversal_bullish") {
+        bullishWeight += 1.2;
+        sidewaysWeight += 1.5;
     } else {
-        sidewaysWeight += 1.8;
+        sidewaysWeight += 1.5;
     }
 
-    // RSI influence (overbought > 80, oversold < 20)
-    if (rsi > 80) {
-        bullishWeight *= 0.80;
-        sidewaysWeight += 0.5;
-    } else if (rsi < 20) {
-        bearishWeight *= 0.80;
-        sidewaysWeight += 0.5;
-    } else if (rsi >= 50) {
-        bullishWeight += 0.5;
+    // Momentum (5 bars) influence
+    if (momentum5Bars > 0.3) bullishWeight += 1.0;
+    else if (momentum5Bars < -0.3) bearishWeight += 1.0;
+
+    // RSI momentum influence
+    if (rsi >= 52 && rsi <= 72) {
+        bullishWeight += 1.2;
+    } else if (rsi >= 72) {
+        bullishWeight += 0.4;
+        sidewaysWeight += 0.8;
+    } else if (rsi <= 48 && rsi >= 28) {
+        bearishWeight += 1.2;
+    } else if (rsi <= 28) {
+        bearishWeight += 0.4;
+        sidewaysWeight += 0.8;
     } else {
-        bearishWeight += 0.5;
+        sidewaysWeight += 0.5;
+    }
+
+    // Optional TimesFM influence if provided for backward compatibility
+    if (timesfmDirection === "bullish") {
+        const factor = Math.min(Math.max((timesfmConfidence || 50) / 100, 0.2), 0.95);
+        bullishWeight += 1.2 * factor;
+    } else if (timesfmDirection === "bearish") {
+        const factor = Math.min(Math.max((timesfmConfidence || 50) / 100, 0.2), 0.95);
+        bearishWeight += 1.2 * factor;
     }
 
     const totalWeight = bullishWeight + bearishWeight + sidewaysWeight;
@@ -187,23 +215,27 @@ export function evaluateLocally(features) {
     let pSell = 0.10;
     let pWait = 0.20;
 
-    if (pBullish > 0.50 && pBullish > pBearish * 1.3 && rsi < 85) {
-        pBuy = Number(Math.min(0.92, pBullish * 1.05).toFixed(2));
-        pSell = Number(Math.max(0.03, pBearish * 0.4).toFixed(2));
-        pWait = Number(Math.max(0.05, 1 - pBuy - pSell).toFixed(2));
-    } else if (pBearish > 0.50 && pBearish > pBullish * 1.3 && rsi > 15) {
-        pSell = Number(Math.min(0.92, pBearish * 1.05).toFixed(2));
-        pBuy = Number(Math.max(0.03, pBullish * 0.4).toFixed(2));
-        pWait = Number(Math.max(0.05, 1 - pBuy - pSell).toFixed(2));
+    const bullishSetup = ["strong_bullish", "pullback_bullish"].includes(emaTrend) && momentum5Bars > 0;
+    const bearishSetup = ["strong_bearish", "pullback_bearish"].includes(emaTrend) && momentum5Bars < 0;
+
+    if (bullishSetup && pBullish > pBearish && pBullish >= 0.45 && rsi < 85) {
+        pBuy = Number(Math.min(0.92, pBullish * 1.10).toFixed(2));
+        pSell = Number(Math.max(0.04, pBearish * 0.4).toFixed(2));
+        pWait = Number(Math.max(0.04, 1 - pBuy - pSell).toFixed(2));
+    } else if (bearishSetup && pBearish > pBullish && pBearish >= 0.45 && rsi > 15) {
+        pSell = Number(Math.min(0.92, pBearish * 1.10).toFixed(2));
+        pBuy = Number(Math.max(0.04, pBullish * 0.4).toFixed(2));
+        pWait = Number(Math.max(0.04, 1 - pBuy - pSell).toFixed(2));
     } else {
-        pWait = Number((0.55 + pSideways * 0.35).toFixed(2));
-        pBuy = Number(((1 - pWait) * (pBullish / (pBullish + pBearish || 1))).toFixed(2));
+        pWait = Number(Math.min(0.85, 0.45 + pSideways * 0.4).toFixed(2));
+        const rem = Math.max(0.10, 1 - pWait);
+        pBuy = Number((rem * (pBullish / (pBullish + pBearish || 1))).toFixed(2));
         pSell = Number(Math.max(0.05, 1 - pWait - pBuy).toFixed(2));
     }
 
     let action = "WAIT";
-    if (pBuy > pSell && pBuy >= 0.55) action = "BUY";
-    else if (pSell > pBuy && pSell >= 0.55) action = "SELL";
+    if (pBuy > pSell && pBuy >= pWait && pBuy >= 0.45) action = "BUY";
+    else if (pSell > pBuy && pSell >= pWait && pSell >= 0.45) action = "SELL";
 
     const actionConfidence = Number(
         Math.min(
@@ -213,22 +245,22 @@ export function evaluateLocally(features) {
     );
 
     // 3. Should Enter Score (0.00 to 1.00)
-    let shouldEnterScore = 0.25;
+    let shouldEnterScore = 0.35;
     if (action === "BUY") {
-        shouldEnterScore = Number((pBuy * (rsi < 68 ? 0.95 : 0.80)).toFixed(2));
+        shouldEnterScore = Number((pBuy * (rsi < 70 ? 0.95 : 0.80)).toFixed(2));
     } else if (action === "SELL") {
-        shouldEnterScore = Number((pSell * (rsi > 32 ? 0.95 : 0.80)).toFixed(2));
+        shouldEnterScore = Number((pSell * (rsi > 30 ? 0.95 : 0.80)).toFixed(2));
     } else {
-        shouldEnterScore = Number((Math.max(pBuy, pSell) * 0.6).toFixed(2));
+        shouldEnterScore = Number((Math.max(pBuy, pSell) * 0.70).toFixed(2));
     }
 
     // 4. Risk assessment
     let riskLevel = "Moderate";
     let riskScoreNum = 0.45;
-    if (volatilityPct > 3.0 || rsi > 75 || rsi < 25) {
+    if (volatilityPct > 3.0 || rsi > 78 || rsi < 22) {
         riskLevel = "High";
         riskScoreNum = 0.78;
-    } else if (shouldEnterScore >= 0.70 && volatilityPct < 1.8 && rsi >= 40 && rsi <= 65) {
+    } else if (shouldEnterScore >= 0.60 && volatilityPct < 1.8 && rsi >= 38 && rsi <= 68) {
         riskLevel = "Low";
         riskScoreNum = 0.22;
     }
@@ -263,24 +295,24 @@ async function callJevSystemOneApi(state, apiKey) {
         questions: {
             trend_direction: {
                 type: "choice",
-                instructions: "What is the most probable market trend direction based on structure and indicator momentum?",
+                instructions: "What is the most probable market trend direction based on candle structure and indicator momentum?",
                 criteria: {
-                    bullish: "Upward momentum and bullish indicators",
-                    sideways: "Consolidation, neutral or mixed indicators",
-                    bearish: "Downward momentum and bearish indicators",
+                    bullish: "Upward trend, bullish structure and positive momentum",
+                    sideways: "Consolidation, flat, neutral or choppy indicators",
+                    bearish: "Downward trend, bearish structure and negative momentum",
                 },
             },
             should_enter: {
                 type: "noul",
-                instructions: "Is this a favorable, high-probability entry setup with acceptable risk?",
+                instructions: "Is this a favorable entry setup with positive expected value and acceptable risk?",
             },
             trade_action: {
                 type: "choice",
-                instructions: "What trade action is justified at this current bar?",
+                instructions: "What trade action is justified based on the current market structure and momentum?",
                 criteria: {
-                    BUY: "Confirmed bullish setup to enter Long",
-                    SELL: "Confirmed bearish setup to enter Short",
-                    WAIT: "Wait for clearer confirmation or avoid choppy market",
+                    BUY: "Bullish trend or upward momentum favors entering or holding a Long position",
+                    SELL: "Bearish trend or downward momentum favors entering or holding a Short position",
+                    WAIT: "Choppy, uncertain, or conflicting signals without directional edge",
                 },
             },
             risk_rating: {
@@ -343,11 +375,7 @@ export async function evaluateMarketProbability({
                     rsi14: features.rsi,
                     returnPct: features.returnPct,
                     volatilityPct: features.volatilityPct,
-                },
-                timesfmProjection: {
-                    direction: features.timesfmDirection,
-                    deltaPct: features.timesfmDeltaPct,
-                    confidence: features.timesfmConfidence,
+                    momentum5Bars: features.momentum5Bars,
                 },
             };
 
@@ -370,10 +398,19 @@ export async function evaluateMarketProbability({
                     SELL: actionAns?.choice === "SELL" ? 0.8 : 0.1,
                 };
 
-                const riskScoreVal = typeof riskAns?.score === "number" ? riskAns.score : 1;
-                const riskLevel = riskScoreVal < 0.7 ? "Low" : riskScoreVal < 1.5 ? "Moderate" : "High";
+                const rawRiskScore = typeof riskAns?.score === "number" ? riskAns.score : 1;
+                const riskLevel = rawRiskScore < 0.7 ? "Low" : rawRiskScore < 1.5 ? "Moderate" : "High";
+                const riskScoreVal = riskLevel === "Low" ? 0.22 : riskLevel === "Moderate" ? 0.5 : 0.78;
 
                 const isTypeSafe = resolveApiEndpoint(apiKey).includes("typesafe.ai");
+
+                const rawAction = String(actionAns?.choice || "WAIT").toUpperCase();
+                const actionConflictsWithStructure =
+                    (rawAction === "BUY" && features.emaTrend === "reversal_bearish") ||
+                    (rawAction === "SELL" && features.emaTrend === "reversal_bullish") ||
+                    (rawAction === "BUY" && features.momentum5Bars <= -0.3) ||
+                    (rawAction === "SELL" && features.momentum5Bars >= 0.3);
+                const action = actionConflictsWithStructure ? "WAIT" : rawAction;
 
                 return {
                     trendProbabilities: {
@@ -381,7 +418,7 @@ export async function evaluateMarketProbability({
                         sideways: Number(trendProbs.sideways ?? 0),
                         bearish: Number(trendProbs.bearish ?? 0),
                     },
-                    action: String(actionAns?.choice || "WAIT").toUpperCase(),
+                    action,
                     actionConfidence: Number(actionAns?.confidence ?? 0.8),
                     actionProbabilities: {
                         BUY: Number(actionProbs.BUY ?? 0),
