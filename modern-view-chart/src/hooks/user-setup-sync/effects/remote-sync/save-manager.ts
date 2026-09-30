@@ -43,6 +43,7 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
     }
 
     let isFlushing = false;
+    let inFlightSerialized: string | null = null;
 
     const buildSnapshot = () => {
         const snapshot = pickPersistedSetupState(useMarketStore.getState(), deps.themeRef.current);
@@ -176,6 +177,7 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
 
         if (isFlushing) return;
         isFlushing = true;
+        inFlightSerialized = pending.serialized;
         deps.pendingSaveRef.current = null;
 
         let result: 'saved' | 'remote-won' | 'retry-now' | 'retry-later';
@@ -187,6 +189,7 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
             );
         } finally {
             isFlushing = false;
+            inFlightSerialized = null;
         }
 
         if (result === 'saved' || result === 'remote-won') {
@@ -220,6 +223,20 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
         const snapshot = buildSnapshot();
         const serialized = JSON.stringify(snapshot);
         const matchesLastSaved = serialized === deps.lastSavedRef.current;
+        const existingPending = deps.pendingSaveRef.current;
+
+        if (existingPending?.serialized === serialized) {
+            if (deps.saveTimerRef.current) clearTimeout(deps.saveTimerRef.current);
+            deps.saveTimerRef.current = setTimeout(() => {
+                void flushSave();
+                deps.saveTimerRef.current = null;
+            }, delayMs);
+            return;
+        }
+
+        if (isFlushing && inFlightSerialized === serialized) {
+            return;
+        }
 
         if (matchesLastSaved && !isFlushing) {
             deps.pendingSaveRef.current = null;
