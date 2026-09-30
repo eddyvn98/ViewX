@@ -16,7 +16,7 @@ export const updateUiPreferences = async (req, res) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const { voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio, themeColor } = req.body;
+        const { voiceAlertsEnabled, voiceAlertsUsePreGeneratedAudio } = req.body;
 
         const user = await Users.findOne({ _id: userId });
         if (!user) {
@@ -35,10 +35,6 @@ export const updateUiPreferences = async (req, res) => {
         if (typeof voiceAlertsUsePreGeneratedAudio === 'boolean') {
             user.uiPreferences.voiceAlertsUsePreGeneratedAudio = voiceAlertsUsePreGeneratedAudio;
         }
-        if (typeof themeColor === 'string') {
-            user.uiPreferences.themeColor = themeColor;
-        }
-
         // Mark as modified if it's a subdocument or Mixed type
         user.markModified('uiPreferences');
         await user.save();
@@ -72,8 +68,7 @@ export const getUiPreferences = async (req, res) => {
         return res.status(200).json({
             uiPreferences: user.uiPreferences || {
                 voiceAlertsEnabled: true,
-                voiceAlertsUsePreGeneratedAudio: true,
-                themeColor: 'green'
+                voiceAlertsUsePreGeneratedAudio: true
             }
         });
     } catch (error) {
