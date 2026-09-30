@@ -22,6 +22,10 @@ import type {
     UserSetupSyncMessage,
 } from '@/hooks/user-setup-sync/types';
 import type { RemoteSyncDeps } from './types';
+import {
+    deleteDurableUserSetupOutboxIfNotNewer,
+    writeDurableUserSetupOutbox,
+} from '@/hooks/user-setup-sync/durable-outbox';
 
 type FetchWithAuthRetry = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -46,8 +50,8 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
         snapshot: PersistedSetupState,
         serialized: string,
         clientUpdatedAt: number,
-    ) => {
-        if (Date.now() < deps.retryAfterRef.current) return false;
+    ): Promise<'saved' | 'remote-won' | 'retry-now' | 'retry-later'> => {
+        if (Date.now() < deps.retryAfterRef.current) return 'retry-later';
         deps.lastSaveAttemptAtRef.current = Date.now();
         emitUserSetupSyncStatus('saving', deps.lastSavedAtRef.current);
         try {
@@ -68,7 +72,7 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
             });
 
             const payload = await response.json().catch(() => null) as UserStateApiResponse | null;
-            if (response.ok || response.status === 202) {
+            if (response.ok && response.status !== 202) {
                 deps.lastSavedRef.current = serialized;
                 deps.lastSavedAtRef.current = Date.now();
                 const remoteUpdatedAt = Date.parse(String(payload?.updated_at || ''));
@@ -98,7 +102,12 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
                 deps.retryAfterRef.current = response.status === 202 && !deps.isAuthenticated
                     ? Date.now() + PUBLIC_STATE_SAVE_PAUSE_MS
                     : 0;
-                return true;
+                return 'saved';
+            }
+
+            if (response.status === 202) {
+                deps.retryAfterRef.current = Date.now() + PUBLIC_STATE_SAVE_PAUSE_MS;
+                return 'retry-later';
             }
 
             if (response.status === 409) {
@@ -115,7 +124,10 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
                     deps.lastRemoteRevisionRef.current = remoteRevision;
                 }
                 const hasNewerLocalMutation = deps.lastLocalMutationAtRef.current > (remoteClientUpdatedAt || 0);
-                if (!hasNewerLocalMutation && isPlainObject(payload?.state)) {
+                if (hasNewerLocalMutation) {
+                    return 'retry-now';
+                }
+                if (isPlainObject(payload?.state)) {
                     applyPersistedSetupState(payload.state as Partial<PersistedSetupState>, { includeTabs: false });
                     deps.lastSavedRef.current = JSON.stringify(
                         fitPersistedSetupStateToBudget(
@@ -124,22 +136,28 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
                     );
                 }
                 emitUserSetupSyncStatus('saved', deps.lastSavedAtRef.current);
-                return true;
+                return 'remote-won';
             }
 
             if (response.status === 429) {
                 deps.retryAfterRef.current = Date.now() + parseRetryAfterMs(response.headers.get('retry-after'));
             }
         } catch {
-            // Keep silent and retry on next user change.
+            // Keep the durable outbox record and retry when connectivity recovers.
         }
         emitUserSetupSyncStatus('error', deps.lastSavedAtRef.current);
-        return false;
+        return 'retry-later';
     };
 
     const flushSave = async (force = false) => {
         const pending = deps.pendingSaveRef.current;
         if (!pending || !deps.isReadyRef.current) return;
+
+        await writeDurableUserSetupOutbox(
+            deps.outboxScopeKey,
+            pending.snapshot,
+            pending.clientUpdatedAt,
+        );
 
         const now = Date.now();
         const waitForRateLimit = Math.max(0, deps.retryAfterRef.current - now);
@@ -155,24 +173,46 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
         }
 
         deps.pendingSaveRef.current = null;
-        const didSave = await saveState(
+        const result = await saveState(
             pending.snapshot,
             pending.serialized,
-            deps.lastLocalMutationAtRef.current || Date.now(),
+            pending.clientUpdatedAt,
         );
-        if (!didSave && deps.pendingSaveRef.current === null) {
+
+        if (result === 'saved' || result === 'remote-won') {
+            await deleteDurableUserSetupOutboxIfNotNewer(
+                deps.outboxScopeKey,
+                pending.clientUpdatedAt,
+            );
+            return;
+        }
+
+        if (deps.pendingSaveRef.current === null) {
             deps.pendingSaveRef.current = pending;
+        }
+
+        if (result === 'retry-now') {
+            if (deps.saveTimerRef.current) clearTimeout(deps.saveTimerRef.current);
+            deps.saveTimerRef.current = setTimeout(() => {
+                void flushSave();
+            }, 0);
         }
     };
 
     const scheduleSave = (delayMs = SAVE_DEBOUNCE_MS) => {
         if (!deps.isReadyRef.current) return;
-        deps.lastLocalMutationAtRef.current = Date.now();
+        const clientUpdatedAt = Date.now();
+        deps.lastLocalMutationAtRef.current = clientUpdatedAt;
         const snapshot = buildSnapshot();
         const serialized = JSON.stringify(snapshot);
         if (serialized === deps.lastSavedRef.current) return;
 
-        deps.pendingSaveRef.current = { snapshot, serialized };
+        deps.pendingSaveRef.current = { snapshot, serialized, clientUpdatedAt };
+        void writeDurableUserSetupOutbox(
+            deps.outboxScopeKey,
+            snapshot,
+            clientUpdatedAt,
+        );
         emitUserSetupSyncStatus('saving', deps.lastSavedAtRef.current);
         if (deps.saveTimerRef.current) {
             clearTimeout(deps.saveTimerRef.current);
