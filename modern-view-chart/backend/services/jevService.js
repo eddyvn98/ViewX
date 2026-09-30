@@ -100,9 +100,17 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
         if (emaDiffPct < 0.08) {
             emaTrend = "neutral";
         } else if (emaFast > emaSlow) {
-            emaTrend = currentPrice >= emaFast ? "strong_bullish" : currentPrice >= emaSlow ? "pullback_bullish" : "bullish";
+            emaTrend = currentPrice >= emaFast
+                ? "strong_bullish"
+                : currentPrice >= emaSlow
+                ? "pullback_bullish"
+                : "reversal_bearish";
         } else if (emaFast < emaSlow) {
-            emaTrend = currentPrice <= emaFast ? "strong_bearish" : currentPrice <= emaSlow ? "pullback_bearish" : "bearish";
+            emaTrend = currentPrice <= emaFast
+                ? "strong_bearish"
+                : currentPrice <= emaSlow
+                ? "pullback_bearish"
+                : "reversal_bullish";
         }
     }
 
@@ -159,6 +167,12 @@ export function evaluateLocally(features) {
         bearishWeight += 3.2;
     } else if (emaTrend === "bearish" || emaTrend === "pullback_bearish") {
         bearishWeight += 2.4;
+    } else if (emaTrend === "reversal_bearish") {
+        bearishWeight += 1.2;
+        sidewaysWeight += 1.5;
+    } else if (emaTrend === "reversal_bullish") {
+        bullishWeight += 1.2;
+        sidewaysWeight += 1.5;
     } else {
         sidewaysWeight += 1.5;
     }
@@ -201,11 +215,14 @@ export function evaluateLocally(features) {
     let pSell = 0.10;
     let pWait = 0.20;
 
-    if (pBullish > pBearish && pBullish >= 0.45 && rsi < 85) {
+    const bullishSetup = ["strong_bullish", "pullback_bullish"].includes(emaTrend) && momentum5Bars > 0;
+    const bearishSetup = ["strong_bearish", "pullback_bearish"].includes(emaTrend) && momentum5Bars < 0;
+
+    if (bullishSetup && pBullish > pBearish && pBullish >= 0.45 && rsi < 85) {
         pBuy = Number(Math.min(0.92, pBullish * 1.10).toFixed(2));
         pSell = Number(Math.max(0.04, pBearish * 0.4).toFixed(2));
         pWait = Number(Math.max(0.04, 1 - pBuy - pSell).toFixed(2));
-    } else if (pBearish > pBullish && pBearish >= 0.45 && rsi > 15) {
+    } else if (bearishSetup && pBearish > pBullish && pBearish >= 0.45 && rsi > 15) {
         pSell = Number(Math.min(0.92, pBearish * 1.10).toFixed(2));
         pBuy = Number(Math.max(0.04, pBullish * 0.4).toFixed(2));
         pWait = Number(Math.max(0.04, 1 - pBuy - pSell).toFixed(2));
@@ -381,10 +398,19 @@ export async function evaluateMarketProbability({
                     SELL: actionAns?.choice === "SELL" ? 0.8 : 0.1,
                 };
 
-                const riskScoreVal = typeof riskAns?.score === "number" ? riskAns.score : 1;
-                const riskLevel = riskScoreVal < 0.7 ? "Low" : riskScoreVal < 1.5 ? "Moderate" : "High";
+                const rawRiskScore = typeof riskAns?.score === "number" ? riskAns.score : 1;
+                const riskLevel = rawRiskScore < 0.7 ? "Low" : rawRiskScore < 1.5 ? "Moderate" : "High";
+                const riskScoreVal = riskLevel === "Low" ? 0.22 : riskLevel === "Moderate" ? 0.5 : 0.78;
 
                 const isTypeSafe = resolveApiEndpoint(apiKey).includes("typesafe.ai");
+
+                const rawAction = String(actionAns?.choice || "WAIT").toUpperCase();
+                const actionConflictsWithStructure =
+                    (rawAction === "BUY" && features.emaTrend === "reversal_bearish") ||
+                    (rawAction === "SELL" && features.emaTrend === "reversal_bullish") ||
+                    (rawAction === "BUY" && features.momentum5Bars <= -0.3) ||
+                    (rawAction === "SELL" && features.momentum5Bars >= 0.3);
+                const action = actionConflictsWithStructure ? "WAIT" : rawAction;
 
                 return {
                     trendProbabilities: {
@@ -392,7 +418,7 @@ export async function evaluateMarketProbability({
                         sideways: Number(trendProbs.sideways ?? 0),
                         bearish: Number(trendProbs.bearish ?? 0),
                     },
-                    action: String(actionAns?.choice || "WAIT").toUpperCase(),
+                    action,
                     actionConfidence: Number(actionAns?.confidence ?? 0.8),
                     actionProbabilities: {
                         BUY: Number(actionProbs.BUY ?? 0),
