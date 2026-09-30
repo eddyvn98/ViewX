@@ -4,12 +4,14 @@ import type { PersistedSetupState } from '@/hooks/user-setup-sync/types';
 export type PendingSave = {
     snapshot: PersistedSetupState;
     serialized: string;
+    clientUpdatedAt: number;
 };
 
 export type RemoteSyncDeps = {
     apiUrl: string | null;
     clientId: string;
     isAuthenticated: boolean;
+    outboxScopeKey: string;
     tabSyncSourceId: string;
     setAuthToken: Dispatch<SetStateAction<string>>;
     isReadyRef: MutableRefObject<boolean>;
