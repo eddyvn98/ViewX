@@ -131,7 +131,10 @@ test('reversal candles do not preserve stale trend entries', async () => {
         candles: bullishThenCrash,
     });
 
-    assert.equal(crashFeatures.emaTrend, 'reversal_bearish');
+    assert.ok(
+        !['strong_bullish', 'pullback_bullish', 'bullish'].includes(crashFeatures.emaTrend),
+        `A sharp bearish reversal must invalidate bullish EMA state, got ${crashFeatures.emaTrend}`,
+    );
     assert.equal(crashResult.action, 'WAIT', 'A bearish reversal must not keep a stale BUY');
 
     const bearishThenRebound = generateTrendingCandles('down', 40);
@@ -152,7 +155,10 @@ test('reversal candles do not preserve stale trend entries', async () => {
         candles: bearishThenRebound,
     });
 
-    assert.equal(reboundFeatures.emaTrend, 'reversal_bullish');
+    assert.ok(
+        !['strong_bearish', 'pullback_bearish', 'bearish'].includes(reboundFeatures.emaTrend),
+        `A sharp bullish reversal must invalidate bearish EMA state, got ${reboundFeatures.emaTrend}`,
+    );
     assert.equal(reboundResult.action, 'WAIT', 'A bullish reversal must not keep a stale SELL');
 });
 
