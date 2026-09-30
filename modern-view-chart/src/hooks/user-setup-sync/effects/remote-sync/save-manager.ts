@@ -23,6 +23,7 @@ import type {
 } from '@/hooks/user-setup-sync/types';
 import type { RemoteSyncDeps } from './types';
 import {
+    deleteDurableUserSetupOutboxForSource,
     deleteDurableUserSetupOutboxIfNotNewer,
     writeDurableUserSetupOutbox,
 } from '@/hooks/user-setup-sync/durable-outbox';
@@ -40,6 +41,8 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
     if (!apiUrl) {
         throw new Error('Remote sync API URL is required');
     }
+
+    let isFlushing = false;
 
     const buildSnapshot = () => {
         const snapshot = pickPersistedSetupState(useMarketStore.getState(), deps.themeRef.current);
@@ -99,9 +102,7 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
                     serialized,
                 } satisfies UserSetupSyncMessage);
                 emitUserSetupSyncStatus('saved', deps.lastSavedAtRef.current);
-                deps.retryAfterRef.current = response.status === 202 && !deps.isAuthenticated
-                    ? Date.now() + PUBLIC_STATE_SAVE_PAUSE_MS
-                    : 0;
+                deps.retryAfterRef.current = 0;
                 return 'saved';
             }
 
@@ -155,6 +156,7 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
 
         await writeDurableUserSetupOutbox(
             deps.outboxScopeKey,
+            deps.tabSyncSourceId,
             pending.snapshot,
             pending.clientUpdatedAt,
         );
@@ -172,18 +174,32 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
             return;
         }
 
+        if (isFlushing) return;
+        isFlushing = true;
         deps.pendingSaveRef.current = null;
-        const result = await saveState(
-            pending.snapshot,
-            pending.serialized,
-            pending.clientUpdatedAt,
-        );
+
+        let result: 'saved' | 'remote-won' | 'retry-now' | 'retry-later';
+        try {
+            result = await saveState(
+                pending.snapshot,
+                pending.serialized,
+                pending.clientUpdatedAt,
+            );
+        } finally {
+            isFlushing = false;
+        }
 
         if (result === 'saved' || result === 'remote-won') {
             await deleteDurableUserSetupOutboxIfNotNewer(
                 deps.outboxScopeKey,
                 pending.clientUpdatedAt,
             );
+            if (deps.pendingSaveRef.current) {
+                if (deps.saveTimerRef.current) clearTimeout(deps.saveTimerRef.current);
+                deps.saveTimerRef.current = setTimeout(() => {
+                    void flushSave();
+                }, 0);
+            }
             return;
         }
 
@@ -201,15 +217,30 @@ export function createSaveManager(deps: RemoteSyncDeps, fetchWithAuthRetry: Fetc
 
     const scheduleSave = (delayMs = SAVE_DEBOUNCE_MS) => {
         if (!deps.isReadyRef.current) return;
-        const clientUpdatedAt = Date.now();
-        deps.lastLocalMutationAtRef.current = clientUpdatedAt;
         const snapshot = buildSnapshot();
         const serialized = JSON.stringify(snapshot);
-        if (serialized === deps.lastSavedRef.current) return;
+        const matchesLastSaved = serialized === deps.lastSavedRef.current;
 
+        if (matchesLastSaved && !isFlushing) {
+            deps.pendingSaveRef.current = null;
+            if (deps.saveTimerRef.current) {
+                clearTimeout(deps.saveTimerRef.current);
+                deps.saveTimerRef.current = null;
+            }
+            void deleteDurableUserSetupOutboxForSource(
+                deps.outboxScopeKey,
+                deps.tabSyncSourceId,
+            );
+            emitUserSetupSyncStatus('saved', deps.lastSavedAtRef.current);
+            return;
+        }
+
+        const clientUpdatedAt = Date.now();
+        deps.lastLocalMutationAtRef.current = clientUpdatedAt;
         deps.pendingSaveRef.current = { snapshot, serialized, clientUpdatedAt };
         void writeDurableUserSetupOutbox(
             deps.outboxScopeKey,
+            deps.tabSyncSourceId,
             snapshot,
             clientUpdatedAt,
         );
