@@ -4,47 +4,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatForecastTimeframe } from "./forecast-timeframe.js";
 import { evaluateMarketProbability } from "./jevService.js";
+import {
+    executeForecastOnWorker,
+    resolvePythonBin,
+    startForecastWorker,
+} from "./forecastWorkerClient.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const FORECAST_SCRIPT = path.resolve(__dirname, "../forecast/forecast_service.py");
 const DEFAULT_TIMEOUT_MS = 120_000;
 
-function stripAnsi(text) {
-    return String(text || "").replace(/\x1B\[[0-9;]*[A-Za-z]/g, "");
-}
-
-function parseForecastPayload(stdout) {
-    const cleaned = stripAnsi(stdout).trim();
-    if (!cleaned) return {};
-    try {
-        return JSON.parse(cleaned);
-    } catch {}
-
-    // TimesFM can print informational/progress lines to stdout.
-    // Parse the last JSON object line if extra logs are mixed in.
-    const lines = cleaned.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    for (let idx = lines.length - 1; idx >= 0; idx -= 1) {
-        const line = lines[idx];
-        if (!line.startsWith("{") || !line.endsWith("}")) continue;
-        try {
-            return JSON.parse(line);
-        } catch {}
-    }
-    throw new Error("Forecast response did not contain valid JSON.");
-}
-
-function resolvePythonBin() {
-    const managedRuntime = path.resolve(__dirname, "../forecast/.venv-311/Scripts/python.exe");
-    const configured = (process.env.FORECAST_PYTHON_BIN || process.env.PYTHON_BIN || "").trim();
-    if (configured) {
-        return path.isAbsolute(configured) ? configured : path.resolve(process.cwd(), configured);
-    }
-    if (process.platform === "win32" && fs.existsSync(managedRuntime)) {
-        return managedRuntime;
-    }
-    return "python";
-}
+// Pre-warm the Python TimesFM worker in the background
+startForecastWorker();
 
 function sanitizeFiniteNumber(value, digits = 8) {
     const num = typeof value === "number" ? value : Number(value);
@@ -176,6 +148,104 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
     return lines.join("\n\n");
 }
 
+function stripAnsi(text) {
+    return String(text || "").replace(/\x1B\[[0-9;]*[A-Za-z]/g, "");
+}
+
+function parseForecastPayload(stdout) {
+    const cleaned = stripAnsi(stdout).trim();
+    if (!cleaned) return {};
+    try {
+        return JSON.parse(cleaned);
+    } catch {}
+
+    const lines = cleaned.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    for (let idx = lines.length - 1; idx >= 0; idx -= 1) {
+        const line = lines[idx];
+        if (!line.startsWith("{") || !line.endsWith("}")) continue;
+        try {
+            return JSON.parse(line);
+        } catch {}
+    }
+    throw new Error("Forecast response did not contain valid JSON.");
+}
+
+async function executeForecastOneShot(payload, timeoutMs) {
+    const pythonBin = resolvePythonBin();
+    return new Promise((resolve) => {
+        const child = spawn(pythonBin, [FORECAST_SCRIPT], {
+            stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        let stdout = "";
+        let stderr = "";
+        let settled = false;
+
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(result);
+        };
+
+        const timer = setTimeout(() => {
+            try {
+                child.kill();
+            } catch {}
+            finish({
+                status: "error",
+                code: "forecast_timeout",
+                message: "Forecast service bi timeout.",
+            });
+        }, timeoutMs);
+
+        child.stdout.on("data", (chunk) => {
+            stdout += chunk.toString();
+        });
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk.toString();
+        });
+        child.on("error", (error) => {
+            finish({
+                status: "error",
+                code: "forecast_spawn_failed",
+                message: error?.message || "Khong the khoi dong forecast service.",
+            });
+        });
+        child.on("close", (code) => {
+            if (code !== 0) {
+                finish({
+                    status: "error",
+                    code: "forecast_process_failed",
+                    message: stderr.trim() || `Forecast process exited with code ${code}.`,
+                });
+                return;
+            }
+            try {
+                const parsed = parseForecastPayload(stdout);
+                finish(parsed);
+            } catch (error) {
+                finish({
+                    status: "error",
+                    code: "forecast_parse_failed",
+                    message: error?.message || "Khong doc duoc ket qua forecast.",
+                });
+            }
+        });
+
+        child.stdin.write(JSON.stringify(payload));
+        child.stdin.end();
+    });
+}
+
+async function runForecastModel(payload, timeoutMs) {
+    let parsed = await executeForecastOnWorker(payload, Math.min(timeoutMs, 10_000));
+    if (!parsed?.result || parsed?.status !== "ok") {
+        parsed = await executeForecastOneShot(payload, timeoutMs);
+    }
+    return parsed;
+}
+
 export async function generateForecast({
     chart,
     candles,
@@ -215,101 +285,35 @@ export async function generateForecast({
         candles: sanitizedCandles,
     };
 
-    const pythonBin = resolvePythonBin();
+    // Execute TimesFM model and Jev AI evaluator concurrently for independent analysis & minimal latency
+    const [parsed, probabilities] = await Promise.all([
+        runForecastModel(payload, timeoutMs),
+        evaluateMarketProbability({
+            symbol: payload.chart.symbol,
+            timeframe: payload.chart.timeframe,
+            candles: sanitizedCandles,
+        }).catch((probErr) => {
+            console.warn("[Forecast] Probability evaluation failed:", probErr?.message || probErr);
+            return null;
+        }),
+    ]);
 
-    return new Promise((resolve) => {
-        const child = spawn(pythonBin, [FORECAST_SCRIPT], {
-            stdio: ["pipe", "pipe", "pipe"],
-        });
-
-        let stdout = "";
-        let stderr = "";
-        let settled = false;
-
-        const finish = (result) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            resolve(result);
+    if (!parsed || parsed.status !== "ok" || !parsed.result) {
+        return {
+            ok: false,
+            code: parsed?.code || "forecast_service_failed",
+            message: parsed?.message || "Forecast service tra ve du lieu khong hop le.",
         };
+    }
 
-        const timer = setTimeout(() => {
-            try {
-                child.kill();
-            } catch {}
-            finish({
-                ok: false,
-                code: "forecast_timeout",
-                message: "Forecast service bi timeout.",
-            });
-        }, timeoutMs);
-
-        child.stdout.on("data", (chunk) => {
-            stdout += chunk.toString();
-        });
-        child.stderr.on("data", (chunk) => {
-            stderr += chunk.toString();
-        });
-        child.on("error", (error) => {
-            finish({
-                ok: false,
-                code: "forecast_spawn_failed",
-                message: error?.message || "Khong the khoi dong forecast service.",
-            });
-        });
-        child.on("close", async (code) => {
-            if (code !== 0) {
-                finish({
-                    ok: false,
-                    code: "forecast_process_failed",
-                    message: stderr.trim() || `Forecast process exited with code ${code}.`,
-                });
-                return;
-            }
-            try {
-                const parsed = parseForecastPayload(stdout);
-                if (parsed?.status !== "ok" || !parsed?.result) {
-                    finish({
-                        ok: false,
-                        code: parsed?.code || "forecast_invalid_response",
-                        message: parsed?.message || "Forecast service tra ve du lieu khong hop le.",
-                    });
-                    return;
-                }
-
-                // Evaluate probabilistic model (Jev AI / Calibrated System One)
-                let probabilities = null;
-                try {
-                    probabilities = await evaluateMarketProbability({
-                        symbol: payload.chart.symbol,
-                        timeframe: payload.chart.timeframe,
-                        candles: sanitizedCandles,
-                        timesfmResult: parsed.result,
-                    });
-                } catch (probErr) {
-                    console.warn("[Forecast] Probability evaluation failed:", probErr?.message || probErr);
-                }
-
-                finish({
-                    ok: true,
-                    forecast: {
-                        ...parsed.result,
-                        probabilities,
-                    },
-                    response: buildHumanSummary(payload.chart, parsed.result, probabilities, lang, question),
-                    engine: String(parsed.result?.engine || "unknown"),
-                    probabilities,
-                });
-            } catch (error) {
-                finish({
-                    ok: false,
-                    code: "forecast_parse_failed",
-                    message: error?.message || "Khong doc duoc ket qua forecast.",
-                });
-            }
-        });
-
-        child.stdin.write(JSON.stringify(payload));
-        child.stdin.end();
-    });
+    return {
+        ok: true,
+        forecast: {
+            ...parsed.result,
+            probabilities,
+        },
+        response: buildHumanSummary(payload.chart, parsed.result, probabilities, lang, question),
+        engine: String(parsed.result?.engine || "unknown"),
+        probabilities,
+    };
 }

@@ -75,3 +75,35 @@ test('evaluateMarketProbability executes without crashing when no API key provid
     assert.ok(result.trendProbabilities.bearish > result.trendProbabilities.bullish, 'Bearish prob should exceed bullish');
     assert.equal(result.action, 'SELL', 'Action should recommend SELL for downtrend');
 });
+
+test('evaluateMarketProbability evaluates independently without timesfmResult', async () => {
+    // Uptrend without any timesfmResult
+    const upCandles = generateTrendingCandles('up', 40);
+    const upResult = await evaluateMarketProbability({
+        symbol: 'XAUUSD',
+        timeframe: '15m',
+        candles: upCandles,
+    });
+    assert.equal(upResult.action, 'BUY', `Independent uptrend should trigger BUY, got ${upResult.action}`);
+    assert.ok(upResult.trendProbabilities.bullish > upResult.trendProbabilities.bearish);
+
+    // Downtrend without any timesfmResult
+    const downCandles = generateTrendingCandles('down', 40);
+    const downResult = await evaluateMarketProbability({
+        symbol: 'XAUUSD',
+        timeframe: '15m',
+        candles: downCandles,
+    });
+    assert.equal(downResult.action, 'SELL', `Independent downtrend should trigger SELL, got ${downResult.action}`);
+    assert.ok(downResult.trendProbabilities.bearish > downResult.trendProbabilities.bullish);
+
+    // Sideways market should recommend WAIT
+    const flatCandles = generateTrendingCandles('flat', 40);
+    const flatResult = await evaluateMarketProbability({
+        symbol: 'XAUUSD',
+        timeframe: '15m',
+        candles: flatCandles,
+    });
+    assert.equal(flatResult.action, 'WAIT', `Independent sideways market should trigger WAIT, got ${flatResult.action}`);
+});
+

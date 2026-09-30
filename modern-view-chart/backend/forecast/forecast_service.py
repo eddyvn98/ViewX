@@ -254,22 +254,16 @@ def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, A
         return None
 
 
-def main() -> int:
-    try:
-        payload = json.load(sys.stdin)
-    except Exception as exc:
-        json.dump({"status": "error", "code": "invalid_payload", "message": str(exc)}, sys.stdout)
-        return 1
-
+def process_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     candles = payload.get("candles") or []
     closes = [safe_float(item.get("close")) for item in candles if isinstance(item, dict)]
     closes = [value for value in closes if value is not None]
     if len(closes) < 20:
-        json.dump(
-            {"status": "error", "code": "insufficient_candles", "message": "Need at least 20 valid candles"},
-            sys.stdout,
-        )
-        return 1
+        return {
+            "status": "error",
+            "code": "insufficient_candles",
+            "message": "Need at least 20 valid candles",
+        }
 
     chart = payload.get("chart") or {}
     timeframe = str(chart.get("timeframe") or chart.get("interval") or "").strip()
@@ -280,8 +274,56 @@ def main() -> int:
     if result is None:
         result = build_heuristic_forecast(closes, horizon)
 
-    json.dump({"status": "ok", "result": result}, sys.stdout)
+    return {"status": "ok", "result": result}
+
+
+def run_worker() -> int:
+    enabled_val = os.getenv("TIMESFM_ENABLED", "0")
+    if str(enabled_val).strip().lower() in {"1", "true", "yes", "on"}:
+        try:
+            warmup_closes = [100.0 + (step * 0.1) for step in range(30)]
+            maybe_run_timesfm(warmup_closes, 8)
+            print("[timesfm-worker] model pre-warmed into memory", file=sys.stderr)
+        except Exception as exc:
+            print(f"[timesfm-worker] pre-warm warning: {exc}", file=sys.stderr)
+
+    sys.stdout.write(json.dumps({"status": "ready"}) + "\n")
+    sys.stdout.flush()
+
+    for line in sys.stdin:
+        raw_line = line.strip()
+        if not raw_line:
+            continue
+        try:
+            payload = json.loads(raw_line)
+            req_id = payload.get("req_id")
+            response = process_payload(payload)
+            if req_id is not None:
+                response["req_id"] = req_id
+            sys.stdout.write(json.dumps(response) + "\n")
+            sys.stdout.flush()
+        except Exception as exc:
+            sys.stdout.write(
+                json.dumps({"status": "error", "code": "worker_payload_error", "message": str(exc)}) + "\n"
+            )
+            sys.stdout.flush()
+
     return 0
+
+
+def main() -> int:
+    if "--worker" in sys.argv:
+        return run_worker()
+
+    try:
+        payload = json.load(sys.stdin)
+    except Exception as exc:
+        json.dump({"status": "error", "code": "invalid_payload", "message": str(exc)}, sys.stdout)
+        return 1
+
+    response = process_payload(payload)
+    json.dump(response, sys.stdout)
+    return 0 if response.get("status") == "ok" else 1
 
 
 if __name__ == "__main__":
