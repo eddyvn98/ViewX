@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 import { readStoredAccessToken } from '@/lib/auth/session';
 import { buildApiUrl, buildPublicApiUrl, getOrCreateClientId } from '@/hooks/user-setup-sync/sync-utils';
 import { buildUserSetupOutboxScopeKey } from '@/hooks/user-setup-sync/durable-outbox';
-import type { PersistedSetupState } from '@/hooks/user-setup-sync/types';
+import type { PendingSave } from '@/hooks/user-setup-sync/effects/remote-sync/types';
 import { setupAuthSyncEffect } from '@/hooks/user-setup-sync/effects/auth-sync-effect';
 import { setupBroadcastEffect } from '@/hooks/user-setup-sync/effects/broadcast-effect';
 import { setupRemoteSyncEffect } from '@/hooks/user-setup-sync/effects/remote-sync-effect';
@@ -42,7 +42,7 @@ export function useUserSetupSync() {
     const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const lastSavedRef = useRef('');
     const lastSaveAttemptAtRef = useRef(0);
-    const pendingSaveRef = useRef<{ snapshot: PersistedSetupState; serialized: string } | null>(null);
+    const pendingSaveRef = useRef<PendingSave | null>(null);
     const retryAfterRef = useRef(0);
     const remotePollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const themeRef = useRef<'light' | 'dark' | 'system' | undefined>(undefined);
