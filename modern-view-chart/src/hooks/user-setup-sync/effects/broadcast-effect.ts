@@ -1,12 +1,8 @@
 import type { MutableRefObject } from 'react';
 import { applyPersistedSetupState, isPlainObject } from '@/hooks/user-setup-sync/persistence-utils';
 import { USER_SETUP_SYNC_CHANNEL_NAME } from '@/hooks/user-setup-sync/constants';
-import type { PersistedSetupState, UserSetupSyncMessage } from '@/hooks/user-setup-sync/types';
-
-type PendingSave = {
-    snapshot: PersistedSetupState;
-    serialized: string;
-};
+import type { UserSetupSyncMessage } from '@/hooks/user-setup-sync/types';
+import type { PendingSave } from '@/hooks/user-setup-sync/effects/remote-sync/types';
 
 type BroadcastEffectDeps = {
     tabSyncSourceId: string;

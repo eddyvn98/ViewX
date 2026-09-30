@@ -144,7 +144,6 @@ const schema = new Schema(
     uiPreferences: {
       voiceAlertsEnabled: { type: Boolean, default: true },
       voiceAlertsUsePreGeneratedAudio: { type: Boolean, default: true },
-      themeColor: { type: String, default: "green" },
     },
   },
   { timestamps: true }

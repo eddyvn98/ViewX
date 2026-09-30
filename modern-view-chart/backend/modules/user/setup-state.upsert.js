@@ -229,7 +229,12 @@ export function createUpsertHandler({ resolveScope, requireDatabase = false }) {
     });
 
     if (result.conflict) {
-      return res.status(CONFLICT_STATUS).json(buildConflictEnvelope(scope, result.conflictDoc, result.message));
+      // Always return the complete latest snapshot, including drawings stored
+      // in the separate user_state_drawings collection.
+      const latest = await fetchState(scope);
+      return res.status(CONFLICT_STATUS).json(
+        buildConflictEnvelope(scope, latest || result.conflictDoc, result.message),
+      );
     }
 
     return res.status(200).json(buildSavedEnvelope(scope, result.doc));
