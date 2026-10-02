@@ -61,6 +61,50 @@ function calculateRSI(prices, period = 14) {
     return Number((100 - 100 / (1 + rs)).toFixed(2));
 }
 
+function calculateATR(candles, period = 14) {
+    if (!Array.isArray(candles) || candles.length < 2) return 0;
+    const rows = candles
+        .map((c) => ({
+            high: Number(c.high ?? c.h),
+            low: Number(c.low ?? c.l),
+            close: Number(c.close ?? c.c),
+        }))
+        .filter((c) => Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close));
+
+    if (rows.length < 2) return 0;
+    const ranges = [];
+    for (let i = 1; i < rows.length; i++) {
+        const prevClose = rows[i - 1].close;
+        ranges.push(Math.max(
+            rows[i].high - rows[i].low,
+            Math.abs(rows[i].high - prevClose),
+            Math.abs(rows[i].low - prevClose),
+        ));
+    }
+    const window = ranges.slice(-Math.min(period, ranges.length));
+    return window.length ? window.reduce((sum, value) => sum + value, 0) / window.length : 0;
+}
+
+function normalizeDistribution(raw, keys, floor = 0.02) {
+    const values = keys.map((key) => Math.max(0, Number(raw?.[key] ?? 0)));
+    const total = values.reduce((sum, value) => sum + value, 0);
+    const base = total > 0 ? values.map((value) => value / total) : keys.map(() => 1 / keys.length);
+    const adjusted = base.map((value) => value + floor);
+    const adjustedTotal = adjusted.reduce((sum, value) => sum + value, 0);
+    return Object.fromEntries(keys.map((key, index) => [
+        key,
+        Number((adjusted[index] / adjustedTotal).toFixed(4)),
+    ]));
+}
+
+function pctDiff(a, b) {
+    const left = Number(a);
+    const right = Number(b);
+    if (!Number.isFinite(left) || !Number.isFinite(right) || right === 0) return 0;
+    return Number((((left - right) / Math.abs(right)) * 100).toFixed(4));
+}
+
+
 /**
  * Extract structured market state descriptor for AI evaluation
  */
@@ -71,24 +115,34 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
             emaTrend: "neutral",
             rsi: 50,
             returnPct: 0,
-            volatilityPct: 0,
             momentum5Bars: 0,
-            timesfmDirection: timesfmResult?.direction || "sideways",
-            timesfmConfidence: timesfmResult?.confidence || 50,
+            momentum20Bars: 0,
+            volatilityPct: 0,
+            atr14: 0,
+            volumeRatio20: 1,
+            distanceToHigh20Pct: 0,
+            distanceToLow20Pct: 0,
+            timesfmDirection: timesfmResult?.direction || null,
+            timesfmConfidence: timesfmResult?.confidence || null,
+            timesfmMoveAtr: timesfmResult?.move_atr || null,
+            timesfmEdge: timesfmResult?.edge || null,
         };
     }
 
-    const closes = candles.map((c) => Number(c.close || c.c || 0)).filter((v) => Number.isFinite(v) && v > 0);
+    const closes = candles
+        .map((c) => Number(c.close ?? c.c ?? 0))
+        .filter((value) => Number.isFinite(value) && value > 0);
     const currentPrice = closes[closes.length - 1] || 0;
     const prevPrice = closes[closes.length - 2] || currentPrice;
     const price5BarsAgo = closes[closes.length - 6] || closes[0] || currentPrice;
+    const price20BarsAgo = closes[closes.length - 21] || closes[0] || currentPrice;
 
-    const returnPct = prevPrice > 0 ? Number((((currentPrice - prevPrice) / prevPrice) * 100).toFixed(2)) : 0;
-    const momentum5Bars = price5BarsAgo > 0 ? Number((((currentPrice - price5BarsAgo) / price5BarsAgo) * 100).toFixed(2)) : 0;
+    const returnPct = pctDiff(currentPrice, prevPrice);
+    const momentum5Bars = pctDiff(currentPrice, price5BarsAgo);
+    const momentum20Bars = pctDiff(currentPrice, price20BarsAgo);
 
     const fastPeriod = Math.min(20, Math.max(5, Math.floor(closes.length * 0.4)));
     const slowPeriod = Math.min(50, Math.max(10, Math.floor(closes.length * 0.8)));
-
     const emaFast = calculateEMA(closes, fastPeriod);
     const emaSlow = calculateEMA(closes, slowPeriod);
     const ema200 = closes.length >= 200 ? calculateEMA(closes, 200) : null;
@@ -96,7 +150,6 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
     let emaTrend = "neutral";
     if (emaFast && emaSlow && currentPrice > 0) {
         const emaDiffPct = (Math.abs(emaFast - emaSlow) / currentPrice) * 100;
-        // If EMA fast and slow are essentially intertwined (< 0.08%), market is neutral / consolidating
         if (emaDiffPct < 0.08) {
             emaTrend = "neutral";
         } else if (emaFast > emaSlow) {
@@ -115,14 +168,22 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
     }
 
     const rsi = calculateRSI(closes, Math.min(14, Math.max(5, Math.floor(closes.length * 0.4))));
-
-    // Calculate normalized volatility
+    const atr14 = calculateATR(candles, 14);
     const windowCandles = candles.slice(-20);
-    const highs = windowCandles.map((c) => Number(c.high || c.h || currentPrice));
-    const lows = windowCandles.map((c) => Number(c.low || c.l || currentPrice));
-    const maxHigh = Math.max(...highs, currentPrice);
-    const minLow = Math.min(...lows, currentPrice);
+    const highs = windowCandles.map((c) => Number(c.high ?? c.h ?? currentPrice)).filter(Number.isFinite);
+    const lows = windowCandles.map((c) => Number(c.low ?? c.l ?? currentPrice)).filter(Number.isFinite);
+    const maxHigh = highs.length ? Math.max(...highs, currentPrice) : currentPrice;
+    const minLow = lows.length ? Math.min(...lows, currentPrice) : currentPrice;
     const volatilityPct = currentPrice > 0 ? Number((((maxHigh - minLow) / currentPrice) * 100).toFixed(2)) : 0;
+
+    const volumes = windowCandles
+        .map((c) => Number(c.volume ?? c.v ?? 0))
+        .filter((value) => Number.isFinite(value) && value >= 0);
+    const currentVolume = volumes[volumes.length - 1] || 0;
+    const averageVolume = volumes.length
+        ? volumes.reduce((sum, value) => sum + value, 0) / volumes.length
+        : 0;
+    const volumeRatio20 = averageVolume > 0 ? Number((currentVolume / averageVolume).toFixed(3)) : 1;
 
     return {
         currentPrice,
@@ -130,13 +191,23 @@ export function extractMarketFeatures(candles = [], timesfmResult = null) {
         emaSlow,
         ema200,
         emaTrend,
+        emaFastVsSlowPct: pctDiff(emaFast, emaSlow),
+        priceVsEmaFastPct: pctDiff(currentPrice, emaFast),
+        priceVsEmaSlowPct: pctDiff(currentPrice, emaSlow),
         rsi,
         returnPct,
         momentum5Bars,
+        momentum20Bars,
         volatilityPct,
+        atr14: Number(atr14.toFixed(6)),
+        atrPct: currentPrice > 0 ? Number(((atr14 / currentPrice) * 100).toFixed(4)) : 0,
+        volumeRatio20,
+        distanceToHigh20Pct: pctDiff(maxHigh, currentPrice),
+        distanceToLow20Pct: pctDiff(currentPrice, minLow),
         timesfmDirection: timesfmResult?.direction || null,
-        timesfmConfidence: timesfmResult ? Number(timesfmResult.confidence || 50) : null,
-        timesfmDeltaPct: timesfmResult ? Number(timesfmResult.delta_pct || 0) : null,
+        timesfmConfidence: timesfmResult ? Number(timesfmResult.confidence || 0) : null,
+        timesfmMoveAtr: timesfmResult ? Number(timesfmResult.move_atr || 0) : null,
+        timesfmEdge: timesfmResult?.edge || null,
     };
 }
 
@@ -196,13 +267,14 @@ export function evaluateLocally(features) {
         sidewaysWeight += 0.5;
     }
 
-    // Optional TimesFM influence if provided for backward compatibility
-    if (timesfmDirection === "bullish") {
-        const factor = Math.min(Math.max((timesfmConfidence || 50) / 100, 0.2), 0.95);
-        bullishWeight += 1.2 * factor;
-    } else if (timesfmDirection === "bearish") {
-        const factor = Math.min(Math.max((timesfmConfidence || 50) / 100, 0.2), 0.95);
-        bearishWeight += 1.2 * factor;
+    // TimesFM is advisory only. Ignore weak/noisy projections and cap influence.
+    const timesfmUsable = features.timesfmEdge === "moderate" || features.timesfmEdge === "strong";
+    if (timesfmUsable && timesfmDirection === "bullish") {
+        const factor = Math.min(Math.max((timesfmConfidence || 50) / 100, 0.2), 0.9);
+        bullishWeight += 0.35 * factor;
+    } else if (timesfmUsable && timesfmDirection === "bearish") {
+        const factor = Math.min(Math.max((timesfmConfidence || 50) / 100, 0.2), 0.9);
+        bearishWeight += 0.35 * factor;
     }
 
     const totalWeight = bullishWeight + bearishWeight + sidewaysWeight;
@@ -295,7 +367,7 @@ async function callJevSystemOneApi(state, apiKey) {
         questions: {
             trend_direction: {
                 type: "choice",
-                instructions: "What is the most probable market trend direction based on candle structure and indicator momentum?",
+                instructions: "Infer direction from numeric observations. Do not treat any single indicator as a verdict; preserve uncertainty when evidence conflicts.",
                 criteria: {
                     bullish: "Upward trend, bullish structure and positive momentum",
                     sideways: "Consolidation, flat, neutral or choppy indicators",
@@ -304,11 +376,11 @@ async function callJevSystemOneApi(state, apiKey) {
             },
             should_enter: {
                 type: "noul",
-                instructions: "Is this a favorable entry setup with positive expected value and acceptable risk?",
+                instructions: "Is the current location a favorable entry now, considering trend stage, distance from recent extremes, volatility, momentum, and overextension? A valid trend can still be a poor entry.",
             },
             trade_action: {
                 type: "choice",
-                instructions: "What trade action is justified based on the current market structure and momentum?",
+                instructions: "Choose the action justified at the current price. Prefer WAIT when evidence is mixed, extended, or lacks a clear location advantage.",
                 criteria: {
                     BUY: "Bullish trend or upward momentum favors entering or holding a Long position",
                     SELL: "Bearish trend or downward momentum favors entering or holding a Short position",
@@ -370,13 +442,28 @@ export async function evaluateMarketProbability({
                 symbol: String(symbol || "CHART"),
                 timeframe: String(timeframe || "15m"),
                 currentPrice: features.currentPrice,
-                technicalSummary: {
-                    emaTrend: features.emaTrend,
+                observations: {
+                    emaFastVsSlowPct: features.emaFastVsSlowPct,
+                    priceVsEmaFastPct: features.priceVsEmaFastPct,
+                    priceVsEmaSlowPct: features.priceVsEmaSlowPct,
                     rsi14: features.rsi,
-                    returnPct: features.returnPct,
-                    volatilityPct: features.volatilityPct,
-                    momentum5Bars: features.momentum5Bars,
+                    return1BarPct: features.returnPct,
+                    momentum5BarsPct: features.momentum5Bars,
+                    momentum20BarsPct: features.momentum20Bars,
+                    atr14: features.atr14,
+                    atrPct: features.atrPct,
+                    range20Pct: features.volatilityPct,
+                    volumeRatio20: features.volumeRatio20,
+                    distanceToHigh20Pct: features.distanceToHigh20Pct,
+                    distanceToLow20Pct: features.distanceToLow20Pct,
                 },
+                timesfmAdvisory: features.timesfmEdge && features.timesfmEdge !== "noise"
+                    ? {
+                        direction: features.timesfmDirection,
+                        moveAtr: features.timesfmMoveAtr,
+                        edge: features.timesfmEdge,
+                    }
+                    : null,
             };
 
             const answers = await callJevSystemOneApi(state, apiKey);
@@ -386,22 +473,23 @@ export async function evaluateMarketProbability({
                 const actionAns = answers.trade_action;
                 const riskAns = answers.risk_rating;
 
-                const trendProbs = trendAns?.probabilities || {
+                const rawTrendProbs = trendAns?.probabilities || {
                     bullish: trendAns?.choice === "bullish" ? 0.8 : 0.1,
                     sideways: trendAns?.choice === "sideways" ? 0.8 : 0.1,
                     bearish: trendAns?.choice === "bearish" ? 0.8 : 0.1,
                 };
-
-                const actionProbs = actionAns?.probabilities || {
+                const rawActionProbs = actionAns?.probabilities || {
                     BUY: actionAns?.choice === "BUY" ? 0.8 : 0.1,
                     WAIT: actionAns?.choice === "WAIT" ? 0.8 : 0.1,
                     SELL: actionAns?.choice === "SELL" ? 0.8 : 0.1,
                 };
 
+                const trendProbs = normalizeDistribution(rawTrendProbs, ["bullish", "sideways", "bearish"]);
+                const actionProbs = normalizeDistribution(rawActionProbs, ["BUY", "WAIT", "SELL"]);
+
                 const rawRiskScore = typeof riskAns?.score === "number" ? riskAns.score : 1;
                 const riskLevel = rawRiskScore < 0.7 ? "Low" : rawRiskScore < 1.5 ? "Moderate" : "High";
                 const riskScoreVal = riskLevel === "Low" ? 0.22 : riskLevel === "Moderate" ? 0.5 : 0.78;
-
                 const isTypeSafe = resolveApiEndpoint(apiKey).includes("typesafe.ai");
 
                 const rawAction = String(actionAns?.choice || "WAIT").toUpperCase();
@@ -410,22 +498,26 @@ export async function evaluateMarketProbability({
                     (rawAction === "SELL" && features.emaTrend === "reversal_bullish") ||
                     (rawAction === "BUY" && features.momentum5Bars <= -0.3) ||
                     (rawAction === "SELL" && features.momentum5Bars >= 0.3);
-                const action = actionConflictsWithStructure ? "WAIT" : rawAction;
+
+                const sortedActions = Object.entries(actionProbs).sort((a, b) => b[1] - a[1]);
+                const actionMargin = (sortedActions[0]?.[1] || 0) - (sortedActions[1]?.[1] || 0);
+                let action = actionConflictsWithStructure ? "WAIT" : rawAction;
+                if (actionMargin < 0.08 || actionProbs.WAIT >= (actionProbs[action] ?? 0)) {
+                    action = "WAIT";
+                }
+
+                const rawEnter = Number(enterAns?.noul ?? 0.5);
+                const shouldEnterScore = Number(Math.max(0.05, Math.min(0.95, rawEnter)).toFixed(4));
+                const actionConfidence = Number(
+                    Math.max(0.05, Math.min(0.95, actionProbs[action] ?? Number(actionAns?.confidence ?? 0.5))).toFixed(4)
+                );
 
                 return {
-                    trendProbabilities: {
-                        bullish: Number(trendProbs.bullish ?? 0),
-                        sideways: Number(trendProbs.sideways ?? 0),
-                        bearish: Number(trendProbs.bearish ?? 0),
-                    },
+                    trendProbabilities: trendProbs,
                     action,
-                    actionConfidence: Number(actionAns?.confidence ?? 0.8),
-                    actionProbabilities: {
-                        BUY: Number(actionProbs.BUY ?? 0),
-                        WAIT: Number(actionProbs.WAIT ?? 0),
-                        SELL: Number(actionProbs.SELL ?? 0),
-                    },
-                    shouldEnterScore: Number(enterAns?.noul ?? 0.5),
+                    actionConfidence,
+                    actionProbabilities: actionProbs,
+                    shouldEnterScore,
                     riskLevel,
                     riskScore: Number(riskScoreVal.toFixed(2)),
                     engine: isTypeSafe ? "typesafe-systemone" : "jev-ai-systemone",
