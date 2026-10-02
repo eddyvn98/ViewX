@@ -56,8 +56,14 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
     const deltaPct = Number(result?.delta_pct || 0);
     const bandLow = Number(result?.band_low || 0);
     const bandHigh = Number(result?.band_high || 0);
-    const confidence = Number(result?.confidence || 0);
+    const practicalBandLow = Number(result?.practical_band_low ?? bandLow);
+    const practicalBandHigh = Number(result?.practical_band_high ?? bandHigh);
+    const confidence = Number(result?.directional_clarity ?? result?.confidence ?? 0);
     const direction = String(result?.direction || "sideways");
+    const atr14 = Number(result?.atr14 || 0);
+    const moveAtr = Number(result?.move_atr || 0);
+    const intervalSpanAtr = Number(result?.interval_span_atr || 0);
+    const edge = String(result?.edge || "unknown");
 
     const isVi = lang === "vi";
 
@@ -70,8 +76,12 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
         : (deltaPct > 0 ? `rise about **${deltaPct.toFixed(2)}%**` : deltaPct < 0 ? `fall about **${Math.abs(deltaPct).toFixed(2)}%**` : "no significant move");
 
     const confidenceText = isVi
-        ? (confidence >= 75 ? "độ tin cậy **Khá cao**" : confidence >= 55 ? "độ tin cậy **Trung bình**" : "độ tin cậy **Thấp**")
-        : (confidence >= 75 ? "**High confidence**" : confidence >= 55 ? "**Medium confidence**" : "**Low confidence**");
+        ? (confidence >= 75 ? "độ rõ hướng **Khá cao**" : confidence >= 55 ? "độ rõ hướng **Trung bình**" : "độ rõ hướng **Thấp**")
+        : (confidence >= 75 ? "**High directional clarity**" : confidence >= 55 ? "**Medium directional clarity**" : "**Low directional clarity**");
+
+    const edgeText = isVi
+        ? ({ noise: "Nhiễu / không đáng kể", weak: "Yếu", moderate: "Trung bình", strong: "Mạnh" }[edge] || "Chưa xác định")
+        : ({ noise: "Noise / negligible", weak: "Weak", moderate: "Moderate", strong: "Strong" }[edge] || "Unknown");
 
     const isTimesfm = String(result?.engine || "").toLowerCase() === "timesfm";
     const engineTag = isTimesfm ? "TimesFM AI" : (isVi ? "Dự báo heuristic" : "Heuristic fallback");
@@ -82,16 +92,24 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
             ? `Xu hướng chủ đạo trong ${horizon} nến tới là ${directionText} với ${confidenceText}.`
             : `Dominant trend for the next ${horizon} candles is ${directionText} with ${confidenceText}.`,
         isVi
-            ? `**Kịch bản giá (${engineTag})**: Dự kiến ${moveText} từ giá hiện tại **${currentPrice.toFixed(3)}** về vùng mục tiêu **${targetPrice.toFixed(3)}** (Biên độ: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`).`
-            : `**Price Scenario (${engineTag})**: Expected to ${moveText} from current price **${currentPrice.toFixed(3)}** towards target **${targetPrice.toFixed(3)}** (Range: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`).`
+            ? `**Kịch bản giá (${engineTag})**: Dự kiến ${moveText} từ **${currentPrice.toFixed(3)}** về **${targetPrice.toFixed(3)}**. Vùng thực dụng theo ATR: \`${practicalBandLow.toFixed(3)}\` - \`${practicalBandHigh.toFixed(3)}\`.`
+            : `**Price Scenario (${engineTag})**: Expected to ${moveText} from **${currentPrice.toFixed(3)}** toward **${targetPrice.toFixed(3)}**. ATR-aware practical range: \`${practicalBandLow.toFixed(3)}\` - \`${practicalBandHigh.toFixed(3)}\`.`
     ];
+
+    if (isTimesfm) {
+        lines.push(
+            isVi
+                ? `- **Edge TimesFM**: **${edgeText}** | Dịch chuyển: **${moveAtr.toFixed(2)} ATR** | Biên p10-p90 cuối kỳ: **${intervalSpanAtr.toFixed(2)} ATR** | ATR14: **${atr14.toFixed(3)}**`
+                : `- **TimesFM edge**: **${edgeText}** | Move: **${moveAtr.toFixed(2)} ATR** | Terminal p10-p90 span: **${intervalSpanAtr.toFixed(2)} ATR** | ATR14: **${atr14.toFixed(3)}**`
+        );
+    }
 
     const q = String(question || "").toLowerCase();
     const asksRange = /(vung gia|vùng giá|range|bien do|biên độ|volatility)/i.test(q);
     if (asksRange) {
         lines.splice(2, 0, isVi
-            ? `- **Vùng giá kỳ vọng**: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\` (Biên độ dự kiến: ${(bandHigh - bandLow).toFixed(3)})`
-            : `- **Expected Price Range**: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\` (Expected span: ${(bandHigh - bandLow).toFixed(3)})`
+            ? `- **Vùng giá thực dụng (ATR-aware)**: \`${practicalBandLow.toFixed(3)}\` - \`${practicalBandHigh.toFixed(3)}\` (Model p10-p90: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`)`
+            : `- **ATR-aware practical range**: \`${practicalBandLow.toFixed(3)}\` - \`${practicalBandHigh.toFixed(3)}\` (Model p10-p90: \`${bandLow.toFixed(3)}\` - \`${bandHigh.toFixed(3)}\`)`
         );
     }
 
@@ -103,7 +121,7 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
 
         const action = probabilities.action || "WAIT";
         const actionProbs = probabilities.actionProbabilities || {};
-        const actionPct = Math.round((actionProbs[action] || probabilities.actionConfidence || 0.7) * 100);
+        const actionPct = Math.round((actionProbs[action] ?? probabilities.actionConfidence ?? 0.7) * 100);
         const shouldEnterPct = Math.round((probabilities.shouldEnterScore || 0) * 100);
         const riskLevel = probabilities.riskLevel || "Moderate";
         const riskScore = probabilities.riskScore !== undefined ? probabilities.riskScore : 0.5;
@@ -140,8 +158,8 @@ function buildHumanSummary(chart, result, probabilities = null, lang = "vi", que
 
     lines.push(
         isVi
-            ? `*Lưu ý: Luồng dự báo TimesFM & xác suất Jev AI System One nhằm mục đích tham khảo kỹ thuật, luôn tuân thủ kỷ luật quản trị rủi ro.*`
-            : `*Note: TimesFM forecast & Jev AI System One probabilities are for technical reference only. Always practice strict risk management.*`
+            ? `*Lưu ý: TimesFM chỉ là tín hiệu dự báo phụ; Jev thẩm định từ cấu trúc kỹ thuật. Các xác suất không phải tỷ lệ thắng được bảo đảm.*`
+            : `*Note: TimesFM is advisory only; Jev assesses the technical structure. These probabilities are not guaranteed win rates.*`
     );
 
     return lines.join("\n\n");
