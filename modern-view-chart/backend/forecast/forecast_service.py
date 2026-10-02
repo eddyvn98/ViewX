@@ -64,18 +64,41 @@ def clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
 
 
+def calculate_atr(candles: List[Dict[str, Any]], period: int = 14) -> float:
+    """Calculate Wilder-style ATR from OHLC candles for trading-scale context."""
+    rows = []
+    for item in candles or []:
+        if not isinstance(item, dict):
+            continue
+        high = safe_float(item.get("high") if item.get("high") is not None else item.get("h"))
+        low = safe_float(item.get("low") if item.get("low") is not None else item.get("l"))
+        close = safe_float(item.get("close") if item.get("close") is not None else item.get("c"))
+        if high is None or low is None or close is None or high < low:
+            continue
+        rows.append((high, low, close))
+
+    if len(rows) < 2:
+        return 0.0
+
+    true_ranges = []
+    previous_close = rows[0][2]
+    for high, low, close in rows[1:]:
+        true_ranges.append(max(high - low, abs(high - previous_close), abs(low - previous_close)))
+        previous_close = close
+
+    if not true_ranges:
+        return 0.0
+    window = true_ranges[-max(1, min(period, len(true_ranges))):]
+    return float(statistics.mean(window))
+
+
 def calculate_timesfm_confidence(
     current_price: float,
     target_price: float,
     terminal_lower: float,
     terminal_upper: float,
 ) -> float:
-    """Score directional clarity using only TimesFM's terminal p10/p90 interval.
-
-    This is not a calibrated probability of a profitable trade.  A high score
-    means the whole 80% model interval is on the same side of the current price;
-    otherwise the point forecast is discounted according to the interval width.
-    """
+    """Directional clarity of the model interval, not trade win probability."""
     current = safe_float(current_price)
     target = safe_float(target_price)
     lower = safe_float(terminal_lower)
@@ -96,14 +119,70 @@ def calculate_timesfm_confidence(
         directional_margin = 0.0
 
     if directional_margin > 0:
-        # Even the conservative p10/p90 bound supports the predicted direction.
         return round(clamp(75.0 + signal_ratio * 15.0, 35.0, 90.0), 2)
 
-    # The interval crosses the current price, so the direction is uncertain.
     return round(clamp(40.0 + signal_ratio * 30.0, 35.0, 70.0), 2)
 
 
-def build_heuristic_forecast(closes: List[float], horizon: int) -> Dict[str, Any]:
+def classify_forecast_edge(
+    current_price: float,
+    target_price: float,
+    terminal_lower: float,
+    terminal_upper: float,
+    atr_value: float,
+) -> Dict[str, Any]:
+    """Normalize forecast size by ATR so small moves are treated as noise."""
+    current = safe_float(current_price)
+    target = safe_float(target_price)
+    lower = safe_float(terminal_lower)
+    upper = safe_float(terminal_upper)
+    atr = safe_float(atr_value)
+
+    if current is None or target is None or lower is None or upper is None:
+        return {
+            "direction": "sideways",
+            "edge": "noise",
+            "edge_score": 0.0,
+            "move_atr": 0.0,
+            "interval_span_atr": 0.0,
+            "signal_to_noise": 0.0,
+        }
+
+    low, high = sorted((lower, upper))
+    fallback_scale = max(abs(current) * 0.001, 1e-9)
+    atr = atr if atr is not None and atr > 0 else fallback_scale
+    move = target - current
+    signed_move_atr = move / atr
+    move_atr = abs(signed_move_atr)
+    interval_span_atr = (high - low) / atr
+    half_width = max((high - low) / 2.0, atr * 0.5, 1e-9)
+    signal_to_noise = abs(move) / half_width
+    interval_crosses_current = low <= current <= high
+
+    if move_atr < 0.5:
+        edge = "noise"
+    elif move_atr < 1.0:
+        edge = "weak"
+    elif move_atr < 1.5:
+        edge = "moderate"
+    else:
+        edge = "strong"
+
+    if move_atr < 0.5 or (interval_crosses_current and signal_to_noise < 0.75):
+        direction = "sideways"
+    else:
+        direction = "bullish" if move > 0 else "bearish" if move < 0 else "sideways"
+
+    return {
+        "direction": direction,
+        "edge": edge,
+        "edge_score": round(clamp((move_atr / 1.5) * 100.0, 0.0, 100.0), 2),
+        "move_atr": round(signed_move_atr, 4),
+        "interval_span_atr": round(interval_span_atr, 4),
+        "signal_to_noise": round(signal_to_noise, 4),
+    }
+
+def build_heuristic_forecast(closes: List[float], horizon: int, atr_value: Optional[float] = None) -> Dict[str, Any]:
     current_price = closes[-1]
     recent_window = closes[-min(len(closes), 20):]
     lookback = min(len(closes), 12)
@@ -129,16 +208,30 @@ def build_heuristic_forecast(closes: List[float], horizon: int) -> Dict[str, Any
 
     target_price = forecast[-1]
     delta_pct = ((target_price - current_price) / price_scale) * 100.0
+    atr = safe_float(atr_value)
+    if atr is None or atr <= 0:
+        atr = max(mean_abs_delta, price_scale * 0.001)
 
-    direction = "sideways"
-    if delta_pct > 0.18:
-        direction = "bullish"
-    elif delta_pct < -0.18:
-        direction = "bearish"
-
-    confidence = clamp(78.0 - volatility_ratio * 6500.0, 35.0, 82.0)
-    band_low = min(lower_band)
-    band_high = max(upper_band)
+    edge = classify_forecast_edge(
+        current_price,
+        target_price,
+        lower_band[-1],
+        upper_band[-1],
+        atr,
+    )
+    clarity = calculate_timesfm_confidence(
+        current_price,
+        target_price,
+        lower_band[-1],
+        upper_band[-1],
+    )
+    model_band_low = min(lower_band)
+    model_band_high = max(upper_band)
+    baseline_half_span = atr * math.sqrt(max(horizon, 1))
+    atr_baseline_low = current_price - baseline_half_span
+    atr_baseline_high = current_price + baseline_half_span
+    practical_band_low = min(model_band_low, atr_baseline_low)
+    practical_band_high = max(model_band_high, atr_baseline_high)
 
     return {
         "engine": "heuristic",
@@ -149,17 +242,30 @@ def build_heuristic_forecast(closes: List[float], horizon: int) -> Dict[str, Any
         "current_price": round(current_price, 8),
         "target_price": round(target_price, 8),
         "delta_pct": round(delta_pct, 4),
-        "direction": direction,
-        "confidence": round(confidence, 2),
-        "band_low": round(band_low, 8),
-        "band_high": round(band_high, 8),
+        "direction": edge["direction"],
+        "confidence": clarity,
+        "directional_clarity": clarity,
+        "atr14": round(float(atr), 8),
+        "move_atr": edge["move_atr"],
+        "interval_span_atr": edge["interval_span_atr"],
+        "signal_to_noise": edge["signal_to_noise"],
+        "edge": edge["edge"],
+        "edge_score": edge["edge_score"],
+        "band_low": round(float(model_band_low), 8),
+        "band_high": round(float(model_band_high), 8),
+        "atr_baseline_low": round(float(atr_baseline_low), 8),
+        "atr_baseline_high": round(float(atr_baseline_high), 8),
+        "practical_band_low": round(float(practical_band_low), 8),
+        "practical_band_high": round(float(practical_band_high), 8),
     }
 
-
-def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, Any]]:
+def maybe_run_timesfm(
+    closes: List[float],
+    horizon: int,
+    atr_value: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
     enabled_val = os.getenv("TIMESFM_ENABLED", "0")
     if str(enabled_val).strip().lower() not in {"1", "true", "yes", "on"}:
-        # print(f"[timesfm] not enabled (val={enabled_val})", file=sys.stderr)
         return None
     try:
         import numpy as np
@@ -172,13 +278,13 @@ def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, A
         global _TIMESFM_MODEL
         global _TIMESFM_REPO
         global _TIMESFM_HORIZON
-        # TimesFM 3.0 weights are non-commercial. Keep the production default on
-        # the Apache-2.0 TimesFM 2.5 checkpoint while using the maintained 3.x API.
+        # TimesFM remains a univariate close-price model. OHLC-derived ATR is
+        # used only to judge whether its projected move is large enough to matter.
         repo_id = str(os.getenv("TIMESFM_REPO", "google/timesfm-2.5-200m-pytorch")).strip()
         if repo_id == "google/timesfm-3.0-pytorch":
             print("[timesfm] TimesFM 3.0 weights are not licensed for production; using 2.5 checkpoint.", file=sys.stderr)
             repo_id = "google/timesfm-2.5-200m-pytorch"
-        import math
+
         max_horizon = max(32, int(math.ceil(max(1, int(horizon)) / 16) * 16))
 
         if _TIMESFM_MODEL is None or _TIMESFM_REPO != repo_id or _TIMESFM_HORIZON != max_horizon:
@@ -212,29 +318,51 @@ def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, A
         )
         points = point_forecast[0][:horizon].tolist()
         quantiles = quantile_forecast[0][:horizon].tolist() if len(quantile_forecast) > 0 else []
+        if not points:
+            return None
+
         lower_band = []
         upper_band = []
-        for row in quantiles[:horizon]:
+        for index, point in enumerate(points):
+            row = quantiles[index] if index < len(quantiles) else []
             if len(row) >= 2:
-                lower_band.append(float(row[0])) # 0.1 quantile
-                upper_band.append(float(row[-1])) # 0.9 quantile
+                lower_band.append(float(row[0]))
+                upper_band.append(float(row[-1]))
             else:
-                lower_band.append(float(points[len(lower_band)]))
-                upper_band.append(float(points[len(upper_band)]))
+                lower_band.append(float(point))
+                upper_band.append(float(point))
+
         current_price = closes[-1]
         target_price = float(points[-1])
         delta_pct = ((target_price - current_price) / max(abs(current_price), 1e-9)) * 100.0
-        direction = "sideways"
-        if delta_pct > 0.18:
-            direction = "bullish"
-        elif delta_pct < -0.18:
-            direction = "bearish"
-        confidence = calculate_timesfm_confidence(
+        atr = safe_float(atr_value)
+        if atr is None or atr <= 0:
+            recent = closes[-min(len(closes), 20):]
+            deltas = [abs(recent[index] - recent[index - 1]) for index in range(1, len(recent))]
+            atr = statistics.mean(deltas) if deltas else max(abs(current_price) * 0.001, 1e-9)
+
+        edge = classify_forecast_edge(
+            current_price,
+            target_price,
+            lower_band[-1],
+            upper_band[-1],
+            atr,
+        )
+        clarity = calculate_timesfm_confidence(
             current_price,
             target_price,
             lower_band[-1],
             upper_band[-1],
         )
+
+        model_band_low = min(lower_band)
+        model_band_high = max(upper_band)
+        baseline_half_span = atr * math.sqrt(max(horizon, 1))
+        atr_baseline_low = current_price - baseline_half_span
+        atr_baseline_high = current_price + baseline_half_span
+        practical_band_low = min(model_band_low, atr_baseline_low)
+        practical_band_high = max(model_band_high, atr_baseline_high)
+
         return {
             "engine": "timesfm",
             "horizon": horizon,
@@ -244,20 +372,38 @@ def maybe_run_timesfm(closes: List[float], horizon: int) -> Optional[Dict[str, A
             "current_price": round(float(current_price), 8),
             "target_price": round(float(target_price), 8),
             "delta_pct": round(float(delta_pct), 4),
-            "direction": direction,
-            "confidence": confidence,
-            "band_low": round(float(min(lower_band)), 8),
-            "band_high": round(float(max(upper_band)), 8),
+            "direction": edge["direction"],
+            # Backwards-compatible field name. This is directional clarity,
+            # not probability that a trade will win.
+            "confidence": clarity,
+            "directional_clarity": clarity,
+            "atr14": round(float(atr), 8),
+            "move_atr": edge["move_atr"],
+            "interval_span_atr": edge["interval_span_atr"],
+            "signal_to_noise": edge["signal_to_noise"],
+            "edge": edge["edge"],
+            "edge_score": edge["edge_score"],
+            "band_low": round(float(model_band_low), 8),
+            "band_high": round(float(model_band_high), 8),
+            "atr_baseline_low": round(float(atr_baseline_low), 8),
+            "atr_baseline_high": round(float(atr_baseline_high), 8),
+            "practical_band_low": round(float(practical_band_low), 8),
+            "practical_band_high": round(float(practical_band_high), 8),
         }
     except Exception as exc:
         print(f"[timesfm] fallback to heuristic: {exc}", file=sys.stderr)
         return None
 
-
 def process_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     candles = payload.get("candles") or []
-    closes = [safe_float(item.get("close")) for item in candles if isinstance(item, dict)]
-    closes = [value for value in closes if value is not None]
+    closes = []
+    for item in candles:
+        if not isinstance(item, dict):
+            continue
+        close = safe_float(item.get("close") if item.get("close") is not None else item.get("c"))
+        if close is not None and close > 0:
+            closes.append(close)
+
     if len(closes) < 20:
         return {
             "status": "error",
@@ -265,17 +411,17 @@ def process_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             "message": "Need at least 20 valid candles",
         }
 
+    atr_value = calculate_atr(candles)
     chart = payload.get("chart") or {}
     timeframe = str(chart.get("timeframe") or chart.get("interval") or "").strip()
     requested_horizon = safe_int(payload.get("horizon"))
     horizon = requested_horizon if requested_horizon and requested_horizon > 0 else horizon_from_timeframe(timeframe)
 
-    result = maybe_run_timesfm(closes, horizon)
+    result = maybe_run_timesfm(closes, horizon, atr_value)
     if result is None:
-        result = build_heuristic_forecast(closes, horizon)
+        result = build_heuristic_forecast(closes, horizon, atr_value)
 
     return {"status": "ok", "result": result}
-
 
 def run_worker() -> int:
     enabled_val = os.getenv("TIMESFM_ENABLED", "0")
