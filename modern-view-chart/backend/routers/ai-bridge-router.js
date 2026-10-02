@@ -133,28 +133,36 @@ function buildForecastTextFromQuestion({ question, chart, forecast, lang = "vi" 
     const delta = Number(forecast?.delta_pct || 0);
     const low = Number(forecast?.band_low || 0);
     const high = Number(forecast?.band_high || 0);
-    const confidence = Number(forecast?.confidence || 0);
+    const practicalLow = Number(forecast?.practical_band_low ?? low);
+    const practicalHigh = Number(forecast?.practical_band_high ?? high);
+    const confidence = Number(forecast?.directional_clarity ?? forecast?.confidence ?? 0);
     const horizon = Number(forecast?.horizon || 0);
+    const atr14 = Number(forecast?.atr14 || 0);
+    const moveAtr = Number(forecast?.move_atr || 0);
+    const intervalSpanAtr = Number(forecast?.interval_span_atr || 0);
+    const edge = String(forecast?.edge || "unknown");
 
     const directionVi = direction === "bullish" ? "Tăng" : direction === "bearish" ? "Giảm" : "Đi ngang";
     const directionEn = direction === "bullish" ? "Bullish" : direction === "bearish" ? "Bearish" : "Sideways";
     const engineTag = String(forecast?.engine || "").toLowerCase() === "timesfm" ? "TimesFM AI" : "Heuristic fallback";
+    const isTimesfm = String(forecast?.engine || "").toLowerCase() === "timesfm";
+    const edgeVi = ({ noise: "Nhiễu / không đáng kể", weak: "Yếu", moderate: "Trung bình", strong: "Mạnh" }[edge] || "Chưa xác định");
 
     const lines = [];
     if (asksRange) {
         if (isVi) {
             lines.push(
                 `Dự báo vùng giá kế tiếp ${symbol} (${timeframe}) trong ${horizon} nến (${engineTag}):`,
-                `- Vùng kỳ vọng: ${low.toFixed(3)} - ${high.toFixed(3)}`,
-                `- Biên độ dự kiến: ${(high - low).toFixed(3)}`,
-                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`
+                `- Vùng thực dụng theo ATR: ${practicalLow.toFixed(3)} - ${practicalHigh.toFixed(3)}`,
+                `- Biên p10-p90 của model: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+                `- Xu hướng chính: ${directionVi}, độ rõ hướng ~${confidence.toFixed(0)}%`
             );
         } else {
             lines.push(
                 `Next range forecast for ${symbol} (${timeframe}) over ${horizon} candles (${engineTag}):`,
-                `- Expected range: ${low.toFixed(3)} - ${high.toFixed(3)}`,
-                `- Expected volatility span: ${(high - low).toFixed(3)}`,
-                `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`
+                `- ATR-aware practical range: ${practicalLow.toFixed(3)} - ${practicalHigh.toFixed(3)}`,
+                `- Model p10-p90 band: ${low.toFixed(3)} - ${high.toFixed(3)}`,
+                `- Main bias: ${directionEn}, directional clarity ~${confidence.toFixed(0)}%`
             );
         }
     } else {
@@ -163,22 +171,30 @@ function buildForecastTextFromQuestion({ question, chart, forecast, lang = "vi" 
                 `Dự đoán giá sắp tới ${symbol} (${timeframe}) trong ${horizon} nến (${engineTag}):`,
                 `- Giá hiện tại: ${current.toFixed(3)}`,
                 `- Giá mục tiêu: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
-                `- Xu hướng chính: ${directionVi}, độ tin cậy ~${confidence.toFixed(0)}%`
+                `- Xu hướng chính: ${directionVi}, độ rõ hướng ~${confidence.toFixed(0)}%`
             );
         } else {
             lines.push(
                 `Next move forecast for ${symbol} (${timeframe}) over ${horizon} candles (${engineTag}):`,
                 `- Current price: ${current.toFixed(3)}`,
                 `- Target price: ${target.toFixed(3)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%)`,
-                `- Main bias: ${directionEn}, confidence ~${confidence.toFixed(0)}%`
+                `- Main bias: ${directionEn}, directional clarity ~${confidence.toFixed(0)}%`
             );
         }
+    }
+
+    if (isTimesfm) {
+        lines.push(
+            isVi
+                ? `- Edge TimesFM: ${edgeVi}; dịch chuyển ${moveAtr.toFixed(2)} ATR; biên cuối kỳ ${intervalSpanAtr.toFixed(2)} ATR; ATR14 ${atr14.toFixed(3)}`
+                : `- TimesFM edge: ${edge}; move ${moveAtr.toFixed(2)} ATR; terminal span ${intervalSpanAtr.toFixed(2)} ATR; ATR14 ${atr14.toFixed(3)}`
+        );
     }
 
     if (forecast?.probabilities) {
         const probs = forecast.probabilities;
         const action = probs.action || "WAIT";
-        const actionPct = Math.round(((probs.actionProbabilities && probs.actionProbabilities[action]) || probs.actionConfidence || 0.7) * 100);
+        const actionPct = Math.round((probs.actionProbabilities?.[action] ?? probs.actionConfidence ?? 0.7) * 100);
         const shouldEnterPct = Math.round((probs.shouldEnterScore || 0) * 100);
         const trend = probs.trendProbabilities || {};
         const pBull = Math.round((trend.bullish || 0) * 100);
