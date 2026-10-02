@@ -162,6 +162,93 @@ test('reversal candles do not preserve stale trend entries', async () => {
     assert.equal(reboundResult.action, 'WAIT', 'A bullish reversal must not keep a stale SELL');
 });
 
+
+test('cloud payload sends numeric observations instead of pre-labeled ema trend', async () => {
+    const originalFetch = globalThis.fetch;
+    process.env.JEV_AI_API_KEY = 'test-key';
+    let capturedPayload = null;
+    globalThis.fetch = async (_url, options) => {
+        capturedPayload = JSON.parse(options.body);
+        return {
+            ok: true,
+            json: async () => ({
+                answers: {
+                    trend_direction: {
+                        choice: 'bullish',
+                        probabilities: { bullish: 0.65, sideways: 0.25, bearish: 0.10 },
+                    },
+                    should_enter: { noul: 0.62 },
+                    trade_action: {
+                        choice: 'BUY',
+                        confidence: 0.66,
+                        probabilities: { BUY: 0.66, WAIT: 0.24, SELL: 0.10 },
+                    },
+                    risk_rating: { score: 1 },
+                },
+            }),
+        };
+    };
+
+    try {
+        const candles = generateTrendingCandles('up', 40);
+        await evaluateMarketProbability({
+            symbol: 'XAUUSD',
+            timeframe: '15m',
+            candles,
+        });
+        assert.ok(capturedPayload?.state?.observations);
+        assert.equal(capturedPayload.state.technicalSummary, undefined);
+        assert.equal(capturedPayload.state.observations.emaTrend, undefined);
+        assert.ok(Number.isFinite(capturedPayload.state.observations.emaFastVsSlowPct));
+        assert.ok(Number.isFinite(capturedPayload.state.observations.atr14));
+    } finally {
+        globalThis.fetch = originalFetch;
+        delete process.env.JEV_AI_API_KEY;
+    }
+});
+
+test('cloud 100-0-0 probabilities are smoothed instead of displayed as certainty', async () => {
+    const originalFetch = globalThis.fetch;
+    process.env.JEV_AI_API_KEY = 'test-key';
+    globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+            answers: {
+                trend_direction: {
+                    choice: 'bullish',
+                    probabilities: { bullish: 1, sideways: 0, bearish: 0 },
+                },
+                should_enter: { noul: 1 },
+                trade_action: {
+                    choice: 'BUY',
+                    confidence: 1,
+                    probabilities: { BUY: 1, WAIT: 0, SELL: 0 },
+                },
+                risk_rating: { score: 1 },
+            },
+        }),
+    });
+
+    try {
+        const candles = generateTrendingCandles('up', 40);
+        const result = await evaluateMarketProbability({
+            symbol: 'XAUUSD',
+            timeframe: '15m',
+            candles,
+        });
+        assert.ok(result.trendProbabilities.bullish < 1);
+        assert.ok(result.trendProbabilities.sideways > 0);
+        assert.ok(result.trendProbabilities.bearish > 0);
+        assert.ok(result.actionProbabilities.BUY < 1);
+        assert.ok(result.actionProbabilities.WAIT > 0);
+        assert.ok(result.shouldEnterScore <= 0.95);
+        assert.ok(result.actionConfidence <= 0.95);
+    } finally {
+        globalThis.fetch = originalFetch;
+        delete process.env.JEV_AI_API_KEY;
+    }
+});
+
 test('cloud risk score is normalized to the UI 0..1 contract', async () => {
     const originalFetch = globalThis.fetch;
     process.env.JEV_AI_API_KEY = 'test-key';
