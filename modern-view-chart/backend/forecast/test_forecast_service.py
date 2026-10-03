@@ -1,6 +1,6 @@
 import unittest
 
-from forecast_service import calculate_timesfm_confidence, horizon_from_timeframe
+from forecast_service import calculate_atr, calculate_timesfm_confidence, classify_forecast_edge, horizon_from_timeframe
 
 
 class ForecastTimeframeTests(unittest.TestCase):
@@ -37,6 +37,39 @@ class ForecastTimeframeTests(unittest.TestCase):
         self.assertGreaterEqual(clear_direction, 75.0)
         self.assertLess(uncertain_direction, 55.0)
         self.assertLess(sideways, 55.0)
+
+    def test_atr_uses_full_ohlc_range(self):
+        candles = [
+            {"high": 101.0, "low": 99.0, "close": 100.0},
+            {"high": 104.0, "low": 100.0, "close": 103.0},
+            {"high": 106.0, "low": 102.0, "close": 105.0},
+        ]
+        atr = calculate_atr(candles, period=14)
+        self.assertGreater(atr, 3.0)
+
+    def test_small_timesfm_move_is_classified_as_noise_in_atr_units(self):
+        edge = classify_forecast_edge(
+            current_price=100.0,
+            target_price=100.3,
+            terminal_lower=99.4,
+            terminal_upper=100.8,
+            atr_value=1.0,
+        )
+        self.assertEqual(edge["direction"], "sideways")
+        self.assertEqual(edge["edge"], "noise")
+        self.assertLess(abs(edge["move_atr"]), 0.5)
+
+    def test_large_timesfm_move_can_keep_directional_bias(self):
+        edge = classify_forecast_edge(
+            current_price=100.0,
+            target_price=102.0,
+            terminal_lower=101.0,
+            terminal_upper=103.0,
+            atr_value=1.0,
+        )
+        self.assertEqual(edge["direction"], "bullish")
+        self.assertEqual(edge["edge"], "strong")
+        self.assertGreaterEqual(edge["move_atr"], 1.5)
 
 
 if __name__ == "__main__":
