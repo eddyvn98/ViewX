@@ -107,7 +107,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
     React.useEffect(() => {
         if (!activeChart) return;
         setSelectedType((activeChart.chartType || 'candles') as ChartTypeOption);
-    }, [activeChart?.id, activeChart?.chartType]);
+    }, [activeChart]);
 
     return (
         <>
