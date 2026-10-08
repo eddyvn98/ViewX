@@ -274,6 +274,8 @@ export function createApp() {
             "/user/vangtoday/symbols",
             "/user/vangtoday/prices",
             "/user/vangtoday/candles",
+            "/chart/data",
+            "/chart/prices",
             "/tts",
         ]);
         if (publicAuthPaths.has(req.path)) return next();
