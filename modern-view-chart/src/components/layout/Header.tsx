@@ -299,6 +299,8 @@ export const Header = memo(function Header() {
             <div className="flex items-center gap-3">
                 <button
                     onClick={toggleLeftSidebar}
+                    aria-label={isLeftSidebarOpen ? "Hide market list" : "Show market list"}
+                    aria-pressed={isLeftSidebarOpen}
                     className={cn(
                         "w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90 border",
                         isLeftSidebarOpen
@@ -317,6 +319,8 @@ export const Header = memo(function Header() {
                                 setIsNotificationMenuOpen((prev) => !prev);
                                 markAllNotificationsAsRead();
                             }}
+                            aria-label={tNotifications('buttonTitle')}
+                            aria-expanded={isNotificationMenuOpen}
                             className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary dark:bg-white/[0.05] text-muted-foreground dark:text-white/40 hover:text-foreground dark:hover:text-white hover:bg-secondary/80 dark:hover:bg-white/10 transition-all relative group active:scale-90 border border-border dark:border-white/5"
                             title={tNotifications('buttonTitle')}
                         >
@@ -443,6 +447,8 @@ export const Header = memo(function Header() {
                             <div className="relative" ref={avatarMenuRef}>
                                 <button
                                     onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
+                                    aria-label="Account menu"
+                                    aria-expanded={isAvatarMenuOpen}
                                     className={cn(
                                         "w-7 h-7 rounded-full bg-secondary dark:bg-white/[0.05] border p-[1px] shadow-sm transition-all duration-500",
                                         membershipUi.avatarBorderClassName
@@ -469,6 +475,9 @@ export const Header = memo(function Header() {
                                                     setVoiceAlertsEnabled(!voiceAlertsEnabled);
                                                     void voiceNotifier.unlock();
                                                 }}
+                                                role="switch"
+                                                aria-checked={voiceAlertsEnabled}
+                                                aria-label="Voice alerts"
                                                 className={cn(
                                                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                                                     voiceAlertsEnabled ? "bg-primary" : "bg-muted"
@@ -490,6 +499,9 @@ export const Header = memo(function Header() {
                                                     setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio);
                                                     void voiceNotifier.unlock();
                                                 }}
+                                                role="switch"
+                                                aria-checked={voiceAlertsUsePreGeneratedAudio}
+                                                aria-label="Pre-generated audio"
                                                 className={cn(
                                                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                                                     voiceAlertsUsePreGeneratedAudio ? "bg-primary" : "bg-muted"
@@ -508,6 +520,7 @@ export const Header = memo(function Header() {
                                             <span className="text-xs text-foreground dark:text-white">Test Voice Notification</span>
                                             <button
                                                 onClick={handleTestVoice}
+                                                aria-label="Test voice notification"
                                                 className="p-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors active:scale-90"
                                                 title="Click to test voice notification"
                                             >
@@ -571,6 +584,8 @@ export const Header = memo(function Header() {
 
                     <button
                         onClick={toggleRightSidebar}
+                        aria-label={isRightSidebarOpen ? "Hide right sidebar" : "Show right sidebar"}
+                        aria-pressed={isRightSidebarOpen}
                         className={cn(
                             "w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 border",
                             isRightSidebarOpen
