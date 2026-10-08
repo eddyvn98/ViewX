@@ -195,7 +195,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     useEffect(() => {
         const sourceText = String(source || '').toUpperCase();
         if (!isCacheReady || sourceText !== 'BINANCE' || !symbol || !interval) return;
-        if (getCandles().length >= MIN_CANDLES_THRESHOLD) return;
+        if (candlesCount >= MIN_CANDLES_THRESHOLD) return;
 
         const bootstrapKey = historyRequestKey;
         if (httpBootstrapKeyRef.current === bootstrapKey) return;
@@ -213,6 +213,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
 
         return () => controller.abort();
     }, [
+        candlesCount,
         historyRequestKey,
         interval,
         isCacheReady,
