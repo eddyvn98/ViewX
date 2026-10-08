@@ -4,6 +4,9 @@ ingress:
   - hostname: posweb.vivutrade.io.vn
     service: http://127.0.0.1:13002
   - hostname: vivutrade.io.vn
+    path: ^/ws(?:/.*)?$
+    service: http://127.0.0.1:18091
+  - hostname: vivutrade.io.vn
     service: http://127.0.0.1:13000
   - hostname: api.vivutrade.io.vn
     service: http://127.0.0.1:18091
