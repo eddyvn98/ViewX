@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { toBinanceInterval } from './binanceIntervals.js';
+import { getBinanceUpstreamLimit, resolveBinanceInterval } from './binanceIntervals.js';
+import { aggregateBinanceCandles } from './binanceCandleAggregation.js';
 
 const router = new Router();
 
@@ -24,11 +25,13 @@ router.route('/data').post(async (req, res) => {
         return res.status(400).json({ error: 'Invalid symbol' });
     }
 
-    const binanceInterval = toBinanceInterval(requestedInterval);
+    const intervalPlan = resolveBinanceInterval(requestedInterval);
+    const binanceInterval = intervalPlan.upstream;
+    const upstreamLimit = getBinanceUpstreamLimit(requestedInterval, limit);
     const url = new URL('https://api.binance.com/api/v3/klines');
     url.searchParams.set('symbol', symbol);
     url.searchParams.set('interval', binanceInterval);
-    url.searchParams.set('limit', String(limit));
+    url.searchParams.set('limit', String(upstreamLimit));
 
     try {
         const response = await fetch(url, { signal: AbortSignal.timeout(4500) });
@@ -37,15 +40,17 @@ router.route('/data').post(async (req, res) => {
         }
 
         const payload = await response.json();
-        const candles = (Array.isArray(payload) ? payload : [])
+        const normalizedCandles = (Array.isArray(payload) ? payload : [])
             .map(normalizeKline)
             .filter(Boolean);
+        const candles = aggregateBinanceCandles(normalizedCandles, requestedInterval).slice(-limit);
 
         return res.json({
             source: 'BINANCE',
             symbol,
             interval: requestedInterval,
             binanceInterval,
+            derivedInterval: intervalPlan.aggregate,
             candles,
         });
     } catch (error) {
