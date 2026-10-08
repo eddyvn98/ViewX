@@ -38,7 +38,7 @@ export function TimeframeSelector({ onClose }: TimeframeSelectorProps) {
                         {cat}
                         <div className="h-[1px] flex-1 bg-border/50 ml-2" />
                     </div>
-                    {TIMEFRAME_CONFIG.filter((tf: any) => tf.category === cat).map((tf: any) => (
+                    {TIMEFRAME_CONFIG.filter((tf) => tf.category === cat).map((tf) => (
                         <div
                             key={tf.id}
                             className={cn(
