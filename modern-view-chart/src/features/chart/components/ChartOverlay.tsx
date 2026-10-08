@@ -21,8 +21,8 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles }: Cha
 
     useEffect(() => {
         if (isConnected) {
-            setShowConnectionNotice(false);
-            return;
+            const resetTimer = window.setTimeout(() => setShowConnectionNotice(false), 0);
+            return () => window.clearTimeout(resetTimer);
         }
 
         const timer = setTimeout(() => setShowConnectionNotice(true), 1800);
@@ -64,11 +64,14 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles }: Cha
         if (!Number.isFinite(baseline ?? NaN)) return;
         // Turn off loading as soon as chart extends further into the past.
         if (Number.isFinite(oldestTime) && oldestTime > 0 && oldestTime < Number(baseline)) {
-            setIsBackfillLoading(false);
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
+            const finishTimer = window.setTimeout(() => {
+                setIsBackfillLoading(false);
+                if (timerRef.current) {
+                    clearTimeout(timerRef.current);
+                    timerRef.current = null;
+                }
+            }, 0);
+            return () => window.clearTimeout(finishTimer);
         }
     }, [isBackfillLoading, oldestTime]);
 
