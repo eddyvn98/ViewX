@@ -370,3 +370,15 @@ a[href*="tradingview.com"] {
     display: none !important;
   }
 }
+
+/* Mobile accessibility: keep visual controls compact while preserving a usable hit area. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .touch-target-y {
+    min-height: 44px;
+  }
+}
