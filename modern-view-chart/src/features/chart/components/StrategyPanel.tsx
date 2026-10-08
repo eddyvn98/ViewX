@@ -1,18 +1,32 @@
 'use client';
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { Activity, Bot, MessageSquare } from 'lucide-react';
-import { StrategyList } from '@/features/strategy/components/StrategyList';
-import { StrategyBuilder } from '@/features/strategy/components/StrategyBuilder';
 import { cn } from '@/lib/utils';
-import { SignalsView } from '@/features/strategy/components/SignalsView';
-import { AIChatView } from '@/features/strategy/components/AIChatView';
 import { useStrategyStore } from '@/features/strategy/store/strategy-store';
-import { Strategy } from '@/features/strategy/types';
+import type { Strategy } from '@/features/strategy/types';
 import { useMarketStore } from '@/lib/store';
 import { useTranslations } from 'next-intl';
 
 import { motion, LayoutGroup } from 'framer-motion';
+
+const SignalsView = dynamic(
+    () => import('@/features/strategy/components/SignalsView').then((module) => module.SignalsView),
+    { ssr: false }
+);
+const StrategyList = dynamic(
+    () => import('@/features/strategy/components/StrategyList').then((module) => module.StrategyList),
+    { ssr: false }
+);
+const StrategyBuilder = dynamic(
+    () => import('@/features/strategy/components/StrategyBuilder').then((module) => module.StrategyBuilder),
+    { ssr: false }
+);
+const AIChatView = dynamic(
+    () => import('@/features/strategy/components/AIChatView').then((module) => module.AIChatView),
+    { ssr: false }
+);
 
 export function StrategyPanel({ hideAiTab = false }: { hideAiTab?: boolean }) {
     type PanelView = 'build' | 'list' | 'signals' | 'ai_chat';
