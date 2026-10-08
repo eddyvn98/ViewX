@@ -2,8 +2,13 @@
 
 import { X } from "lucide-react";
 import React from "react";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
-import { AIChatView } from "@/features/strategy/components/AIChatView";
+
+const AIChatView = dynamic(
+  () => import("@/features/strategy/components/AIChatView").then((m) => m.AIChatView),
+  { ssr: false }
+);
 
 function PanelFallback({ className = "" }: { className?: string }) {
   return <div className={cn("h-full w-full animate-pulse bg-secondary/20", className)} />;
@@ -146,7 +151,7 @@ export function MobilePanels({
         <div className="flex-1 flex flex-col min-h-0 bg-background overflow-hidden">
           <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
             <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Strategy Manager</h2>
-            <button onClick={handleClosePanel} className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-all">
+            <button onClick={handleClosePanel} aria-label="Close strategy panel" className="touch-target p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -162,7 +167,7 @@ export function MobilePanels({
         <div className="absolute inset-0 z-[70] bg-background flex flex-col">
           <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
             <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">AI Assistant</h2>
-            <button onClick={handleClosePanel} className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-all">
+            <button onClick={handleClosePanel} aria-label="Close AI assistant" className="touch-target p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -190,7 +195,7 @@ export function MobilePanels({
         <div className="absolute inset-0 z-[60] bg-background flex flex-col">
           <div className="flex items-center justify-between p-3 border-b border-border bg-secondary/10">
             <h2 className="text-sm font-bold uppercase tracking-wider text-foreground/80">Active Indicators</h2>
-            <button onClick={() => setActiveMobileTab("chart")} className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-all">
+            <button onClick={() => setActiveMobileTab("chart")} aria-label="Close indicators panel" className="touch-target p-1.5 text-muted-foreground hover:text-foreground bg-secondary/40 rounded-md transition-colors">
               <X size={16} />
             </button>
           </div>
