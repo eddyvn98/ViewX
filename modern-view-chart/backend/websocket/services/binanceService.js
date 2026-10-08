@@ -62,7 +62,12 @@ export function subscribeBinance(symbol, interval, onCandleUpdate) {
                     low: Math.min(...components.map((item) => item.low)),
                     close: components[components.length - 1].close,
                     volume: components.reduce((sum, item) => sum + item.volume, 0),
-                    isClosed: false,
+                    isClosed:
+                        candle.isClosed &&
+                        (
+                            (intervalPlan.aggregate === '10m' && (Math.floor(candle.time / 300) % 2 === 1)) ||
+                            (intervalPlan.aggregate === '1Y' && new Date(candle.time * 1000).getUTCMonth() === 11)
+                        ),
                 };
                 onCandleUpdate(aggregated);
             }
