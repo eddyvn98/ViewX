@@ -42,8 +42,11 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     const scrollRef = useRef<HTMLDivElement>(null);
     const [centerSymbol, setCenterSymbol] = useState(currentSymbol);
     const initialCentered = useRef(false);
+    const isStoreSyncingRef = useRef(false);
     const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const recenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const recenterFrameRef = useRef<number | null>(null);
     const longPressTriggeredRef = useRef(false);
     const dragMovedRef = useRef(false);
     const pressStartRef = useRef({ x: 0, y: 0 });
@@ -92,7 +95,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
                 }
             }
 
-            if (closestSymbol && closestSymbol !== centerSymbol) {
+            if (closestSymbol && closestSymbol !== centerSymbol && !isStoreSyncingRef.current) {
                 setCenterSymbol(closestSymbol);
             }
         };
@@ -104,27 +107,66 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     }, [centerSymbol, symbolPool]);
 
     useEffect(() => {
-        if (scrollRef.current && currentSymbol && !initialCentered.current && symbolPool.length > 0) {
-            const index = symbolPool.indexOf(currentSymbol);
-            if (index !== -1) {
-                const container = scrollRef.current;
-                const middleIndex = index + symbolPool.length;
-                setTimeout(() => {
-                    const item = container.children[middleIndex] as HTMLElement;
-                    if (item) {
-                        const targetScroll = item.offsetLeft - (container.clientWidth / 2) + (item.clientWidth / 2);
-                        container.scrollTo({ left: targetScroll, behavior: 'auto' });
-                        initialCentered.current = true;
-                    }
-                }, 50);
-            }
+        const container = scrollRef.current;
+        if (!container || !currentSymbol || symbolPool.length === 0) return;
+
+        const index = symbolPool.indexOf(currentSymbol);
+        if (index === -1) return;
+
+        if (syncTimerRef.current) {
+            clearTimeout(syncTimerRef.current);
+            syncTimerRef.current = null;
         }
+        if (recenterTimerRef.current) {
+            clearTimeout(recenterTimerRef.current);
+            recenterTimerRef.current = null;
+        }
+        if (recenterFrameRef.current !== null) {
+            cancelAnimationFrame(recenterFrameRef.current);
+            recenterFrameRef.current = null;
+        }
+
+        // The chart/store is authoritative. While we realign the carousel, ignore the
+        // old visual center so it cannot write the previous symbol back into the chart.
+        isStoreSyncingRef.current = true;
+
+        const middleIndex = index + symbolPool.length;
+        const delay = initialCentered.current ? 0 : 50;
+        recenterTimerRef.current = setTimeout(() => {
+            const item = container.children[middleIndex] as HTMLElement;
+            if (item) {
+                const targetScroll = item.offsetLeft - (container.clientWidth / 2) + (item.clientWidth / 2);
+                container.scrollTo({ left: targetScroll, behavior: 'auto' });
+            }
+            initialCentered.current = true;
+
+            recenterFrameRef.current = requestAnimationFrame(() => {
+                setCenterSymbol(currentSymbol);
+                isStoreSyncingRef.current = false;
+                recenterFrameRef.current = null;
+            });
+            recenterTimerRef.current = null;
+        }, delay);
+
+        return () => {
+            if (recenterTimerRef.current) {
+                clearTimeout(recenterTimerRef.current);
+                recenterTimerRef.current = null;
+            }
+            if (recenterFrameRef.current !== null) {
+                cancelAnimationFrame(recenterFrameRef.current);
+                recenterFrameRef.current = null;
+            }
+            isStoreSyncingRef.current = false;
+        };
     }, [currentSymbol, symbolPool]);
 
     useEffect(() => {
         return () => {
             if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
             if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+            if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+            if (recenterFrameRef.current !== null) cancelAnimationFrame(recenterFrameRef.current);
         };
     }, []);
 
@@ -136,7 +178,7 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
     };
 
     useEffect(() => {
-        if (!initialCentered.current) return;
+        if (!initialCentered.current || isStoreSyncingRef.current) return;
         if (!centerSymbol || !currentSymbol || centerSymbol === currentSymbol) return;
         if (!resolvedActiveChartId) return;
         if (syncTimerRef.current) clearTimeout(syncTimerRef.current);

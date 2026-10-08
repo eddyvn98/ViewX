@@ -581,3 +581,39 @@ test.describe('chart interaction stability', () => {
         await attachDiagnostics(page, testInfo);
     });
 });
+
+
+test.describe('mobile symbol carousel synchronization', () => {
+    test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+    test('external chart symbol selection is not reverted by a stale carousel center', async ({ page }) => {
+        await page.goto('/en/chart', { waitUntil: 'domcontentloaded' });
+        await expect.poll(async () =>
+            page.evaluate(() => Boolean(window.__VIEWX_E2E__))
+        ).toBe(true);
+        await page.evaluate(() => window.__VIEWX_E2E__?.seed());
+
+        const carousel = page.getByTestId('mobile-symbol-carousel');
+        await expect(carousel).toBeVisible();
+
+        // Simulate the market picker updating the active chart outside the carousel.
+        await page.evaluate(() => window.__VIEWX_E2E__?.setChartSymbol('BTCUSDm', 'MT5'));
+        await expect.poll(async () =>
+            page.evaluate(() => window.__VIEWX_E2E__?.getChartState()?.symbol)
+        ).toBe('BTCUSDm');
+
+        const selectedBtc = carousel.locator('[data-symbol="BTCUSDm"]').first().locator('.rounded-full').first();
+        await expect(selectedBtc).toHaveClass(/bg-primary\/20/);
+
+        // The old carousel had a ~220ms delayed write that restored the old symbol.
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => window.__VIEWX_E2E__?.getChartState()?.symbol)).toBe('BTCUSDm');
+
+        // A second picker change must also remain authoritative after recentering.
+        await page.evaluate(() => window.__VIEWX_E2E__?.setChartSymbol('EURUSDm', 'MT5'));
+        const selectedEur = carousel.locator('[data-symbol="EURUSDm"]').first().locator('.rounded-full').first();
+        await expect(selectedEur).toHaveClass(/bg-primary\/20/);
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => window.__VIEWX_E2E__?.getChartState()?.symbol)).toBe('EURUSDm');
+    });
+});
