@@ -159,6 +159,9 @@ export async function refreshAccessToken(): Promise<string> {
         body: JSON.stringify({}),
     })
         .then(async (response) => {
+            if (response.status === 204) {
+                return '';
+            }
             if (!response.ok) {
                 // ONLY clear stored session if the backend explicitly rejected the credentials (401 / 403).
                 // Transient server errors (500, 502 Bad Gateway, 503, 504) or network hiccups must NOT
