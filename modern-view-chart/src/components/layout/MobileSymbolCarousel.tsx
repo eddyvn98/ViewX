@@ -129,7 +129,6 @@ export const MobileSymbolCarousel = React.memo(function MobileSymbolCarousel({ o
         // The chart/store is authoritative. While we realign the carousel, ignore the
         // old visual center so it cannot write the previous symbol back into the chart.
         isStoreSyncingRef.current = true;
-        setCenterSymbol(currentSymbol);
 
         const middleIndex = index + symbolPool.length;
         const delay = initialCentered.current ? 0 : 50;
