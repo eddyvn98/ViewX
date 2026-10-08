@@ -1,47 +1,25 @@
 import fetch from "node-fetch";
+import { getBinanceUpstreamLimit, resolveBinanceInterval } from "../../modules/chart/binanceIntervals.js";
+import { aggregateBinanceCandles } from "../../modules/chart/binanceCandleAggregation.js";
+import { buildBinanceRestUrl } from "../../modules/chart/binanceConfig.js";
 
-const INTERVAL_MAP = {
-    '1': '1m',
-    '3': '3m',
-    '5': '5m',
-    '10': '10m',
-    '15': '15m',
-    '30': '30m',
-    '60': '1h',
-    '120': '2h',
-    '240': '4h',
-    '1440': '1d',
-    'D': '1d',
-    '1D': '1d',
-    'D1': '1d',
-    '10080': '1w',
-    'W': '1w',
-    '1W': '1w',
-    'W1': '1w',
-    '43200': '1M',
-    'M': '1M',
-    '1M': '1M',
-    'MN1': '1M',
-    '1mo': '1M',
-    '525600': '1M',
-    'Y': '1M',
-    '1Y': '1M',
-    'Y1': '1M',
-};
 
 export async function handleBinanceHistory({ ws }, data) {
     try {
-        const binanceInterval = INTERVAL_MAP[data.interval] || '1m';
+        const requestedInterval = String(data.interval || '1').trim();
+        const intervalPlan = resolveBinanceInterval(requestedInterval);
+        const binanceInterval = intervalPlan.upstream;
         const requestedCount = Number(data.count);
         const limit = Number.isFinite(requestedCount)
             ? Math.max(1, Math.min(1000, Math.floor(requestedCount)))
             : 500;
+        const upstreamLimit = getBinanceUpstreamLimit(requestedInterval, limit);
         const fromTimestamp = Number(data.fromTimestamp);
         const toTimestamp = Number(data.toTimestamp);
         const params = new URLSearchParams({
             symbol: data.symbol.toUpperCase(),
             interval: binanceInterval,
-            limit: String(limit),
+            limit: String(upstreamLimit),
         });
         if (Number.isFinite(fromTimestamp) && fromTimestamp > 0) {
             params.set('startTime', String(Math.floor(fromTimestamp * 1000)));
@@ -49,14 +27,14 @@ export async function handleBinanceHistory({ ws }, data) {
         if (Number.isFinite(toTimestamp) && toTimestamp > 0) {
             params.set('endTime', String(Math.floor(toTimestamp * 1000)));
         }
-        const url = `https://api.binance.com/api/v3/klines?${params.toString()}`;
+        const url = buildBinanceRestUrl(`/api/v3/klines?${params.toString()}`);
         const res = await fetch(url);
         if (!res.ok) return;
         const raw = await res.json();
 
         if (!Array.isArray(raw)) return;
 
-        const candles = raw.map(k => ({
+        const normalizedCandles = raw.map(k => ({
             time: k[0] / 1000,
             open: parseFloat(k[1]),
             high: parseFloat(k[2]),
@@ -64,6 +42,7 @@ export async function handleBinanceHistory({ ws }, data) {
             close: parseFloat(k[4]),
             volume: parseFloat(k[5])
         }));
+        const candles = aggregateBinanceCandles(normalizedCandles, requestedInterval).slice(-limit);
 
         ws.send(JSON.stringify({
             topic: "mt5_candles",

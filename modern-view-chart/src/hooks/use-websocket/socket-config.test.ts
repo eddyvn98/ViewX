@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { deriveWebClientMode, parseIntervalSeconds } from './socket-config';
+import { deriveDefaultSocketUrl, deriveWebClientMode, parseIntervalSeconds } from './socket-config';
+import { wsRuntime } from './runtime';
 
 describe('websocket interval duration', () => {
     it('does not request weekly history using a one-minute time span', () => {
@@ -67,6 +68,41 @@ describe('websocket client mode', () => {
                 configurable: true,
                 writable: true,
                 value: originalLocalStorage,
+            });
+        }
+    });
+});
+
+
+describe('websocket endpoint routing', () => {
+    it('uses the same public hostname with /ws instead of a separate api DNS dependency', () => {
+        const browserGlobal = globalThis as typeof globalThis & { window?: Window };
+        const originalWindow = browserGlobal.window;
+        const originalSocketUrl = wsRuntime.socketUrl;
+
+        Object.defineProperty(browserGlobal, 'window', {
+            configurable: true,
+            writable: true,
+            value: {
+                location: {
+                    protocol: 'https:',
+                    hostname: 'vivutrade.io.vn',
+                    host: 'vivutrade.io.vn',
+                    port: '',
+                },
+            } as Window,
+        });
+        wsRuntime.socketUrl = '';
+
+        try {
+            assert.equal(deriveDefaultSocketUrl(), 'wss://vivutrade.io.vn/ws');
+        } finally {
+            wsRuntime.socketUrl = originalSocketUrl;
+            if (originalWindow === undefined) Reflect.deleteProperty(browserGlobal, 'window');
+            else Object.defineProperty(browserGlobal, 'window', {
+                configurable: true,
+                writable: true,
+                value: originalWindow,
             });
         }
     });

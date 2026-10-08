@@ -1,40 +1,14 @@
 import WebSocket from 'ws';
+import { resolveBinanceInterval } from '../../modules/chart/binanceIntervals.js';
+import { getBinanceAggregateBucketStart } from '../../modules/chart/binanceCandleAggregation.js';
 
-// Map intervals from our app (1, 15, H1) to Binance (1m, 15m, 1h)
-const INTERVAL_MAP = {
-    '1': '1m',
-    '3': '3m',
-    '5': '5m',
-    '10': '10m',
-    '15': '15m',
-    '30': '30m',
-    '60': '1h',
-    '120': '2h',
-    '240': '4h',
-    '1440': '1d',
-    'D': '1d',
-    '1D': '1d',
-    'D1': '1d',
-    '10080': '1w',
-    'W': '1w',
-    '1W': '1w',
-    'W1': '1w',
-    '43200': '1M',
-    'M': '1M',
-    '1M': '1M',
-    'MN1': '1M',
-    '1mo': '1M',
-    '525600': '1M',
-    'Y': '1M',
-    '1Y': '1M',
-    'Y1': '1M',
-};
 
 const streams = new Map(); // key: "symbol:interval" => WebSocket
 
 export function subscribeBinance(symbol, interval, onCandleUpdate) {
     const strInterval = String(interval || '').trim();
-    const binanceInterval = INTERVAL_MAP[strInterval] || INTERVAL_MAP[strInterval.toUpperCase()] || (strInterval.endsWith('m') || strInterval.endsWith('h') || strInterval.endsWith('d') || strInterval.endsWith('w') || strInterval.endsWith('M') ? strInterval : '1m');
+    const intervalPlan = resolveBinanceInterval(strInterval);
+    const binanceInterval = intervalPlan.upstream;
 
     const normalizedSymbol = symbol.toUpperCase();
     const key = `${normalizedSymbol}:${strInterval}`;
@@ -46,6 +20,7 @@ export function subscribeBinance(symbol, interval, onCandleUpdate) {
 
     console.log(`🔌 Connecting to Binance Stream: ${wsUrl}`);
     const ws = new WebSocket(wsUrl);
+    const aggregateComponents = new Map();
 
     ws.on('open', () => {
         console.log(`✅ Binance Stream Open: ${key}`);
@@ -66,7 +41,35 @@ export function subscribeBinance(symbol, interval, onCandleUpdate) {
                     volume: parseFloat(k.v),
                     isClosed: k.x
                 };
-                onCandleUpdate(candle);
+
+                if (!intervalPlan.aggregate) {
+                    onCandleUpdate(candle);
+                    return;
+                }
+
+                const bucketStart = getBinanceAggregateBucketStart(candle.time, strInterval);
+                for (const componentTime of aggregateComponents.keys()) {
+                    if (getBinanceAggregateBucketStart(componentTime, strInterval) !== bucketStart) {
+                        aggregateComponents.delete(componentTime);
+                    }
+                }
+                aggregateComponents.set(candle.time, candle);
+                const components = Array.from(aggregateComponents.values()).sort((a, b) => a.time - b.time);
+                const aggregated = {
+                    time: bucketStart,
+                    open: components[0].open,
+                    high: Math.max(...components.map((item) => item.high)),
+                    low: Math.min(...components.map((item) => item.low)),
+                    close: components[components.length - 1].close,
+                    volume: components.reduce((sum, item) => sum + item.volume, 0),
+                    isClosed:
+                        candle.isClosed &&
+                        (
+                            (intervalPlan.aggregate === '10m' && (Math.floor(candle.time / 300) % 2 === 1)) ||
+                            (intervalPlan.aggregate === '1Y' && new Date(candle.time * 1000).getUTCMonth() === 11)
+                        ),
+                };
+                onCandleUpdate(aggregated);
             }
         } catch (err) {
             console.error('Binance Parse Error:', err);

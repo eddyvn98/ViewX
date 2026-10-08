@@ -1,4 +1,5 @@
 import time
+import calendar
 
 import MetaTrader5 as mt5
 
@@ -136,6 +137,35 @@ class MT5Service:
             print(f"[DEBUG] symbol_info('{resolved_symbol}') still None after {attempts} attempts | last_error: {error_code} - {error_desc}")
         return symbol_info
 
+    def _is_yearly_interval(self, interval):
+        raw = str(interval or "").strip().upper()
+        return raw in {"525600", "Y", "1Y", "Y1"}
+
+    def _aggregate_yearly_rates(self, rates):
+        yearly = {}
+        if rates is None:
+            return []
+        for rate in rates:
+            ts = int(rate["time"])
+            year = time.gmtime(ts).tm_year
+            item = {
+                "time": calendar.timegm((year, 1, 1, 0, 0, 0)),
+                "open": float(rate["open"]),
+                "high": float(rate["high"]),
+                "low": float(rate["low"]),
+                "close": float(rate["close"]),
+                "volume": int(rate["tick_volume"]),
+            }
+            current = yearly.get(year)
+            if current is None:
+                yearly[year] = item
+                continue
+            current["high"] = max(current["high"], item["high"])
+            current["low"] = min(current["low"], item["low"])
+            current["close"] = item["close"]
+            current["volume"] += item["volume"]
+        return [yearly[year] for year in sorted(yearly)]
+
     def fetch_candles(self, symbol, interval, count=200):
         resolved_symbol = self._resolve_symbol(symbol)
         if not resolved_symbol:
@@ -161,11 +191,17 @@ class MT5Service:
                 print(f"[ERROR] Failed to select symbol {resolved_symbol}: {error_code} - {error_desc}")
                 return []
 
-        tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
+        is_yearly = self._is_yearly_interval(interval)
+        tf = mt5.TIMEFRAME_MN1 if is_yearly else self.timeframe_map.get(str(interval))
+        if tf is None:
+            print(f"[ERROR] Unsupported MT5 timeframe: {interval}")
+            return []
+
+        fetch_count = max(12, int(count) * 12) if is_yearly else int(count)
         print(f"[FETCH] {symbol} -> {resolved_symbol} | Interval: {interval} | TF_ID: {tf} | Count: {count}")
         rates = None
         for attempt in range(3):
-            rates = mt5.copy_rates_from_pos(resolved_symbol, tf, 0, count)
+            rates = mt5.copy_rates_from_pos(resolved_symbol, tf, 0, fetch_count)
             if rates is not None and len(rates) > 0:
                 break
 
@@ -183,6 +219,9 @@ class MT5Service:
         if rates is None or len(rates) == 0:
             return []
         
+        if is_yearly:
+            return self._aggregate_yearly_rates(rates)[-int(count):]
+
         return [{
             'time': int(r['time']),
             'open': float(r['open']),
@@ -210,17 +249,25 @@ class MT5Service:
                 print(f"[ERROR] Failed to select symbol {resolved_symbol}: {error_code} - {error_desc}")
                 return []
 
-        tf = self.timeframe_map.get(str(interval), mt5.TIMEFRAME_M1)
+        is_yearly = self._is_yearly_interval(interval)
+        tf = mt5.TIMEFRAME_MN1 if is_yearly else self.timeframe_map.get(str(interval))
+        if tf is None:
+            print(f"[ERROR] Unsupported MT5 timeframe: {interval}")
+            return []
+        fetch_count = max(12, int(count) * 12) if is_yearly else int(count)
         # Using from_date logic: copy_rates_from(symbol, timeframe, date_from, count)
         # Docs: copy_rates_from(symbol, timeframe, datetime/timestamp, count)
         # It gets bars with open time <= date_from
         
-        rates = mt5.copy_rates_from(resolved_symbol, tf, int(timestamp), count)
+        rates = mt5.copy_rates_from(resolved_symbol, tf, int(timestamp), fetch_count)
         if rates is None:
             error_code, error_desc = mt5.last_error()
             print(f"[WARN] No rates_at found for {symbol} {interval} @ {timestamp} | MT5 error: {error_code} - {error_desc}")
             return []
             
+        if is_yearly:
+            return self._aggregate_yearly_rates(rates)[-int(count):]
+
         return [{
             'time': int(r['time']),
             'open': float(r['open']),

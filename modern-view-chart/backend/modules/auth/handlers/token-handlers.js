@@ -7,7 +7,7 @@ import { toAuthResponse } from "../token-utils.js";
 
 export async function refresh(req, res) {
     const refreshToken = getRefreshTokenFromRequest(req);
-    if (!refreshToken) return res.status(401).json({ error: "refresh_token is required" });
+    if (!refreshToken) return res.status(204).end();
 
     try {
         const tokens = await rotateRefreshToken(refreshToken);

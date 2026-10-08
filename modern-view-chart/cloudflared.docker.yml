@@ -4,6 +4,9 @@ ingress:
   - hostname: posweb.vivutrade.io.vn
     service: http://host.docker.internal:13002
   - hostname: vivutrade.io.vn
+    path: ^/ws(?:/.*)?$
+    service: http://host.docker.internal:18092
+  - hostname: vivutrade.io.vn
     service: http://host.docker.internal:13010
   - hostname: api.vivutrade.io.vn
     service: http://host.docker.internal:18092

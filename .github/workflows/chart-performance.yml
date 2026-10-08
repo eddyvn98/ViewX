@@ -102,3 +102,121 @@ jobs:
           path: /tmp/viewx-next.log
           if-no-files-found: ignore
           retention-days: 7
+
+  chart-production-bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: modern-view-chart
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: modern-view-chart/package-lock.json
+
+      - name: Repair lockfile metadata
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production application without E2E fixtures
+        env:
+          NEXT_PUBLIC_E2E: '0'
+          NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED: 'false'
+          BACKEND_ORIGIN: http://127.0.0.1:8091
+        run: npm run build
+
+      - name: Start deterministic Binance upstream
+        run: |
+          node scripts/ci/binance-mock-server.mjs > /tmp/viewx-binance-mock.log 2>&1 &
+          echo $! > /tmp/viewx-binance-mock.pid
+
+      - name: Wait for Binance mock
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8092/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/viewx-binance-mock.log
+          exit 1
+
+      - name: Start backend
+        env:
+          NODE_ENV: production
+          PORT: '8091'
+          ACCESS_TOKEN: ci-public-chart-bootstrap
+          URL_MONGOOSE: mongodb://127.0.0.1:27027/viewx?directConnection=true
+          MAX_WS_CLIENTS: '150'
+          WS_MSG_RATE_PER_10S: '60'
+          BRIDGE_WS_MSG_RATE_PER_10S: '15000'
+          BINANCE_REST_BASE_URL: http://127.0.0.1:8092
+        run: |
+          npm run server:start > /tmp/viewx-backend.log 2>&1 &
+          echo $! > /tmp/viewx-backend.pid
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:8091/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/viewx-backend.log
+          exit 1
+
+      - name: Start production frontend
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_E2E: '0'
+          NEXT_PUBLIC_STRATEGY_ENGINE_ENABLED: 'false'
+          BACKEND_ORIGIN: http://127.0.0.1:8091
+        run: |
+          npm run start:3000 > /tmp/viewx-next-production.log 2>&1 &
+          echo $! > /tmp/viewx-next-production.pid
+
+      - name: Wait for chart route
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/en/chart > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/viewx-next-production.log
+          exit 1
+
+      - name: Run clean-browser chart bootstrap smoke
+        env:
+          CI: '1'
+        run: |
+          npx playwright test tests/chart-production-bootstrap.spec.ts --project=chromium
+          npx playwright test tests/chart-production-bootstrap.spec.ts --project="Mobile Chrome"
+
+      - name: Upload production bootstrap diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart-production-bootstrap
+          path: |
+            modern-view-chart/playwright-report
+            modern-view-chart/test-results
+            /tmp/viewx-binance-mock.log
+            /tmp/viewx-backend.log
+            /tmp/viewx-next-production.log
+          if-no-files-found: ignore
+          retention-days: 14
+
