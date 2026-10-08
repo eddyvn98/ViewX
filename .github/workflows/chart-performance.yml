@@ -137,6 +137,22 @@ jobs:
           BACKEND_ORIGIN: http://127.0.0.1:8091
         run: npm run build
 
+      - name: Start deterministic Binance upstream
+        run: |
+          node scripts/ci/binance-mock-server.mjs > /tmp/viewx-binance-mock.log 2>&1 &
+          echo $! > /tmp/viewx-binance-mock.pid
+
+      - name: Wait for Binance mock
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8092/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/viewx-binance-mock.log
+          exit 1
+
       - name: Start backend
         env:
           NODE_ENV: production
@@ -146,6 +162,7 @@ jobs:
           MAX_WS_CLIENTS: '150'
           WS_MSG_RATE_PER_10S: '60'
           BRIDGE_WS_MSG_RATE_PER_10S: '15000'
+          BINANCE_REST_BASE_URL: http://127.0.0.1:8092
         run: |
           npm run server:start > /tmp/viewx-backend.log 2>&1 &
           echo $! > /tmp/viewx-backend.pid
@@ -197,6 +214,7 @@ jobs:
           path: |
             modern-view-chart/playwright-report
             modern-view-chart/test-results
+            /tmp/viewx-binance-mock.log
             /tmp/viewx-backend.log
             /tmp/viewx-next-production.log
           if-no-files-found: ignore
