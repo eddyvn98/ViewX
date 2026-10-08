@@ -1,16 +1,18 @@
 'use client';
 
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useMarketStore } from '@/lib/store';
-import { MarketList } from '@/features/market/MarketList';
-import { LayerManager } from '@/features/chart/components/LayerManager';
-import { OrderForm } from '@/features/terminal/components/OrderForm';
 import { motion, LayoutGroup } from 'framer-motion';
-import { StrategyPanel } from '@/features/chart/components/StrategyPanel';
 import { LineChart, Layout, ShoppingCart, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RightSidebarTab } from '@/lib/store/types';
 import { useTranslations } from 'next-intl';
+
+const MarketList = dynamic(() => import('@/features/market/MarketList').then((m) => m.MarketList), { ssr: false });
+const LayerManager = dynamic(() => import('@/features/chart/components/LayerManager').then((m) => m.LayerManager), { ssr: false });
+const StrategyPanel = dynamic(() => import('@/features/chart/components/StrategyPanel').then((m) => m.StrategyPanel), { ssr: false });
+const OrderForm = dynamic(() => import('@/features/terminal/components/OrderForm').then((m) => m.OrderForm), { ssr: false });
 
 interface RightSidebarProps {
     mobileLandscape?: boolean;
@@ -123,11 +125,18 @@ export const RightSidebar = memo(function RightSidebar({ mobileLandscape = false
         setDraggedTab(null);
     };
 
-    const tabConfigs: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>, label: string, component: React.ReactNode }> = {
-        market: { icon: LineChart, label: t('market'), component: <MarketList mode="watchlist" /> },
-        layer: { icon: Layout, label: t('layer'), component: <LayerManager /> },
-        strategy: { icon: Brain, label: t('strategy'), component: <StrategyPanel /> },
-        trade: { icon: ShoppingCart, label: t('trade'), component: <OrderForm forceInline={mobileLandscape} /> }
+    const tabConfigs: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>, label: string }> = {
+        market: { icon: LineChart, label: t('market') },
+        layer: { icon: Layout, label: t('layer') },
+        strategy: { icon: Brain, label: t('strategy') },
+        trade: { icon: ShoppingCart, label: t('trade') }
+    };
+
+    const renderTabContent = (tabId: RightSidebarTab) => {
+        if (tabId === 'market') return <MarketList mode="watchlist" />;
+        if (tabId === 'layer') return <LayerManager />;
+        if (tabId === 'strategy') return <StrategyPanel />;
+        return <OrderForm forceInline={mobileLandscape} />;
     };
 
     if (mobileLandscape) {
@@ -171,11 +180,9 @@ export const RightSidebar = memo(function RightSidebar({ mobileLandscape = false
                 </div>
 
                 <div className="flex-1 overflow-hidden relative min-h-0 flex flex-col mt-2">
-                    {tabsOrder.map(tabId => (
-                        <div key={tabId} className={cn("flex-1 min-h-0 animate-in fade-in zoom-in-95 duration-300", safeTab === tabId ? "flex flex-col h-full" : "hidden")}>
-                            {tabConfigs[tabId].component}
-                        </div>
-                    ))}
+                    <div className="flex flex-1 min-h-0 flex-col h-full animate-in fade-in zoom-in-95 duration-300">
+                        {renderTabContent(safeTab)}
+                    </div>
                 </div>
             </aside>
         );
@@ -265,11 +272,9 @@ export const RightSidebar = memo(function RightSidebar({ mobileLandscape = false
                 </LayoutGroup>
 
                 <div className="flex-1 overflow-hidden relative min-h-0 flex flex-col">
-                    {bottomTabs.map(tabId => (
-                        <div key={tabId} className={cn("flex-1 min-h-0 animate-in fade-in zoom-in-95 duration-500", activeTab === tabId ? "flex flex-col h-full" : "hidden")}>
-                            {tabConfigs[tabId].component}
-                        </div>
-                    ))}
+                    <div className="flex flex-1 min-h-0 flex-col h-full animate-in fade-in zoom-in-95 duration-300">
+                        {renderTabContent((bottomTabs.includes(activeTab) ? activeTab : bottomTabs[0]) as RightSidebarTab)}
+                    </div>
                 </div>
             </div>
         </aside>
