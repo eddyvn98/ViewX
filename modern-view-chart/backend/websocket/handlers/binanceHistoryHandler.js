@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import { getBinanceUpstreamLimit, resolveBinanceInterval } from "../../modules/chart/binanceIntervals.js";
 import { aggregateBinanceCandles } from "../../modules/chart/binanceCandleAggregation.js";
+import { buildBinanceRestUrl } from "../../modules/chart/binanceConfig.js";
 
 
 export async function handleBinanceHistory({ ws }, data) {
@@ -26,7 +27,7 @@ export async function handleBinanceHistory({ ws }, data) {
         if (Number.isFinite(toTimestamp) && toTimestamp > 0) {
             params.set('endTime', String(Math.floor(toTimestamp * 1000)));
         }
-        const url = `https://api.binance.com/api/v3/klines?${params.toString()}`;
+        const url = buildBinanceRestUrl(`/api/v3/klines?${params.toString()}`);
         const res = await fetch(url);
         if (!res.ok) return;
         const raw = await res.json();
