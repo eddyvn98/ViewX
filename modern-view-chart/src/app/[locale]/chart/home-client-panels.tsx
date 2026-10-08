@@ -2,8 +2,13 @@
 
 import { X } from "lucide-react";
 import React from "react";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
-import { AIChatView } from "@/features/strategy/components/AIChatView";
+
+const AIChatView = dynamic(
+  () => import("@/features/strategy/components/AIChatView").then((m) => m.AIChatView),
+  { ssr: false }
+);
 
 function PanelFallback({ className = "" }: { className?: string }) {
   return <div className={cn("h-full w-full animate-pulse bg-secondary/20", className)} />;
