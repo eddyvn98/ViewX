@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useChartOHLC } from '../hooks/use-chart-ohlc';
 import { useMarketStore, Candle } from '@/lib/store';
-import { useChartIndicatorValues } from '../hooks/use-chart-indicator-values';
 
 interface ChartOverlayProps {
     chartId: string;
@@ -9,11 +7,9 @@ interface ChartOverlayProps {
     interval?: string;
     source?: string;
     candles: Candle[];
-    currentPrice?: number;
 }
 
-export function ChartOverlay({ chartId, symbol, interval, source, candles, currentPrice }: ChartOverlayProps) {
-    if (!symbol || !interval || !source) return null;
+export function ChartOverlay({ chartId, symbol, interval, source, candles }: ChartOverlayProps) {
     const [isBackfillLoading, setIsBackfillLoading] = useState(false);
     const [showConnectionNotice, setShowConnectionNotice] = useState(false);
     const isConnected = useMarketStore((state) => state.isConnected);
@@ -77,12 +73,15 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles, curre
     }, [isBackfillLoading, oldestTime]);
 
 
+    if (!symbol || !interval || !source) return null;
+
     return (
         <>
             {showConnectionNotice && !isConnected && (
                 <div
                     role="status"
                     aria-live="polite"
+                    data-testid={`chart-connection-status-${chartId}`}
                     className="absolute left-2 top-2 z-20 pointer-events-none select-none rounded-md border border-border/60 bg-background/88 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur-md"
                 >
                     {candles.length > 0
