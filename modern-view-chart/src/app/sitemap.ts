@@ -1,50 +1,29 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
+import { getSiteOrigin } from '@/lib/site-url';
+
+const ROUTES = [
+  { path: '', changeFrequency: 'weekly' as const, priority: 1 },
+  { path: '/chart', changeFrequency: 'always' as const, priority: 0.9 },
+  { path: '/strategy/dashboard', changeFrequency: 'daily' as const, priority: 0.8 },
+  { path: '/about', changeFrequency: 'monthly' as const, priority: 0.6 },
+  { path: '/contact', changeFrequency: 'yearly' as const, priority: 0.5 },
+  { path: '/terms', changeFrequency: 'yearly' as const, priority: 0.4 },
+  { path: '/privacy', changeFrequency: 'yearly' as const, priority: 0.4 },
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vivutrade.io.vn';
+  const baseUrl = getSiteOrigin();
 
-  return [
-    {
-      url: `${baseUrl}`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 1,
+  return ROUTES.flatMap((route) => ['vi', 'en'].map((locale) => ({
+    url: `${baseUrl}/${locale}${route.path}`,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+    alternates: {
+      languages: {
+        vi: `${baseUrl}/vi${route.path}`,
+        en: `${baseUrl}/en${route.path}`,
+        'x-default': `${baseUrl}/vi${route.path}`,
+      },
     },
-    {
-      url: `${baseUrl}/chart`,
-      lastModified: new Date(),
-      changeFrequency: 'always',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/strategy/dashboard`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.4,
-    },
-  ];
+  })));
 }

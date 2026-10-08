@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Bell, BarChart2, Settings, PanelRightClose, LogOut, Volume2 } from 'lucide-react';
 import { HeartHandshake } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -8,7 +9,6 @@ import { TabContainer } from './TabContainer';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
-import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { TelegramLinkDialog } from './TelegramLinkDialog';
 import { AlertEditDialog } from '@/features/chart/components/AlertEditDialog';
 import { useWebSocket } from '@/hooks/use-websocket';
@@ -51,6 +51,11 @@ const MEMBERSHIP_UI: Record<MembershipTier, MembershipUi> = {
     },
 };
 
+const GoogleSignInButton = dynamic(
+    () => import('@/components/auth/GoogleSignInButton').then((module) => module.GoogleSignInButton),
+    { ssr: false }
+);
+
 const SUPPORT_TELEGRAM_URL = 'https://t.me/htt711';
 const SUPPORT_ZALO_URL = 'https://zalo.me/84932690949';
 
@@ -83,6 +88,7 @@ export const Header = memo(function Header() {
     const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
     const [displayName, setDisplayName] = React.useState("Guest");
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+    const [isSignInOpen, setIsSignInOpen] = React.useState(false);
     const [membershipTier, setMembershipTier] = React.useState<MembershipTier>('free');
     const [isAvatarMenuOpen, setIsAvatarMenuOpen] = React.useState(false);
     const [isTelegramDialogOpen, setIsTelegramDialogOpen] = React.useState(false);
@@ -293,6 +299,8 @@ export const Header = memo(function Header() {
             <div className="flex items-center gap-3">
                 <button
                     onClick={toggleLeftSidebar}
+                    aria-label={isLeftSidebarOpen ? "Hide market list" : "Show market list"}
+                    aria-pressed={isLeftSidebarOpen}
                     className={cn(
                         "w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90 border",
                         isLeftSidebarOpen
@@ -311,6 +319,8 @@ export const Header = memo(function Header() {
                                 setIsNotificationMenuOpen((prev) => !prev);
                                 markAllNotificationsAsRead();
                             }}
+                            aria-label={tNotifications('buttonTitle')}
+                            aria-expanded={isNotificationMenuOpen}
                             className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary dark:bg-white/[0.05] text-muted-foreground dark:text-white/40 hover:text-foreground dark:hover:text-white hover:bg-secondary/80 dark:hover:bg-white/10 transition-all relative group active:scale-90 border border-border dark:border-white/5"
                             title={tNotifications('buttonTitle')}
                         >
@@ -401,13 +411,27 @@ export const Header = memo(function Header() {
                     </Link>
 
                     {!isAuthenticated ? (
-                        <GoogleSignInButton
-                            className="mr-1"
-                            text="signin_with"
-                            size="small"
-                            width={170}
-                            redirectTo="/chart"
-                        />
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setIsSignInOpen((open) => !open)}
+                                aria-expanded={isSignInOpen}
+                                aria-label="Sign in"
+                                className="h-7 rounded-md border border-border bg-secondary/50 px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-secondary"
+                            >
+                                Sign in
+                            </button>
+                            {isSignInOpen ? (
+                                <div className="absolute right-0 top-9 z-[170] rounded-lg border border-border bg-background p-3 shadow-xl">
+                                    <GoogleSignInButton
+                                        text="signin_with"
+                                        size="small"
+                                        width={170}
+                                        redirectTo="/chart"
+                                    />
+                                </div>
+                            ) : null}
+                        </div>
                     ) : null}
 
                     {isAuthenticated ? (
@@ -423,6 +447,8 @@ export const Header = memo(function Header() {
                             <div className="relative" ref={avatarMenuRef}>
                                 <button
                                     onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
+                                    aria-label="Account menu"
+                                    aria-expanded={isAvatarMenuOpen}
                                     className={cn(
                                         "w-7 h-7 rounded-full bg-secondary dark:bg-white/[0.05] border p-[1px] shadow-sm transition-all duration-500",
                                         membershipUi.avatarBorderClassName
@@ -449,6 +475,9 @@ export const Header = memo(function Header() {
                                                     setVoiceAlertsEnabled(!voiceAlertsEnabled);
                                                     void voiceNotifier.unlock();
                                                 }}
+                                                role="switch"
+                                                aria-checked={voiceAlertsEnabled}
+                                                aria-label="Voice alerts"
                                                 className={cn(
                                                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                                                     voiceAlertsEnabled ? "bg-primary" : "bg-muted"
@@ -470,6 +499,9 @@ export const Header = memo(function Header() {
                                                     setVoiceAlertsUsePreGeneratedAudio(!voiceAlertsUsePreGeneratedAudio);
                                                     void voiceNotifier.unlock();
                                                 }}
+                                                role="switch"
+                                                aria-checked={voiceAlertsUsePreGeneratedAudio}
+                                                aria-label="Pre-generated audio"
                                                 className={cn(
                                                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
                                                     voiceAlertsUsePreGeneratedAudio ? "bg-primary" : "bg-muted"
@@ -488,6 +520,7 @@ export const Header = memo(function Header() {
                                             <span className="text-xs text-foreground dark:text-white">Test Voice Notification</span>
                                             <button
                                                 onClick={handleTestVoice}
+                                                aria-label="Test voice notification"
                                                 className="p-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors active:scale-90"
                                                 title="Click to test voice notification"
                                             >
@@ -551,6 +584,8 @@ export const Header = memo(function Header() {
 
                     <button
                         onClick={toggleRightSidebar}
+                        aria-label={isRightSidebarOpen ? "Hide right sidebar" : "Show right sidebar"}
+                        aria-pressed={isRightSidebarOpen}
                         className={cn(
                             "w-7 h-7 flex items-center justify-center rounded-lg transition-all active:scale-90 border",
                             isRightSidebarOpen

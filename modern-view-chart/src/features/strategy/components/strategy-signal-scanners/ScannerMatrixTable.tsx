@@ -54,7 +54,7 @@ export function ScannerMatrixTable({
                                 <th key={`${scannerId}-${tf}`} className="bg-background border border-border/60 px-1 py-0.5 text-center text-[10px] font-medium uppercase tracking-[0.02em] min-w-[72px] w-[72px]">
                                     <div className="flex items-center justify-center gap-1">
                                         <span>{tf}</span>
-                                        <button onClick={() => onRemoveTimeframe(scannerId, tf)} className="text-muted-foreground hover:text-rose-400">
+                                        <button type="button" onClick={() => onRemoveTimeframe(scannerId, tf)} aria-label={`Remove timeframe ${tf}`} className="text-muted-foreground hover:text-rose-400">
                                             <X size={9} />
                                         </button>
                                     </div>
@@ -88,7 +88,7 @@ export function ScannerMatrixTable({
                                 <td className="sticky left-0 z-10 bg-background border border-border/60 px-1 py-0.5 text-[10px] font-medium min-w-[80px] w-fit shadow-[1px_0_0_var(--color-border)]">
                                     <div className="flex items-center justify-between gap-1">
                                         <span>{symbol}</span>
-                                        <button onClick={() => onRemoveSymbol(scannerId, symbol)} className="text-muted-foreground hover:text-rose-400">
+                                        <button type="button" onClick={() => onRemoveSymbol(scannerId, symbol)} aria-label={`Remove symbol ${symbol}`} className="text-muted-foreground hover:text-rose-400">
                                             <X size={9} />
                                         </button>
                                     </div>

@@ -97,6 +97,13 @@ export function TerminalHeader({
                             {effectiveCollapsed ? 'Maximize' : 'Minimize'}
                         </span>
                         <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                toggleCollapse();
+                            }}
+                            aria-label={effectiveCollapsed ? "Expand terminal" : "Collapse terminal"}
+                            aria-expanded={!effectiveCollapsed}
                             className={cn(
                                 'p-1.5 rounded-lg transition-all',
                                 !effectiveCollapsed

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useMarketStore } from '@/lib/store';
+import { useMarketStore, type IndicatorConfig } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,7 @@ interface SubchartIndicatorsTabsProps {
     isSubchartVisible: boolean;
 }
 
-const EMPTY_ARRAY: any[] = [];
+const EMPTY_ARRAY: IndicatorConfig[] = [];
 
 export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartIndicatorsTabsProps) {
     const indicators = useMarketStore(useShallow(state => state.chartIndicators[chartId] || EMPTY_ARRAY));
@@ -57,7 +57,9 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
     };
 
     return (
-        <div className={cn(
+        <div
+            aria-label={isSubchartVisible ? "Indicator subchart tabs" : "Indicator tabs"}
+            className={cn(
             "flex bg-secondary/80 backdrop-blur-md border border-border rounded-t-md overflow-hidden border-b-0",
             isCompactLandscape && "rounded-t-sm"
         )}>
@@ -68,7 +70,7 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
                         key={ind.id}
                         onClick={() => handleTabClick(ind.id)}
                         className={cn(
-                            "px-3 md:px-5 py-1 text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
+                            "touch-target px-3 md:px-5 py-1 text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
                             isCompactLandscape && "!px-2 !py-0.5 !text-[10px] !tracking-tight",
                             isVisible
                                 ? "bg-primary/20 text-primary font-bold"

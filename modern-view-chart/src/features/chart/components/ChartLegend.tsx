@@ -55,7 +55,10 @@ export function ChartLegend({ chartId, symbol, interval, source, candles, chartT
         >
             {/* Legend Toggle Button */}
             <button
+                type="button"
                 onClick={() => setIsVisible(!isVisible)}
+                aria-label={isVisible ? "Hide chart legend" : "Show chart legend"}
+                aria-pressed={isVisible}
                 className="absolute left-[140px] top-[-30px] z-[60] pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-background/60 backdrop-blur-md border border-primary/20 text-muted-foreground hover:text-primary active:scale-95 transition-all shadow-lg"
             >
                 {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}

@@ -105,7 +105,9 @@ export function SignalHistoryItem({
                     </div>
                 ) : isEntry ? (
                     <button
+                        type="button"
                         onClick={() => onManualAnalyze(signalIndex, signal)}
+                        aria-label={`Analyze ${signal.symbol} signal with AI`}
                         disabled={isAnalyzing}
                         className="opacity-0 group-hover:opacity-100 transition-all p-1 text-primary hover:text-white bg-primary/10 hover:bg-primary rounded border border-primary/20"
                     >

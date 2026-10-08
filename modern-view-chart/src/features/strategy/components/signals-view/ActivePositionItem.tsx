@@ -62,7 +62,9 @@ export function ActivePositionItem({
                         {pnl.toFixed(2)}
                     </div>
                     <button
+                        type="button"
                         onClick={() => onCloseOrCancel(position, currentPrice)}
+                        aria-label={position.status === 'open' ? `Close ${position.symbol} position` : `Cancel ${position.symbol} position`}
                         className="p-1 rounded hover:bg-white/5 text-muted-foreground/30 hover:text-foreground transition-colors"
                     >
                         <XIcon size={12} />

@@ -84,11 +84,15 @@ export function ChartPanels({
         document.body.style.userSelect = 'none';
 
         const clamp = (value: number) => Math.max(0, Math.min(85, value));
+        const dragRect = container.getBoundingClientRect();
+        let pendingClientY: number | null = null;
+        let resizeFrame = 0;
 
-        const updateHeight = (clientY: number) => {
-            const rect = container.getBoundingClientRect();
-            const pixelsFromBottom = rect.bottom - clientY;
-            const nextPct = clamp((pixelsFromBottom / Math.max(1, rect.height)) * 100);
+        const flushHeight = () => {
+            resizeFrame = 0;
+            if (!isDraggingRef.current || pendingClientY === null) return;
+            const pixelsFromBottom = dragRect.bottom - pendingClientY;
+            const nextPct = clamp((pixelsFromBottom / Math.max(1, dragRect.height)) * 100);
             if (nextPct <= 2) {
                 setIsSubchartVisible(false);
                 return;
@@ -98,12 +102,14 @@ export function ChartPanels({
 
         const onPointerMove = (moveEvent: PointerEvent) => {
             if (!isDraggingRef.current) return;
-            updateHeight(moveEvent.clientY);
+            pendingClientY = moveEvent.clientY;
+            if (!resizeFrame) resizeFrame = requestAnimationFrame(flushHeight);
         };
 
         const endDrag = () => {
             if (!isDraggingRef.current) return;
             isDraggingRef.current = false;
+            if (resizeFrame) cancelAnimationFrame(resizeFrame);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             window.removeEventListener('pointermove', onPointerMove);
@@ -150,8 +156,9 @@ export function ChartPanels({
 
                     <button
                         onClick={() => setIsSubchartVisible(!isSubchartVisible)}
+                        aria-label={isSubchartVisible ? "Hide indicator subchart" : "Show indicator subchart"}
                         className={cn(
-                            "px-3 md:px-4 py-1 rounded-tr-md border border-border border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md text-[11px] leading-none",
+                            "touch-target px-3 md:px-4 py-1 rounded-tr-md border border-border border-b-0 border-l-0 transition-all active:scale-95 flex items-center gap-1.5 backdrop-blur-md text-[11px] leading-none",
                             isCompactLandscape && "!px-2 !py-0.5 !gap-1 !text-[10px]",
                             isSubchartVisible
                                 ? "bg-secondary/80 text-muted-foreground hover:text-primary"
@@ -199,7 +206,7 @@ export function ChartPanels({
                             aria-label="Resize subchart height"
                             onPointerDown={startResizeSubchart}
                             onDoubleClick={resetSubchartHeightPct}
-                            className="absolute top-0 left-0 right-0 h-4 -translate-y-1/2 cursor-row-resize z-30 bg-transparent hover:bg-primary/15"
+                            className="touch-target-y absolute top-0 left-0 right-0 h-4 -translate-y-1/2 cursor-row-resize z-30 bg-transparent hover:bg-primary/15"
                             title="Double-click to reset subchart height"
                         />
                     )}

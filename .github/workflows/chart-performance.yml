@@ -205,6 +205,8 @@ jobs:
         run: |
           npx playwright test tests/chart-production-bootstrap.spec.ts --project=chromium
           npx playwright test tests/chart-production-bootstrap.spec.ts --project="Mobile Chrome"
+          npx playwright test tests/chart-quality-smoke.spec.ts --project=chromium
+          npx playwright test tests/chart-quality-smoke.spec.ts --project="Mobile Chrome"
 
       - name: Upload production bootstrap diagnostics
         if: always()

@@ -107,7 +107,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
     React.useEffect(() => {
         if (!activeChart) return;
         setSelectedType((activeChart.chartType || 'candles') as ChartTypeOption);
-    }, [activeChart?.id, activeChart?.chartType]);
+    }, [activeChart]);
 
     return (
         <>
@@ -119,6 +119,8 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
             {/* Left: Menu */}
             <button
                 onClick={handleMenuClick}
+                aria-label="Open chart menu"
+                aria-pressed={activeMobileTab === 'menu'}
                 className={cn(
                     "p-2 -ml-2 rounded-full transition-colors active:scale-95",
                     activeMobileTab === 'menu' ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
@@ -131,8 +133,10 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
             <div className={cn("flex items-center", mini ? "gap-1" : compact ? "gap-1.5" : "gap-3")}>
                 <button
                     onClick={handleChartTypeClick}
+                    aria-label="Choose chart type"
+                    aria-expanded={isChartTypePanelOpen}
                     className={cn(
-                        "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
+                        "touch-target flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
                         compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         activeChart?.chartType !== 'candles'
                             ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.1)]"
@@ -145,8 +149,10 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
 
                 <button
                     onClick={handleIndicatorsClick}
+                    aria-label="Open indicators"
+                    aria-pressed={activeMobileTab === 'indicators'}
                     className={cn(
-                        "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
+                        "touch-target flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
                         compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         activeMobileTab === 'indicators'
                             ? "text-blue-500 border-blue-500/30 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
@@ -159,8 +165,10 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
 
                 <button
                     onClick={handleDrawingClick}
+                    aria-label="Toggle drawing toolbar"
+                    aria-pressed={isDrawingToolbarVisible}
                     className={cn(
-                        "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
+                        "touch-target flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
                         compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         isDrawingToolbarVisible
                             ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
@@ -177,8 +185,10 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
             <div className={cn("flex items-center", compact ? "gap-1" : "gap-2")}>
                 <button
                     onClick={handleAiClick}
+                    aria-label="Toggle AI assistant"
+                    aria-pressed={activeMobileTab === 'ai_overlay'}
                     className={cn(
-                        "flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
+                        "touch-target flex items-center rounded-full text-xs font-bold transition-all active:scale-95 border",
                         compact ? "gap-1 px-2 py-1" : "gap-1.5 px-3 py-1.5",
                         activeMobileTab === 'ai_overlay'
                             ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
@@ -191,6 +201,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                 </button>
                 <Link
                     href={`/${locale}/pricing`}
+                    aria-label="Support Vivutrade"
                     className={cn(
                         "flex items-center rounded-full border font-black transition-all active:scale-95",
                         compact ? "px-2 py-1" : "px-3 py-1.5",
@@ -210,7 +221,8 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                     <span className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Loại Nến</span>
                         <button
                             onClick={() => setIsChartTypePanelOpen(false)}
-                            className="p-1 rounded hover:bg-secondary/40 text-muted-foreground"
+                            aria-label="Close chart type picker"
+                            className="touch-target p-1 rounded hover:bg-secondary/40 text-muted-foreground"
                         >
                             <X size={14} />
                         </button>
@@ -288,6 +300,7 @@ export const MobileTopBar = memo(function MobileTopBar({ className, compact = fa
                                         onClick={() => applyColor(selectedType, selectedSide, color)}
                                         className="h-5 w-5 rounded border border-border/30"
                                         style={{ backgroundColor: color }}
+                                        aria-label={`Set ${selectedSide} candle color to ${color}`}
                                         title="Chọn màu"
                                     />
                                 ))}

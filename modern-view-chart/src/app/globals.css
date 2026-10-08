@@ -17,7 +17,7 @@
     --secondary: hsl(220 14.3% 95%);
     --secondary-foreground: hsl(220.9 39.3% 11%);
     --muted: hsl(220 14.3% 96%);
-    --muted-foreground: hsl(220 8.9% 45%);
+    --muted-foreground: hsl(220 8.9% 38%);
     --accent: hsl(220 14.3% 95%);
     --accent-foreground: hsl(220.9 39.3% 11%);
     --destructive: hsl(0 84.2% 60.2%);
@@ -56,7 +56,7 @@
     --secondary: hsl(225 30% 7%);
     --secondary-foreground: hsl(210 40% 98%);
     --muted: hsl(225 30% 6%);
-    --muted-foreground: hsl(215 20.2% 60%);
+    --muted-foreground: hsl(215 20.2% 68%);
     --accent: hsl(217.2 32.6% 15%);
     --accent-foreground: hsl(210 40% 98%);
     --destructive: hsl(0 84.2% 60.2%);
@@ -368,5 +368,17 @@ a[href*="tradingview.com"] {
 @media (max-width: 768px) {
   .cancel-btn {
     display: none !important;
+  }
+}
+
+/* Mobile accessibility: keep visual controls compact while preserving a usable hit area. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .touch-target-y {
+    min-height: 44px;
   }
 }

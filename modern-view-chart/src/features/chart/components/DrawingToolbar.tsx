@@ -142,7 +142,10 @@ export function DrawingToolbar({ chartId }: { chartId: string }) {
                 {/* Integrated Toggle Handle */}
                 <div className="flex flex-col justify-center -ml-px">
                     <button
+                        type="button"
                         onClick={toggleVisible}
+                        aria-label={isVisible ? "Hide drawing toolbar" : "Show drawing toolbar"}
+                        aria-expanded={isVisible}
                         className={cn(
                             "group/toggle w-4 h-12 flex items-center justify-center rounded-r-xl border border-l-0 border-white/10 glass-panel hover:bg-white/10 transition-all",
                             isVisible ? "opacity-100" : "opacity-100 bg-primary/20 border-primary/20"

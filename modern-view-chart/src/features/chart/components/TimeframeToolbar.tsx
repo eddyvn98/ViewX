@@ -42,7 +42,7 @@ export function TimeframeToolbar() {
                         data-testid={`timeframe-${tf.id}`}
                         aria-pressed={currentInterval === tf.id}
                         className={cn(
-                            "px-1.5 py-0.5 rounded text-[11px] font-bold transition-all",
+                            "touch-target px-1.5 py-0.5 rounded text-[11px] font-bold transition-all",
                             currentInterval === tf.id
                                 ? "text-primary bg-primary/10"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
@@ -57,8 +57,10 @@ export function TimeframeToolbar() {
             <div className="relative">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
+                    aria-label="More timeframes"
+                    aria-expanded={isOpen}
                     className={cn(
-                        "p-0.5 rounded hover:bg-secondary/40 transition-all",
+                        "touch-target p-0.5 rounded hover:bg-secondary/40 transition-all",
                         isOpen ? "bg-secondary text-primary" : "text-muted-foreground"
                     )}
                 >

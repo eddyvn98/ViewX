@@ -7,11 +7,9 @@ import { useUserSetupSync } from "@/hooks/use-user-setup-sync";
 import { useMarketStore, RootState } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
-import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import React from "react";
 import dynamic from "next/dynamic";
-import { ChartE2EBridge } from "@/features/chart/testing/ChartE2EBridge";
 import {
   DESKTOP_SCALE_BASE_HEIGHT,
   DESKTOP_SCALE_BASE_WIDTH,
@@ -29,6 +27,17 @@ import {
   usePanelScrollState,
   useViewportState,
 } from "./use-home-client-ui";
+
+const MobileMenu = dynamic(
+  () => import("@/components/layout/MobileMenu").then((m) => m.MobileMenu),
+  { ssr: false }
+);
+const ChartE2EBridge = process.env.NEXT_PUBLIC_E2E === "1"
+  ? dynamic(
+      () => import("@/features/chart/testing/ChartE2EBridge").then((m) => m.ChartE2EBridge),
+      { ssr: false }
+    )
+  : null;
 
 const NotificationManager = dynamic(
   () => import("@/features/notifications/NotificationManager").then((m) => m.NotificationManager),
@@ -70,6 +79,27 @@ const StrategyRunnerBootstrap = dynamic(
   () => import("@/features/strategy/components/StrategyRunnerBootstrap").then((m) => m.StrategyRunnerBootstrap),
   { ssr: false }
 );
+
+function DeferredStrategyRunnerBootstrap() {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const win = window as typeof window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (typeof win.requestIdleCallback === "function") {
+      const id = win.requestIdleCallback(() => setReady(true), { timeout: 1800 });
+      return () => win.cancelIdleCallback?.(id);
+    }
+
+    const timer = window.setTimeout(() => setReady(true), 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return ready ? <StrategyRunnerBootstrap /> : null;
+}
 
 export default function Home() {
   useWebSocket();
@@ -193,8 +223,8 @@ export default function Home() {
         isScaledDesktopMode && "chart-scaled-desktop-shell"
       )}
     >
-      <ChartE2EBridge />
-      {strategyEnabled && <StrategyRunnerBootstrap />}
+      {ChartE2EBridge ? <ChartE2EBridge /> : null}
+      {strategyEnabled && <DeferredStrategyRunnerBootstrap />}
       <NotificationManager />
       <div className={cn("flex flex-1 min-h-0 overflow-hidden", isScaledDesktopMode && "chart-scaled-desktop-viewport")}>
         <div
