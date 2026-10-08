@@ -62,10 +62,12 @@ export function TabContainer() {
 
                     {Object.keys(tabs).length > 1 && (
                         <button
+                            type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 removeTab(tab.id);
                             }}
+                            aria-label={`Close workspace ${tab.name}`}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all"
                         >
                             <X size={10} />
