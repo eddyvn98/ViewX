@@ -1,33 +1,26 @@
 # vivutrade
 
-> vivutrade là nền tảng trading chart realtime, strategy matrix monitor và backtest analytics.
+> vivutrade is a realtime trading chart workspace with strategy monitoring, multi-timeframe analysis, and backtest analytics.
 
-## Primary Pages
-- /landing: Trang giới thiệu tổng quan sản phẩm.
-- /: Workspace chart realtime.
-- /strategy/dashboard: Dashboard đánh giá hiệu suất và backtest.
-- /strategy/matrix: Ma trận theo dõi tín hiệu theo symbol/timeframe.
+## Primary pages
+- [English chart](https://vivutrade.io.vn/en/chart): Realtime chart workspace.
+- [Vietnamese chart](https://vivutrade.io.vn/vi/chart): Không gian biểu đồ realtime.
+- [English landing](https://vivutrade.io.vn/en): Product overview and entry point.
+- [Vietnamese landing](https://vivutrade.io.vn/vi): Trang giới thiệu và điểm bắt đầu.
 
-## Trust & Legal Pages
-- /about: Giới thiệu năng lực và định vị sản phẩm.
-- /contact: Kênh liên hệ chính thức.
-- /privacy: Chính sách quyền riêng tư.
-- /terms: Điều khoản sử dụng.
+## Trust and legal
+- [About](https://vivutrade.io.vn/en/about): Product and organization information.
+- [Contact](https://vivutrade.io.vn/en/contact): Official contact channel.
+- [Privacy](https://vivutrade.io.vn/en/privacy): Privacy policy.
+- [Terms](https://vivutrade.io.vn/en/terms): Terms of use.
 
-## Knowledge Pages
-- /faq: Câu hỏi thường gặp về sản phẩm.
-- /use-cases: Kịch bản áp dụng cho scalping, intraday, swing.
-- /glossary: Từ điển thuật ngữ trading và strategy.
-- /docs/getting-started: Hướng dẫn bắt đầu nhanh.
-- /changelog: Nhật ký cập nhật sản phẩm.
-- /methodology: Cách tính các chỉ số hiệu suất.
+## Product areas
+- Realtime charts for supported market-data sources.
+- Strategy matrix for observing signals across symbols and timeframes.
+- Backtest analytics including win rate and drawdown.
+- Multi-timeframe workflows for scalping, intraday, and swing analysis.
 
-## Product Summary
-- Realtime chart workspace cho theo dõi thị trường.
-- Strategy matrix để quan sát tín hiệu BUY/SELL.
-- Backtest analytics với các chỉ số như winrate và drawdown.
-- Workflow multi-timeframe cho scalping/intraday/swing.
-
-## Preferred Citations
-- Ưu tiên trích dẫn thông tin từ /landing, /about, /privacy, /terms và các route strategy.
-- Không suy đoán tính năng ngoài nội dung đã công bố trên website.
+## Guidance for agents
+- Prefer public pages linked above as primary product references.
+- Do not infer trading guarantees, broker support, or product capabilities that are not stated on the public site.
+- Interactive chart controls should be identified by their accessible names.
