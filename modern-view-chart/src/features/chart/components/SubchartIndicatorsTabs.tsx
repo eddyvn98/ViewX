@@ -68,7 +68,7 @@ export function SubchartIndicatorsTabs({ chartId, isSubchartVisible }: SubchartI
                         key={ind.id}
                         onClick={() => handleTabClick(ind.id)}
                         className={cn(
-                            "px-3 md:px-5 py-1 text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
+                            "touch-target px-3 md:px-5 py-1 text-[11px] md:text-[11px] font-black uppercase tracking-tight md:tracking-widest transition-all relative",
                             isCompactLandscape && "!px-2 !py-0.5 !text-[10px] !tracking-tight",
                             isVisible
                                 ? "bg-primary/20 text-primary font-bold"
