@@ -108,14 +108,19 @@ export function DrawingLayer() {
                             </div>
 
                             <button
+                                type="button"
                                 onClick={() => setExpandedId(expandedId === drawing.id ? null : drawing.id)}
+                                aria-label={`Configure ${drawing.type}`}
+                                aria-expanded={expandedId === drawing.id}
                                 className={cn("p-1 transition-all", expandedId === drawing.id ? "text-primary" : "text-muted-foreground/40 hover:text-foreground")}
                             >
                                 <Settings2 size={11} />
                             </button>
 
                             <button
+                                type="button"
                                 onClick={() => removeDrawing(chartId, drawing.id)}
+                                aria-label={`Remove ${drawing.type}`}
                                 className="p-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all"
                             >
                                 <Trash2 size={11} />
