@@ -25,7 +25,7 @@ router.route('/data').post(async (req, res) => {
     }
 
     const binanceInterval = toBinanceInterval(requestedInterval);
-    const url = new URL('https://api.binance.com/api/v3/klines');
+    const url = buildBinanceRestUrl('/api/v3/klines');
     url.searchParams.set('symbol', symbol);
     url.searchParams.set('interval', binanceInterval);
     url.searchParams.set('limit', String(limit));
@@ -61,7 +61,7 @@ router.route('/prices').get(async (_req, res) => {
 
     try {
         const prices = await Promise.all(symbols.map(async (symbol) => {
-            const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`, {
+            const response = await fetch(buildBinanceRestUrl(`/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`), {
                 signal: AbortSignal.timeout(3500),
             });
             if (!response.ok) throw new Error(`Binance ticker HTTP ${response.status}`);
