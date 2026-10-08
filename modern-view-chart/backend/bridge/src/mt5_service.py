@@ -143,7 +143,9 @@ class MT5Service:
 
     def _aggregate_yearly_rates(self, rates):
         yearly = {}
-        for rate in rates or []:
+        if rates is None:
+            return []
+        for rate in rates:
             ts = int(rate["time"])
             year = time.gmtime(ts).tm_year
             item = {
