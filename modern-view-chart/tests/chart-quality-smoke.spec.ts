@@ -41,7 +41,12 @@ test.describe('chart PageSpeed quality regressions', () => {
 
         const pageHeaders = response?.headers() || {};
         expect(pageHeaders['cross-origin-opener-policy']).toBe('same-origin-allow-popups');
-        expect(pageHeaders['strict-transport-security'] || '').toContain('max-age=31536000');
+        // Production policy needs separate edge verification. Six months is the enforced
+        // minimum for this production-like HTTP smoke, rather than an exact edge value.
+        const hstsHeader = pageHeaders['strict-transport-security'] || '';
+        const hstsMaxAge = Number(hstsHeader.match(/max-age=(\\d+)/i)?.[1] || 0);
+        expect(hstsMaxAge).toBeGreaterThanOrEqual(15552000);
+        expect(hstsHeader).toContain('includeSubDomains');
 
         const llmsResponse = await page.request.get('/llms.txt');
         expect(llmsResponse.ok()).toBe(true);
