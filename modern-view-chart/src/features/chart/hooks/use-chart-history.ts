@@ -23,6 +23,7 @@ import {
 } from './history-request-gate';
 import { loadCachedCandles } from '../cache/candle-history-cache';
 import { getIncrementalHistoryCount, INITIAL_HISTORY_COUNT } from './history-sync';
+import { fetchBinanceHistoryHttp } from '../data/binance-history-http';
 import { buildMt5AuthFields, normalizeMt5AccountScope, resolveChartIdentityDataSource } from '@/lib/mt5/account-scope';
 const MIN_CANDLES_THRESHOLD = 150;
 const AUTO_FIT_GROWTH_STEP = 24;
@@ -65,6 +66,7 @@ export function useChartHistory(props: UseChartHistoryProps) {
     const autoFitProgressRef = useRef<{ key: string; count: number } | null>(null);
     const clearedForKeyRef = useRef<string | null>(null);
     const lastHistoryRevisionRef = useRef(-1);
+    const httpBootstrapKeyRef = useRef('');
     const [hydratedCacheKey, setHydratedCacheKey] = useState('');
     // BUG #3 fix: generation counter to reject stale RAF callbacks on rapid symbol/timeframe switching.
     // Each context change bumps the generation; RAF callbacks that don't match are discarded.
@@ -189,6 +191,35 @@ export function useChartHistory(props: UseChartHistoryProps) {
         if (isVietnamGoldSource) return;
         if (historyRevision > 0) completeHistoryRequest(historyRequestKey);
     }, [historyRevision, historyRequestKey, isVietnamGoldSource]);
+
+    useEffect(() => {
+        const sourceText = String(source || '').toUpperCase();
+        if (!isCacheReady || sourceText !== 'BINANCE' || !symbol || !interval) return;
+        if (getCandles().length >= MIN_CANDLES_THRESHOLD) return;
+
+        const bootstrapKey = historyRequestKey;
+        if (httpBootstrapKeyRef.current === bootstrapKey) return;
+        httpBootstrapKeyRef.current = bootstrapKey;
+
+        const controller = new AbortController();
+        void fetchBinanceHistoryHttp(symbol, interval, 500, controller.signal).then((httpCandles) => {
+            if (controller.signal.aborted || httpBootstrapKeyRef.current !== bootstrapKey) return;
+            if (httpCandles.length === 0) {
+                httpBootstrapKeyRef.current = '';
+                return;
+            }
+            useMarketStore.getState().setCandles('BINANCE', normSymbol, interval, httpCandles);
+        });
+
+        return () => controller.abort();
+    }, [
+        historyRequestKey,
+        interval,
+        isCacheReady,
+        normSymbol,
+        source,
+        symbol,
+    ]);
 
     useEffect(() => {
         if (!isCacheReady || !isReady || !symbol || !interval || !isConnected) return;
