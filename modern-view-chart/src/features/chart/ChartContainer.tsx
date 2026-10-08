@@ -190,6 +190,9 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
     useChartShortcuts(chartId);
 
     const isMinimized = useMarketStore(state => state.activeMobileTab === 'positions');
+    const runtimeIndicatorCount = useMarketStore(
+        state => state.chartIndicatorRuntime[chartId]?.length || 0
+    );
 
     return (
         <div
@@ -198,6 +201,8 @@ export const ChartContainer = memo(function ChartContainer({ chartId, isNarrow }
             data-symbol={symbol || ''}
             data-interval={interval || ''}
             data-source={source || ''}
+            data-candle-count={candles.length}
+            data-indicator-runtime-count={runtimeIndicatorCount}
             onContextMenu={handleContextMenu}
         >
             <ChartOverlay
