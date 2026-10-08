@@ -15,11 +15,23 @@ interface ChartOverlayProps {
 export function ChartOverlay({ chartId, symbol, interval, source, candles, currentPrice }: ChartOverlayProps) {
     if (!symbol || !interval || !source) return null;
     const [isBackfillLoading, setIsBackfillLoading] = useState(false);
+    const [showConnectionNotice, setShowConnectionNotice] = useState(false);
+    const isConnected = useMarketStore((state) => state.isConnected);
     const startedAtRef = useRef(0);
     const baselineOldestTimeRef = useRef<number | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const normalizedSource = useMemo(() => String(source || '').toUpperCase(), [source]);
     const oldestTime = Number(candles[0]?.time || 0);
+
+    useEffect(() => {
+        if (isConnected) {
+            setShowConnectionNotice(false);
+            return;
+        }
+
+        const timer = setTimeout(() => setShowConnectionNotice(true), 1800);
+        return () => clearTimeout(timer);
+    }, [isConnected]);
 
     useEffect(() => {
         const onBackfillRequest = (event: Event) => {
@@ -67,6 +79,17 @@ export function ChartOverlay({ chartId, symbol, interval, source, candles, curre
 
     return (
         <>
+            {showConnectionNotice && !isConnected && (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className="absolute left-2 top-2 z-20 pointer-events-none select-none rounded-md border border-border/60 bg-background/88 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur-md"
+                >
+                    {candles.length > 0
+                        ? 'Realtime reconnecting · historical chart available'
+                        : 'Loading market history · realtime reconnecting'}
+                </div>
+            )}
             {isBackfillLoading && (
                 <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none select-none">
                     <div className="inline-flex items-center gap-2 rounded-lg border border-primary/35 bg-background/85 px-3 py-2 text-[12px] font-bold tracking-wide text-primary shadow-lg backdrop-blur-md">
