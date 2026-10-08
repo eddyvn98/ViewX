@@ -80,6 +80,27 @@ const StrategyRunnerBootstrap = dynamic(
   { ssr: false }
 );
 
+function DeferredStrategyRunnerBootstrap() {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const win = window as typeof window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (typeof win.requestIdleCallback === "function") {
+      const id = win.requestIdleCallback(() => setReady(true), { timeout: 1800 });
+      return () => win.cancelIdleCallback?.(id);
+    }
+
+    const timer = window.setTimeout(() => setReady(true), 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return ready ? <StrategyRunnerBootstrap /> : null;
+}
+
 export default function Home() {
   useWebSocket();
   useUserSetupSync();
@@ -203,7 +224,7 @@ export default function Home() {
       )}
     >
       {ChartE2EBridge ? <ChartE2EBridge /> : null}
-      {strategyEnabled && <StrategyRunnerBootstrap />}
+      {strategyEnabled && <DeferredStrategyRunnerBootstrap />}
       <NotificationManager />
       <div className={cn("flex flex-1 min-h-0 overflow-hidden", isScaledDesktopMode && "chart-scaled-desktop-viewport")}>
         <div
