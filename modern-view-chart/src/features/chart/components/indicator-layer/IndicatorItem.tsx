@@ -31,7 +31,10 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                 editingId === indicator.id ? 'bg-secondary/40 border-border/20' : 'hover:bg-secondary/20 hover:border-border/10'
             )}>
                 <button
+                    type="button"
                     onClick={() => toggleVisibility(chartId, indicator.id)}
+                    aria-label={indicator.visible ? `Hide ${localizedName}` : `Show ${localizedName}`}
+                    aria-pressed={indicator.visible}
                     className={cn('transition-colors flex-shrink-0 p-1 rounded-md hover:bg-secondary/40 active:scale-95', indicator.visible ? 'text-primary' : 'text-muted-foreground/40')}
                     title={indicator.visible ? t('hide') : t('show')}
                 >
@@ -46,7 +49,10 @@ export function IndicatorItem({ indicator, chartId, editingId, setEditingId, tog
                 </div>
 
                 <button
+                    type="button"
                     onClick={() => setEditingId(editingId === indicator.id ? null : indicator.id)}
+                    aria-label={`Configure ${localizedName}`}
+                    aria-expanded={editingId === indicator.id}
                     className={cn('p-1.5 rounded-md transition-all active:scale-95', editingId === indicator.id ? 'text-primary bg-primary/10' : 'text-muted-foreground/30 hover:text-foreground hover:bg-secondary/40')}
                 >
                     <Settings2 size={12} />
