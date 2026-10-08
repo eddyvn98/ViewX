@@ -10,27 +10,25 @@ import { getSiteUrl } from '@/lib/site-url';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-be-vietnam',
 });
 
 const outfit = Outfit({
   subsets: ['latin'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-outfit',
 });
 
 const inter = Inter({
   subsets: ['vietnamese'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-inter',
 });
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#0b0e14',
 };
