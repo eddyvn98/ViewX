@@ -6,12 +6,12 @@ on:
       ws_url:
         description: Live WebSocket URL (wss://...)
         required: false
-        default: 'wss://api.vivutrade.io.vn'
+        default: 'wss://vivutrade.io.vn/ws'
         type: string
       api_url:
         description: Live API base URL (https://...)
         required: false
-        default: 'https://api.vivutrade.io.vn'
+        default: 'https://vivutrade.io.vn'
         type: string
       clients:
         description: Concurrent WebSocket clients
@@ -46,8 +46,8 @@ jobs:
       run:
         working-directory: modern-view-chart
     env:
-      SOAK_WS_URL: ${{ github.event.inputs.ws_url || vars.VIEWX_SOAK_WS_URL || 'wss://api.vivutrade.io.vn' }}
-      SOAK_API_URL: ${{ github.event.inputs.api_url || vars.VIEWX_SOAK_API_URL || 'https://api.vivutrade.io.vn' }}
+      SOAK_WS_URL: ${{ github.event.inputs.ws_url || vars.VIEWX_SOAK_WS_URL || 'wss://vivutrade.io.vn/ws' }}
+      SOAK_API_URL: ${{ github.event.inputs.api_url || vars.VIEWX_SOAK_API_URL || 'https://vivutrade.io.vn' }}
       SOAK_CLIENTS: ${{ github.event.inputs.clients || '50' }}
       SOAK_DURATION_SEC: ${{ github.event.inputs.duration_sec || '900' }}
       SOAK_RAMP_SEC: ${{ github.event.inputs.ramp_sec || '60' }}
