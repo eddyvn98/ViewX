@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/:path*",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        ],
+      },
+      {
         source: "/api/:path*",
         headers: [
           { key: "Content-Security-Policy", value: nonHtmlContentSecurityPolicy },
