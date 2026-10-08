@@ -44,7 +44,7 @@ test.describe('chart PageSpeed quality regressions', () => {
         // Production policy needs separate edge verification. Six months is the enforced
         // minimum for this production-like HTTP smoke, rather than an exact edge value.
         const hstsHeader = pageHeaders['strict-transport-security'] || '';
-        const hstsMaxAge = Number(hstsHeader.match(/max-age=(\\d+)/i)?.[1] || 0);
+        const hstsMaxAge = Number(hstsHeader.match(/max-age=([0-9]+)/i)?.[1] || 0);
         expect(hstsMaxAge).toBeGreaterThanOrEqual(15552000);
         expect(hstsHeader).toContain('includeSubDomains');
 
