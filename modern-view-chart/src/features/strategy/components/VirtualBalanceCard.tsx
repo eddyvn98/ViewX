@@ -11,11 +11,14 @@ export function VirtualBalanceCard() {
     const [confirmAction, setConfirmAction] = React.useState<'balance' | 'all' | null>(null);
 
     React.useEffect(() => {
-        setMounted(true);
-        if (confirmAction) {
-            const timer = setTimeout(() => setConfirmAction(null), 3000);
-            return () => clearTimeout(timer);
-        }
+        const timer = window.setTimeout(() => setMounted(true), 0);
+        return () => window.clearTimeout(timer);
+    }, []);
+
+    React.useEffect(() => {
+        if (!confirmAction) return;
+        const timer = window.setTimeout(() => setConfirmAction(null), 3000);
+        return () => window.clearTimeout(timer);
     }, [confirmAction]);
 
     const handleAction = () => {
@@ -81,7 +84,9 @@ export function VirtualBalanceCard() {
                 </button>
 
                 <button
+                    type="button"
                     onClick={handleAction}
+                    aria-label={confirmAction === 'all' ? "Confirm reset virtual account" : "Reset virtual account"}
                     className={cn(
                         "p-1 rounded transition-all",
                         confirmAction === 'all'
