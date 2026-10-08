@@ -314,3 +314,27 @@ test("ignores execution results from a bridge with a mismatched broker identity"
 
     assert.equal(clientWs.sent.length, before);
 });
+
+
+test("forwards MT5 candle intervals unchanged so broker bridge owns timeframe mapping", () => {
+    const { clientWs, bridgeWs, clients, bridgeRegistry } = setup();
+
+    for (const interval of ["1", "60", "240", "1440", "10080"]) {
+        handleMt5Command({ ws: clientWs, clients, bridgeRegistry }, {
+            topic: "mt5_command",
+            command: "get_candles",
+            account_login: "10001",
+            terminal_id: "terminal-a",
+            broker: "Exness",
+            symbol: "XAUUSDm",
+            interval,
+            count: 300,
+        });
+
+        const forwarded = bridgeWs.sent.at(-1);
+        assert.equal(forwarded.command, "get_candles");
+        assert.equal(forwarded.interval, interval);
+        assert.equal(forwarded.broker, "Exness");
+        assert.equal(forwarded.symbol, "XAUUSDm");
+    }
+});
