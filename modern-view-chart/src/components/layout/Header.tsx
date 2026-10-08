@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Bell, BarChart2, Settings, PanelRightClose, LogOut, Volume2 } from 'lucide-react';
 import { HeartHandshake } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -8,7 +9,6 @@ import { TabContainer } from './TabContainer';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './ThemeToggle';
 import { ThemeColorSwitcher } from './ThemeColorSwitcher';
-import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { TelegramLinkDialog } from './TelegramLinkDialog';
 import { AlertEditDialog } from '@/features/chart/components/AlertEditDialog';
 import { useWebSocket } from '@/hooks/use-websocket';
@@ -51,6 +51,11 @@ const MEMBERSHIP_UI: Record<MembershipTier, MembershipUi> = {
     },
 };
 
+const GoogleSignInButton = dynamic(
+    () => import('@/components/auth/GoogleSignInButton').then((module) => module.GoogleSignInButton),
+    { ssr: false }
+);
+
 const SUPPORT_TELEGRAM_URL = 'https://t.me/htt711';
 const SUPPORT_ZALO_URL = 'https://zalo.me/84932690949';
 
@@ -83,6 +88,7 @@ export const Header = memo(function Header() {
     const toggleLeftSidebar = useMarketStore((state) => state.toggleLeftSidebar);
     const [displayName, setDisplayName] = React.useState("Guest");
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+    const [isSignInOpen, setIsSignInOpen] = React.useState(false);
     const [membershipTier, setMembershipTier] = React.useState<MembershipTier>('free');
     const [isAvatarMenuOpen, setIsAvatarMenuOpen] = React.useState(false);
     const [isTelegramDialogOpen, setIsTelegramDialogOpen] = React.useState(false);
@@ -401,13 +407,27 @@ export const Header = memo(function Header() {
                     </Link>
 
                     {!isAuthenticated ? (
-                        <GoogleSignInButton
-                            className="mr-1"
-                            text="signin_with"
-                            size="small"
-                            width={170}
-                            redirectTo="/chart"
-                        />
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setIsSignInOpen((open) => !open)}
+                                aria-expanded={isSignInOpen}
+                                aria-label="Sign in"
+                                className="h-7 rounded-md border border-border bg-secondary/50 px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-secondary"
+                            >
+                                Sign in
+                            </button>
+                            {isSignInOpen ? (
+                                <div className="absolute right-0 top-9 z-[170] rounded-lg border border-border bg-background p-3 shadow-xl">
+                                    <GoogleSignInButton
+                                        text="signin_with"
+                                        size="small"
+                                        width={170}
+                                        redirectTo="/chart"
+                                    />
+                                </div>
+                            ) : null}
+                        </div>
                     ) : null}
 
                     {isAuthenticated ? (
