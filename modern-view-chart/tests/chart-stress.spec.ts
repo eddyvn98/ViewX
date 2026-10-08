@@ -603,7 +603,7 @@ test.describe('mobile symbol carousel synchronization', () => {
         ).toBe('BTCUSDm');
 
         const selectedBtc = carousel.locator('[data-symbol="BTCUSDm"]').first().locator('.rounded-full').first();
-        await expect(selectedBtc).toHaveClass(/bg-primary\\/20/);
+        await expect(selectedBtc).toHaveClass(/bg-primary\/20/);
 
         // The old carousel had a ~220ms delayed write that restored the old symbol.
         await page.waitForTimeout(500);
@@ -612,7 +612,7 @@ test.describe('mobile symbol carousel synchronization', () => {
         // A second picker change must also remain authoritative after recentering.
         await page.evaluate(() => window.__VIEWX_E2E__?.setChartSymbol('EURUSDm', 'MT5'));
         const selectedEur = carousel.locator('[data-symbol="EURUSDm"]').first().locator('.rounded-full').first();
-        await expect(selectedEur).toHaveClass(/bg-primary\\/20/);
+        await expect(selectedEur).toHaveClass(/bg-primary\/20/);
         await page.waitForTimeout(500);
         expect(await page.evaluate(() => window.__VIEWX_E2E__?.getChartState()?.symbol)).toBe('EURUSDm');
     });
