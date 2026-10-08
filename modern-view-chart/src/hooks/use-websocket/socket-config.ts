@@ -68,15 +68,7 @@ export function deriveDefaultSocketUrl(): string {
     if (WS_URL_FROM_ENV) return WS_URL_FROM_ENV;
     if (wsRuntime.socketUrl) return wsRuntime.socketUrl;
 
-    if (hostname === 'vivutrade.io.vn') {
-        return 'wss://api.vivutrade.io.vn';
-    }
-    if (hostname.endsWith('.vivutrade.io.vn') && !hostname.startsWith('api.')) {
-        const suffix = hostname.slice(hostname.indexOf('.'));
-        return `${protocol}//api${suffix}`;
-    }
-
-    return `${protocol}//${host}`;
+    return `${protocol}//${host}/ws`;
 }
 
 export function extractCredentialFromUrl(url: URL): string {
