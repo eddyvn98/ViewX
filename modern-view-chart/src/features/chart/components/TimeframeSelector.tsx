@@ -41,30 +41,33 @@ export function TimeframeSelector({ onClose }: TimeframeSelectorProps) {
                     {TIMEFRAME_CONFIG.filter((tf: any) => tf.category === cat).map((tf: any) => (
                         <div
                             key={tf.id}
-                            onClick={() => handleSelect(tf.id)}
                             className={cn(
-                                "group flex items-center justify-between px-3 py-1.5 cursor-pointer transition-all",
+                                "group flex items-center justify-between px-1 py-0.5 transition-all",
                                 currentInterval === tf.id ? "bg-secondary/40" : "hover:bg-secondary/20"
                             )}
                         >
-                            <span className={cn(
-                                "text-xs font-medium",
-                                currentInterval === tf.id ? "text-yellow-500" : "text-muted-foreground group-hover:text-foreground"
-                            )}>
+                            <button
+                                type="button"
+                                onClick={() => handleSelect(tf.id)}
+                                aria-pressed={currentInterval === tf.id}
+                                className={cn(
+                                    "touch-target flex-1 px-2 text-left text-xs font-medium",
+                                    currentInterval === tf.id ? "text-yellow-500" : "text-muted-foreground group-hover:text-foreground"
+                                )}
+                            >
                                 {tf.title}
-                            </span>
+                            </button>
 
                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleFavoriteTimeframe(tf.id);
-                                }}
+                                type="button"
+                                onClick={() => toggleFavoriteTimeframe(tf.id)}
                                 aria-label={`Toggle favorite ${tf.title}`}
+                                aria-pressed={favoriteTimeframes.includes(tf.id)}
                                 className={cn(
                                     "touch-target p-1 rounded hover:bg-secondary transition-all",
                                     favoriteTimeframes.includes(tf.id)
                                         ? "text-yellow-500 opacity-100"
-                                        : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                                        : "text-muted-foreground opacity-70 group-hover:opacity-100"
                                 )}
                             >
                                 <Star size={12} fill={favoriteTimeframes.includes(tf.id) ? "currentColor" : "none"} />
