@@ -1,12 +1,12 @@
 import React from 'react';
-import { History, Maximize2, Trash2 } from 'lucide-react';
+import { History, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useStrategyStore } from '../store/strategy-store';
 import { cn } from '@/lib/utils';
 
 export function VirtualBalanceCard() {
     const t = useTranslations('Signals');
-    const { virtualBalance, initialVirtualBalance, lastBacktestPnL, backtestCount, setVirtualBalance, resetVirtualAccount } = useStrategyStore();
+    const { virtualBalance, initialVirtualBalance, backtestCount, resetVirtualAccount } = useStrategyStore();
     const [mounted, setMounted] = React.useState(false);
     const [confirmAction, setConfirmAction] = React.useState<'balance' | 'all' | null>(null);
 
