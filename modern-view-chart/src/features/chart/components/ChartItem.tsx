@@ -104,10 +104,11 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                                 const groups: Record<'none' | 'A' | 'B' | 'C' | 'D', 'none' | 'A' | 'B' | 'C' | 'D'> = { 'none': 'A', 'A': 'B', 'B': 'C', 'C': 'D', 'D': 'none' };
                                 updateChart(chart.id, { group: groups[chart.group || 'none'] });
                             }}
+                            aria-label={`Change symbol link group for ${chart.symbol}`}
                             className={cn(
-                                "flex items-center justify-center w-5 h-5 rounded-lg transition-all shrink-0 active:scale-90",
+                                "touch-target flex items-center justify-center w-5 h-5 rounded-lg transition-all shrink-0 active:scale-90",
                                 !chart.group || chart.group === 'none'
-                                    ? "text-muted-foreground/30 hover:text-foreground hover:bg-secondary"
+                                    ? "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                     : chart.group === 'A' ? "text-emerald-500 bg-emerald-500/10" :
                                         chart.group === 'B' ? "text-primary bg-primary/10" :
                                             chart.group === 'C' ? "text-orange-500 bg-orange-500/10" : "text-purple-500 bg-purple-500/10"
@@ -123,7 +124,7 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                             )}>
                                 {chart.symbol}
                             </span>
-                            <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tight">{formatChartTimeframe(chart.interval)} • {chart.source}</span>
+                            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">{formatChartTimeframe(chart.interval)} • {chart.source}</span>
                         </div>
                         <button
                             onClick={(e) => {
@@ -142,14 +143,15 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                                     addNotification(`Chua co gia realtime cho ${chart.symbol}. Thu lai sau vai giay.`, 'warning');
                                 }
                             }}
-                            className="ml-0.5 p-1 text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-500/5 rounded-lg transition-all group/bell"
+                            aria-label={`Create quick alert for ${chart.symbol}`}
+                            className="touch-target ml-0.5 p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/5 rounded-lg transition-all group/bell"
                             title="Quick Alert"
                         >
                             <Bell size={11} className="group-hover/bell:animate-bounce" />
                         </button>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                        <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={11} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); toggleMaximizeChart(isMaximized ? null : chart.id); }} aria-label={isMaximized ? "Restore chart" : "Maximize chart"} className="touch-target p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all" title={isMaximized ? "Restore" : "Maximize"}><Maximize2 size={11} /></button>
                         <a
                             href={popoutHref}
                             target="_blank"
@@ -166,12 +168,13 @@ export function ChartItem({ chart, isActive, isMaximized, canClose }: ChartItemP
                                     `width=${width},height=${height},left=${left},top=${top},menubar=no,location=no,status=no,toolbar=no,scrollbars=no`
                                 );
                             }}
-                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all"
+                            aria-label="Open chart in a new window"
+                            className="touch-target p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all"
                             title="Pop out"
                         >
                             <ExternalLink size={11} />
                         </a>
-                        {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all" title="Close"><X size={11} /></button>}
+                        {canClose && <button onClick={(e) => { e.stopPropagation(); removeChart(chart.id); }} aria-label="Close chart" className="touch-target p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all" title="Close"><X size={11} /></button>}
                     </div>
                 </div>
             </div>
