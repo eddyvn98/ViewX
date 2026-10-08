@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useMarketStore } from '@/lib/store';
-import { Plus, X, Edit2, Layout } from 'lucide-react';
+import { Plus, X, Layout } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function TabContainer() {
