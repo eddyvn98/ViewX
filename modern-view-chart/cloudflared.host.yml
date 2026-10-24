@@ -21,9 +21,15 @@ ingress:
   - hostname: dich.vivutrade.io.vn
     service: http://127.0.0.1:8000
   - hostname: hub.vivutrade.io.vn
-    service: http://127.0.0.1:3000
+    service: http://127.0.0.1:3012
   - hostname: thuchi.vivutrade.io.vn
-    service: http://127.0.0.1:3006
+    service: http://127.0.0.1:3012
   - hostname: trans.vivutrade.io.vn
     service: http://127.0.0.1:8080
+  - hostname: jp.vivutrade.io.vn
+    service: http://127.0.0.1:5000
+  - hostname: pdf.vivutrade.io.vn
+    service: http://127.0.0.1:8787
+  - hostname: deploy-pdf.vivutrade.io.vn
+    service: http://127.0.0.1:8789
   - service: http_status:404

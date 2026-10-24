@@ -20,7 +20,7 @@ const BRAND_CONFIG = {
     DOJIVN: {
         provider: "DOJI",
         historyUrl: (dateText) => `https://giavang.org/trong-nuoc/doji/${dateText}.html`,
-        matchesPrimaryRow: (cells) => normalizeText(cells[0]) === "ha noi" && normalizeText(cells[1]).includes("sjc"),
+        matchesPrimaryRow: (cells) => (normalizeText(cells[0]) === "ha noi" && normalizeText(cells[1]).includes("sjc")) || (cells.length === 3 && normalizeText(cells[0]).includes("sjc")),
         matchesUpdateRow: () => false,
     },
 };
@@ -78,8 +78,8 @@ function buildDailyCandleFromRows(symbol, rows, day, usedUrl) {
     const primaryRow = rows.find((cells) => config.matchesPrimaryRow(cells)) || null;
     if (!primaryRow) return null;
 
-    const primaryBuy = parsePriceText(primaryRow[2]);
-    const primarySell = parsePriceText(primaryRow[3]);
+    const primaryBuy = parsePriceText(primaryRow[primaryRow.length >= 4 ? 2 : 1]);
+    const primarySell = parsePriceText(primaryRow[primaryRow.length >= 4 ? 3 : 2]);
     const primaryMid = Number.isFinite(primaryBuy) && Number.isFinite(primarySell)
         ? Math.round((primaryBuy + primarySell) / 2)
         : primarySell ?? primaryBuy ?? null;

@@ -4,7 +4,12 @@ import { getStoredVietnamGoldCandles, isStoredVietnamGoldTimeframe } from "./vnG
 
 const SJC_ENDPOINT = "https://sjc.com.vn/GoldPrice/Services/PriceService.ashx";
 const DOJI_ENDPOINT = "https://bang-gia-vang.trangsucdoji-ldp.workers.dev/";
+const VANG_TODAY_ENDPOINT = "https://vang.today/api/prices";
+const GIAVANG_SJC_URL = "https://giavang.org/trong-nuoc/sjc/";
+const GIAVANG_DOJI_URL = "https://giavang.org/trong-nuoc/doji/";
 const CACHE_TTL_MS = 30_000;
+const FAILURE_BACKOFF_MS = 60_000;
+const WARN_THROTTLE_MS = 5 * 60 * 1000;
 const SJC_HISTORY_LOOKBACK_DAYS = 30;
 const SJC_DAILY_HISTORY_TTL_MS = 30 * 60 * 1000;
 
@@ -15,15 +20,24 @@ const SYMBOLS = {
 
 let cache = {
     updatedAt: 0,
+    lastAttemptAt: 0,
     quotes: [],
 };
 
+let lastFetchWarnAt = 0;
 let inflightPromise = null;
 let sjcDailyHistoryCache = {
     updatedAt: 0,
     points: [],
 };
 let sjcDailyHistoryInflight = null;
+
+function logFetchWarnThrottled(event, meta) {
+    const now = Date.now();
+    if (now - lastFetchWarnAt < WARN_THROTTLE_MS) return;
+    lastFetchWarnAt = now;
+    logWarn(event, meta);
+}
 
 function parseNumberLikeVnd(input, multiplier = 1000) {
     const text = String(input ?? "")
@@ -32,6 +46,33 @@ function parseNumberLikeVnd(input, multiplier = 1000) {
     const value = Number.parseFloat(text);
     if (!Number.isFinite(value)) return null;
     return value * multiplier;
+}
+
+function parseGiavangPriceText(input) {
+    const text = String(input || "").replace(/[^\d.,-]/g, "").trim();
+    if (!text) return null;
+    const normalized = text.includes(".") && !text.includes(",")
+        ? text.replace(/\./g, "")
+        : text.replace(/,/g, "");
+    const value = Number.parseFloat(normalized);
+    if (!Number.isFinite(value)) return null;
+    return value * 100;
+}
+
+function parseGiavangTableRows(html) {
+    return [...String(html || "").matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)]
+        .map((match) =>
+            String(match[1] || "")
+                .replace(/<script[\s\S]*?<\/script>/gi, "")
+                .replace(/<style[\s\S]*?<\/style>/gi, "")
+                .replace(/<[^>]+>/g, "|")
+                .replace(/&nbsp;/g, " ")
+                .replace(/\s+/g, " ")
+                .split("|")
+                .map((part) => part.trim())
+                .filter(Boolean)
+        )
+        .filter((cells) => cells.length > 0);
 }
 
 function formatUpdateStamp(date) {
@@ -66,6 +107,101 @@ function buildQuote({
         sourceUrl,
         serverTime: updatedAt,
     };
+}
+
+async function fetchFallbackFromVangToday() {
+    const response = await fetch(VANG_TODAY_ENDPOINT, {
+        headers: {
+            "user-agent": "Mozilla/5.0 (compatible; VivuTradeBot/1.0)",
+            accept: "application/json,text/plain,*/*",
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`vangtoday_fallback_http_${response.status}`);
+    }
+    const payload = await response.json();
+    const prices = payload?.prices || {};
+    const updatedAt = Number(payload?.timestamp) > 0 ? Number(payload.timestamp) * 1000 : Date.now();
+    const result = {};
+
+    const sjcRow = prices.SJL1L10 || prices.VNGSJC;
+    if (sjcRow && Number(sjcRow.buy) > 0 && Number(sjcRow.sell) > 0) {
+        result.sjc = buildQuote({
+            symbol: SYMBOLS.SJC,
+            displayName: "SJC",
+            buy: Math.round(Number(sjcRow.buy) / 10),
+            sell: Math.round(Number(sjcRow.sell) / 10),
+            sourceUrl: "https://vang.today",
+            updatedAt,
+        });
+    }
+
+    const dojiRow = prices.DOHNL || prices.DOHCML || prices.DOJINHTV;
+    if (dojiRow && Number(dojiRow.buy) > 0 && Number(dojiRow.sell) > 0) {
+        result.doji = buildQuote({
+            symbol: SYMBOLS.DOJI,
+            displayName: "DOJI",
+            buy: Math.round(Number(dojiRow.buy) / 10),
+            sell: Math.round(Number(dojiRow.sell) / 10),
+            sourceUrl: "https://vang.today",
+            updatedAt,
+        });
+    }
+
+    return result;
+}
+
+async function fetchSjcFromGiavang() {
+    const response = await fetch(GIAVANG_SJC_URL, {
+        headers: { "user-agent": "Mozilla/5.0 (compatible; VivuTradeBot/1.0)" },
+    });
+    if (!response.ok) {
+        throw new Error(`giavang_sjc_http_${response.status}`);
+    }
+    const rows = parseGiavangTableRows(await response.text());
+    const row = rows.find((cells) =>
+        cells.length >= 4 && String(cells[1] || "").toLowerCase().includes("vàng sjc 1l")
+    );
+    if (!row) return null;
+    const buy = parseGiavangPriceText(row[2]);
+    const sell = parseGiavangPriceText(row[3]);
+    if (!Number.isFinite(buy) && !Number.isFinite(sell)) return null;
+    return buildQuote({
+        symbol: SYMBOLS.SJC,
+        displayName: "SJC",
+        buy,
+        sell,
+        sourceUrl: GIAVANG_SJC_URL,
+        updatedAt: Date.now(),
+    });
+}
+
+async function fetchDojiFromGiavang() {
+    const response = await fetch(GIAVANG_DOJI_URL, {
+        headers: { "user-agent": "Mozilla/5.0 (compatible; VivuTradeBot/1.0)" },
+    });
+    if (!response.ok) {
+        throw new Error(`giavang_doji_http_${response.status}`);
+    }
+    const rows = parseGiavangTableRows(await response.text());
+    const row = rows.find((cells) =>
+        (cells.length >= 3 && String(cells[0] || "").toLowerCase().includes("sjc"))
+        || (cells.length >= 4 && String(cells[1] || "").toLowerCase().includes("sjc"))
+    );
+    if (!row) return null;
+    const buyIdx = row.length >= 4 ? 2 : 1;
+    const sellIdx = row.length >= 4 ? 3 : 2;
+    const buy = parseGiavangPriceText(row[buyIdx]);
+    const sell = parseGiavangPriceText(row[sellIdx]);
+    if (!Number.isFinite(buy) && !Number.isFinite(sell)) return null;
+    return buildQuote({
+        symbol: SYMBOLS.DOJI,
+        displayName: "DOJI",
+        buy,
+        sell,
+        sourceUrl: GIAVANG_DOJI_URL,
+        updatedAt: Date.now(),
+    });
 }
 
 async function fetchSjcQuote() {
@@ -142,34 +278,53 @@ async function fetchDojiQuote() {
 }
 
 async function fetchFreshQuotes() {
-    const settled = await Promise.allSettled([fetchSjcQuote(), fetchDojiQuote()]);
-    const quotes = settled
-        .flatMap((result) => {
-            if (result.status !== "fulfilled") {
-                logWarn("vn_gold.fetch_failed", { error: result.reason?.message || String(result.reason || "unknown") });
-                return [];
-            }
-            return result.value ? [result.value] : [];
-        });
+    let fallbackQuotes = null;
+    try {
+        fallbackQuotes = await fetchFallbackFromVangToday();
+    } catch {
+        fallbackQuotes = null;
+    }
 
-    return quotes;
+    let sjcQuote = fallbackQuotes?.sjc || null;
+    let dojiQuote = fallbackQuotes?.doji || null;
+
+    if (!sjcQuote) {
+        sjcQuote = await fetchSjcFromGiavang().catch(() => null) || await fetchSjcQuote().catch((err) => {
+            logFetchWarnThrottled("vn_gold.fetch_failed", { error: err?.message || String(err) });
+            return null;
+        });
+    }
+
+    if (!dojiQuote) {
+        dojiQuote = await fetchDojiFromGiavang().catch(() => null) || await fetchDojiQuote().catch((err) => {
+            logFetchWarnThrottled("vn_gold.fetch_failed", { error: err?.message || String(err) });
+            return null;
+        });
+    }
+
+    return [sjcQuote, dojiQuote].filter(Boolean);
 }
 
 function refreshVietnamGoldQuotes() {
     if (inflightPromise) return inflightPromise;
 
+    cache.lastAttemptAt = Date.now();
     inflightPromise = fetchFreshQuotes()
         .then((quotes) => {
+            const now = Date.now();
+            cache.lastAttemptAt = now;
             if (quotes.length > 0) {
                 cache = {
-                    updatedAt: Date.now(),
+                    updatedAt: now,
+                    lastAttemptAt: now,
                     quotes,
                 };
             }
             return cache.quotes;
         })
         .catch((error) => {
-            logWarn("vn_gold.refresh_failed", { error: error?.message || String(error) });
+            cache.lastAttemptAt = Date.now();
+            logFetchWarnThrottled("vn_gold.refresh_failed", { error: error?.message || String(error) });
             return cache.quotes;
         })
         .finally(() => {
@@ -181,8 +336,11 @@ function refreshVietnamGoldQuotes() {
 
 export function getCachedVietnamGoldQuotes({ refresh = true } = {}) {
     const now = Date.now();
-    const stale = cache.quotes.length === 0 || now - cache.updatedAt >= CACHE_TTL_MS;
-    if (refresh && stale) {
+    const hasQuotes = cache.quotes.length > 0;
+    const isStale = hasQuotes
+        ? now - cache.updatedAt >= CACHE_TTL_MS
+        : now - cache.lastAttemptAt >= FAILURE_BACKOFF_MS;
+    if (refresh && isStale) {
         void refreshVietnamGoldQuotes();
     }
     return cache.quotes;
@@ -191,6 +349,10 @@ export function getCachedVietnamGoldQuotes({ refresh = true } = {}) {
 export async function getVietnamGoldQuotes({ force = false, nonBlocking = false } = {}) {
     const now = Date.now();
     if (!force && cache.quotes.length > 0 && now - cache.updatedAt < CACHE_TTL_MS) {
+        return cache.quotes;
+    }
+
+    if (!force && nonBlocking && cache.quotes.length === 0 && now - cache.lastAttemptAt < FAILURE_BACKOFF_MS) {
         return cache.quotes;
     }
 
@@ -445,7 +607,7 @@ export async function getVietnamGoldCandles(symbol, interval, count = 300) {
     if (normalizedSymbol === SYMBOLS.SJC) {
         // SJC has a real historical endpoint: prioritize this over projected DB candles for 1h/4h.
         if (normalizedTimeframe === "60" || normalizedTimeframe === "240") {
-            const realHistory = await fetchSjcHistory(normalizedTimeframe, safeCount);
+            const realHistory = await fetchSjcHistory(normalizedTimeframe, safeCount).catch(() => []);
             if (realHistory.length > 0) return realHistory;
         }
 
@@ -454,10 +616,10 @@ export async function getVietnamGoldCandles(symbol, interval, count = 300) {
             if (stored.length > 0) return stored;
         }
 
-        const history = await fetchSjcHistory(interval, safeCount);
+        const history = await fetchSjcHistory(interval, safeCount).catch(() => []);
         if (history.length > 0) return history;
 
-        const dailyPoints = await fetchSjcRecentDailyPoints();
+        const dailyPoints = await fetchSjcRecentDailyPoints().catch(() => []);
         if (dailyPoints.length > 0) {
             return buildCandlesFromHistoricalPoints(dailyPoints, interval, safeCount);
         }

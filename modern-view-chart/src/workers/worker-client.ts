@@ -1,23 +1,15 @@
 import type { Strategy } from '@/features/strategy/types';
 import type { Candle, IndicatorConfig } from '@/lib/store/types';
+import { executeWorkerJob, type WorkerJob, type WorkerResponse } from './worker-jobs';
 
-export type WorkerJob =
-    | { type: 'RUN_BACKTEST'; payload: { strategy: Strategy; candles: Candle[]; initialBalance: number; overrideSymbol?: string; overrideTimeframe?: string; source?: 'MT5' | 'BINANCE'; matrixScopeKey?: string } }
-    | { type: 'CALCULATE_INDICATORS'; payload: { indicator: IndicatorConfig; candles: Candle[] } }
-    | { type: 'CALCULATE_BATCH'; payload: { indicators: IndicatorConfig[]; candles: Candle[] } };
-
-export type WorkerResponse<T = unknown> = {
-    id: string;
-    success: boolean;
-    data?: T;
-    error?: string;
-};
+export type { WorkerJob, WorkerResponse } from './worker-jobs';
 
 let jobId = 0;
 
 class ChartWorkerClient {
     private worker: Worker | null = null;
-    private resolvers = new Map<string, (value: unknown) => void>();
+    private workerFailed = false;
+    private resolvers = new Map<string, { resolve: (value: unknown) => void; job: WorkerJob }>();
     private rejecters = new Map<string, (reason: unknown) => void>();
 
     constructor() {
@@ -26,17 +18,41 @@ class ChartWorkerClient {
         }
     }
 
+    private fallbackAllPending() {
+        const pendingEntries = Array.from(this.resolvers.entries());
+        const pendingRejecters = new Map(this.rejecters);
+        this.resolvers.clear();
+        this.rejecters.clear();
+
+        pendingEntries.forEach(([id, entry]) => {
+            try {
+                const result = executeWorkerJob(entry.job);
+                entry.resolve(result);
+            } catch (err) {
+                const reject = pendingRejecters.get(id);
+                if (reject) {
+                    try {
+                        reject(err);
+                    } catch {
+                        // Ignore downstream rejection handler errors.
+                    }
+                }
+            }
+        });
+    }
+
     private init() {
         try {
             this.worker = new Worker(new URL('./chart-worker.ts', import.meta.url));
+            this.workerFailed = false;
 
             this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
                 const { id, success, data, error } = event.data;
 
                 if (success) {
-                    const resolve = this.resolvers.get(id);
-                    if (resolve) {
-                        resolve(data);
+                    const entry = this.resolvers.get(id);
+                    if (entry) {
+                        entry.resolve(data);
                         this.cleanup(id);
                     }
                     return;
@@ -50,10 +66,30 @@ class ChartWorkerClient {
             };
 
             this.worker.onerror = (error) => {
-                console.error('[WorkerClient] Global Worker Error:', error);
+                error.preventDefault?.();
+                this.workerFailed = true;
+                try {
+                    this.worker?.terminate();
+                } catch {
+                    // Ignore worker termination errors.
+                }
+                this.worker = null;
+                this.fallbackAllPending();
             };
-        } catch (err) {
-            console.error('[WorkerClient] Failed to initialize worker:', err);
+
+            this.worker.onmessageerror = () => {
+                this.workerFailed = true;
+                try {
+                    this.worker?.terminate();
+                } catch {
+                    // Ignore worker termination errors.
+                }
+                this.worker = null;
+                this.fallbackAllPending();
+            };
+        } catch {
+            this.workerFailed = true;
+            this.worker = null;
         }
     }
 
@@ -63,15 +99,28 @@ class ChartWorkerClient {
     }
 
     private sendJob<T = unknown>(job: WorkerJob): Promise<T> {
-        if (!this.worker) {
-            return Promise.reject(new Error('Worker not initialized'));
+        if (!this.worker || this.workerFailed) {
+            try {
+                return Promise.resolve(executeWorkerJob(job) as T);
+            } catch (err) {
+                return Promise.reject(err instanceof Error ? err : new Error(String(err)));
+            }
         }
 
         const id = `${Date.now()}-${++jobId}`;
         return new Promise<T>((resolve, reject) => {
-            this.resolvers.set(id, (value) => resolve(value as T));
+            this.resolvers.set(id, { resolve: (value) => resolve(value as T), job });
             this.rejecters.set(id, reject);
-            this.worker?.postMessage({ id, type: job.type, payload: job.payload });
+            try {
+                this.worker?.postMessage({ id, type: job.type, payload: job.payload });
+            } catch {
+                this.cleanup(id);
+                try {
+                    resolve(executeWorkerJob(job) as T);
+                } catch (fallbackErr) {
+                    reject(fallbackErr instanceof Error ? fallbackErr : new Error(String(fallbackErr)));
+                }
+            }
         });
     }
 

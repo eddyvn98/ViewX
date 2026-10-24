@@ -5,7 +5,7 @@ import { createStrategyStoreState } from './strategy-store.actions';
 import { migrateStrategyStoreState } from './strategy-store';
 
 interface MigratedState {
-    strategies?: Array<{ id: string; name: string; buy?: object; sell?: object }>;
+    strategies?: Array<{ id: string; name: string; buy?: object; sell?: object; enabledDirections?: string[]; active?: boolean }>;
     matrixScanners: Array<{ strategyId: string | null; symbols: string[] }>;
     virtualPositions?: Array<{ id: string; timeframe?: string; matrixScopeKey?: string }>;
 }

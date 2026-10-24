@@ -389,7 +389,7 @@ async function consumeOneChatCredit(userId) {
     const updated = await userModel.findOneAndUpdate(
         { _id: userId, aiAssistantCredits: { $gt: 0 } },
         { $inc: { aiAssistantCredits: -1 }, $set: { aiAssistantCreditsUpdatedAt: new Date() } },
-        { new: true, projection: "_id aiAssistantCredits" },
+        { returnDocument: "after", projection: "_id aiAssistantCredits" },
     );
     if (!updated?._id) {
         return { ok: false, remainingCredits: 0 };

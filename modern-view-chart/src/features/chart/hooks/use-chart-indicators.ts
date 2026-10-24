@@ -7,7 +7,7 @@ import { normalizeSymbol } from '@/lib/utils/symbol';
 import { DEFAULT_CHART_INDICATORS } from './indicators/default-indicators';
 import { formatCandles, buildLiveCandle } from './indicators/indicator-candle-utils';
 import { createIndicatorInstance } from './indicators/sync-indicator-series';
-import { IndicatorCache } from '../logic/indicator-calculations';
+import { IndicatorCache, calculateIndicators } from '../logic/indicator-calculations';
 import { bumpChartPerfCounter } from '../testing/chart-perf-counters';
 
 const EMPTY_INDICATORS: IndicatorConfig[] = [];
@@ -214,9 +214,26 @@ export function useChartIndicators(
                         });
                     } catch {
                         if (batchVersion !== batchVersionRef.current || batchKey !== lastKeyRef.current) return;
+                        const fallbackCaches = calculateIndicators(inputCandles, configs);
+                        const fallbackMap = new Map(fallbackCaches.map((item) => [item.id, item]));
                         configs.forEach(config => {
+                            const latestConfig = useMarketStore.getState().chartIndicators[chartId]?.find(
+                                (candidate) => candidate.id === config.id
+                            ) || config;
                             const instance = instancesRef.current[config.id];
-                            if (instance) instance.update(inputCandles, config);
+                            const fallbackItem = fallbackMap.get(config.id);
+                            if (instance) instance.update(inputCandles, latestConfig, fallbackItem?.results);
+                            runtimeByIdRef.current[config.id] = fallbackItem || {
+                                type: config.type,
+                                id: config.id,
+                                period: Number(config.params?.period || 14),
+                                color: config.color,
+                                pane: config.pane,
+                                results: config.type === 'MACD'
+                                    ? { macd: [], signal: [], histogram: [] }
+                                    : [],
+                                params: latestConfig.params
+                            };
                         });
                     }
                 };
