@@ -4,6 +4,9 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 const nonHtmlContentSecurityPolicy = [
   "default-src 'none'",
+  "script-src 'self'",
+  "worker-src 'self' blob:",
+  "connect-src 'self'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
   "form-action 'none'",

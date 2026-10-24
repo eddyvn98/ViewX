@@ -57,7 +57,7 @@ async function claimNextUpdate() {
       $set: { status: "processing", leaseUntil },
       $inc: { attempts: 1 },
     },
-    { sort: { createdAt: 1 }, new: true },
+    { sort: { createdAt: 1 }, returnDocument: "after" },
   );
 }
 

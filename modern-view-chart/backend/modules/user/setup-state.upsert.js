@@ -160,7 +160,7 @@ async function persistState({
         $inc: { revision: 1 },
       },
       {
-        new: true,
+        returnDocument: "after",
       },
     );
   }
@@ -185,7 +185,7 @@ async function persistState({
           lastSyncedAt: new Date(),
         },
       },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: "after" },
     );
   }
 
