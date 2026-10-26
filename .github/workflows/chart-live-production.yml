@@ -1,0 +1,53 @@
+name: Chart Live Production Verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 1 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chart-live-production
+  cancel-in-progress: false
+
+jobs:
+  live-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: modern-view-chart
+    env:
+      VIEWX_LIVE_BASE_URL: https://vivutrade.io.vn
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: modern-view-chart/package-lock.json
+      - name: Repair lockfile metadata
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install dependencies
+        run: npm ci
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Verify live production (3 desktop and 3 mobile samples)
+        run: >
+          npx playwright test tests/chart-live-production.spec.ts
+          --project=chromium --project="Mobile Chrome"
+          --repeat-each=3 --retries=0
+          --reporter=line
+      - name: Upload production evidence even when failing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart-live-production-evidence
+          path: |
+            modern-view-chart/test-results
+            modern-view-chart/playwright-report
+          if-no-files-found: warn
+          retention-days: 30

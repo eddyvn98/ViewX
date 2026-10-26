@@ -123,14 +123,14 @@ try {
     Write-Host ""
 
     Write-Host "[Deploy] Running live WebSocket auth smoke..." -ForegroundColor Cyan
-    & node scripts/server/ws-auth-smoke.mjs --ws-url "wss://api.vivutrade.io.vn"
+    & node scripts/server/ws-auth-smoke.mjs --ws-url "wss://vivutrade.io.vn/ws"
     Assert-LastExitCode "WebSocket auth smoke"
 
     if (-not $SkipSoak) {
         Write-Host "[Deploy] Running $SoakClients-client live soak test (${SoakDurationSec}s)..." -ForegroundColor Cyan
         & node scripts/server/ws-soak-test.mjs `
-            --ws-url "wss://api.vivutrade.io.vn" `
-            --api-url "https://api.vivutrade.io.vn" `
+            --ws-url "wss://vivutrade.io.vn/ws" `
+            --api-url "https://vivutrade.io.vn" `
             --clients $SoakClients `
             --duration-sec $SoakDurationSec `
             --ramp-sec $SoakRampSec `
